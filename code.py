@@ -13,17 +13,17 @@ import random
 pins = {
     "mosi": board.GP11,
     "clk": board.GP10,
-    "reset": board.GP17,
-    "cs": board.GP18,
-    "dc": board.GP16
+    "reset": board.GP12,
+    "cs": board.GP9,
+    "dc": board.GP8
 }
-
 displayio.release_displays()
 
 spi = busio.SPI(clock=pins["clk"], MOSI=pins["mosi"])
 display_bus = displayio.FourWire(spi, command=pins["dc"], chip_select=pins["cs"], reset=pins["reset"])
 
-display = ST7735R(display_bus, width=160, height=128, rotation=90, bgr=True)
+#display = ST7735R(display_bus, width=160, height=128, rotation=90, bgr=True)
+display = ST7735R(display_bus, width=168, height=132, rotation=-90, bgr=False)
 
 
 # ------------- Functions ------------- #
@@ -119,7 +119,7 @@ def move_digimon_right():
     
     for _ in range(40):  # Adjust the number of movements
         for grid in digimon_walk_grids:
-            if grid.x < 90:  # Adjust the limit to stop the movement
+            if grid.x < 70:  # Adjust the limit to stop the movement
                 grid.x += 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x 
