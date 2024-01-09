@@ -3,10 +3,14 @@ import sys
 import board
 import busio
 import displayio
+import terminalio
 import time
 from adafruit_st7735r import ST7735R
 import adafruit_imageload
 import random
+from digitalio import DigitalInOut, Direction, Pull
+from adafruit_button import Button
+import gc
 
 
 # Pin configuration
@@ -15,16 +19,47 @@ pins = {
     "clk": board.GP10,
     "reset": board.GP12,
     "cs": board.GP9,
-    "dc": board.GP8
+    "dc": board.GP8,
+    "key0": board.GP15,
+    "key1": board.GP17,
+    "key2": board.GP2,
+    "key3": board.GP3
 }
 displayio.release_displays()
 
 spi = busio.SPI(clock=pins["clk"], MOSI=pins["mosi"])
 display_bus = displayio.FourWire(spi, command=pins["dc"], chip_select=pins["cs"], reset=pins["reset"])
-
-#display = ST7735R(display_bus, width=160, height=128, rotation=90, bgr=True)
 display = ST7735R(display_bus, width=168, height=132, rotation=-90, bgr=False)
 
+switch = DigitalInOut(pins["key0"])
+switch.direction = Direction.INPUT
+switch.pull = Pull.DOWN
+
+# --| Button Config |-------------------------------------------------
+BUTTON_X = 0
+BUTTON_Y = 0
+BUTTON_WIDTH = 20
+BUTTON_HEIGHT = 20
+BUTTON_STYLE = Button.ROUNDRECT
+BUTTON_FILL_COLOR = 0x00FFFF
+BUTTON_OUTLINE_COLOR = 0xFF00FF
+BUTTON_LABEL = "HELLO WORLD"
+BUTTON_LABEL_COLOR = 0x000000
+# --| Button Config |-------------------------------------------------
+
+# Make the button
+button = Button(
+    x=BUTTON_X,
+    y=BUTTON_Y,
+    width=BUTTON_WIDTH,
+    height=BUTTON_HEIGHT,
+    style=BUTTON_STYLE,
+    fill_color=BUTTON_FILL_COLOR,
+    outline_color=BUTTON_OUTLINE_COLOR,
+    label=BUTTON_LABEL,
+    label_font=terminalio.FONT,
+    label_color=BUTTON_LABEL_COLOR,
+)
 
 # ------------- Functions ------------- #
 # Set visibility of layer
@@ -51,14 +86,16 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
     if not filename:
         return  # we're done, no icon desired
     
-    image, pal = adafruit_imageload.load(filename, bitmap=displayio.Bitmap, palette=displayio.Palette)
-    pal.make_transparent(0)
+    
     if filename == "/registerjungle.bmp":
+        image = displayio.OnDiskBitmap(filename)
         print("Background")
-        tile_grids = displayio.TileGrid(image, pixel_shader=pal)
+        tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
         group.append(tile_grids)
         splash.append(group)
     else:
+        image, pal = adafruit_imageload.load(filename, bitmap=displayio.Bitmap, palette=displayio.Palette)
+        pal.make_transparent(0)
         print("otro file")
         tile_grids = [create_tile_grid(image, pal, x_pos, y_pos, tile_height=t_height, tile_width=t_width) for _ in range(4)]
         
@@ -197,10 +234,16 @@ bg_group = displayio.Group()  # Group for background sprites
 display.root_group = splash
 set_image(bg_group, "/registerjungle.bmp",0,0,0,0)
 
+# Add button to the display context
+splash.append(button)
+
 digimon_frames = [0, 1, 2, 3]
 current_frame = 0
 global_position = 40
 
 while True:
     move_main_screen()
+    if switch.value:
+        print("key presionado")
     time.sleep(0.2)  # Adjust this delay according to your animation speed
+
