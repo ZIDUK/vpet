@@ -6,11 +6,12 @@ import time
 from adafruit_st7735r import ST7735R
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_button import Button
-import random
+from random import randint
 import gc
 import adafruit_imageload
 
 gc.collect()
+gc.enable()
 start_mem = gc.mem_free()
 print("Point 1 Available memory: {} bytes".format(start_mem))
 
@@ -94,14 +95,15 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
         return  # we're done, no icon desired
     
     
-    if filename == "/registerjungle.bmp":
+    if filename == "/Background/registerjungle.bmp":
         image = displayio.OnDiskBitmap(filename)
         print("Background")
         tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
         group.append(tile_grids)
         splash.append(group)
     else:
-        image, pal = adafruit_imageload.load(filename, bitmap=displayio.Bitmap, palette=displayio.Palette)
+        image = displayio.OnDiskBitmap(open(filename, "rb"))
+        pal = image.pixel_shader
         pal.make_transparent(0)
         print("otro file")
         tile_grids = [create_tile_grid(image, pal, x_pos, y_pos, tile_height=t_height, tile_width=t_width) for _ in range(4)]
@@ -215,7 +217,7 @@ def move_digimon_victory():
     
 # Function main Screen Moves
 def move_main_screen():
-    random_number = random.randint(1, 5)  # Generate a random number between 1 and 5
+    random_number = randint(1, 5)  # Generate a random number between 1 and 5
 
     if random_number == 1:
         move_digimon_left()
@@ -245,7 +247,7 @@ View_Menu5 = displayio.Group()  # Group for idle sprites
 # ------------- Setup for Images ------------- #
 bg_group = displayio.Group()  # Group for background sprites
 display.root_group = splash
-set_image(bg_group, "/registerjungle.bmp",0,0,0,0)
+set_image(bg_group, "/Background/registerjungle.bmp",0,0,0,0)
 
 # Add all of the main buttons to the splash Group
 for b in buttons:
@@ -285,5 +287,6 @@ while True:
 
     print( "Point 4 Available memory: {} bytes".format(end_mem) )
     print( "Code section 3-4 used {} bytes".format(start_mem - end_mem) )
+
 
 
