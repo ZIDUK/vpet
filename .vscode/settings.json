@@ -8,7 +8,7 @@
     "python.analysis.extraPaths": [
         "",
         "/Users/jonathanpardofuentes/.vscode/extensions/joedevivo.vscode-circuitpython-0.2.0-darwin-arm64/stubs",
-        "/Users/jonathanpardofuentes/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20231228/adafruit-circuitpython-bundle-py-20231228/lib"
+        "/Users/jonathanpardofuentes/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20240123/adafruit-circuitpython-bundle-py-20240123/lib"
     ],
     "circuitpython.board.version": "8.2.9"
 }
