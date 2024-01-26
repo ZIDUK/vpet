@@ -2,10 +2,12 @@ import board
 import busio
 import displayio
 import terminalio
+import asyncio
 import time
 from adafruit_st7735r import ST7735R
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_button import Button
+from adafruit_debouncer import Debouncer
 from random import randint
 import gc
 import adafruit_imageload
@@ -29,6 +31,8 @@ pins = {
 }
 screen_width = 168
 screen_height = 132
+view_live = 0
+view_option = 0
 
 displayio.release_displays()
 
@@ -36,39 +40,223 @@ spi = busio.SPI(clock=pins["clk"], MOSI=pins["mosi"])
 display_bus = displayio.FourWire(spi, command=pins["dc"], chip_select=pins["cs"], reset=pins["reset"])
 display = ST7735R(display_bus, width=screen_width, height=screen_height, rotation=-90, bgr=False)
 
-switch = DigitalInOut(pins["key0"])
-switch.direction = Direction.INPUT
-switch.pull = Pull.DOWN
+switch0 = DigitalInOut(pins["key0"])
+switch0.direction = Direction.INPUT
+switch0.pull = Pull.UP
+button0 = Debouncer(switch0)
 
-# Button dimensions and colors
+switch1 = DigitalInOut(pins["key1"])
+switch1.direction = Direction.INPUT
+switch1.pull = Pull.UP
+button1 = Debouncer(switch1)
+
+
+switch2 = DigitalInOut(pins["key2"])
+switch2.direction = Direction.INPUT
+switch2.pull = Pull.UP
+button2 = Debouncer(switch2)
+'''
+switch3 = DigitalInOut(pins["key3"])
+switch3.direction = Direction.INPUT
+switch3.pull = Pull.UP
+'''
+
+# We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
 TAB_BUTTON_HEIGHT = 16
 TAB_BUTTON_WIDTH = int(screen_width / 6)
+
+# We want two big buttons at the bottom of the screen
 TAB_DN_BUTTON_HEIGHT = 16
 TAB_DN_BUTTON_WIDTH = int(screen_width / 6)
 TAB_DN_BUTTON_Y = 100
 
 # ---------- Display Buttons ------------- #
-# Create buttons using a loop
+# This group will make it easy for us to read a button press later.
 buttons = []
-button_labels = ["View 1", "View 2", "View 3", "View 4", "View 5"]
+statsButtons = []
 
-for i, label in enumerate(button_labels):
-    new_button = Button(
-        x=TAB_BUTTON_WIDTH * i,
-        y=0 if i < 3 else TAB_DN_BUTTON_Y,
-        width=TAB_BUTTON_WIDTH if i < 3 else TAB_DN_BUTTON_WIDTH,
-        height=TAB_BUTTON_HEIGHT if i < 3 else TAB_DN_BUTTON_HEIGHT,
-        label=label,
-        label_font=terminalio.FONT,
-        label_color=0xFF7E00,
-        fill_color=0x5C5B5C,
-        outline_color=0x767676,
-        selected_fill=0x1A1A1A,
-        selected_outline=0x2E2E2E,
-        selected_label=0x525252,
-    )
-    buttons.append(new_button)
+# Main User Interface Buttons
+button_view1 = Button(
+    x=0,  # Start at furthest left
+    y=0,  # Start at top
+    width=TAB_BUTTON_WIDTH,  # Calculated width
+    height=TAB_BUTTON_HEIGHT,  # Static height
+    label="View 1",
+    label_font=terminalio.FONT,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+buttons.append(button_view1)  # adding this button to the buttons group
+
+button_view2 = Button(
+    x=TAB_BUTTON_WIDTH,  # Start after width of a button
+    y=0,
+    width=TAB_BUTTON_WIDTH,
+    height=TAB_BUTTON_HEIGHT,
+    label="View 2",
+    label_font=terminalio.FONT,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+buttons.append(button_view2)  # adding this button to the buttons group
+
+button_view3 = Button(
+    x=TAB_BUTTON_WIDTH * 2,  # Start after width of 2 buttons
+    y=0,
+    width=TAB_BUTTON_WIDTH,
+    height=TAB_BUTTON_HEIGHT,
+    label="View 3",
+    label_font=terminalio.FONT,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+buttons.append(button_view3)  # adding this button to the buttons group
+
+button_view4 = Button(
+    x=TAB_BUTTON_WIDTH * 3,  # Start after width of 2 buttons
+    y=0,
+    width=TAB_BUTTON_WIDTH,
+    height=TAB_BUTTON_HEIGHT,
+    label="View 4",
+    label_font=terminalio.FONT,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+buttons.append(button_view4)  # adding this button to the buttons group
+
+button_view5 = Button(
+    x=TAB_BUTTON_WIDTH * 4,  # Start after width of 2 buttons
+    y=0,
+    width=TAB_BUTTON_WIDTH,
+    height=TAB_BUTTON_HEIGHT,
+    label="View 5",
+    label_font=terminalio.FONT,
+    label_color=0xFF7E00,
+    fill_color=0x5C5B5C,
+    outline_color=0x767676,
+    selected_fill=0x1A1A1A,
+    selected_outline=0x2E2E2E,
+    selected_label=0x525252,
+)
+buttons.append(button_view5)  # adding this button to the buttons group
+
+Stats1Button = Button(
+    x=15,  # Start after width of 2 buttons
+    y=20,
+    width=100,
+    height=50,
+    label="Opcion1",
+    label_font=terminalio.FONT,
+    label_color=0x0,
+    fill_color=None,
+    outline_color=0x767676,
+)
+statsButtons.append(Stats1Button)
+
+Stats2Button = Button(
+    x=15,  # Start after width of 2 buttons
+    y=75,
+    width=100,
+    height=50,
+    label="Opcion2",
+    label_font=terminalio.FONT,
+    label_color=0x0,
+    fill_color=None,
+    outline_color=0x767676,
+)
+statsButtons.append(Stats2Button)
+
+def switch_option(what_option):
+    global view_option
+    if what_option == 1:
+        Stats1Button.selected = True
+        Stats2Button.selected = False
+    elif what_option == 2:
+        Stats1Button.selected = False
+        Stats2Button.selected = True
+        
+    # Set global button state
+    view_option = what_option
+    print("Option {option_num:.0f} On".format(option_num=what_option))
+
+def switch_view(what_view):
+    global view_live
+    if what_view == 1:
+        button_view1.selected = True
+        button_view2.selected = False
+        button_view3.selected = False
+        button_view4.selected = False
+        button_view5.selected = False
+        layerVisibility("hide", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("show", splash, View_Menu1)
+    elif what_view == 2:
+        button_view1.selected = False
+        button_view2.selected = True
+        button_view3.selected = False
+        button_view4.selected = False
+        button_view5.selected = False
+        layerVisibility("hide", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("show", splash, View_Menu2)
+    elif what_view == 3:
+        button_view1.selected = False
+        button_view2.selected = False
+        button_view3.selected = True
+        button_view4.selected = False
+        button_view5.selected = False
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("show", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("hide", splash, View_Menu5)
+    elif what_view == 4:
+        button_view1.selected = False
+        button_view2.selected = False
+        button_view3.selected = False
+        button_view4.selected = True
+        button_view5.selected = False
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("show", splash, View_Menu4)
+        layerVisibility("hide", splash, View_Menu5)
+    else:
+        button_view1.selected = False
+        button_view2.selected = False
+        button_view3.selected = False
+        button_view4.selected = False
+        button_view5.selected = True
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("show", splash, View_Menu5)
+
+    # Set global button state
+    view_live = what_view
+    print("View {view_num:.0f} On".format(view_num=what_view))
 # ------------- Functions ------------- #
 # Set visibility of layer
 def layerVisibility(state, layer, target):
@@ -97,7 +285,6 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
     
     if filename == "/Background/registerjungle.bmp":
         image = displayio.OnDiskBitmap(filename)
-        print("Background")
         tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
         group.append(tile_grids)
         splash.append(group)
@@ -105,7 +292,6 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
         image = displayio.OnDiskBitmap(open(filename, "rb"))
         pal = image.pixel_shader
         pal.make_transparent(0)
-        print("otro file")
         tile_grids = [create_tile_grid(image, pal, x_pos, y_pos, tile_height=t_height, tile_width=t_width) for _ in range(4)]
         
         for grid in tile_grids:
@@ -141,7 +327,7 @@ def destroy_animation(group):
         pass
 
 # Function to move Digimon to the left
-def move_digimon_left():
+async def move_digimon_left():
     global current_frame, global_position
     
     digimon_walk_grids = set_image(walk_group, "/Greymon/dmonwalk.bmp", global_position, 35, 78, 62)
@@ -149,46 +335,53 @@ def move_digimon_left():
     
     for _ in range(35):  # Adjust the number of movements
         for grid in digimon_walk_grids:
+            
             if grid.x > 2:  # Adjust the limit to stop the movement
                 grid.x -= 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x
-        time.sleep(0.05)  # Adjust this delay according to your animation speed
+        time.sleep(0.025)  # Adjust this delay according to your animation speed
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
+               
     destroy_animation(walk_group)
 
 # Function to move Digimon to the right
-def move_digimon_right():
+async def move_digimon_right():
     global current_frame, global_position
     digimon_walk_grids = set_image(walk_group, "/Greymon/dmonwalk.bmp", global_position, 35, 78, 62)
     display_animation(walk_group)
     
     for _ in range(40):  # Adjust the number of movements
         for grid in digimon_walk_grids:
+            
             if grid.x < 70:  # Adjust the limit to stop the movement
                 grid.x += 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x 
-        time.sleep(0.05)  # Adjust this delay according to your animation speed
+        time.sleep(0.025)  # Adjust this delay according to your animation speed
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
+               
     destroy_animation(walk_group)
     
 # Function to move Digimon to Idle
-def move_digimon_idle():
+async def move_digimon_idle():
     global current_frame, global_position
     
     digimon_idle_grids = set_image(idle_group, "/Greymon/dmonidle.bmp", global_position, 35, 78, 64)
     display_animation(idle_group)
     
-    for _ in range(40):  # Adjust the number of movements
-        for grid in digimon_idle_grids:
+    for _ in range(4):  # Adjust the number of movements
+       
+        for grid in digimon_idle_grids:           
+            
             grid[0] = current_frame  # Display the current frame
-        time.sleep(0.05)  # Adjust this delay according to your animation speed
-        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames   
+    
+        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(idle_group)
     
 # Function to move Digimon to Idle
-def move_digimon_sleep():
+async def move_digimon_sleep():
     global current_frame, global_position
     
     digimon_sleep_grids = set_image(sleep_group, "/Greymon/dmonsleep.bmp", global_position, 60, 50, 64)
@@ -198,11 +391,11 @@ def move_digimon_sleep():
         for grid in digimon_sleep_grids:
             grid[0] = current_frame  # Display the current frame
         time.sleep(0.5)  # Adjust this delay according to your animation speed
-        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames   
+        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(sleep_group)
     
     # Function to move Digimon to Idle
-def move_digimon_victory():
+async def move_digimon_victory():
     global current_frame, global_position
     
     digimon_victory_grids = set_image(victory_group, "/Greymon/dmonvictory.bmp", global_position, 35, 78, 64)
@@ -211,25 +404,75 @@ def move_digimon_victory():
     for _ in range(40):  # Adjust the number of movements
         for grid in digimon_victory_grids:
             grid[0] = current_frame  # Display the current frame
-        time.sleep(0.05)  # Adjust this delay according to your animation speed
-        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames   
+        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(victory_group)
     
 # Function main Screen Moves
-def move_main_screen():
-    random_number = randint(1, 5)  # Generate a random number between 1 and 5
+async def move_main_screen():
+    while True:
+       
+        random_number = randint(1, 5)  # Generate a random number between 1 and 5
 
-    if random_number == 1:
-        move_digimon_left()
-    elif random_number == 2:
-        move_digimon_idle()
-    elif random_number == 3:
-        move_digimon_sleep()
-    elif random_number == 4:
-        move_digimon_victory()
-    else:
-        move_digimon_right()
-
+        if random_number == 1:
+           await move_digimon_left()
+        elif random_number == 2:
+           await move_digimon_idle()
+        elif random_number == 3:
+           await move_digimon_sleep()
+        elif random_number == 4:
+           await move_digimon_victory()
+        else:
+           await move_digimon_right()
+           
+async def key_manipulation(button0, button1, button2):
+    while True:
+        button0.update()  # Update button state
+        button1.update()
+        button2.update()
+        global view_live
+        global view_option
+        if button0.fell:  # Check if button was pressed and not already registered
+            print("hola")
+            view_live = view_live + 1
+            for i, b in enumerate(buttons): 
+                
+                if view_live == 1:
+                    switch_view(view_live)
+                    view_option=0
+                    break
+                if view_live == 2:
+                    switch_view(view_live)
+                    break
+                if view_live == 3:
+                    switch_view(view_live)
+                    break
+                if view_live == 4:
+                    switch_view(view_live)
+                    break
+                if view_live == 5:
+                    switch_view(view_live)
+                    view_live = 0
+                    break
+            
+                
+        if button1.fell:  # Check if button was pressed and not already registered
+            print("option {view_num:.0f} ".format(view_num=view_option))
+            view_option = view_option + 1
+            for i, b in enumerate(statsButtons):
+                if view_live == 1:
+                        
+                    if view_option == 1:
+                        switch_option(view_option)                
+                        break
+                    if view_option == 2:
+                        switch_option(view_option)
+                        view_option = 0
+                        break
+        if button2.fell:
+            print("hola")
+            await asyncio.sleep(1)
+            
 # ------------- Display Groups ------------- #
 splash = displayio.Group()  # The Main Display Group
 idle_group = displayio.Group()  # Group for idle sprites
@@ -249,18 +492,31 @@ bg_group = displayio.Group()  # Group for background sprites
 display.root_group = splash
 set_image(bg_group, "/Background/registerjungle.bmp",0,0,0,0)
 
+
+
 # Add all of the main buttons to the splash Group
 for b in buttons:
     splash.append(b)
+    
+for b in statsButtons:
+    View_Menu1.append(b)
 
 digimon_frames = [0, 1, 2, 3]
 current_frame = 0
 global_position = 40
 
 # Set veriables and startup states
-#button_view1.selected = True
-#button_view2.selected = False
-#button_view3.selected = False
+button_view1.selected = False
+button_view2.selected = False
+button_view3.selected = False
+button_view4.selected = False
+button_view5.selected = False
+
+layerVisibility("hide", splash, View_Menu1)
+layerVisibility("hide", splash, View_Menu2)
+layerVisibility("hide", splash, View_Menu3)
+layerVisibility("hide", splash, View_Menu4)
+layerVisibility("hide", splash, View_Menu5)
 
 
 gc.collect()
@@ -269,24 +525,16 @@ end_mem = gc.mem_free()
 print("Point 2 Available memory: {} bytes".format(end_mem))
 print("Code section 1-2 used {} bytes".format(start_mem - end_mem))
 
-while True:
-    gc.collect()
-    start_mem = gc.mem_free()
-    print( "Point 3 Available memory: {} bytes".format(start_mem) )
-
-
-
-    move_main_screen()
-    if switch.value:
-        print("key presionado")
-    time.sleep(0.2)  # Adjust this delay according to your animation speed
+async def main():
+    
+    dmon_task = asyncio.create_task(move_main_screen())
+    keys_task = asyncio.create_task(key_manipulation(button0, button1, button2))
+ 
+    await asyncio.gather(keys_task,dmon_task)
     
     
-    gc.collect()
-    end_mem = gc.mem_free()
-
-    print( "Point 4 Available memory: {} bytes".format(end_mem) )
-    print( "Code section 3-4 used {} bytes".format(start_mem - end_mem) )
+       
+asyncio.run(main())
 
 
 
