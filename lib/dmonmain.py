@@ -33,7 +33,6 @@ screen_width = 168
 screen_height = 132
 view_live = 0
 view_option = 0
-
 displayio.release_displays()
 
 spi = busio.SPI(clock=pins["clk"], MOSI=pins["mosi"])
@@ -340,7 +339,7 @@ async def move_digimon_left():
                 grid.x -= 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x
-        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        await asyncio.sleep_ms(25)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
                
     destroy_animation(walk_group)
@@ -358,7 +357,7 @@ async def move_digimon_right():
                 grid.x += 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x 
-        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        await asyncio.sleep_ms(25)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
                
     destroy_animation(walk_group)
@@ -372,11 +371,9 @@ async def move_digimon_idle():
     
     for _ in range(4):  # Adjust the number of movements
        
-        for grid in digimon_idle_grids:           
-            
+        for grid in digimon_idle_grids:               
             grid[0] = current_frame  # Display the current frame
-    
-        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        await asyncio.sleep_ms(10)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(idle_group)
     
@@ -390,7 +387,7 @@ async def move_digimon_sleep():
     for _ in range(40):  # Adjust the number of movements
         for grid in digimon_sleep_grids:
             grid[0] = current_frame  # Display the current frame
-        time.sleep(0.5)  # Adjust this delay according to your animation speed
+        await asyncio.sleep_ms(100)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(sleep_group)
     
@@ -404,36 +401,47 @@ async def move_digimon_victory():
     for _ in range(40):  # Adjust the number of movements
         for grid in digimon_victory_grids:
             grid[0] = current_frame  # Display the current frame
-        time.sleep(0.025)  # Adjust this delay according to your animation speed
+        await asyncio.sleep_ms(10)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(victory_group)
     
 # Function main Screen Moves
 async def move_main_screen():
     while True:
-       
+     
         random_number = randint(1, 5)  # Generate a random number between 1 and 5
 
         if random_number == 1:
            await move_digimon_left()
+          
         elif random_number == 2:
            await move_digimon_idle()
+          
         elif random_number == 3:
            await move_digimon_sleep()
+           
         elif random_number == 4:
            await move_digimon_victory()
+           
         else:
            await move_digimon_right()
            
+ 
+
+        
 async def key_manipulation(button0, button1, button2):
+    print("entrando a botones")
+    flag = True
     while True:
-        button0.update()  # Update button state
+        button0.update()
         button1.update()
         button2.update()
         global view_live
         global view_option
-        if button0.fell:  # Check if button was pressed and not already registered
-            print("hola")
+            
+        if button0.fell:
+            print("button1")
+            flag = False
             view_live = view_live + 1
             for i, b in enumerate(buttons): 
                 
@@ -454,7 +462,6 @@ async def key_manipulation(button0, button1, button2):
                     switch_view(view_live)
                     view_live = 0
                     break
-            
                 
         if button1.fell:  # Check if button was pressed and not already registered
             print("option {view_num:.0f} ".format(view_num=view_option))
@@ -469,9 +476,26 @@ async def key_manipulation(button0, button1, button2):
                         switch_option(view_option)
                         view_option = 0
                         break
+                    
         if button2.fell:
-            print("hola")
-            await asyncio.sleep(1)
+            view_live = 0
+            button_view1.selected = False
+            button_view2.selected = False
+            button_view3.selected = False
+            button_view4.selected = False
+            button_view5.selected = False
+
+            layerVisibility("hide", splash, View_Menu1)
+            layerVisibility("hide", splash, View_Menu2)
+            layerVisibility("hide", splash, View_Menu3)
+            layerVisibility("hide", splash, View_Menu4)
+            layerVisibility("hide", splash, View_Menu5)
+            
+            flag = True
+            
+        if flag == True:
+            await asyncio.sleep_ms(0)
+    
             
 # ------------- Display Groups ------------- #
 splash = displayio.Group()  # The Main Display Group
@@ -527,13 +551,10 @@ print("Code section 1-2 used {} bytes".format(start_mem - end_mem))
 
 async def main():
     
-    dmon_task = asyncio.create_task(move_main_screen())
-    keys_task = asyncio.create_task(key_manipulation(button0, button1, button2))
- 
-    await asyncio.gather(keys_task,dmon_task)
-    
-    
-       
+    asyncio.create_task(move_main_screen())
+    while True:
+        await key_manipulation(button0, button1, button2)
+
 asyncio.run(main())
 
 
