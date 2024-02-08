@@ -13,6 +13,7 @@ import gc
 import adafruit_imageload
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text.label import Label
+from adafruit_button.sprite_button import SpriteButton
 
 gc.collect()
 gc.enable()
@@ -67,9 +68,12 @@ switch3.pull = Pull.UP
 
 # ---------- Display Screens View 1 ------------- #
 
+
 rect1 = Rect(0, 15, 168, 115, fill=0x00FF00)
 rect2 = Rect(0, 15, 168, 115, fill=0xFFFF00)
 rect3 = Rect(0, 15, 168, 115, fill=0x00FFFF)
+rect4 = Rect(0, 0, 168, 18, fill=0x8fa68c)
+rect5 = Rect(0, 114, 168, 18, fill=0x8fa68c)
 
 my_label = Label(terminalio.FONT, text="My Label Text", color=0x000000)
 my_label.x = 20
@@ -77,99 +81,117 @@ my_label.y = 20
 
 # We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
-TAB_BUTTON_HEIGHT = 16
-TAB_BUTTON_WIDTH = int(screen_width / 6)
+TAB_BUTTON_HEIGHT = 18
+TAB_BUTTON_WIDTH = int(screen_width / 5.5)
 
 # We want two big buttons at the bottom of the screen
-TAB_DN_BUTTON_HEIGHT = 16
-TAB_DN_BUTTON_WIDTH = int(screen_width / 6)
-TAB_DN_BUTTON_Y = 100
+TAB_DN_BUTTON_Y = 114
+TAB_DN_BUTTON_HEIGHT = 18
+TAB_DN_BUTTON_WIDTH = int(screen_width / 5.5)
+
 
 # ---------- Display Buttons ------------- #
 # This group will make it easy for us to read a button press later.
 buttons = []
 statsButtons = []
 
+
 # Main User Interface Buttons
-button_view1 = Button(
+btn_stats_view = SpriteButton(
     x=0,  # Start at furthest left
     y=0,  # Start at top
     width=TAB_BUTTON_WIDTH,  # Calculated width
     height=TAB_BUTTON_HEIGHT,  # Static height
-    label="View 1",
     label_font=terminalio.FONT,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    bmp_path="icons/statb2.bmp",
+    selected_bmp_path="icons/statb1.bmp",
+    transparent_index=0,
 )
-buttons.append(button_view1)  # adding this button to the buttons group
+buttons.append(btn_stats_view)  # adding this button to the buttons group
 
-button_view2 = Button(
+btn_eat_view = SpriteButton(
     x=TAB_BUTTON_WIDTH,  # Start after width of a button
     y=0,
-    width=TAB_BUTTON_WIDTH,
-    height=TAB_BUTTON_HEIGHT,
-    label="View 2",
+    width=TAB_BUTTON_WIDTH,  # Calculated width
+    height=TAB_BUTTON_HEIGHT,  # Static height
     label_font=terminalio.FONT,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    bmp_path="icons/eat2.bmp",
+    selected_bmp_path="icons/eat1.bmp",
+    transparent_index=0,
 )
-buttons.append(button_view2)  # adding this button to the buttons group
+buttons.append(btn_eat_view)  # adding this button to the buttons group
 
-button_view3 = Button(
+btn_training_view = SpriteButton(
     x=TAB_BUTTON_WIDTH * 2,  # Start after width of 2 buttons
     y=0,
-    width=TAB_BUTTON_WIDTH,
-    height=TAB_BUTTON_HEIGHT,
-    label="View 3",
+    width=TAB_BUTTON_WIDTH,  # Calculated width
+    height=TAB_BUTTON_HEIGHT,  # Static height
     label_font=terminalio.FONT,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    bmp_path="icons/training2.bmp",
+    selected_bmp_path="icons/training1.bmp",
+    transparent_index=0,
 )
-buttons.append(button_view3)  # adding this button to the buttons group
+buttons.append(btn_training_view)  # adding this button to the buttons group
 
-button_view4 = Button(
+btn_battle_view = SpriteButton(
     x=TAB_BUTTON_WIDTH * 3,  # Start after width of 2 buttons
     y=0,
-    width=TAB_BUTTON_WIDTH,
-    height=TAB_BUTTON_HEIGHT,
-    label="View 4",
+    width=TAB_BUTTON_WIDTH,  # Calculated width
+    height=TAB_BUTTON_HEIGHT,  # Static height
     label_font=terminalio.FONT,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    bmp_path="icons/battle2.bmp",
+    selected_bmp_path="icons/battle1.bmp",
+    transparent_index=0,
 )
-buttons.append(button_view4)  # adding this button to the buttons group
+buttons.append(btn_battle_view)  # adding this button to the buttons group
 
-button_view5 = Button(
-    x=TAB_BUTTON_WIDTH * 4,  # Start after width of 2 buttons
-    y=0,
-    width=TAB_BUTTON_WIDTH,
-    height=TAB_BUTTON_HEIGHT,
-    label="View 5",
+btn_poop_view = SpriteButton(
+    x=0,  # Start after width of 2 buttons
+    y=TAB_DN_BUTTON_Y,
+    width=TAB_DN_BUTTON_WIDTH,  # Calculated width
+    height=TAB_DN_BUTTON_HEIGHT,  # Static height
     label_font=terminalio.FONT,
-    label_color=0xFF7E00,
-    fill_color=0x5C5B5C,
-    outline_color=0x767676,
-    selected_fill=0x1A1A1A,
-    selected_outline=0x2E2E2E,
-    selected_label=0x525252,
+    bmp_path="icons/poop2.bmp",
+    selected_bmp_path="icons/poop1.bmp",
+    transparent_index=0,
 )
-buttons.append(button_view5)  # adding this button to the buttons group
+buttons.append(btn_poop_view)  # adding this button to the buttons group
+
+btn_light_view = SpriteButton(
+    x=TAB_DN_BUTTON_WIDTH,  # Start after width of 2 buttons
+    y=TAB_DN_BUTTON_Y,
+    width=TAB_DN_BUTTON_WIDTH,  # Calculated width
+    height=TAB_DN_BUTTON_HEIGHT,  # Static height
+    label_font=terminalio.FONT,
+    bmp_path="icons/light2.bmp",
+    selected_bmp_path="icons/light1.bmp",
+    transparent_index=0,
+)
+buttons.append(btn_light_view)  # adding this button to the buttons group
+
+btn_band_view = SpriteButton(
+    x=TAB_DN_BUTTON_WIDTH * 2,  # Start after width of 2 buttons
+    y=TAB_DN_BUTTON_Y,
+    width=TAB_DN_BUTTON_WIDTH,  # Calculated width
+    height=TAB_DN_BUTTON_HEIGHT,  # Static height
+    label_font=terminalio.FONT,
+    bmp_path="icons/band2.bmp",
+    selected_bmp_path="icons/band1.bmp",
+    transparent_index=0,
+)
+buttons.append(btn_band_view)  # adding this button to the buttons group
+
+btn_callout_view = SpriteButton(
+    x=TAB_DN_BUTTON_WIDTH * 3,  # Start after width of 2 buttons
+    y=TAB_DN_BUTTON_Y,
+    width=TAB_DN_BUTTON_WIDTH,  # Calculated width
+    height=TAB_DN_BUTTON_HEIGHT,  # Static height
+    label_font=terminalio.FONT,
+    bmp_path="icons/call2.bmp",
+    selected_bmp_path="icons/call1.bmp",
+    transparent_index=0,
+)
+buttons.append(btn_callout_view)  # adding this button to the buttons group
 
 Stats1Button = Button(
     x=15,  # Start after width of 2 buttons
@@ -233,60 +255,142 @@ def switch_option(what_option):
 def switch_view(what_view):
     global view_live
     if what_view == 1:
-        button_view1.selected = True
-        button_view2.selected = False
-        button_view3.selected = False
-        button_view4.selected = False
-        button_view5.selected = False
-        layerVisibility("hide", splash, View_Menu5)
+        btn_stats_view.selected = True
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
+        
+        layerVisibility("show", splash, View_Menu1)
         layerVisibility("hide", splash, View_Menu2)
         layerVisibility("hide", splash, View_Menu3)
         layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("show", splash, View_Menu1)
-    elif what_view == 2:
-        button_view1.selected = False
-        button_view2.selected = True
-        button_view3.selected = False
-        button_view4.selected = False
-        button_view5.selected = False
         layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    elif what_view == 2:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = True
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
         layerVisibility("hide", splash, View_Menu1)
         layerVisibility("show", splash, View_Menu2)
-    elif what_view == 3:
-        button_view1.selected = False
-        button_view2.selected = False
-        button_view3.selected = True
-        button_view4.selected = False
-        button_view5.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("show", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
         layerVisibility("hide", splash, View_Menu4)
         layerVisibility("hide", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    elif what_view == 3:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = True
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("show", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("hide", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
     elif what_view == 4:
-        button_view1.selected = False
-        button_view2.selected = False
-        button_view3.selected = False
-        button_view4.selected = True
-        button_view5.selected = False
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = True
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
         layerVisibility("hide", splash, View_Menu1)
         layerVisibility("hide", splash, View_Menu2)
         layerVisibility("hide", splash, View_Menu3)
         layerVisibility("show", splash, View_Menu4)
         layerVisibility("hide", splash, View_Menu5)
-    else:
-        button_view1.selected = False
-        button_view2.selected = False
-        button_view3.selected = False
-        button_view4.selected = False
-        button_view5.selected = True
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    elif what_view == 5:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = True
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
         layerVisibility("hide", splash, View_Menu1)
         layerVisibility("hide", splash, View_Menu2)
         layerVisibility("hide", splash, View_Menu3)
         layerVisibility("hide", splash, View_Menu4)
         layerVisibility("show", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    elif what_view == 6:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = True        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = False
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("show", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    elif what_view == 7:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = True        
+        btn_callout_view.selected = False
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("show", splash, View_Menu5)
+        layerVisibility("hide", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
+    else:
+        btn_stats_view.selected = False
+        btn_eat_view.selected = False
+        btn_training_view.selected = False
+        btn_battle_view.selected = False
+        btn_poop_view.selected = False
+        btn_light_view.selected = False        
+        btn_band_view.selected = False        
+        btn_callout_view.selected = True
+        layerVisibility("hide", splash, View_Menu1)
+        layerVisibility("hide", splash, View_Menu2)
+        layerVisibility("hide", splash, View_Menu3)
+        layerVisibility("hide", splash, View_Menu4)
+        layerVisibility("hide", splash, View_Menu5)
+        layerVisibility("show", splash, View_Menu6)
+        layerVisibility("hide", splash, View_Menu7)
+        layerVisibility("hide", splash, View_Menu8)
 
     # Set global button state
     view_live = what_view
@@ -321,6 +425,8 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
         tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
         group.append(tile_grids)
         splash.append(group)
+        splash.append(rect4)
+        splash.append(rect5)
     else:
         image = displayio.OnDiskBitmap(open(filename, "rb"))
         pal = image.pixel_shader
@@ -373,14 +479,14 @@ async def move_digimon_left():
     digimon_walk_grids = set_image(walk_group, "/Greymon/dmonwalk.bmp", global_position, 35, 78, 62)
     display_animation(walk_group)
     
-    for _ in range(35):  # Adjust the number of movements
+    for _ in range(10):  # Adjust the number of movements
         for grid in digimon_walk_grids:
             
             if grid.x > 2:  # Adjust the limit to stop the movement
                 grid.x -= 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x
-        await asyncio.sleep_ms(25)
+        await asyncio.sleep_ms(250)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
                
     destroy_animation(walk_group)
@@ -391,14 +497,14 @@ async def move_digimon_right():
     digimon_walk_grids = set_image(walk_group, "/Greymon/dmonwalk.bmp", global_position, 35, 78, 62)
     display_animation(walk_group)
     
-    for _ in range(40):  # Adjust the number of movements
+    for _ in range(10):  # Adjust the number of movements
         for grid in digimon_walk_grids:
             
             if grid.x < 70:  # Adjust the limit to stop the movement
                 grid.x += 3  # Adjust the movement speed
                 grid[0] = current_frame  # Display the current frame
                 global_position = grid.x 
-        await asyncio.sleep_ms(25)
+        await asyncio.sleep_ms(250)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
                
     destroy_animation(walk_group)
@@ -414,7 +520,7 @@ async def move_digimon_idle():
        
         for grid in digimon_idle_grids:               
             grid[0] = current_frame  # Display the current frame
-        await asyncio.sleep_ms(10)
+        await asyncio.sleep_ms(250)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(idle_group)
     
@@ -439,10 +545,10 @@ async def move_digimon_victory():
     digimon_victory_grids = set_image(victory_group, "/Greymon/dmonvictory.bmp", global_position, 35, 78, 64)
     display_animation(victory_group)
     
-    for _ in range(40):  # Adjust the number of movements
+    for _ in range(4):  # Adjust the number of movements
         for grid in digimon_victory_grids:
             grid[0] = current_frame  # Display the current frame
-        await asyncio.sleep_ms(10)
+        await asyncio.sleep_ms(250)
         current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
     destroy_animation(victory_group)
     
@@ -494,6 +600,15 @@ async def key_manipulation(button0, button1, button2):
                     break
                 if view_live == 5:
                     switch_view(view_live)
+                    break
+                if view_live == 6:
+                    switch_view(view_live)
+                    break
+                if view_live == 7:
+                    switch_view(view_live)
+                    break
+                if view_live == 8:
+                    switch_view(view_live)
                     view_live = 0
                     break
                 
@@ -527,17 +642,23 @@ async def key_manipulation(button0, button1, button2):
                     
         if button2.fell:
             view_live = 0
-            button_view1.selected = False
-            button_view2.selected = False
-            button_view3.selected = False
-            button_view4.selected = False
-            button_view5.selected = False
+            btn_stats_view.selected = False
+            btn_eat_view.selected = False
+            btn_training_view.selected = False
+            btn_light_view.selected = False
+            btn_poop_view.selected = False
+            btn_band_view.selected = False
+            btn_battle_view.selected = False
+            btn_callout_view.selected = False
 
             layerVisibility("hide", splash, View_Menu1)
             layerVisibility("hide", splash, View_Menu2)
             layerVisibility("hide", splash, View_Menu3)
             layerVisibility("hide", splash, View_Menu4)
             layerVisibility("hide", splash, View_Menu5)
+            layerVisibility("hide", splash, View_Menu6)
+            layerVisibility("hide", splash, View_Menu7)
+            layerVisibility("hide", splash, View_Menu8)
             
             flag = True
             
@@ -547,6 +668,7 @@ async def key_manipulation(button0, button1, button2):
             
 # ------------- Display Groups ------------- #
 splash = displayio.Group()  # The Main Display Group
+
 idle_group = displayio.Group()  # Group for idle sprites
 walk_group = displayio.Group()  # Group for walk sprites
 sleep_group = displayio.Group()  # Group for sleep sprites
@@ -568,13 +690,15 @@ View_Menu2 = displayio.Group()  # Group for idle sprites
 View_Menu3 = displayio.Group()  # Group for idle sprites
 View_Menu4 = displayio.Group()  # Group for idle sprites
 View_Menu5 = displayio.Group()  # Group for idle sprites
+View_Menu6 = displayio.Group()  # Group for idle sprites
+View_Menu7 = displayio.Group()  # Group for idle sprites
+View_Menu8 = displayio.Group()  # Group for idle sprites
 
 
 # ------------- Setup for Images ------------- #
 bg_group = displayio.Group()  # Group for background sprites
 display.root_group = splash
 set_image(bg_group, "/Background/registerjungle.bmp",0,0,0,0)
-
 
 
 # Add all of the main buttons to the splash Group
@@ -590,18 +714,23 @@ current_frame = 0
 global_position = 40
 
 # Set veriables and startup states
-button_view1.selected = False
-button_view2.selected = False
-button_view3.selected = False
-button_view4.selected = False
-button_view5.selected = False
+btn_stats_view.selected = False
+btn_eat_view.selected = False
+btn_training_view.selected = False
+btn_light_view.selected = False
+btn_poop_view.selected = False
+btn_band_view.selected = False
+btn_battle_view.selected = False
+btn_callout_view.selected = False
 
 layerVisibility("hide", splash, View_Menu1)
 layerVisibility("hide", splash, View_Menu2)
 layerVisibility("hide", splash, View_Menu3)
 layerVisibility("hide", splash, View_Menu4)
 layerVisibility("hide", splash, View_Menu5)
-
+layerVisibility("hide", splash, View_Menu6)
+layerVisibility("hide", splash, View_Menu7)
+layerVisibility("hide", splash, View_Menu8)
 
 gc.collect()
 end_mem = gc.mem_free()
