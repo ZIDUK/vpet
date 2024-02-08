@@ -11,6 +11,8 @@ from adafruit_debouncer import Debouncer
 from random import randint
 import gc
 import adafruit_imageload
+from adafruit_display_shapes.rect import Rect
+from adafruit_display_text.label import Label
 
 gc.collect()
 gc.enable()
@@ -33,11 +35,14 @@ screen_width = 168
 screen_height = 132
 view_live = 0
 view_option = 0
+view_screen = 0
 displayio.release_displays()
 
 spi = busio.SPI(clock=pins["clk"], MOSI=pins["mosi"])
 display_bus = displayio.FourWire(spi, command=pins["dc"], chip_select=pins["cs"], reset=pins["reset"])
 display = ST7735R(display_bus, width=screen_width, height=screen_height, rotation=-90, bgr=False)
+
+
 
 switch0 = DigitalInOut(pins["key0"])
 switch0.direction = Direction.INPUT
@@ -59,6 +64,16 @@ switch3 = DigitalInOut(pins["key3"])
 switch3.direction = Direction.INPUT
 switch3.pull = Pull.UP
 '''
+
+# ---------- Display Screens View 1 ------------- #
+
+rect1 = Rect(0, 15, 168, 115, fill=0x00FF00)
+rect2 = Rect(0, 15, 168, 115, fill=0xFFFF00)
+rect3 = Rect(0, 15, 168, 115, fill=0x00FFFF)
+
+my_label = Label(terminalio.FONT, text="My Label Text", color=0x000000)
+my_label.x = 20
+my_label.y = 20
 
 # We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
@@ -182,6 +197,26 @@ Stats2Button = Button(
 )
 statsButtons.append(Stats2Button)
 
+def switch_stats_screen(what_screen):
+    print("entrando a screens")
+    global view_screen
+    if what_screen == 1:
+        layerVisibility("show", View_Menu1, view1_screen1_group)
+        layerVisibility("hide", View_Menu1, view1_screen2_group)
+        layerVisibility("hide", View_Menu1, view1_screen3_group)
+    elif what_screen == 2:
+        layerVisibility("hide", View_Menu1, view1_screen1_group)
+        layerVisibility("show", View_Menu1, view1_screen2_group)
+        layerVisibility("hide", View_Menu1, view1_screen3_group)
+    elif what_screen == 3:
+        layerVisibility("hide", View_Menu1, view1_screen1_group)
+        layerVisibility("hide", View_Menu1, view1_screen2_group)
+        layerVisibility("show", View_Menu1, view1_screen3_group)
+    # Set global button state
+    view_screen = what_screen
+    print("screen {option_num:.0f} On".format(option_num=what_screen))
+
+
 def switch_option(what_option):
     global view_option
     if what_option == 1:
@@ -280,8 +315,7 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
 
     if not filename:
         return  # we're done, no icon desired
-    
-    
+     
     if filename == "/Background/registerjungle.bmp":
         image = displayio.OnDiskBitmap(filename)
         tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
@@ -308,6 +342,13 @@ def create_tile_grid(bitmap, palette, x_pos, y_pos, width=1, height=1, tile_heig
 def display_bg():
     display.root_group = splash
 
+def display_screens(screen):
+    try:
+        View_Menu1.append(screen)
+          
+    except ValueError:
+        pass
+ 
 def display_animation(group):
     try:
         splash.append(group)
@@ -412,22 +453,15 @@ async def move_main_screen():
         random_number = randint(1, 5)  # Generate a random number between 1 and 5
 
         if random_number == 1:
-           await move_digimon_left()
-          
+           await move_digimon_left()       
         elif random_number == 2:
-           await move_digimon_idle()
-          
+           await move_digimon_idle()  
         elif random_number == 3:
-           await move_digimon_sleep()
-           
+           await move_digimon_sleep()  
         elif random_number == 4:
-           await move_digimon_victory()
-           
+           await move_digimon_victory()          
         else:
            await move_digimon_right()
-           
- 
-
         
 async def key_manipulation(button0, button1, button2):
     print("entrando a botones")
@@ -438,13 +472,13 @@ async def key_manipulation(button0, button1, button2):
         button2.update()
         global view_live
         global view_option
+        global view_screen
             
         if button0.fell:
             print("button1")
             flag = False
             view_live = view_live + 1
-            for i, b in enumerate(buttons): 
-                
+            for i, b in enumerate(buttons):                 
                 if view_live == 1:
                     switch_view(view_live)
                     view_option=0
@@ -465,17 +499,31 @@ async def key_manipulation(button0, button1, button2):
                 
         if button1.fell:  # Check if button was pressed and not already registered
             print("option {view_num:.0f} ".format(view_num=view_option))
-            view_option = view_option + 1
-            for i, b in enumerate(statsButtons):
-                if view_live == 1:
-                        
-                    if view_option == 1:
-                        switch_option(view_option)                
-                        break
-                    if view_option == 2:
-                        switch_option(view_option)
-                        view_option = 0
-                        break
+            view_option = view_option + 1     
+                
+            if view_live == 1:
+                view_screen = view_screen + 1
+                if view_screen == 1:
+                    switch_stats_screen(view_screen)
+                    
+                if view_screen == 2:
+                    switch_stats_screen(view_screen)
+                    
+                if view_screen == 3:
+                    switch_stats_screen(view_screen)
+                    view_screen = 0
+                    
+    
+            elif view_live == 2:
+                    
+                for i, b in enumerate(statsButtons):
+                        if view_option == 1:
+                            switch_option(view_option)                
+                            break
+                        if view_option == 2:
+                            switch_option(view_option)
+                            view_option = 0
+                            break
                     
         if button2.fell:
             view_live = 0
@@ -504,12 +552,23 @@ walk_group = displayio.Group()  # Group for walk sprites
 sleep_group = displayio.Group()  # Group for sleep sprites
 victory_group = displayio.Group()  # Group for victory sprites
 
+view1_screen1_group = displayio.Group()
+view1_screen2_group = displayio.Group()
+view1_screen3_group = displayio.Group()
+
+view1_screen1_group.append(rect1)
+view1_screen1_group.append(my_label)
+
+view1_screen3_group.append(rect3)
+view1_screen2_group.append(rect2)
+
 # ------------- Display Menus ------------- #
 View_Menu1 = displayio.Group()  # The Main Display Group
 View_Menu2 = displayio.Group()  # Group for idle sprites
 View_Menu3 = displayio.Group()  # Group for idle sprites
 View_Menu4 = displayio.Group()  # Group for idle sprites
 View_Menu5 = displayio.Group()  # Group for idle sprites
+
 
 # ------------- Setup for Images ------------- #
 bg_group = displayio.Group()  # Group for background sprites
@@ -523,7 +582,8 @@ for b in buttons:
     splash.append(b)
     
 for b in statsButtons:
-    View_Menu1.append(b)
+    View_Menu2.append(b)
+
 
 digimon_frames = [0, 1, 2, 3]
 current_frame = 0
