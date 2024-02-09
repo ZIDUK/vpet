@@ -69,11 +69,11 @@ switch3.pull = Pull.UP
 # ---------- Display Screens View 1 ------------- #
 
 
-rect1 = Rect(0, 15, 168, 115, fill=0x00FF00)
-rect2 = Rect(0, 15, 168, 115, fill=0xFFFF00)
-rect3 = Rect(0, 15, 168, 115, fill=0x00FFFF)
-rect4 = Rect(0, 0, 168, 18, fill=0x8fa68c)
-rect5 = Rect(0, 114, 168, 18, fill=0x8fa68c)
+rect1 = Rect(0, 15, 168, 115, fill=0x8fa68c)
+rect2 = Rect(0, 15, 168, 115, fill=0x8fa68c)
+rect3 = Rect(0, 15, 168, 115, fill=0x8fa68c)
+topBar = Rect(0, 0, 168, 18, fill=0x8fa68c)
+bottomBar = Rect(0, 114, 168, 18, fill=0x8fa68c)
 
 my_label = Label(terminalio.FONT, text="My Label Text", color=0x000000)
 my_label.x = 20
@@ -223,17 +223,17 @@ def switch_stats_screen(what_screen):
     print("entrando a screens")
     global view_screen
     if what_screen == 1:
-        layerVisibility("show", View_Menu1, view1_screen1_group)
-        layerVisibility("hide", View_Menu1, view1_screen2_group)
-        layerVisibility("hide", View_Menu1, view1_screen3_group)
+        layerVisibility("show", View_Menu1, v_stats_screen1_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen2_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen3_group)
     elif what_screen == 2:
-        layerVisibility("hide", View_Menu1, view1_screen1_group)
-        layerVisibility("show", View_Menu1, view1_screen2_group)
-        layerVisibility("hide", View_Menu1, view1_screen3_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen1_group)
+        layerVisibility("show", View_Menu1, v_stats_screen2_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen3_group)
     elif what_screen == 3:
-        layerVisibility("hide", View_Menu1, view1_screen1_group)
-        layerVisibility("hide", View_Menu1, view1_screen2_group)
-        layerVisibility("show", View_Menu1, view1_screen3_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen1_group)
+        layerVisibility("hide", View_Menu1, v_stats_screen2_group)
+        layerVisibility("show", View_Menu1, v_stats_screen3_group)
     # Set global button state
     view_screen = what_screen
     print("screen {option_num:.0f} On".format(option_num=what_screen))
@@ -407,6 +407,13 @@ def layerVisibility(state, layer, target):
     except ValueError:
         pass
 
+
+def set_stats_screens():
+    v_stats_screen1_group.append(rect1)
+    v_stats_screen1_group.append(my_label)
+    v_stats_screen3_group.append(rect3)
+    v_stats_screen2_group.append(rect2)
+    
 # This will handle switching Images and Icons
 def set_image(group, filename, x_pos, y_pos, t_height, t_width):
     """Set the image file for a given goup for display.
@@ -425,8 +432,8 @@ def set_image(group, filename, x_pos, y_pos, t_height, t_width):
         tile_grids = displayio.TileGrid(image, pixel_shader=image.pixel_shader)
         group.append(tile_grids)
         splash.append(group)
-        splash.append(rect4)
-        splash.append(rect5)
+        splash.append(topBar)
+        splash.append(bottomBar)
     else:
         image = displayio.OnDiskBitmap(open(filename, "rb"))
         pal = image.pixel_shader
@@ -674,16 +681,12 @@ walk_group = displayio.Group()  # Group for walk sprites
 sleep_group = displayio.Group()  # Group for sleep sprites
 victory_group = displayio.Group()  # Group for victory sprites
 
-view1_screen1_group = displayio.Group()
-view1_screen2_group = displayio.Group()
-view1_screen3_group = displayio.Group()
+v_stats_screen1_group = displayio.Group()
+v_stats_screen2_group = displayio.Group()
+v_stats_screen3_group = displayio.Group()
 
-view1_screen1_group.append(rect1)
-view1_screen1_group.append(my_label)
 
-view1_screen3_group.append(rect3)
-view1_screen2_group.append(rect2)
-
+set_stats_screens()
 # ------------- Display Menus ------------- #
 View_Menu1 = displayio.Group()  # The Main Display Group
 View_Menu2 = displayio.Group()  # Group for idle sprites
