@@ -69,15 +69,38 @@ switch3.pull = Pull.UP
 # ---------- Display Screens View 1 ------------- #
 
 
-rect1 = Rect(0, 15, 168, 115, fill=0x8fa68c)
-rect2 = Rect(0, 15, 168, 115, fill=0x8fa68c)
-rect3 = Rect(0, 15, 168, 115, fill=0x8fa68c)
+status_Screen1 = Rect(0, 15, 168, 100, fill=0x8fa68c)
+status_Screen2 = Rect(0, 15, 168, 100, fill=0x8fa68c)
+status_Screen3 = Rect(0, 15, 168, 100, fill=0x8fa68c)
+eating_Screen = Rect(0, 15, 168, 100, fill=0x8fa68c)
+
+
 topBar = Rect(0, 0, 168, 18, fill=0x8fa68c)
 bottomBar = Rect(0, 114, 168, 18, fill=0x8fa68c)
 
-my_label = Label(terminalio.FONT, text="My Label Text", color=0x000000)
-my_label.x = 20
-my_label.y = 20
+lb_Hungry = Label(terminalio.FONT, text="HUNGRY", color=0x000000)
+lb_Hungry.x = 10
+lb_Hungry.y = 70
+
+lb_Strength = Label(terminalio.FONT, text="STRENGTH", color=0x000000)
+lb_Strength.x = 10
+lb_Strength.y = 30
+
+lb_Effort = Label(terminalio.FONT, text="EFFORT", color=0x000000)
+lb_Effort.x = 10
+lb_Effort.y = 70
+
+lb_Dp = Label(terminalio.FONT, text="DP", color=0x000000)
+lb_Dp.x = 10
+lb_Dp.y = 30
+
+lb_meat = Label(terminalio.FONT, text="MEAT", color=0x000000)
+lb_meat.x = 80
+lb_meat.y = 50
+
+lb_pill = Label(terminalio.FONT, text="PILL", color=0x000000)
+lb_pill.x = 80
+lb_pill.y = 95
 
 # We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
@@ -193,29 +216,27 @@ btn_callout_view = SpriteButton(
 )
 buttons.append(btn_callout_view)  # adding this button to the buttons group
 
-Stats1Button = Button(
+Stats1Button = SpriteButton(  
     x=15,  # Start after width of 2 buttons
-    y=20,
-    width=100,
-    height=50,
-    label="Opcion1",
+    y=40,
+    width=24,  # Calculated width
+    height=24,  # Static height
     label_font=terminalio.FONT,
-    label_color=0x0,
-    fill_color=None,
-    outline_color=0x767676,
+    bmp_path="icons/transarrow.bmp",
+    selected_bmp_path="icons/arrow.bmp",
+    transparent_index=0,
 )
 statsButtons.append(Stats1Button)
 
-Stats2Button = Button(
+Stats2Button = SpriteButton(
     x=15,  # Start after width of 2 buttons
-    y=75,
-    width=100,
-    height=50,
-    label="Opcion2",
+    y=80,
+    width=24,  # Calculated width
+    height=24,  # Static height
     label_font=terminalio.FONT,
-    label_color=0x0,
-    fill_color=None,
-    outline_color=0x767676,
+    bmp_path="icons/transarrow.bmp",
+    selected_bmp_path="icons/arrow.bmp",
+    transparent_index=0,
 )
 statsButtons.append(Stats2Button)
 
@@ -407,12 +428,70 @@ def layerVisibility(state, layer, target):
     except ValueError:
         pass
 
-
+def set_eating_screen():
+    v_eating_screen_group.append(eating_Screen)
+    for b in statsButtons:
+        v_eating_screen_group.append(b)
+     
+    meat = displayio.OnDiskBitmap("/icons/meat.bmp")
+    pal_meat = meat.pixel_shader
+    pal_meat.make_transparent(0)
+    meat_tile = displayio.TileGrid(meat, pixel_shader=meat.pixel_shader, x=40,y=40)
+    v_eating_screen_group.append(meat_tile)
+    
+    
+    pill = displayio.OnDiskBitmap("/icons/pill.bmp")
+    pal_pill = pill.pixel_shader
+    pal_pill.make_transparent(0)
+    pill_tile = displayio.TileGrid(pill, pixel_shader=pill.pixel_shader, x=40,y=80)
+    v_eating_screen_group.append(pill_tile)
+    
+    v_eating_screen_group.append(lb_meat)
+    v_eating_screen_group.append(lb_pill)
+    
+    View_Menu2.append(v_eating_screen_group)
+    
+    
 def set_stats_screens():
-    v_stats_screen1_group.append(rect1)
-    v_stats_screen1_group.append(my_label)
-    v_stats_screen3_group.append(rect3)
-    v_stats_screen2_group.append(rect2)
+    
+    v_stats_screen1_group.append(status_Screen1)
+    v_stats_screen1_group.append(lb_Hungry)
+    v_stats_screen1_group.append(lb_Strength)
+    
+    
+    hungry_h = displayio.OnDiskBitmap("/icons/heart5.bmp")
+    pal_h = hungry_h.pixel_shader
+    pal_h.make_transparent(0)
+    hungry_tile = displayio.TileGrid(hungry_h, pixel_shader=hungry_h.pixel_shader, x=5,y=80)
+    v_stats_screen1_group.append(hungry_tile)
+    
+    strength_h = displayio.OnDiskBitmap("/icons/heart0.bmp")
+    pal_s = strength_h.pixel_shader
+    pal_s.make_transparent(0)
+    strength_tile = displayio.TileGrid(strength_h, pixel_shader=strength_h.pixel_shader, x=5,y=35)
+    v_stats_screen1_group.append(strength_tile)
+    
+    
+        
+    v_stats_screen2_group.append(status_Screen2)
+    v_stats_screen2_group.append(lb_Effort)
+    v_stats_screen2_group.append(lb_Dp)
+    
+    effort_h = displayio.OnDiskBitmap("/icons/heart5.bmp")
+    pal_e = effort_h.pixel_shader
+    pal_e.make_transparent(0)
+    effort_tile = displayio.TileGrid(effort_h, pixel_shader=effort_h.pixel_shader, x=5,y=80)
+    v_stats_screen2_group.append(effort_tile)
+    
+    dp_h = displayio.OnDiskBitmap("/icons/heart0.bmp")
+    pal_d = dp_h.pixel_shader
+    pal_d.make_transparent(0)
+    dp_tile = displayio.TileGrid(dp_h, pixel_shader=dp_h.pixel_shader, x=5,y=35)
+    v_stats_screen2_group.append(dp_tile)
+
+        
+    v_stats_screen3_group.append(status_Screen3)
+    
     
 # This will handle switching Images and Icons
 def set_image(group, filename, x_pos, y_pos, t_height, t_width):
@@ -685,8 +764,9 @@ v_stats_screen1_group = displayio.Group()
 v_stats_screen2_group = displayio.Group()
 v_stats_screen3_group = displayio.Group()
 
+v_eating_screen_group = displayio.Group()
 
-set_stats_screens()
+
 # ------------- Display Menus ------------- #
 View_Menu1 = displayio.Group()  # The Main Display Group
 View_Menu2 = displayio.Group()  # Group for idle sprites
@@ -708,9 +788,8 @@ set_image(bg_group, "/Background/registerjungle.bmp",0,0,0,0)
 for b in buttons:
     splash.append(b)
     
-for b in statsButtons:
-    View_Menu2.append(b)
-
+set_eating_screen()
+set_stats_screens()
 
 digimon_frames = [0, 1, 2, 3]
 current_frame = 0
@@ -725,6 +804,8 @@ btn_poop_view.selected = False
 btn_band_view.selected = False
 btn_battle_view.selected = False
 btn_callout_view.selected = False
+Stats1Button.selected = True
+
 
 layerVisibility("hide", splash, View_Menu1)
 layerVisibility("hide", splash, View_Menu2)
