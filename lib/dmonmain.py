@@ -55,28 +55,21 @@ switch1.direction = Direction.INPUT
 switch1.pull = Pull.UP
 button1 = Debouncer(switch1)
 
-
 switch2 = DigitalInOut(pins["key2"])
 switch2.direction = Direction.INPUT
 switch2.pull = Pull.UP
 button2 = Debouncer(switch2)
-'''
-switch3 = DigitalInOut(pins["key3"])
-switch3.direction = Direction.INPUT
-switch3.pull = Pull.UP
-'''
 
-# ---------- Display Screens View 1 ------------- #
+# ---------- Display Root Screen Options  ------------- #
 
+topBar = Rect(0, 0, 168, 18, fill=0x8fa68c)
+bottomBar = Rect(0, 114, 168, 18, fill=0x8fa68c)
+
+# ---------- Display Screens Status View ------------- #
 
 status_Screen1 = Rect(0, 15, 168, 100, fill=0x8fa68c)
 status_Screen2 = Rect(0, 15, 168, 100, fill=0x8fa68c)
 status_Screen3 = Rect(0, 15, 168, 100, fill=0x8fa68c)
-eating_Screen = Rect(0, 15, 168, 100, fill=0x8fa68c)
-
-
-topBar = Rect(0, 0, 168, 18, fill=0x8fa68c)
-bottomBar = Rect(0, 114, 168, 18, fill=0x8fa68c)
 
 lb_Hungry = Label(terminalio.FONT, text="HUNGRY", color=0x000000)
 lb_Hungry.x = 10
@@ -93,6 +86,12 @@ lb_Effort.y = 70
 lb_Dp = Label(terminalio.FONT, text="DP", color=0x000000)
 lb_Dp.x = 10
 lb_Dp.y = 30
+
+
+# ---------- Display Screens Eating View ------------- #
+
+
+eating_Screen = Rect(0, 15, 168, 100, fill=0x8fa68c)
 
 lb_meat = Label(terminalio.FONT, text="MEAT", color=0x000000)
 lb_meat.x = 80
@@ -111,6 +110,8 @@ lb_age.x = 80
 lb_age.y = 95
 
 
+# ---------- Display Buttons ------------- #
+
 # We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
 TAB_BUTTON_HEIGHT = 18
@@ -122,10 +123,9 @@ TAB_DN_BUTTON_HEIGHT = 18
 TAB_DN_BUTTON_WIDTH = int(screen_width / 5.5)
 
 
-# ---------- Display Buttons ------------- #
 # This group will make it easy for us to read a button press later.
 buttons = []
-statsButtons = []
+eatingButtons = []
 
 
 # Main User Interface Buttons
@@ -166,7 +166,7 @@ btn_training_view = SpriteButton(
 buttons.append(btn_training_view)  # adding this button to the buttons group
 
 btn_battle_view = SpriteButton(
-    x=TAB_BUTTON_WIDTH * 3,  # Start after width of 2 buttons
+    x=TAB_BUTTON_WIDTH * 3,  # Start after width of 3 buttons
     y=0,
     width=TAB_BUTTON_WIDTH,  # Calculated width
     height=TAB_BUTTON_HEIGHT,  # Static height
@@ -178,7 +178,7 @@ btn_battle_view = SpriteButton(
 buttons.append(btn_battle_view)  # adding this button to the buttons group
 
 btn_poop_view = SpriteButton(
-    x=0,  # Start after width of 2 buttons
+    x=0,  
     y=TAB_DN_BUTTON_Y,
     width=TAB_DN_BUTTON_WIDTH,  # Calculated width
     height=TAB_DN_BUTTON_HEIGHT,  # Static height
@@ -190,7 +190,7 @@ btn_poop_view = SpriteButton(
 buttons.append(btn_poop_view)  # adding this button to the buttons group
 
 btn_light_view = SpriteButton(
-    x=TAB_DN_BUTTON_WIDTH,  # Start after width of 2 buttons
+    x=TAB_DN_BUTTON_WIDTH,  
     y=TAB_DN_BUTTON_Y,
     width=TAB_DN_BUTTON_WIDTH,  # Calculated width
     height=TAB_DN_BUTTON_HEIGHT,  # Static height
@@ -214,7 +214,7 @@ btn_band_view = SpriteButton(
 buttons.append(btn_band_view)  # adding this button to the buttons group
 
 btn_callout_view = SpriteButton(
-    x=TAB_DN_BUTTON_WIDTH * 3,  # Start after width of 2 buttons
+    x=TAB_DN_BUTTON_WIDTH * 3,  # Start after width of 3 buttons
     y=TAB_DN_BUTTON_Y,
     width=TAB_DN_BUTTON_WIDTH,  # Calculated width
     height=TAB_DN_BUTTON_HEIGHT,  # Static height
@@ -225,45 +225,45 @@ btn_callout_view = SpriteButton(
 )
 buttons.append(btn_callout_view)  # adding this button to the buttons group
 
-Stats1Button = SpriteButton(  
-    x=15,  # Start after width of 2 buttons
+Eating1Button = SpriteButton(  
+    x=15,  
     y=40,
-    width=24,  # Calculated width
-    height=24,  # Static height
+    width=24,  
+    height=24,  
     label_font=terminalio.FONT,
     bmp_path="icons/transarrow.bmp",
     selected_bmp_path="icons/arrow.bmp",
     transparent_index=0,
 )
-statsButtons.append(Stats1Button)
+eatingButtons.append(Eating1Button)
 
-Stats2Button = SpriteButton(
-    x=15,  # Start after width of 2 buttons
+Eating2Button = SpriteButton(
+    x=15,  
     y=80,
-    width=24,  # Calculated width
-    height=24,  # Static height
+    width=24,  
+    height=24,  
     label_font=terminalio.FONT,
     bmp_path="icons/transarrow.bmp",
     selected_bmp_path="icons/arrow.bmp",
     transparent_index=0,
 )
-statsButtons.append(Stats2Button)
+eatingButtons.append(Eating2Button)
 
 def switch_stats_screen(what_screen):
     print("entrando a screens")
     global view_screen
     if what_screen == 1:
-        layerVisibility("show", View_Menu1, v_stats_screen1_group)
-        layerVisibility("hide", View_Menu1, v_stats_screen2_group)
-        layerVisibility("hide", View_Menu1, v_stats_screen3_group)
+        layerVisibility("show", Stats_View, v_stats_screen1_group)
+        layerVisibility("hide", Stats_View, v_stats_screen2_group)
+        layerVisibility("hide", Stats_View, v_stats_screen3_group)
     elif what_screen == 2:
-        layerVisibility("hide", View_Menu1, v_stats_screen1_group)
-        layerVisibility("show", View_Menu1, v_stats_screen2_group)
-        layerVisibility("hide", View_Menu1, v_stats_screen3_group)
+        layerVisibility("hide", Stats_View, v_stats_screen1_group)
+        layerVisibility("show", Stats_View, v_stats_screen2_group)
+        layerVisibility("hide", Stats_View, v_stats_screen3_group)
     elif what_screen == 3:
-        layerVisibility("hide", View_Menu1, v_stats_screen1_group)
-        layerVisibility("hide", View_Menu1, v_stats_screen2_group)
-        layerVisibility("show", View_Menu1, v_stats_screen3_group)
+        layerVisibility("hide", Stats_View, v_stats_screen1_group)
+        layerVisibility("hide", Stats_View, v_stats_screen2_group)
+        layerVisibility("show", Stats_View, v_stats_screen3_group)
     # Set global button state
     view_screen = what_screen
     print("screen {option_num:.0f} On".format(option_num=what_screen))
@@ -272,11 +272,11 @@ def switch_stats_screen(what_screen):
 def switch_option(what_option):
     global view_option
     if what_option == 1:
-        Stats1Button.selected = True
-        Stats2Button.selected = False
+        Eating1Button.selected = True
+        Eating2Button.selected = False
     elif what_option == 2:
-        Stats1Button.selected = False
-        Stats2Button.selected = True
+        Eating1Button.selected = False
+        Eating2Button.selected = True
         
     # Set global button state
     view_option = what_option
@@ -294,14 +294,14 @@ def switch_view(what_view):
         btn_band_view.selected = False        
         btn_callout_view.selected = False
         
-        layerVisibility("show", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("show", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("hide", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 2:
         btn_stats_view.selected = False
         btn_eat_view.selected = True
@@ -311,14 +311,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = False        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("show", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("show", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("hide", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 3:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -328,14 +328,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = False        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("show", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("show", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("hide", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 4:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -345,14 +345,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = False        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("show", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("show", splash, Battle_View)
+        layerVisibility("hide", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 5:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -362,14 +362,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = False        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("show", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("show", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 6:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -379,14 +379,14 @@ def switch_view(what_view):
         btn_light_view.selected = True        
         btn_band_view.selected = False        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("show", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("show", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     elif what_view == 7:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -396,14 +396,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = True        
         btn_callout_view.selected = False
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("show", splash, View_Menu5)
-        layerVisibility("hide", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("show", splash, Poop_View)
+        layerVisibility("hide", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
     else:
         btn_stats_view.selected = False
         btn_eat_view.selected = False
@@ -413,14 +413,14 @@ def switch_view(what_view):
         btn_light_view.selected = False        
         btn_band_view.selected = False        
         btn_callout_view.selected = True
-        layerVisibility("hide", splash, View_Menu1)
-        layerVisibility("hide", splash, View_Menu2)
-        layerVisibility("hide", splash, View_Menu3)
-        layerVisibility("hide", splash, View_Menu4)
-        layerVisibility("hide", splash, View_Menu5)
-        layerVisibility("show", splash, View_Menu6)
-        layerVisibility("hide", splash, View_Menu7)
-        layerVisibility("hide", splash, View_Menu8)
+        layerVisibility("hide", splash, Stats_View)
+        layerVisibility("hide", splash, Eating_View)
+        layerVisibility("hide", splash, Training_View)
+        layerVisibility("hide", splash, Battle_View)
+        layerVisibility("hide", splash, Poop_View)
+        layerVisibility("show", splash, Light_View)
+        layerVisibility("hide", splash, Bandage_View)
+        layerVisibility("hide", splash, Callout_View)
 
     # Set global button state
     view_live = what_view
@@ -439,7 +439,7 @@ def layerVisibility(state, layer, target):
 
 def set_eating_screen():
     v_eating_screen_group.append(eating_Screen)
-    for b in statsButtons:
+    for b in eatingButtons:
         v_eating_screen_group.append(b)
      
     meat = displayio.OnDiskBitmap("/icons/meat.bmp")
@@ -458,7 +458,7 @@ def set_eating_screen():
     v_eating_screen_group.append(lb_meat)
     v_eating_screen_group.append(lb_pill)
     
-    View_Menu2.append(v_eating_screen_group)
+    Eating_View.append(v_eating_screen_group)
     
     
 def set_stats_screens():
@@ -483,12 +483,6 @@ def set_stats_screens():
     pal_h = hungry_h.pixel_shader
     pal_h.make_transparent(0)
     
-    #hungry_tile = [create_tile_grid(hungry_h, pal_h, x_pos=, y_pos, tile_height=t_height, tile_width=t_width) for _ in range(4)]
-        
-    #for grid in tile_grids:
-    #    group.append(grid) 
-
-    
     hungry_tile = displayio.TileGrid(hungry_h, pixel_shader=hungry_h.pixel_shader, x=5,y=80)
     v_stats_screen2_group.append(hungry_tile)
     
@@ -500,7 +494,6 @@ def set_stats_screens():
     
     strength_tile = displayio.TileGrid(strength_h, pixel_shader=strength_h.pixel_shader, x=5,y=35)
     v_stats_screen2_group.append(strength_tile)
-    
     
         
     v_stats_screen3_group.append(status_Screen3)
@@ -519,17 +512,10 @@ def set_stats_screens():
     dp_tile = displayio.TileGrid(dp_h, pixel_shader=dp_h.pixel_shader, x=5,y=35)
     v_stats_screen3_group.append(dp_tile)
 
-        
-    
-    
     
 # This will handle switching Images and Icons
 def set_image(group, filename, x_pos, y_pos, t_height, t_width):
-    """Set the image file for a given goup for display.
-    This is most useful for Icons or image slideshows.
-        :param group: The chosen group
-        :param filename: The filename of the chosen image
-    """
+
     if group:
         group.pop()
 
@@ -566,7 +552,7 @@ def display_bg():
 
 def display_screens(screen):
     try:
-        View_Menu1.append(screen)
+        Stats_View.append(screen)
           
     except ValueError:
         pass
@@ -747,7 +733,7 @@ async def key_manipulation(button0, button1, button2):
     
             elif view_live == 2:
                     
-                for i, b in enumerate(statsButtons):
+                for i, b in enumerate(eatingButtons):
                         if view_option == 1:
                             switch_option(view_option)                
                             break
@@ -767,14 +753,14 @@ async def key_manipulation(button0, button1, button2):
             btn_battle_view.selected = False
             btn_callout_view.selected = False
 
-            layerVisibility("hide", splash, View_Menu1)
-            layerVisibility("hide", splash, View_Menu2)
-            layerVisibility("hide", splash, View_Menu3)
-            layerVisibility("hide", splash, View_Menu4)
-            layerVisibility("hide", splash, View_Menu5)
-            layerVisibility("hide", splash, View_Menu6)
-            layerVisibility("hide", splash, View_Menu7)
-            layerVisibility("hide", splash, View_Menu8)
+            layerVisibility("hide", splash, Stats_View)
+            layerVisibility("hide", splash, Eating_View)
+            layerVisibility("hide", splash, Training_View)
+            layerVisibility("hide", splash, Battle_View)
+            layerVisibility("hide", splash, Poop_View)
+            layerVisibility("hide", splash, Light_View)
+            layerVisibility("hide", splash, Bandage_View)
+            layerVisibility("hide", splash, Callout_View)
             
             flag = True
             
@@ -798,14 +784,14 @@ v_eating_screen_group = displayio.Group()
 
 
 # ------------- Display Menus ------------- #
-View_Menu1 = displayio.Group()  # The Main Display Group
-View_Menu2 = displayio.Group()  # Group for idle sprites
-View_Menu3 = displayio.Group()  # Group for idle sprites
-View_Menu4 = displayio.Group()  # Group for idle sprites
-View_Menu5 = displayio.Group()  # Group for idle sprites
-View_Menu6 = displayio.Group()  # Group for idle sprites
-View_Menu7 = displayio.Group()  # Group for idle sprites
-View_Menu8 = displayio.Group()  # Group for idle sprites
+Stats_View = displayio.Group()  # The Stats view Group
+Eating_View = displayio.Group()  # Group for Eating view
+Training_View = displayio.Group()  # Group for Training view
+Battle_View = displayio.Group()  # Group for Battle view
+Poop_View = displayio.Group()  # Group for Poop view
+Light_View = displayio.Group()  # Group for Light view
+Bandage_View = displayio.Group()  # Group for Bandage view
+Callout_View = displayio.Group()  # Group for callout view
 
 
 # ------------- Setup for Images ------------- #
@@ -834,17 +820,17 @@ btn_poop_view.selected = False
 btn_band_view.selected = False
 btn_battle_view.selected = False
 btn_callout_view.selected = False
-Stats1Button.selected = True
+Eating1Button.selected = True
 
 
-layerVisibility("hide", splash, View_Menu1)
-layerVisibility("hide", splash, View_Menu2)
-layerVisibility("hide", splash, View_Menu3)
-layerVisibility("hide", splash, View_Menu4)
-layerVisibility("hide", splash, View_Menu5)
-layerVisibility("hide", splash, View_Menu6)
-layerVisibility("hide", splash, View_Menu7)
-layerVisibility("hide", splash, View_Menu8)
+layerVisibility("hide", splash, Stats_View)
+layerVisibility("hide", splash, Eating_View)
+layerVisibility("hide", splash, Training_View)
+layerVisibility("hide", splash, Battle_View)
+layerVisibility("hide", splash, Poop_View)
+layerVisibility("hide", splash, Light_View)
+layerVisibility("hide", splash, Bandage_View)
+layerVisibility("hide", splash, Callout_View)
 
 gc.collect()
 end_mem = gc.mem_free()
