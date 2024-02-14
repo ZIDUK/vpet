@@ -102,6 +102,15 @@ lb_pill = Label(terminalio.FONT, text="PILL", color=0x000000)
 lb_pill.x = 80
 lb_pill.y = 95
 
+lb_weigth = Label(terminalio.FONT, text="Age", color=0x000000)
+lb_weigth.x = 80
+lb_weigth.y = 50
+
+lb_age = Label(terminalio.FONT, text="Weigth", color=0x000000)
+lb_age.x = 80
+lb_age.y = 95
+
+
 # We want three buttons across the top of the screen
 TAB_BUTTON_Y = 0
 TAB_BUTTON_HEIGHT = 18
@@ -455,42 +464,63 @@ def set_eating_screen():
 def set_stats_screens():
     
     v_stats_screen1_group.append(status_Screen1)
-    v_stats_screen1_group.append(lb_Hungry)
-    v_stats_screen1_group.append(lb_Strength)
+    v_stats_screen1_group.append(lb_age)
+    v_stats_screen1_group.append(lb_weigth)
+    
+    statuswa = displayio.OnDiskBitmap("/icons/statuswa.bmp")
+    pal_wa = statuswa.pixel_shader
+    pal_wa.make_transparent(0)
+    statuswa_tile = displayio.TileGrid(statuswa, pixel_shader=statuswa.pixel_shader, x=5,y=50)
+    v_stats_screen1_group.append(statuswa_tile)
+        
+    
+    v_stats_screen2_group.append(status_Screen2)
+    v_stats_screen2_group.append(lb_Hungry)
+    v_stats_screen2_group.append(lb_Strength)
     
     
-    hungry_h = displayio.OnDiskBitmap("/icons/heart5.bmp")
+    hungry_h = displayio.OnDiskBitmap("/icons/heartf.bmp")
     pal_h = hungry_h.pixel_shader
     pal_h.make_transparent(0)
-    hungry_tile = displayio.TileGrid(hungry_h, pixel_shader=hungry_h.pixel_shader, x=5,y=80)
-    v_stats_screen1_group.append(hungry_tile)
     
-    strength_h = displayio.OnDiskBitmap("/icons/heart0.bmp")
+    #hungry_tile = [create_tile_grid(hungry_h, pal_h, x_pos=, y_pos, tile_height=t_height, tile_width=t_width) for _ in range(4)]
+        
+    #for grid in tile_grids:
+    #    group.append(grid) 
+
+    
+    hungry_tile = displayio.TileGrid(hungry_h, pixel_shader=hungry_h.pixel_shader, x=5,y=80)
+    v_stats_screen2_group.append(hungry_tile)
+    
+    
+    strength_h = displayio.OnDiskBitmap("/icons/hearte.bmp")
     pal_s = strength_h.pixel_shader
     pal_s.make_transparent(0)
+
+    
     strength_tile = displayio.TileGrid(strength_h, pixel_shader=strength_h.pixel_shader, x=5,y=35)
-    v_stats_screen1_group.append(strength_tile)
+    v_stats_screen2_group.append(strength_tile)
     
     
         
-    v_stats_screen2_group.append(status_Screen2)
-    v_stats_screen2_group.append(lb_Effort)
-    v_stats_screen2_group.append(lb_Dp)
+    v_stats_screen3_group.append(status_Screen3)
+    v_stats_screen3_group.append(lb_Effort)
+    v_stats_screen3_group.append(lb_Dp)
     
-    effort_h = displayio.OnDiskBitmap("/icons/heart5.bmp")
+    effort_h = displayio.OnDiskBitmap("/icons/heartf.bmp")
     pal_e = effort_h.pixel_shader
     pal_e.make_transparent(0)
     effort_tile = displayio.TileGrid(effort_h, pixel_shader=effort_h.pixel_shader, x=5,y=80)
-    v_stats_screen2_group.append(effort_tile)
+    v_stats_screen3_group.append(effort_tile)
     
-    dp_h = displayio.OnDiskBitmap("/icons/heart0.bmp")
+    dp_h = displayio.OnDiskBitmap("/icons/hearte.bmp")
     pal_d = dp_h.pixel_shader
     pal_d.make_transparent(0)
     dp_tile = displayio.TileGrid(dp_h, pixel_shader=dp_h.pixel_shader, x=5,y=35)
-    v_stats_screen2_group.append(dp_tile)
+    v_stats_screen3_group.append(dp_tile)
 
         
-    v_stats_screen3_group.append(status_Screen3)
+    
     
     
 # This will handle switching Images and Icons
