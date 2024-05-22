@@ -574,6 +574,22 @@ def destroy_animation(group):
     except ValueError:
         pass
 
+# Function to move Digimon to Eating Meat
+async def move_digimon_eatmeat():
+    global current_frame, global_position
+    
+    digimon_eatmeat_grids = set_image(eatmeat_group, "/Greymon/dmoneatmeat.bmp", global_position, 35, 78, 64)
+    display_animation(eatmeat_group)
+    
+    for _ in range(4):  # Adjust the number of movements
+       
+        for grid in digimon_eatmeat_grids:               
+            grid[0] = current_frame  # Display the current frame
+        await asyncio.sleep_ms(250)
+        current_frame = (current_frame + 1) % len(digimon_frames)  # Cycle through frames
+    destroy_animation(eatmeat_group)
+
+
 # Function to move Digimon to the left
 async def move_digimon_left():
     global current_frame, global_position
@@ -658,8 +674,8 @@ async def move_digimon_victory():
 async def move_main_screen():
     while True:
      
-        random_number = randint(1, 5)  # Generate a random number between 1 and 5
-
+        random_number = randint(1, 6)  # Generate a random number between 1 and 5
+ 
         if random_number == 1:
            await move_digimon_left()       
         elif random_number == 2:
@@ -667,7 +683,10 @@ async def move_main_screen():
         elif random_number == 3:
            await move_digimon_sleep()  
         elif random_number == 4:
-           await move_digimon_victory()          
+           await move_digimon_victory()
+        elif random_number == 5:
+          await move_digimon_eatmeat()
+           
         else:
            await move_digimon_right()
         
@@ -773,6 +792,7 @@ splash = displayio.Group()  # The Main Display Group
 
 idle_group = displayio.Group()  # Group for idle sprites
 walk_group = displayio.Group()  # Group for walk sprites
+eatmeat_group = displayio.Group()  # Group for eat meat sprites
 sleep_group = displayio.Group()  # Group for sleep sprites
 victory_group = displayio.Group()  # Group for victory sprites
 
@@ -845,6 +865,7 @@ async def main():
         await key_manipulation(button0, button1, button2)
 
 asyncio.run(main())
+
 
 
 

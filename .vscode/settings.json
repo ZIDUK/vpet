@@ -8,10 +8,10 @@
     "python.analysis.extraPaths": [
         "/Users/jonathanpardofuentes/.vscode/extensions/joedevivo.vscode-circuitpython-0.2.0-darwin-arm64/boards/0x239A/0x8120",
         "/Users/jonathanpardofuentes/.vscode/extensions/joedevivo.vscode-circuitpython-0.2.0-darwin-arm64/stubs",
-        "/Users/jonathanpardofuentes/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20240208/adafruit-circuitpython-bundle-py-20240208/lib"
+        "/Users/jonathanpardofuentes/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20240326/adafruit-circuitpython-bundle-py-20240326/lib"
     ],
     "circuitpython.board.version": "8.2.9",
     "circuitpython.board.vid": "0x239A",
     "circuitpython.board.pid": "0x8120",
-    "CodeGPT.apiKey": "Google AI Studio"
+    "CodeGPT.apiKey": "OpenAI"
 }
