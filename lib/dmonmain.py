@@ -603,7 +603,10 @@ async def key_manipulation():
         await asyncio.sleep_ms(10)
 
 # ---------- Main ----------
+print("dmonmain loaded, AGUMON_DEMO =", AGUMON_DEMO)
+
 async def main():
+    print("main() entered, AGUMON_DEMO =", AGUMON_DEMO)
     if AGUMON_DEMO:
         # Run the Agumon demo first. The demo owns the buttons during its run
         # and short-circuits key_manipulation via the demo_active flag.
@@ -633,6 +636,7 @@ async def main():
             demo_active = False
             exit_demo = True
 
+    print("Starting normal vPet mode")
     asyncio.create_task(move_main_screen())
     asyncio.create_task(light_blink())
     asyncio.create_task(training_animate())
