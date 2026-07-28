@@ -17,6 +17,12 @@ gc.enable()
 start_mem = gc.mem_free()
 print("Point 1 Available memory: {} bytes".format(start_mem))
 
+# ---------- Demo mode toggle ----------
+# Set AGUMON_DEMO = True to cycle through the 8 Agumon animations
+# (idle, walk, eat, attack, hurt, sleep, happy, evolve) on a clean screen.
+# Button0 = next animation, Button2 = exit demo back to normal mode.
+AGUMON_DEMO = True
+
 # ---------- Hardware ----------
 PINS = {
     "mosi":  board.GP11,
@@ -36,6 +42,11 @@ SCREEN_H = 132
 view_live = 0
 view_option = 0
 view_screen = 0
+
+# Set to True by the demo task to break out of the loop
+exit_demo = False
+# While True, key_manipulation ignores button events (the demo task owns them)
+demo_active = False
 
 # ---------- Display ----------
 displayio.release_displays()
@@ -410,6 +421,100 @@ async def move_digimon_anim09(): await _play_lazy("/Greymon/dmonanim09.bmp",  64
 async def move_digimon_anim10(): await _play_lazy("/Greymon/dmonanim10.bmp",  64, 64, 4)
 async def move_digimon_anim11(): await _play_lazy("/Greymon/dmonanim11.bmp",  64, 64, 2)
 
+# ---------- Agumon animations (32x32 per frame, lazy-loaded) ----------
+# Each BMP is a horizontal strip; the frame count varies (8-11).
+# (path, n_frames, cycles_per_loop, display_seconds_hint)
+AGUMON_ANIMS = (
+    ("/Agumon/agumon_idle.bmp",   9, 2,  "IDLE"),
+    ("/Agumon/agumon_walk.bmp",   10, 2, "WALK"),
+    ("/Agumon/agumon_eat.bmp",    9, 2,  "EAT"),
+    ("/Agumon/agumon_attack.bmp", 10, 2, "ATTACK"),
+    ("/Agumon/agumon_hurt.bmp",   10, 2, "HURT"),
+    ("/Agumon/agumon_sleep.bmp",  8, 2,  "SLEEP"),
+    ("/Agumon/agumon_happy.bmp",  11, 2, "HAPPY"),
+    ("/Agumon/agumon_evolve.bmp", 6, 1,  "EVOLVE"),
+)
+
+async def _play_agumon(path, n_frames, cycles, x=68, y=50, frame_ms=180):
+    """Play a 32x32-frame Agumon strip. Loads from flash, plays, frees."""
+    bmp = displayio.OnDiskBitmap(path)
+    pal = bmp.pixel_shader
+    pal.make_transparent(0)
+    grid = displayio.TileGrid(bmp, pixel_shader=pal, x=x, y=y,
+                              tile_width=32, tile_height=32, default_tile=0)
+    group = displayio.Group()
+    group.append(grid)
+    await display_animation(group)
+    total = n_frames * cycles
+    try:
+        for i in range(total):
+            grid[0] = i % n_frames
+            await asyncio.sleep_ms(frame_ms)
+    finally:
+        await destroy_animation(group)
+        del grid, group, bmp, pal
+        gc.collect()
+
+# ---------- Agumon demo mode ----------
+# Hides normal UI, cycles through all 8 Agumon animations with a label.
+# Button0 = skip to next, Button2 = exit demo.
+_demo_label = _lbl("AGUMON DEMO", 10, 30)
+
+async def agumon_demo():
+    """Cycle through every Agumon animation. Exits when exit_demo is True."""
+    global exit_demo, view_live, demo_active
+    exit_demo = False
+    demo_active = True
+    # Hide all the normal menu views + tab buttons
+    await show_only(None)
+    for b in ALL_TAB_BUTTONS:
+        b.hidden = True
+    for btn in ALL_EAT_BTNS:
+        btn.hidden = True
+    view_live = 0
+
+    # Add label
+    view_layer.append(_demo_label)
+    print("Agumon demo start")
+    i = 0
+    while not exit_demo:
+        path, n_frames, cycles, name = AGUMON_ANIMS[i]
+        _demo_label.text = "AGUMON: " + name
+        print("  playing {} ({} frames)".format(name, n_frames))
+        # Check for skip during the play
+        skip_task = asyncio.create_task(_wait_skip())
+        play_task = asyncio.create_task(_play_agumon(path, n_frames, cycles))
+        done, pending = await asyncio.wait(
+            {skip_task, play_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for t in pending:
+            t.cancel()
+        # Reset bg color between anims (in case previous cleared it)
+        i = (i + 1) % len(AGUMON_ANIMS)
+        gc.collect()
+    # Restore
+    view_layer.remove(_demo_label)
+    for b in ALL_TAB_BUTTONS:
+        b.hidden = False
+    for btn in ALL_EAT_BTNS:
+        btn.hidden = False
+    demo_active = False
+    print("Agumon demo end")
+
+async def _wait_skip():
+    """Wait for button0 to be pressed (skip) or button2 (exit)."""
+    global exit_demo
+    while True:
+        button0.update()
+        button2.update()
+        if button0.fell:
+            return
+        if button2.fell:
+            exit_demo = True
+            return
+        await asyncio.sleep_ms(20)
+
 # ---------- View-local animations ----------
 async def light_blink():
     """Blink the light bulb forever. When Light_View is hidden the tile is
@@ -459,6 +564,11 @@ async def key_manipulation():
         button1.update()
         button2.update()
 
+        # Demo mode owns the buttons — just keep the debouncers ticking
+        if demo_active:
+            await asyncio.sleep_ms(10)
+            continue
+
         if button0.fell:
             new_view = view_live + 1
             if new_view > len(VIEW_MAP):
@@ -488,6 +598,16 @@ async def key_manipulation():
 
 # ---------- Main ----------
 async def main():
+    if AGUMON_DEMO:
+        # Run the Agumon demo first. The demo task itself reads buttons via
+        # _wait_skip, and key_manipulation short-circuits while demo_active.
+        asyncio.create_task(agumon_demo())
+        # Yield to the event loop until the demo is done.
+        while not exit_demo:
+            await asyncio.sleep_ms(10)
+        print("Returning to normal mode")
+        # Fall through to the normal vPet mode below
+
     asyncio.create_task(move_main_screen())
     asyncio.create_task(light_blink())
     asyncio.create_task(training_animate())
