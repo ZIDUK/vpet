@@ -143,8 +143,10 @@ TOP_CELL_W = add_bar(4, TOP_H, TOP_ITEMS)
 bot_y = H - BOT_H + 1
 BOT_CELL_W = add_bar(bot_y, BOT_H, BOT_ITEMS)
 
-# Cursor highlight (single rect, repositioned by move_cursor)
-CURSOR_HL = Rect(0, 0, 1, 1, fill=None, outline=YELLOW, stroke=2)
+# Cursor highlight: fixed size, only x/y changes (Rect.width/height not settable in 8.2.9)
+CURSOR_W = 28
+CURSOR_H_PIX = 26
+CURSOR_HL = Rect(0, 0, CURSOR_W, CURSOR_H_PIX, fill=None, outline=YELLOW, stroke=2)
 splash.append(CURSOR_HL)
 
 # Footer
@@ -223,17 +225,13 @@ def move_cursor(row, col):
     if row == 0:
         cell_w = TOP_CELL_W
         bar_y = 4
-        cell_h = TOP_H
     else:
         cell_w = BOT_CELL_W
         bar_y = bot_y
-        cell_h = BOT_H
     x0 = int(5 + col * cell_w)
-    # Inset highlight by 1px to stay within the bar
-    CURSOR_HL.x = x0 + 1
+    # Center the fixed-size cursor within the cell
+    CURSOR_HL.x = x0 + (int(cell_w) - CURSOR_W) // 2
     CURSOR_HL.y = bar_y + 1
-    CURSOR_HL.width = int(cell_w) - 2
-    CURSOR_HL.height = cell_h - 4
 
 
 cursor_row, cursor_col = 0, 0
