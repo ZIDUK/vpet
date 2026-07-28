@@ -141,6 +141,14 @@ heartf_pal = heartf_bmp.pixel_shader; heartf_pal.make_transparent(0)
 hearte_bmp = displayio.OnDiskBitmap("/icons/hearte.bmp")
 hearte_pal = hearte_bmp.pixel_shader; hearte_pal.make_transparent(0)
 
+# New bitmaps for Poop / Light / Training views
+poop_bmp = displayio.OnDiskBitmap("/icons/poop2.bmp")
+poop_pal = poop_bmp.pixel_shader; poop_pal.make_transparent(0)
+light_bmp = displayio.OnDiskBitmap("/icons/light2.bmp")
+light_pal = light_bmp.pixel_shader; light_pal.make_transparent(0)
+attacka_bmp = displayio.OnDiskBitmap("/Greymon/dmonattacka.bmp")
+attacka_pal = attacka_bmp.pixel_shader; attacka_pal.make_transparent(0)
+
 # ---------- View groups (one per menu) ----------
 Stats_View    = displayio.Group()
 Eating_View   = displayio.Group()
@@ -180,9 +188,9 @@ async def layerVisibility(state, layer, target):
 async def show_only(target):
     """Hide all menu views, then show target (None = none)."""
     for v in ALL_VIEWS:
-        await layerVisibility("hide", splash, v)
+        await layerVisibility("hide", view_layer, v)
     if target is not None:
-        await layerVisibility("show", splash, target)
+        await layerVisibility("show", view_layer, target)
 
 async def switch_view(idx):
     """idx is 1..8 or 0 for no view."""
@@ -217,8 +225,14 @@ async def switch_stats_screen(idx):
     view_screen = idx
     print("Stats screen {} On".format(idx))
 
-# ---------- Root display group ----------
+# ---------- Root display layers ----------
+# anim_layer: bg, tab buttons, digimon animations (z-bottom)
+# view_layer: menu views (z-top, always drawn on top of the digimon)
 splash = displayio.Group()
+anim_layer = displayio.Group()
+view_layer = displayio.Group()
+splash.append(anim_layer)
+splash.append(view_layer)
 display.root_group = splash
 
 # ---------- Pre-create one TileGrid per animation (reused forever) ----------
@@ -245,7 +259,7 @@ bg_group = displayio.Group()
 bg_group.append(bg_tile)
 bg_group.append(topBar)
 bg_group.append(bottomBar)
-splash.append(bg_group)
+anim_layer.append(bg_group)
 
 # ---------- Pre-build the eating sub-view ----------
 v_eat = displayio.Group()
@@ -281,9 +295,24 @@ STATS_SUBVIEWS.append(_stats_subview(
     displayio.TileGrid(hearte_bmp, pixel_shader=hearte_pal, x=5, y=35),
 ))
 
+# ---------- Populate the other menu views ----------
+# Poop view: drop a poop icon centered on screen
+poop_tile = displayio.TileGrid(poop_bmp, pixel_shader=poop_pal, x=72, y=55)
+Poop_View.append(poop_tile)
+
+# Light view: a light bulb that blinks (toggle .hidden in a loop)
+light_tile = displayio.TileGrid(light_bmp, pixel_shader=light_pal, x=72, y=55)
+Light_View.append(light_tile)
+
+# Training view: Greymon attacka (4 frames, 64x76 each) cycling
+attacka_tile = displayio.TileGrid(attacka_bmp, pixel_shader=attacka_pal,
+                                  x=40, y=35, tile_width=64, tile_height=76,
+                                  default_tile=0)
+Training_View.append(attacka_tile)
+
 # ---------- Tab buttons (always visible on splash) ----------
 for b in ALL_TAB_BUTTONS:
-    splash.append(b)
+    anim_layer.append(b)
 
 # ---------- Digimon animation state ----------
 N_FRAMES = 4
@@ -303,13 +332,13 @@ print("Code section 1-2 used {} bytes".format(start_mem - end_mem))
 # ---------- Animation helpers ----------
 async def display_animation(group):
     try:
-        splash.append(group)
+        anim_layer.append(group)
     except ValueError:
         pass
 
 async def destroy_animation(group):
     try:
-        splash.remove(group)
+        anim_layer.remove(group)
     except ValueError:
         pass
 
@@ -337,6 +366,24 @@ async def move_digimon_left():
     await _animate(walk_grid, walk_group, 10, x_step=3, x_min=2)
 async def move_digimon_right():
     await _animate(walk_grid, walk_group, 10, x_step=3, x_max=70)
+
+# ---------- View-local animations ----------
+async def light_blink():
+    """Blink the light bulb forever. When Light_View is hidden the tile is
+    not rendered, so the toggle is a no-op visually but harmless."""
+    while True:
+        light_tile.hidden = False
+        await asyncio.sleep_ms(450)
+        light_tile.hidden = True
+        await asyncio.sleep_ms(450)
+
+async def training_animate():
+    """Cycle attacka frames forever. Same lazy-when-hidden semantics as
+    light_blink: no visual effect when Training_View is not on screen."""
+    while True:
+        for f in range(4):
+            attacka_tile[0] = f
+            await asyncio.sleep_ms(220)
 
 # ---------- Main animation loop (random digimon behavior) ----------
 async def move_main_screen():
@@ -388,6 +435,8 @@ async def key_manipulation():
 # ---------- Main ----------
 async def main():
     asyncio.create_task(move_main_screen())
+    asyncio.create_task(light_blink())
+    asyncio.create_task(training_animate())
     while True:
         await key_manipulation()
 
