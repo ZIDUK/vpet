@@ -270,6 +270,9 @@ def play_anim(name):
         return
     path, n = ANIMS_MAP[name]
     try:
+        # Free old bitmap before loading new (Pico W has only 264KB RAM)
+        grid.bitmap = None
+        gc.collect()
         new_bmp = displayio.OnDiskBitmap(path)
         new_pal = new_bmp.pixel_shader
         new_pal.make_transparent(0)
@@ -278,6 +281,10 @@ def play_anim(name):
         current_n = n
         current_anim = name
         frame = 0
+        gc.collect()
+    except MemoryError as e:
+        print("mem fail:", e)
+        gc.collect()
     except Exception as e:
         print("anim fail:", e)
 
