@@ -436,7 +436,9 @@ AGUMON_ANIMS = (
 )
 
 async def _play_agumon(path, n_frames, cycles, x=68, y=50, frame_ms=180):
-    """Play a 32x32-frame Agumon strip. Loads from flash, plays, frees."""
+    """Play a 32x32-frame Agumon strip. Loads from flash, plays, frees.
+    Polls buttons each frame: button0 = skip current anim, button2 = exit demo."""
+    global exit_demo
     bmp = displayio.OnDiskBitmap(path)
     pal = bmp.pixel_shader
     pal.make_transparent(0)
@@ -448,6 +450,15 @@ async def _play_agumon(path, n_frames, cycles, x=68, y=50, frame_ms=180):
     total = n_frames * cycles
     try:
         for i in range(total):
+            # Poll buttons inline so we don't need asyncio.wait
+            button0.update()
+            button2.update()
+            if button0.fell:
+                # Skip: bail out early, finally will clean up
+                return
+            if button2.fell:
+                exit_demo = True
+                return
             grid[0] = i % n_frames
             await asyncio.sleep_ms(frame_ms)
     finally:
@@ -481,16 +492,8 @@ async def agumon_demo():
         path, n_frames, cycles, name = AGUMON_ANIMS[i]
         _demo_label.text = "AGUMON: " + name
         print("  playing {} ({} frames)".format(name, n_frames))
-        # Check for skip during the play
-        skip_task = asyncio.create_task(_wait_skip())
-        play_task = asyncio.create_task(_play_agumon(path, n_frames, cycles))
-        done, pending = await asyncio.wait(
-            {skip_task, play_task},
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for t in pending:
-            t.cancel()
-        # Reset bg color between anims (in case previous cleared it)
+        # _play_agumon polls buttons itself (no asyncio.wait needed)
+        await _play_agumon(path, n_frames, cycles)
         i = (i + 1) % len(AGUMON_ANIMS)
         gc.collect()
     # Restore
@@ -501,19 +504,6 @@ async def agumon_demo():
         btn.hidden = False
     demo_active = False
     print("Agumon demo end")
-
-async def _wait_skip():
-    """Wait for button0 to be pressed (skip) or button2 (exit)."""
-    global exit_demo
-    while True:
-        button0.update()
-        button2.update()
-        if button0.fell:
-            return
-        if button2.fell:
-            exit_demo = True
-            return
-        await asyncio.sleep_ms(20)
 
 # ---------- View-local animations ----------
 async def light_blink():
