@@ -783,10 +783,12 @@ async def key_manipulation(button0, button1, button2):
             
             flag = True
             
-        if flag == True:
-            await asyncio.sleep_ms(0)
-    
-            
+        # Yield to the event loop so move_main_screen keeps animating
+        # even while a menu view is active. 10ms is short enough for snappy
+        # input response and long enough to give the digimon task CPU time.
+        await asyncio.sleep_ms(10)
+
+
 # ------------- Display Groups ------------- #
 splash = displayio.Group()  # The Main Display Group
 
