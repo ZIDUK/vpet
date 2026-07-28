@@ -1,17 +1,29 @@
 """
-vPet UI v8 — bigger icons, cell highlight for cursor, labels under icons.
+vPet UI v7 — Agumon 64x64 atlas + functional FEED & TRAIN.
 
 Layout (132 tall):
-  Top bar:    30px (5 DM icons + 4-letter label under each, cursor = yellow cell bg)
-  Stage:      60px (Agumon 60x60 centered at y=30..90) — reduced from 64 for safety
-  Footer:     12px (just hearts + EN bar)
-  Bottom bar: 30px (5 DM icons + labels)
-
-Cursor: full cell filled with semi-transparent yellow overlay.
-Selected action label shown in footer (right side, max 4 chars).
+  Top bar:    24px (5 DM icons)
+  Stage:      64px (Agumon 64x64 centered at y=24..88)
+  Footer:     14px (hearts + EN + mood + name + stat)
+  Bottom bar: 30px (5 DM icons + cursor area)
 
 Animations: idle(5) walk(5) run(5) eat(4) attack(6) hurt(4)
             sleep(4) happy(4) poop(4) victory(4)
+
+Actions:
+  FEED   → play eat for 2 cycles (~1.4s), +25 hunger, return to idle
+  TRAIN  → play walk; press KEY1 to push (max 8); ends at 8 presses or
+           ~4s, then +N strength where N=presses
+  BATTLE → loop attack until KEY2
+  HEAL   → play sleep 3 cycles (~2.2s), +30 energy, return to idle
+  SCAN   → loop happy until KEY2
+  DEX    → cycle through all anims (auto-advance every 1.5s)
+  EVO    → loop victory until KEY2
+  MAP    → loop walk until KEY2
+  STAT   → loop hurt until KEY2
+  OPT    → loop run until KEY2
+
+Default (no action): auto-cycle idle <-> walk every 3s.
 """
 
 import board
@@ -25,7 +37,6 @@ from adafruit_display_text.label import Label
 import terminalio
 import asyncio
 import gc
-import random
 
 # --- Display & buttons ---
 displayio.release_displays()
@@ -42,17 +53,19 @@ button2 = Debouncer(sw2)
 
 # --- Layout ---
 W, H = 168, 132
-ICON_SIZE = 20
-TOP_H = 30
+ICON_SIZE = 18
+TOP_H = 24
 BOT_H = 30
-FOOTER_H = 12
-SPRITE_SIZE = 60
+FOOTER_H = 14
+SPRITE_SIZE = 64
 STAGE_TOP = TOP_H
-STAGE_BOT = H - BOT_H - FOOTER_H  # 90
+STAGE_BOT = H - BOT_H - FOOTER_H  # 88
+# 64x64 sprite centered in 64px stage = no vertical margin
 SPRITE_X = (W - SPRITE_SIZE) // 2
-SPRITE_Y = STAGE_TOP + (STAGE_BOT - STAGE_TOP - SPRITE_SIZE) // 2  # 30 + 0 = 30
+SPRITE_Y = STAGE_TOP
 
 # --- Menu ---
+# (icon, label, kind, arg)
 TOP_ITEMS = [
     ("/icons/dm_feed.bmp",     "FEED",   "oneshot", ("eat", 2)),
     ("/icons/dm_train.bmp",    "TRAIN",  "train",   None),
@@ -82,15 +95,12 @@ ANIMS_MAP = {
     "victory": ("/Agumon/agumon_victory.bmp", 4),
 }
 CYCLE_SEQ = ["idle", "walk", "run", "eat", "attack", "hurt", "sleep", "happy", "poop", "victory"]
-HOME_CYCLE = ["idle", "walk", "run"]
 
 # --- Colors ---
 NAVY = 0x0d1b3d
 PANEL = 0x0f1e46
-PANEL_DARK = 0x081632
 LINE = 0x2850a0
 YELLOW = 0xf0b41e
-YELLOW_DIM = 0x704a08  # darker yellow for label text
 GREEN = 0x32c850
 ORANGE = 0xf0b41e
 WHITE = 0xe0e0e0
@@ -102,7 +112,7 @@ splash = displayio.Group()
 display.root_group = splash
 
 # Background
-bg_bmp = displayio.OnDiskBitmap("/Background/registerjungle.bmp")
+bg_bmp = displayio.OnDiskBitmap("/Background/digivice_night.bmp")
 bg_pal = bg_bmp.pixel_shader
 bg_pal.make_transparent(0)
 splash.append(displayio.TileGrid(bg_bmp, pixel_shader=bg_pal))
@@ -111,47 +121,20 @@ splash.append(displayio.TileGrid(bg_bmp, pixel_shader=bg_pal))
 splash.append(Rect(1, 1, W-2, H-2, fill=None, outline=LINE, stroke=1))
 splash.append(Rect(3, 3, W-6, H-6, fill=None, outline=0x143064, stroke=1))
 
-# Bar builder
-def cell_x(i, cell_w):
-    """X position of icon inside cell i (centered)."""
-    return int(5 + i * cell_w + (cell_w - ICON_SIZE) / 2)
-
-def cell_origin(i, cell_w, bar_y, cell_h):
-    """Top-left (x, y) of cell i."""
-    return (int(5 + i * cell_w), bar_y)
-
-def add_bar(bar_y, cell_h, items):
-    # Background panel
-    splash.append(Rect(5, bar_y, W-10, cell_h-2, fill=PANEL))
-    cell_w = (W - 10) / len(items)
-    for i, (path, label, _, _) in enumerate(items):
-        cx = cell_x(i, cell_w)
-        cy = bar_y + 2
-        bmp = displayio.OnDiskBitmap(path)
-        pal = bmp.pixel_shader
-        pal.make_transparent(0)
-        splash.append(displayio.TileGrid(bmp, pixel_shader=pal, x=cx, y=cy))
-        # Label under icon (3-letter abbreviation to fit)
-        abbrev = label[:4]
-        lbl = Label(terminalio.FONT, text=abbrev, color=WHITE)
-        lbl.x = cx + (ICON_SIZE - len(abbrev) * 6) // 2
-        lbl.y = bar_y + cell_h - 9
-        splash.append(lbl)
-    return cell_w
-
-TOP_CELL_W = add_bar(4, TOP_H, TOP_ITEMS)
-bot_y = H - BOT_H + 1
-BOT_CELL_W = add_bar(bot_y, BOT_H, BOT_ITEMS)
-
-# Cursor highlight: 4 corner brackets (Rect.stroke can produce negative bounds)
-CURSOR_SIZE = 4
-brk = [Rect(0, 0, CURSOR_SIZE, CURSOR_SIZE, fill=YELLOW) for _ in range(4)]
-for b in brk:
-    splash.append(b)
+# Top bar
+splash.append(Rect(5, 4, W-10, TOP_H-5, fill=PANEL))
+TOP_CELL_W = (W - 10) / len(TOP_ITEMS)
+for i, (path, _, _, _) in enumerate(TOP_ITEMS):
+    cx = int(5 + i * TOP_CELL_W + (TOP_CELL_W - ICON_SIZE) / 2)
+    cy = 4 + (TOP_H - 5 - ICON_SIZE) // 2
+    bmp = displayio.OnDiskBitmap(path)
+    pal = bmp.pixel_shader
+    pal.make_transparent(0)
+    splash.append(displayio.TileGrid(bmp, pixel_shader=pal, x=cx, y=cy))
 
 # Footer
-footer_y = STAGE_BOT + 1
-splash.append(Rect(5, footer_y, W-10, FOOTER_H-2, fill=PANEL_DARK))
+footer_y = STAGE_BOT + 1  # 89
+splash.append(Rect(5, footer_y, W-10, FOOTER_H-2, fill=PANEL))
 
 # HP hearts (5)
 hf_bmp = displayio.OnDiskBitmap("/icons/hp_full.bmp")
@@ -159,38 +142,56 @@ hf_pal = hf_bmp.pixel_shader; hf_pal.make_transparent(0)
 he_bmp = displayio.OnDiskBitmap("/icons/hp_empty.bmp")
 he_pal = he_bmp.pixel_shader; he_pal.make_transparent(0)
 hp_hearts = []
-energy = 60
+energy = 60  # 3/5 hearts full
 for i in range(5):
     full = i < (energy // 20)
     bmp = hf_bmp if full else he_bmp
     pal = hf_pal if full else he_pal
-    tg = displayio.TileGrid(bmp, pixel_shader=pal, x=7 + i * 11, y=footer_y)
+    tg = displayio.TileGrid(bmp, pixel_shader=pal, x=7 + i * 11, y=footer_y + 1)
     hp_hearts.append(tg)
     splash.append(tg)
 
 # EN bar
 en_lbl = Label(terminalio.FONT, text="EN", color=WHITE)
-en_lbl.x, en_lbl.y = 65, footer_y + 1
+en_lbl.x, en_lbl.y = 65, footer_y + 2
 splash.append(en_lbl)
-splash.append(Rect(76, footer_y + 2, 28, 4, fill=GRAY))
-splash.append(Rect(76, footer_y + 2, 17, 4, fill=ORANGE))
+splash.append(Rect(76, footer_y + 3, 28, 4, fill=GRAY))
+splash.append(Rect(76, footer_y + 3, 17, 4, fill=ORANGE))
 
-# Mood icon
+# Mood
 mood_bmp = displayio.OnDiskBitmap("/icons/mood_small.bmp")
 mood_pal = mood_bmp.pixel_shader; mood_pal.make_transparent(0)
-splash.append(displayio.TileGrid(mood_bmp, pixel_shader=mood_pal, x=109, y=footer_y))
+splash.append(displayio.TileGrid(mood_bmp, pixel_shader=mood_pal, x=109, y=footer_y + 1))
 
 # Selected name
 sel_name_lbl = Label(terminalio.FONT, text="FEED", color=YELLOW)
-sel_name_lbl.x, sel_name_lbl.y = 122, footer_y + 1
+sel_name_lbl.x, sel_name_lbl.y = 122, footer_y + 2
 splash.append(sel_name_lbl)
 
-# Stat feedback
+# Stat feedback (overlaid in footer area)
 stat_lbl = Label(terminalio.FONT, text="", color=GREEN)
 stat_lbl.x, stat_lbl.y = 7, footer_y - 11
 splash.append(stat_lbl)
 
-# Agumon sprite (60x60)
+# Bottom bar
+bot_y = H - BOT_H + 2
+splash.append(Rect(5, bot_y, W-10, BOT_H-5, fill=PANEL))
+BOT_CELL_W = (W - 10) / len(BOT_ITEMS)
+for i, (path, _, _, _) in enumerate(BOT_ITEMS):
+    cx = int(5 + i * BOT_CELL_W + (BOT_CELL_W - ICON_SIZE) / 2)
+    cy = bot_y + (BOT_H - 5 - ICON_SIZE) // 2
+    bmp = displayio.OnDiskBitmap(path)
+    pal = bmp.pixel_shader
+    pal.make_transparent(0)
+    splash.append(displayio.TileGrid(bmp, pixel_shader=pal, x=cx, y=cy))
+
+# Cursor brackets
+CURSOR_SIZE = 3
+brk = [Rect(0, 0, CURSOR_SIZE, CURSOR_SIZE, fill=YELLOW) for _ in range(4)]
+for b in brk:
+    splash.append(b)
+
+# Agumon sprite (centered, 64x64)
 bmp = displayio.OnDiskBitmap("/Agumon/agumon_idle.bmp")
 bpal = bmp.pixel_shader
 bpal.make_transparent(0)
@@ -199,7 +200,7 @@ grid = displayio.TileGrid(bmp, pixel_shader=bpal, x=SPRITE_X, y=SPRITE_Y,
 splash.append(grid)
 
 gc.collect()
-print("UI v8 built. mem free:", gc.mem_free())
+print("UI v7 built. mem free:", gc.mem_free())
 
 # --- State ---
 current_anim = "idle"
@@ -212,10 +213,9 @@ action_cycles_target = 0
 action_cycles_done = 0
 action_ticks = 0
 default_cycle = 0
-last_home = None
 train_presses = 0
 train_max = 8
-train_window = 200
+train_window = 200  # ~4s @ 20ms
 stat_message_ticks = 0
 hunger = 0
 strength = 0
@@ -223,19 +223,18 @@ strength = 0
 
 def move_cursor(row, col):
     if row == 0:
-        cell_w = TOP_CELL_W
-        bar_y = 4
-        cell_h = TOP_H
+        x0 = int(5 + col * TOP_CELL_W)
+        y0 = 4
+        x1 = int(x0 + TOP_CELL_W)
+        y1 = TOP_H - 1
     else:
-        cell_w = BOT_CELL_W
-        bar_y = bot_y
-        cell_h = BOT_H
-    x0 = int(5 + col * cell_w)
-    x1 = x0 + int(cell_w)
-    y1 = bar_y + cell_h - 2
+        x0 = int(5 + col * BOT_CELL_W)
+        y0 = bot_y
+        x1 = int(x0 + BOT_CELL_W)
+        y1 = H - 5
     s = CURSOR_SIZE
-    brk[0].x, brk[0].y = x0, bar_y
-    brk[1].x, brk[1].y = x1 - s, bar_y
+    brk[0].x, brk[0].y = x0, y0
+    brk[1].x, brk[1].y = x1 - s, y0
     brk[2].x, brk[2].y = x0, y1 - s
     brk[3].x, brk[3].y = x1 - s, y1 - s
 
@@ -270,9 +269,6 @@ def play_anim(name):
         return
     path, n = ANIMS_MAP[name]
     try:
-        # Free old bitmap before loading new (Pico W has only 264KB RAM)
-        grid.bitmap = None
-        gc.collect()
         new_bmp = displayio.OnDiskBitmap(path)
         new_pal = new_bmp.pixel_shader
         new_pal.make_transparent(0)
@@ -281,21 +277,16 @@ def play_anim(name):
         current_n = n
         current_anim = name
         frame = 0
-        gc.collect()
-    except MemoryError as e:
-        print("mem fail:", e)
-        gc.collect()
     except Exception as e:
         print("anim fail:", e)
 
 
 def end_action():
-    global mode, action_anim, default_cycle, last_home
+    global mode, action_anim, default_cycle
     mode = "idle"
     action_anim = None
     default_cycle = 0
-    last_home = None
-    play_anim(pick_home())
+    play_anim("idle")
 
 
 def start_oneshot(anim_name, cycles):
@@ -332,15 +323,6 @@ def start_cycle():
     play_anim(CYCLE_SEQ[(idx + 1) % len(CYCLE_SEQ)])
 
 
-def pick_home():
-    global last_home
-    choices = [a for a in HOME_CYCLE if a != last_home]
-    if not choices:
-        choices = HOME_CYCLE
-    last_home = random.choice(choices)
-    return last_home
-
-
 def handle_action(kind, arg):
     if kind == "oneshot":
         anim, cycles = arg
@@ -361,27 +343,34 @@ update_sel_label()
 async def main():
     global cursor_row, cursor_col, current_anim, current_n, frame, default_cycle
     global mode, action_anim, action_cycles_target, action_cycles_done, action_ticks
-    global train_presses, stat_message_ticks, hunger, strength, energy, last_home
+    global train_presses, stat_message_ticks, hunger, strength, energy
 
     tick = 0
     while True:
         tick += 1
+        # Frame advance every 9 ticks (~180ms = 5.5fps)
         if tick % 9 == 0:
             frame = (frame + 1) % current_n
             grid[0] = frame
 
+        # Stat message fade
         if stat_message_ticks > 0:
             stat_message_ticks -= 1
             if stat_message_ticks == 0:
                 stat_lbl.text = ""
 
+        # Mode logic
         if mode == "idle":
             default_cycle += 1
-            if default_cycle >= 100:
+            if default_cycle >= 150:  # 3s
                 default_cycle = 0
-                play_anim(pick_home())
+                if current_anim == "idle":
+                    play_anim("walk")
+                else:
+                    play_anim("idle")
         elif mode == "oneshot":
             action_ticks += 1
+            # One cycle = N frames * 9 ticks each
             cycle_ticks = ANIMS_MAP[action_anim][1] * 9
             if action_ticks > 0 and action_ticks % cycle_ticks == 0:
                 action_cycles_done += 1
@@ -401,10 +390,11 @@ async def main():
                 show_stat("+%d STR!" % train_presses, YELLOW)
                 end_action()
         elif mode == "cycle":
-            if tick % 75 == 0:
+            if tick % 75 == 0:  # 1.5s
                 idx = CYCLE_SEQ.index(current_anim) if current_anim in CYCLE_SEQ else 0
                 play_anim(CYCLE_SEQ[(idx + 1) % len(CYCLE_SEQ)])
 
+        # Buttons
         button0.update()
         button1.update()
         button2.update()
@@ -423,9 +413,8 @@ async def main():
             if mode != "idle":
                 end_action()
             else:
+                play_anim("idle")
                 default_cycle = 0
-                last_home = None
-                play_anim(pick_home())
 
         if button1.fell:
             if mode == "train":
