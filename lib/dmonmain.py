@@ -463,7 +463,10 @@ async def _play_agumon(path, n_frames, cycles, x=68, y=50, frame_ms=180):
             await asyncio.sleep_ms(frame_ms)
     finally:
         await destroy_animation(group)
-        del grid, group, bmp, pal
+        try:
+            del grid, group, bmp, pal
+        except Exception:
+            pass
         gc.collect()
 
 # ---------- Agumon demo mode ----------
@@ -476,12 +479,17 @@ async def agumon_demo():
     global exit_demo, view_live, demo_active
     exit_demo = False
     demo_active = True
-    # Hide all the normal menu views + tab buttons
+    # Hide all the normal menu views
     await show_only(None)
-    for b in ALL_TAB_BUTTONS:
-        b.hidden = True
-    for btn in ALL_EAT_BTNS:
-        btn.hidden = True
+    # Pull tab buttons and eat sub-buttons out of the render tree so they
+    # don't overlay the Agumon sprite. (SpriteButton may not honor .hidden,
+    # so we remove/re-add from anim_layer instead.)
+    saved_btns = list(ALL_TAB_BUTTONS) + list(ALL_EAT_BTNS)
+    for b in saved_btns:
+        try:
+            anim_layer.remove(b)
+        except ValueError:
+            pass
     view_live = 0
 
     # Add label
@@ -493,15 +501,23 @@ async def agumon_demo():
         _demo_label.text = "AGUMON: " + name
         print("  playing {} ({} frames)".format(name, n_frames))
         # _play_agumon polls buttons itself (no asyncio.wait needed)
-        await _play_agumon(path, n_frames, cycles)
+        try:
+            await _play_agumon(path, n_frames, cycles)
+        except Exception as e:
+            print("anim failed:", e)
+            gc.collect()
         i = (i + 1) % len(AGUMON_ANIMS)
         gc.collect()
     # Restore
-    view_layer.remove(_demo_label)
-    for b in ALL_TAB_BUTTONS:
-        b.hidden = False
-    for btn in ALL_EAT_BTNS:
-        btn.hidden = False
+    try:
+        view_layer.remove(_demo_label)
+    except ValueError:
+        pass
+    for b in saved_btns:
+        try:
+            anim_layer.append(b)
+        except ValueError:
+            pass
     demo_active = False
     print("Agumon demo end")
 
@@ -589,14 +605,33 @@ async def key_manipulation():
 # ---------- Main ----------
 async def main():
     if AGUMON_DEMO:
-        # Run the Agumon demo first. The demo task itself reads buttons via
-        # _wait_skip, and key_manipulation short-circuits while demo_active.
-        asyncio.create_task(agumon_demo())
-        # Yield to the event loop until the demo is done.
-        while not exit_demo:
-            await asyncio.sleep_ms(10)
-        print("Returning to normal mode")
-        # Fall through to the normal vPet mode below
+        # Run the Agumon demo first. The demo owns the buttons during its run
+        # and short-circuits key_manipulation via the demo_active flag.
+        # Await directly so any exception is caught here (a separate task
+        # would silently die).
+        try:
+            print("Starting Agumon demo...")
+            await agumon_demo()
+            print("Agumon demo finished, returning to normal mode")
+        except Exception as e:
+            print("DEMO CRASHED:", e)
+            # Best-effort UI restore so we don't end up with no UI
+            for b in ALL_TAB_BUTTONS:
+                try:
+                    b.hidden = False
+                except Exception:
+                    pass
+            for btn in ALL_EAT_BTNS:
+                try:
+                    btn.hidden = False
+                except Exception:
+                    pass
+            try:
+                view_layer.remove(_demo_label)
+            except Exception:
+                pass
+            demo_active = False
+            exit_demo = True
 
     asyncio.create_task(move_main_screen())
     asyncio.create_task(light_blink())
