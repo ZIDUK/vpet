@@ -1,0 +1,16 @@
+# macOS AppleDouble noise on FAT filesystems
+._*
+.Trashes
+.fseventsd
+.metadata_never_index
+
+# Runtime state (not committed, lives on the Pico's flash)
+state.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.DS_Store
