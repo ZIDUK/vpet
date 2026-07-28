@@ -95,6 +95,8 @@ ANIMS_MAP = {
     "victory": ("/Agumon/agumon_victory.bmp", 4),
 }
 CYCLE_SEQ = ["idle", "walk", "run", "eat", "attack", "hurt", "sleep", "happy", "poop", "victory"]
+# Home cycle: alternates when no action is active
+HOME_CYCLE = ["idle", "walk", "run"]
 
 # --- Colors ---
 NAVY = 0x0d1b3d
@@ -213,6 +215,7 @@ action_cycles_target = 0
 action_cycles_done = 0
 action_ticks = 0
 default_cycle = 0
+home_idx = 0  # index into HOME_CYCLE
 train_presses = 0
 train_max = 8
 train_window = 200  # ~4s @ 20ms
@@ -282,11 +285,12 @@ def play_anim(name):
 
 
 def end_action():
-    global mode, action_anim, default_cycle
+    global mode, action_anim, default_cycle, home_idx
     mode = "idle"
     action_anim = None
     default_cycle = 0
-    play_anim("idle")
+    home_idx = 0
+    play_anim(HOME_CYCLE[0])
 
 
 def start_oneshot(anim_name, cycles):
@@ -343,7 +347,7 @@ update_sel_label()
 async def main():
     global cursor_row, cursor_col, current_anim, current_n, frame, default_cycle
     global mode, action_anim, action_cycles_target, action_cycles_done, action_ticks
-    global train_presses, stat_message_ticks, hunger, strength, energy
+    global train_presses, stat_message_ticks, hunger, strength, energy, home_idx
 
     tick = 0
     while True:
@@ -362,12 +366,10 @@ async def main():
         # Mode logic
         if mode == "idle":
             default_cycle += 1
-            if default_cycle >= 150:  # 3s
+            if default_cycle >= 100:  # 2s per state
                 default_cycle = 0
-                if current_anim == "idle":
-                    play_anim("walk")
-                else:
-                    play_anim("idle")
+                home_idx = (home_idx + 1) % len(HOME_CYCLE)
+                play_anim(HOME_CYCLE[home_idx])
         elif mode == "oneshot":
             action_ticks += 1
             # One cycle = N frames * 9 ticks each
@@ -413,8 +415,9 @@ async def main():
             if mode != "idle":
                 end_action()
             else:
-                play_anim("idle")
+                home_idx = 0
                 default_cycle = 0
+                play_anim(HOME_CYCLE[0])
 
         if button1.fell:
             if mode == "train":
