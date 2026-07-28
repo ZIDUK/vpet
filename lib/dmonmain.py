@@ -367,6 +367,49 @@ async def move_digimon_left():
 async def move_digimon_right():
     await _animate(walk_grid, walk_group, 10, x_step=3, x_max=70)
 
+# ---------- Lazy-loaded animations ----------
+# Pre-loading all 11 dmonanim*.bmp would exceed Pico W RAM (~150KB free).
+# Instead each one loads from flash on demand, plays, then frees. The first
+# run of a given animation has a small flash-read delay; subsequent runs hit
+# the flash cache.
+async def _play_lazy(path, tw, th, cycles, x_step=0, x_min=None, x_max=None,
+                    x=40, y=35):
+    """Load a BMP, play its animation, then free the memory."""
+    global current_frame, global_position
+    bmp = displayio.OnDiskBitmap(path)
+    pal = bmp.pixel_shader
+    pal.make_transparent(0)
+    grid = displayio.TileGrid(bmp, pixel_shader=pal, x=x, y=y,
+                              tile_width=tw, tile_height=th, default_tile=0)
+    group = displayio.Group()
+    group.append(grid)
+    await display_animation(group)
+    for _ in range(cycles):
+        if x_step and x_min is not None and grid.x > x_min:
+            grid.x -= x_step
+        elif x_step and x_max is not None and grid.x < x_max:
+            grid.x += x_step
+        if x_step:
+            global_position = grid.x
+        grid[0] = current_frame
+        await asyncio.sleep_ms(250)
+        current_frame = (current_frame + 1) % N_FRAMES
+    await destroy_animation(group)
+    del grid, group, bmp, pal
+    gc.collect()
+
+async def move_digimon_anim01(): await _play_lazy("/Greymon/dmonanim01.bmp",  64, 64, 4)
+async def move_digimon_anim02(): await _play_lazy("/Greymon/dmonanim02.bmp",  64, 64, 4)
+async def move_digimon_anim03(): await _play_lazy("/Greymon/dmonanim03.bmp",  64, 64, 4)
+async def move_digimon_anim04(): await _play_lazy("/Greymon/dmonanim04.bmp",  64, 64, 4)
+async def move_digimon_anim05(): await _play_lazy("/Greymon/dmonanim05.bmp",  64, 64, 4)
+async def move_digimon_anim06(): await _play_lazy("/Greymon/dmonanim06.bmp",  64, 64, 4)
+async def move_digimon_anim07(): await _play_lazy("/Greymon/dmonanim07.bmp",  64, 64, 3)
+async def move_digimon_anim08(): await _play_lazy("/Greymon/dmonanim08.bmp",  64, 64, 3)
+async def move_digimon_anim09(): await _play_lazy("/Greymon/dmonanim09.bmp",  64, 64, 1)
+async def move_digimon_anim10(): await _play_lazy("/Greymon/dmonanim10.bmp",  64, 64, 4)
+async def move_digimon_anim11(): await _play_lazy("/Greymon/dmonanim11.bmp",  64, 64, 2)
+
 # ---------- View-local animations ----------
 async def light_blink():
     """Blink the light bulb forever. When Light_View is hidden the tile is
@@ -388,13 +431,24 @@ async def training_animate():
 # ---------- Main animation loop (random digimon behavior) ----------
 async def move_main_screen():
     while True:
-        pick = randint(1, 6)
-        if   pick == 1: await move_digimon_left()
-        elif pick == 2: await move_digimon_idle()
-        elif pick == 3: await move_digimon_sleep()
-        elif pick == 4: await move_digimon_victory()
-        elif pick == 5: await move_digimon_eatmeat()
-        else:           await move_digimon_right()
+        pick = randint(1, 17)  # 6 original + 11 new lazy animations
+        if   pick ==  1: await move_digimon_left()
+        elif pick ==  2: await move_digimon_idle()
+        elif pick ==  3: await move_digimon_sleep()
+        elif pick ==  4: await move_digimon_victory()
+        elif pick ==  5: await move_digimon_eatmeat()
+        elif pick ==  6: await move_digimon_right()
+        elif pick ==  7: await move_digimon_anim01()
+        elif pick ==  8: await move_digimon_anim02()
+        elif pick ==  9: await move_digimon_anim03()
+        elif pick == 10: await move_digimon_anim04()
+        elif pick == 11: await move_digimon_anim05()
+        elif pick == 12: await move_digimon_anim06()
+        elif pick == 13: await move_digimon_anim07()
+        elif pick == 14: await move_digimon_anim08()
+        elif pick == 15: await move_digimon_anim09()
+        elif pick == 16: await move_digimon_anim10()
+        else:            await move_digimon_anim11()
         gc.collect()  # reclaim any temp allocations
 
 # ---------- Button handling ----------
