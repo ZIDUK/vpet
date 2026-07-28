@@ -102,7 +102,7 @@ splash = displayio.Group()
 display.root_group = splash
 
 # Background
-bg_bmp = displayio.OnDiskBitmap("/Background/digivice_night.bmp")
+bg_bmp = displayio.OnDiskBitmap("/Background/registerjungle.bmp")
 bg_pal = bg_bmp.pixel_shader
 bg_pal.make_transparent(0)
 splash.append(displayio.TileGrid(bg_bmp, pixel_shader=bg_pal))
