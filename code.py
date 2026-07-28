@@ -143,11 +143,11 @@ TOP_CELL_W = add_bar(4, TOP_H, TOP_ITEMS)
 bot_y = H - BOT_H + 1
 BOT_CELL_W = add_bar(bot_y, BOT_H, BOT_ITEMS)
 
-# Cursor highlight: fixed size, only x/y changes (Rect.width/height not settable in 8.2.9)
-CURSOR_W = 28
-CURSOR_H_PIX = 26
-CURSOR_HL = Rect(0, 0, CURSOR_W, CURSOR_H_PIX, fill=None, outline=YELLOW, stroke=2)
-splash.append(CURSOR_HL)
+# Cursor highlight: 4 corner brackets (Rect.stroke can produce negative bounds)
+CURSOR_SIZE = 4
+brk = [Rect(0, 0, CURSOR_SIZE, CURSOR_SIZE, fill=YELLOW) for _ in range(4)]
+for b in brk:
+    splash.append(b)
 
 # Footer
 footer_y = STAGE_BOT + 1
@@ -225,13 +225,19 @@ def move_cursor(row, col):
     if row == 0:
         cell_w = TOP_CELL_W
         bar_y = 4
+        cell_h = TOP_H
     else:
         cell_w = BOT_CELL_W
         bar_y = bot_y
+        cell_h = BOT_H
     x0 = int(5 + col * cell_w)
-    # Center the fixed-size cursor within the cell
-    CURSOR_HL.x = x0 + (int(cell_w) - CURSOR_W) // 2
-    CURSOR_HL.y = bar_y + 1
+    x1 = x0 + int(cell_w)
+    y1 = bar_y + cell_h - 2
+    s = CURSOR_SIZE
+    brk[0].x, brk[0].y = x0, bar_y
+    brk[1].x, brk[1].y = x1 - s, bar_y
+    brk[2].x, brk[2].y = x0, y1 - s
+    brk[3].x, brk[3].y = x1 - s, y1 - s
 
 
 cursor_row, cursor_col = 0, 0
