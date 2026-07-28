@@ -37,6 +37,7 @@ from adafruit_display_text.label import Label
 import terminalio
 import asyncio
 import gc
+import random
 
 # --- Display & buttons ---
 displayio.release_displays()
@@ -215,7 +216,7 @@ action_cycles_target = 0
 action_cycles_done = 0
 action_ticks = 0
 default_cycle = 0
-home_idx = 0  # index into HOME_CYCLE
+last_home = None  # last home anim played, to avoid repeats
 train_presses = 0
 train_max = 8
 train_window = 200  # ~4s @ 20ms
@@ -266,6 +267,16 @@ def show_stat(msg, color=GREEN, ticks=60):
     stat_message_ticks = ticks
 
 
+def pick_home():
+    """Pick a random home animation, avoiding the last one."""
+    global last_home
+    choices = [a for a in HOME_CYCLE if a != last_home]
+    if not choices:
+        choices = HOME_CYCLE
+    last_home = random.choice(choices)
+    return last_home
+
+
 def play_anim(name):
     global current_anim, current_n, frame
     if name is None or name == current_anim:
@@ -285,12 +296,13 @@ def play_anim(name):
 
 
 def end_action():
-    global mode, action_anim, default_cycle, home_idx
+    global mode, action_anim, default_cycle, last_home
     mode = "idle"
     action_anim = None
     default_cycle = 0
-    home_idx = 0
-    play_anim(HOME_CYCLE[0])
+    last_home = None
+    pick = pick_home()
+    play_anim(pick)
 
 
 def start_oneshot(anim_name, cycles):
@@ -347,7 +359,7 @@ update_sel_label()
 async def main():
     global cursor_row, cursor_col, current_anim, current_n, frame, default_cycle
     global mode, action_anim, action_cycles_target, action_cycles_done, action_ticks
-    global train_presses, stat_message_ticks, hunger, strength, energy, home_idx
+    global train_presses, stat_message_ticks, hunger, strength, energy, last_home
 
     tick = 0
     while True:
@@ -368,8 +380,7 @@ async def main():
             default_cycle += 1
             if default_cycle >= 100:  # 2s per state
                 default_cycle = 0
-                home_idx = (home_idx + 1) % len(HOME_CYCLE)
-                play_anim(HOME_CYCLE[home_idx])
+                play_anim(pick_home())
         elif mode == "oneshot":
             action_ticks += 1
             # One cycle = N frames * 9 ticks each
@@ -415,9 +426,9 @@ async def main():
             if mode != "idle":
                 end_action()
             else:
-                home_idx = 0
                 default_cycle = 0
-                play_anim(HOME_CYCLE[0])
+                last_home = None
+                play_anim(pick_home())
 
         if button1.fell:
             if mode == "train":
