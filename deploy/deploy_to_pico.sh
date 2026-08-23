@@ -68,24 +68,22 @@ else
 fi
 
 # 5) Deploy asset directories
-# Only deploy what the current code.py uses (BMPs from Agumon/, registerjungle.bmp).
-# Avoid `rm -rf` on Agumon/ because deleting/recreating the directory on a full FAT
-# filesystem is unreliable; we just copy the BMPs the code needs and let macOS metadata
-# (`._*`) be cleaned by step 0 above.
-for bmp in "$REPO_ROOT"/Agumon/*.bmp; do
-  if [ -f "$bmp" ]; then
-    cp "$bmp" "$DEVICE/Agumon/" 2>/dev/null && echo "    wrote Agumon/$(basename "$bmp")" || echo "    SKIP Agumon/$(basename "$bmp") (no space or other error)"
+# We scan code.py for all "/path/to/file.bmp" references and only copy those.
+# This keeps the device lean: no unused sprites eating flash.
+ASSETS_NEEDED=$(grep -oE '/[A-Za-z_][A-Za-z0-9_/]*\.bmp' "$REPO_ROOT/code.py" | sort -u)
+for asset in $ASSETS_NEEDED; do
+  src="$REPO_ROOT$asset"
+  dest="$DEVICE$asset"
+  mkdir -p "$(dirname "$dest")"
+  if [ -f "$src" ]; then
+    cp "$src" "$dest" 2>/dev/null && echo "    wrote $asset" || echo "    SKIP $asset (no space)"
+  else
+    echo "    MISSING $asset (not in repo)"
   fi
 done
-if [ -d "$REPO_ROOT/Background" ]; then
-  mkdir -p "$DEVICE/Background"
-  for bmp in "$REPO_ROOT"/Background/*.bmp; do
-    if [ -f "$bmp" ]; then
-      cp "$bmp" "$DEVICE/Background/" 2>/dev/null && echo "    wrote Background/$(basename "$bmp")"
-    fi
-  done
-fi
-# Icons: only deploy if code.py uses them (v14 doesn't). Skip for now.
+
+# 5b) Optional: also wipe any asset files on the device that are no longer referenced.
+# We ask the user interactively to avoid surprise deletions. Skip for now.
 
 # 6) Deploy settings.toml (wifi config, etc)
 if [ -f "$REPO_ROOT/settings.toml" ]; then

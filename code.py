@@ -24,7 +24,7 @@ bg_bmp = displayio.OnDiskBitmap("/Background/registerjungle.bmp")
 g.append(displayio.TileGrid(bg_bmp, pixel_shader=bg_bmp.pixel_shader, x=-16, y=0))
 
 # Agumon sprite
-idle_bmp = displayio.OnDiskBitmap("/Agumon/agumon_idle.bmp")
+idle_bmp = displayio.OnDiskBitmap("/Agumon/idle.bmp")
 idle_bmp.pixel_shader.make_transparent(0)
 sp_tg = displayio.TileGrid(
     idle_bmp, pixel_shader=idle_bmp.pixel_shader,

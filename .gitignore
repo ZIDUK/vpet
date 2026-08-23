@@ -54,3 +54,14 @@ Egg/
 Greymon/
 Greymon_32/
 MetalGreymon/
+
+# Agumon sprite variants we don't deploy (only idle.bmp is runtime for v14)
+Agumon/walk.bmp
+Agumon/attack.bmp
+Agumon/eat.bmp
+Agumon/evolve.bmp
+Agumon/happy.bmp
+Agumon/hurt.bmp
+Agumon/sleep.bmp
+Agumon/*_clean.png
+Agumon/scaled/
