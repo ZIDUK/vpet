@@ -10,8 +10,37 @@ state.json
 # Python
 __pycache__/
 *.pyc
+*.tmp
 
 # Editor
 .vscode/
 .DS_Store
 *.swp
+
+# Backup / temp files at repo root
+code.py.v7
+code.py.v13tmp
+code.py.bak
+code.py.old
+code.py.new
+code_pico_lcd144_v13.py
+code_v7_backup.py
+_backup_v6/
+
+# Agumon asset processing (dev only, not deployed)
+Agumon_atlas/
+sprites/
+sprites_clean/
+
+# Reference materials (dev only, not deployed)
+reference/
+mockups/
+fonts/
+scripts/
+pygame_v1/
+
+# Future evolutions not in current vPet (deployed separately when ready)
+Egg/
+Greymon/
+Greymon_32/
+MetalGreymon/
