@@ -32,6 +32,16 @@ Agumon_atlas/
 sprites/
 sprites_clean/
 
+# Agumon sprite variants we don't deploy (only idle.bmp + walk.bmp are runtime)
+Agumon/scaled/
+Agumon/*_clean.png
+Agumon/attack.bmp
+Agumon/eat.bmp
+Agumon/evolve.bmp
+Agumon/happy.bmp
+Agumon/hurt.bmp
+Agumon/sleep.bmp
+
 # Reference materials (dev only, not deployed)
 reference/
 mockups/

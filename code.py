@@ -1,5 +1,6 @@
-"""vPet Pico v13.0 - Agumon animated + jungle + 4 colored action squares w/ selector
-Waveshare Pico-LCD-1.44 (ST7735S 128x128, rotation=180)"""
+"""vPet Pico v14.0 - Agumon animated + jungle + 4 colored action squares w/ selector
+Waveshare Pico-LCD-1.44 (ST7735S 128x128, rotation=180)
+v14.0: brighter stat bar colors, slightly larger bars for visibility"""
 import board, busio, displayio, digitalio, time
 from fourwire import FourWire
 from adafruit_st7735r import ST7735R
@@ -33,13 +34,13 @@ g.append(sp_tg)
 n_idle = idle_bmp.width // 64
 print("sprite", n_idle)
 
-# 4 stat bars at y=80
-bar_colors = [0xf0b41e, 0x2850a0, 0x32c850, 0xd03030]
+# 4 stat bars at y=78, slightly taller (5px) for visibility
+bar_colors = [0xffd700, 0x4080ff, 0x40ff60, 0xff5050]  # brighter palette
 bar_fg_tiles = []
 for i, c in enumerate(bar_colors):
-    b_fg = displayio.Bitmap(26, 4, 1)
+    b_fg = displayio.Bitmap(26, 5, 1)
     p_fg = displayio.Palette(1); p_fg[0] = c
-    fg = displayio.TileGrid(b_fg, pixel_shader=p_fg, x=6 + i*29, y=80)
+    fg = displayio.TileGrid(b_fg, pixel_shader=p_fg, x=6 + i*29, y=78)
     g.append(fg)
     bar_fg_tiles.append((b_fg, fg))
 
@@ -113,6 +114,7 @@ def draw_bars():
             b_fg[x, 1] = 1 if on else 0
             b_fg[x, 2] = 1 if on else 0
             b_fg[x, 3] = 1 if on else 0
+            b_fg[x, 4] = 1 if on else 0
 
 def do_action():
     if menu_idx == 0: pet["h"] = min(100, pet["h"] + 25)
