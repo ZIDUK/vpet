@@ -1,0 +1,15 @@
+{
+  "name": "Greymon",
+  "line": "agumon_line",
+  "stage": "champion",
+  "sprite": "/Greymon/greymon_idle.bmp",
+  "evolves_to": "metalgreymon",
+  "min_age_seconds": 180,
+  "battles_required": 3,
+  "requirements": {
+    "h": 60,
+    "e": 60,
+    "p": 60,
+    "hp": 80
+  }
+}

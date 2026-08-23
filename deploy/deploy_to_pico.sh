@@ -38,34 +38,41 @@ fi
 
 # 2) Deploy code.py
 cp "$REPO_ROOT/code.py" "$DEVICE/code.py"
-echo "    wrote code.py (vPet v13.0)"
+echo "    wrote code.py"
 
-# 3) Deploy lib/ (only files we actually need)
+# 3) Deploy lib/ from the official CircuitPython 10.x bundle
+# We do NOT commit .mpy files to the repo (build artifacts, version-specific).
+# Instead we download the right version on every deploy.
+# See docs/hardware-notes.md for why this matters.
+BUNDLE_URL="https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/download/20250912/adafruit-circuitpython-bundle-10.x-mpy-20250912.zip"
+BUNDLE_ZIP="/tmp/cp10_bundle.zip"
+if [ ! -f "$BUNDLE_ZIP" ]; then
+  echo "    downloading CP 10.x bundle (one-time)..."
+  curl -sL -o "$BUNDLE_ZIP" "$BUNDLE_URL" || { echo "    bundle download failed"; exit 1; }
+fi
+
 mkdir -p "$DEVICE/lib"
 for f in adafruit_st7735r.mpy adafruit_debouncer.mpy adafruit_ticks.mpy; do
-  if [ -f "$REPO_ROOT/lib/$f" ]; then
-    cp "$REPO_ROOT/lib/$f" "$DEVICE/lib/$f"
-    echo "    wrote lib/$f"
-  fi
+  unzip -p "$BUNDLE_ZIP" "adafruit-circuitpython-bundle-10.x-mpy-20250912/lib/$f" \
+    > "$DEVICE/lib/$f" 2>/dev/null && echo "    wrote lib/$f"
 done
 
-# 4) Deploy adafruit_imageload (BMP only - no PNG/GIF/PNM to save space)
-# Just make sure the BMP submodule is present, don't re-copy the whole tree
-if [ ! -d "$DEVICE/lib/adafruit_imageload/bmp" ]; then
-  mkdir -p "$DEVICE/lib/adafruit_imageload"
-  if [ -f "$REPO_ROOT/lib/adafruit_imageload/__init__.mpy" ]; then
-    cp "$REPO_ROOT/lib/adafruit_imageload/__init__.mpy" "$DEVICE/lib/adafruit_imageload/"
-  fi
-  if [ -f "$REPO_ROOT/lib/adafruit_imageload/displayio_types.mpy" ]; then
-    cp "$REPO_ROOT/lib/adafruit_imageload/displayio_types.mpy" "$DEVICE/lib/adafruit_imageload/"
-  fi
-  if [ -d "$REPO_ROOT/lib/adafruit_imageload/bmp" ]; then
-    cp -r "$REPO_ROOT/lib/adafruit_imageload/bmp" "$DEVICE/lib/adafruit_imageload/"
-  fi
-  echo "    wrote lib/adafruit_imageload/ (BMP only)"
+# 3b) Deploy adafruit_imageload (BMP only — skip PNG/GIF/PNM to save space)
+if [ ! -d "$DEVICE/lib/adafruit_imageload/bmp" ] || [ ! -f "$DEVICE/lib/adafruit_imageload/__init__.mpy" ]; then
+  mkdir -p "$DEVICE/lib/adafruit_imageload/bmp"
+  for f in __init__.mpy displayio_types.mpy; do
+    unzip -p "$BUNDLE_ZIP" "adafruit-circuitpython-bundle-10.x-mpy-20250912/lib/adafruit_imageload/$f" \
+      > "$DEVICE/lib/adafruit_imageload/$f" 2>/dev/null && echo "    wrote lib/adafruit_imageload/$f"
+  done
+  for f in __init__.mpy indexed.mpy negative_height_check.mpy truecolor.mpy; do
+    unzip -p "$BUNDLE_ZIP" "adafruit-circuitpython-bundle-10.x-mpy-20250912/lib/adafruit_imageload/bmp/$f" \
+      > "$DEVICE/lib/adafruit_imageload/bmp/$f" 2>/dev/null && echo "    wrote lib/adafruit_imageload/bmp/$f"
+  done
 else
   echo "    lib/adafruit_imageload/ already present (skipped)"
 fi
+
+# (legacy adafruit_imageload section removed — handled by 3b above)
 
 # 5) Deploy asset directories
 # We scan code.py for all "/path/to/file.bmp" references and only copy those.

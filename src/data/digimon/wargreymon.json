@@ -1,0 +1,10 @@
+{
+  "name": "WarGreymon",
+  "line": "agumon_line",
+  "stage": "mega",
+  "sprite": "/WarGreymon/wargreymon_idle.bmp",
+  "evolves_to": null,
+  "min_age_seconds": 0,
+  "battles_required": 0,
+  "requirements": {}
+}

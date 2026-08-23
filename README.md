@@ -1,110 +1,91 @@
-# vPet — Pocket Digimon-Style Virtual Pet Keychain
+# vPet
 
-A real Agumon virtual pet on a 128x128 color display, two buttons, with full stats,
-evolution, and a future web admin for remote care.
+A Digimon-style virtual pet on a Raspberry Pi Pico W with a Waveshare Pico-LCD-1.44 (ST7735S 128×128).
 
-## Hardware (current)
-- **Waveshare Pico-LCD-1.44** (Raspberry Pi Pico W + ST7735S 128x128 color LCD)
-- 2 buttons (GP15, GP17)
-- Backlight on GP13
+## What it is
 
-## Quick start
-
-### 1. Plug in your Pico
-Connect the Pico-LCD-1.44 via USB. The `CIRCUITPY` volume should auto-mount.
-
-### 2. Deploy
-```bash
-./deploy/deploy_to_pico.sh
-```
-
-This copies the runtime files (code.py, lib, assets, settings.toml) to the device.
-The Pico auto-reloads in ~2 seconds.
-
-### 3. Reset
-If anything looks broken:
-```bash
-mv /Volumes/CIRCUITPY/code.py.bak /Volumes/CIRCUITPY/code.py
-```
-
-Or hard-reset: unplug, wait 5s, replug.
-
-## Project structure
-
-```
-vpet/
-├── code.py                 # vPet v13.0 - main runtime, deploy this
-├── lib/                    # Adafruit libraries (CP 10.2.1 compatible)
-│   ├── adafruit_st7735r.mpy
-│   ├── adafruit_debouncer.mpy
-│   ├── adafruit_ticks.mpy
-│   └── adafruit_imageload/  # for sprite loading
-├── Agumon/                 # Agumon sprite sheets (10 animations)
-├── Background/             # Background images
-├── icons/                  # Digimon-style action icons (for future use)
-├── settings.toml           # WiFi config (for future M4)
-│
-├── deploy/                 # deployment scripts
-│   └── deploy_to_pico.sh
-│
-├── docs/                   # Documentation, code snapshots
-│   ├── code_v7_reference.py
-│   └── code_v13_snapshot.py
-│
-├── .plan/                  # Planning (not deployed)
-│   ├── roadmap.md          # milestones and vision
-│   ├── current-sprint.md   # what we're working on now
-│   └── ideas.md            # backlog of features
-│
-└── .gitignore              # excludes dev-only and future-scope files
-```
-
-## What's deployed vs not
-
-**Deployed to the device** (only these):
-- `code.py`
-- `lib/` (just the .mpy files we need)
-- `Agumon/`, `Background/`, `icons/`
-- `settings.toml`
-
-**Stays in the repo** (for development):
-- `docs/` — code history, design notes
-- `.plan/` — sprint plans, roadmap, ideas
-- `deploy/` — scripts
-- All other dev-only files (see `.gitignore`)
+Two evolution lines (Agumon, Gabumon), 4 stages each. Real stats (hunger/energy/happiness/HP),
+real actions (feed/heal/play/rest), real turn-based battles, real persistence across reboots.
+It's a Tamagotchi that grows up, evolves, and remembers what happened.
 
 ## Hardware
-- See `docs/hardware-notes.md` (todo) for full pinout and gotchas
 
-## Roadmap
-See `.plan/roadmap.md`.
+- **MCU**: Raspberry Pi Pico W (RP2040, 264KB RAM, 2MB flash)
+- **Display**: Waveshare Pico-LCD-1.44 (ST7735S 128×128, SPI)
+- **Buttons**: 2× tactile switches on GP15/GP17 (active LOW)
+- **Firmware**: CircuitPython 10.2.1
 
-Current sprint: **M1 — Pet lifecycle** (mood, evolution, death, persistence).
-See `.plan/current-sprint.md`.
+## Repo layout
 
-## Tech notes
+```
+src/           — modular Python (the source of truth)
+  hal.py       — display + button init
+  core/        — game logic (pet, evolution, battle, save)
+  ui/          — display widgets (bars, buttons, sprites)
+  data/        — JSON config: 8 evolution forms + NPCs
+  app.py       — entrypoint / main loop
 
-- **CircuitPython 10.2.1** on Pico W
-- **`from fourwire import FourWire`** (not `from displayio import FourWire` — moved in CP 10)
-- **ST7735S display**: 128x128, needs `colstart=2, rowstart=2, rotation=180` for proper centering
-- **Backlight** must be enabled manually on GP13 (display doesn't auto-enable)
-- **Sprite transparency**: `bmp.pixel_shader.make_transparent(0)` works, but only AFTER the bitmap is loaded into a TileGrid
-- **Pico RAM**: 264KB total. With v13.0 running, ~140KB free. Plenty for M1 features.
+assets/        — raw art, dev only (NOT deployed)
+  raw/         — original source files (Agumon_atlas, Greymon, etc.)
+  atlas/       — generated sprite atlases
+  backgrounds/ — background BMPs
+  mockups/     — UI sketches
 
-## Development
+build/         — generated output (deployed to the Pico)
+  code.py      — flattened from src/ by scripts/build.py
+  Agumon/      — sprite BMPs
+  Background/  — background BMPs
+  settings.toml
 
-The repo is a normal git project. Push to github.com/ZIDUK/vpet.
+scripts/       — dev tooling
+  build.py     — src/ → build/code.py
+  deploy.py    — build/ → /Volumes/CIRCUITPY/
+  simulator.py — run vPet on Mac in pygame (TODO)
 
-```bash
-git add -A
-git commit -m "your message"
-git push origin master
+tests/         — pytest, run on Mac
+docs/          — architecture, hardware notes, ADRs
+.plan/         — roadmap, current sprint, ideas
 ```
 
-To test changes on the device, just rerun `./deploy/deploy_to_pico.sh`.
+## Workflow
 
-## Status
+```bash
+make build     # src/ → build/code.py
+make test      # run pytest
+make deploy    # build/ → /Volumes/CIRCUITPY/  (Pico must be plugged in)
+make all       # build + test + deploy
+```
 
-- **v13.0** running on Pico-LCD-1.44 (committed as `33ba7c7`)
-- T-Display variant was abandoned (overheating, killed the regulator)
-- WiFi-feeding deferred to M4 (waiting for safer hardware)
+## What works now (M0 + M1)
+
+- [x] Display: jungle background, animated sprite, 4 stat bars, 4 action buttons
+- [x] Buttons: navigate menu, apply action
+- [x] Stats: hunger, energy, happiness, HP — decay over time, action effects, caps at 100
+- [x] Persistence: save/load to `/pet_save.json` (survives reboot)
+- [x] Build pipeline: src/ → build/code.py
+- [x] Deploy pipeline: build/ → /Volumes/CIRCUITPY/
+- [x] Tests: 24/24 passing on Mac
+
+## What's next
+
+- [ ] Real Agumon sprite (placeholder is just colored squares)
+- [ ] Other 7 evolution forms (greymon, metalgreymon, wargreymon, gabumon, garurumon, weregarurumon, metalgarurumon)
+- [ ] Battle UI on the screen
+- [ ] Pygame simulator (test on Mac without flashing Pico)
+- [ ] Evolution animation (flash + sprite swap)
+
+## Hardware pinout
+
+| Pin | Function |
+|-----|----------|
+| GP10 | SPI SCK |
+| GP11 | SPI MOSI |
+| GP8  | LCD DC |
+| GP9  | LCD CS |
+| GP12 | LCD RST |
+| GP13 | LCD backlight (active HIGH) |
+| GP15 | Button 0 (next) |
+| GP17 | Button 1 (action) |
+
+See `docs/hardware-notes.md` for the gotchas (CP 10.2.1 API, lib version mismatch,
+AppleDouble noise on FAT, etc).

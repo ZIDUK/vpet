@@ -1,23 +1,30 @@
-# macOS AppleDouble noise on FAT filesystems
+# macOS AppleDouble noise on FAT filesystems (e.g. CIRCUITPY)
 ._*
 .Trashes
 .fseventsd
 .metadata_never_index
 
-# Runtime state (not committed, lives on the Pico's flash)
-state.json
-
 # Python
 __pycache__/
 *.pyc
 *.tmp
+.pytest_cache/
 
 # Editor
 .vscode/
 .DS_Store
 *.swp
 
-# Backup / temp files at repo root
+# Bundle download cache
+.cache/
+
+# ──────────────────────────────────────────────────────────────
+# Repo layout: src/ + assets/ + build/ + tests/ + docs/
+# build/ is the only thing deployed to the Pico.
+# assets/ has raw sources (not deployed).
+# ──────────────────────────────────────────────────────────────
+
+# Old single-file code versions (legacy from v7, v13)
 code.py.v7
 code.py.v13tmp
 code.py.bak
@@ -27,41 +34,38 @@ code_pico_lcd144_v13.py
 code_v7_backup.py
 _backup_v6/
 
-# Agumon asset processing (dev only, not deployed)
+# Old single-file PLAN
+PLAN.md
+
+# Agumon asset processing (raw source, not deployed)
 Agumon_atlas/
 sprites/
 sprites_clean/
-
-# Agumon sprite variants we don't deploy (only idle.bmp + walk.bmp are runtime)
-Agumon/scaled/
-Agumon/*_clean.png
-Agumon/attack.bmp
-Agumon/eat.bmp
-Agumon/evolve.bmp
-Agumon/happy.bmp
-Agumon/hurt.bmp
-Agumon/sleep.bmp
-
-# Reference materials (dev only, not deployed)
+sprites_raw/
 reference/
 mockups/
 fonts/
-scripts/
-pygame_v1/
-
-# Future evolutions not in current vPet (deployed separately when ready)
+icons/
 Egg/
 Greymon/
 Greymon_32/
 MetalGreymon/
+WarGreymon/
+Gabumon/
+Garurumon/
+WereGarurumon/
+MetalGarurumon/
+pygame_v1/
 
-# Agumon sprite variants we don't deploy (only idle.bmp is runtime for v14)
-Agumon/walk.bmp
-Agumon/attack.bmp
-Agumon/eat.bmp
-Agumon/evolve.bmp
-Agumon/happy.bmp
-Agumon/hurt.bmp
-Agumon/sleep.bmp
-Agumon/*_clean.png
-Agumon/scaled/
+# Anything in assets/ is dev-only, never deployed
+assets/
+
+# lib/ at root was a legacy duplicate (moved to assets/raw/lib/)
+lib/
+icons/
+Egg/
+Greymon/
+Greymon_32/
+MetalGreymon/
+Agumon_atlas/
+_backup_v6/

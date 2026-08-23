@@ -1,39 +1,37 @@
-# vPet Ideas Backlog
+# Ideas (parking lot)
 
-## M1 — Pet lifecycle
-- 4 evolution stages (rookie → champion → ultimate → mega) with different sprites
-- Mood system: happy / neutral / tired / sick based on stats
-- Death state: dark screen + tombstone sprite for 30s, then auto-revive as rookie
-- Persistence: state.json saved on every stats change, restored on boot
-- Daily cycle: stats decay faster when "asleep" (button held)
+## Hardware
+- Battery pack (LiPo + TP4056 charger) for portable vPet
+- 3D-printed case in Digivice style (vertical grip + 2 buttons + screen)
+- Alternate screen: 1.8" TFT (160×128) for more detail
+- ESP32-S3 with TFT + audio (v2, future)
+- IR or NFC for pet-to-pet battles (cute but complex)
 
-## M2 — Animations
-- Eat: sprite plays agumon_eat.bmp for 2s after FEED
-- Sleep: sprite plays agumon_sleep.bmp for 3s after HEAL
-- Happy: sprite plays agumon_happy.bmp for 2s after PLAY
-- Hurt: sprite plays agumon_hurt.bmp when health < 30
-- Walk: sprite walks back and forth (already have agumon_walk.bmp, just need to wire it)
+## Software
+- **Pygame simulator**: run vPet on Mac without Pico. Use the same `src/` modules with a pygame backend instead of displayio. Lets us iterate fast.
+- **Web simulator**: even better, browser-based, can share the vPet
+- **Tamagotchi-style mini-games** in the Fight menu (rock-paper-scissors, timing)
+- **Pet-to-pet trading** via serial (connect 2 Picos)
+- **Save state** to a website (REST API on Pico W)
 
-## M3 — Sound + light
-- PWM on backlight (GP13) to dim during sleep
-- Status RGB on future hardware
-- Click sound on button press (needs piezo)
+## Game design
+- Personality traits (aggressive / playful / lazy) that affect stat growth
+- Evolution branches: Greymon can become either MetalGreymon or SkullGreymon (depending on care quality)
+- Time-of-day mechanics (pets sleep at night, more active during day)
+- Illness from low HP for too long
+- Death (after 24h at 0 HP without heal)
+- Daycare mode (regression if neglected)
 
-## M4 — WiFi
-- Captive portal: AP mode on first boot, scan networks, save creds
-- Tiny Flask server: GET /feed, /play, /heal, /status
-- Phone browser: view stats + trigger actions
-- Web UI: simple HTML with 3 buttons + 4 stat bars
+## Polish
+- Custom boot logo (not CircuitPython's default)
+- Sound: tiny piezo buzzer for feedback beeps
+- Vibration motor for "feed" feedback
+- Multiple languages (ES, EN, JP)
+- Custom themes (user-selectable palette)
+- Stats history graph (last 24h shown as mini sparkline)
 
-## M5 — Hardware
-- Migrate to ESP32-S3 with proper thermal management (T-Display died)
-- 3D-printed case with belt clip
-- Lipo battery with charging circuit
-- RGB LED strip on the side for status
-
-## Wild ideas (low priority)
-- Two devices talk to each other (Pico battle mode via IR)
-- AI-generated daily "mood message" (printed via thermal printer)
-- Sound detection: pet reacts to claps
-- Voice synthesis: pet says its name when happy
-- Multiplayer: two pets visit each other (WiFi sync)
+## Process
+- Github Actions: run pytest on every push
+- Pre-commit hook: validate JSON files
+- Discord/Slack bot that watches the Pico serial and pings on critical events
+- Auto-deploy on `git push` via mpremote (Pico W needs to be plugged in)

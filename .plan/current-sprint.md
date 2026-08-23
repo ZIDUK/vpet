@@ -1,37 +1,36 @@
-# Current sprint: M1 — Pet lifecycle
+# Current Sprint — Repo reorg + Refactor
 
-Started: 2026-08-23
-Target: make the pet feel alive, not just a sprite that blinks.
+## Done in this sprint
+- **Repo reorganized** from flat mess (30+ dirs) to clean structure:
+  - `src/` — modular Python (hal, core, ui, app)
+  - `assets/` — raw source art + processed atlases (NOT deployed)
+  - `build/` — generated `code.py` + BMPs (the ONLY thing deployed)
+  - `scripts/` — `build.py` (flatten src → build) and `deploy.py` (build → Pico)
+  - `tests/` — pytest suite, 24/24 passing
+  - `docs/` — hardware notes + this sprint plan
+  - `.plan/` — roadmap, sprint, ideas
+- **Refactored v14.0** monolithic code.py into 8 modules:
+  - `hal.py` — display + button init
+  - `core/pet.py` — stats, decay, save
+  - `core/evolution.py` — rules
+  - `core/battle.py` — turn-based combat
+  - `core/save.py` — JSON persistence
+  - `ui/sprites.py` — BMP loading
+  - `ui/widgets.py` — bars/buttons/ring
+  - `app.py` — entrypoint / main loop
+- **Build pipeline** working: `python3 scripts/build.py` → `build/code.py` (13KB)
+- **Deploy pipeline** working: `python3 scripts/deploy.py` → `/Volumes/CIRCUITPY/`
+- **Verified on Pico**: refactored code runs cleanly, jungle BG + sprite + bars + buttons visible.
 
-## In progress
-- [ ] Stats actually drive sprite mood (happy/sad/hurt/sick)
-  - Decide: how many distinct moods? Start with 4 (happy/neutral/tired/sick)
-  - Threshold logic: avg of stats > 80 = happy, < 30 = sick, etc.
-  - Visual: change Agumon idle frame or swap to a different sprite sheet
+## What's still rough
+- `build/code.py` has `# (import flattened)` noise lines (cosmetic; doesn't affect runtime)
+- The placeholder sprite is colored squares, NOT real Agumon
+- Greymon, MetalGreymon, WarGreymon, Gabumon, etc. sprites not yet sourced/generated
+- Battle UI not yet on screen (logic is ready, no menu)
+- Evolution animation not yet built
 
-## Backlog
-- [ ] Evolution tree: 4 stages, 5-15 min each
-  - rookie: 0-15 min, needs care
-  - champion: 15-60 min, can battle
-  - ultimate: 1-4 hours, walks on its own
-  - mega: 4+ hours, fully autonomous
-- [ ] Death by neglect: health < 20 for > 5 min = pet dies
-- [ ] Persistence: save state.json on stats change, restore on boot
-
-## Blocked / waiting
-- ~~WiFi-feeding~~: deferred to M4 (T-Display died of overheating)
-
-## Done this sprint
-- 2026-08-23: v13.0 working on Pico-LCD-1.44 (commit 33ba7c7)
-  - Agumon animated idle
-  - Jungle background
-  - 4 colored action squares with F/H/P/E letters
-  - White selector ring
-  - Auto-decay every 3s
-
-## Next actions (in order)
-1. Add mood system to pet state (compute_mood function)
-2. Make sprite swap based on mood (use agumon_hurt.bmp when sick)
-3. Add stats-driven evolution check on every tick
-4. Add state.json persistence
-5. Add death screen
+## Next sprint — M1.5 (Agumon real sprite + mood faces)
+- Generate real Agumon idle animation (5+ frames, 64×64 each, 320×64 total)
+- Generate Agumon state faces: idle, hungry, sick, sleep
+- Wire sprite swap based on pet state in `app.py`
+- Test in pygame simulator (so we can iterate without rebooting Pico)
