@@ -4,8 +4,9 @@
 This script does 3 things:
   1. Concatenates src/*.py into build/code.py (CircuitPython doesn't support
      multi-file user modules on the root FS).
-  2. Walks assets/digimon/<species>/ and copies the BMPs into build/<Species>/
-     so the runtime can find them at /<Species>/<state>.bmp.
+  2. Walks assets/digimon/<line>/<stage>/<state>/ and copies the BMPs into
+     build/<Stage>/, so the runtime can find them at /<Stage>/<file>.bmp.
+     The <line> wrapper and <state> subdirectory are collapsed in the build.
   3. Walks assets/ui/ and assets/backgrounds/ and copies the BMPs into build/UI/
      and build/Background/ respectively.
 
@@ -13,9 +14,9 @@ The deploy.py script later copies build/ to /Volumes/CIRCUITPY/.
 
 Asset source-of-truth:
   - assets/digimon/<line>/<stage>/<state>/<file>.bmp  →  build/<Stage>/<file>.bmp
-  - assets/ui/buttons/<name>.bmp                      →  build/UI/buttons/<name>.bmp
-  - assets/ui/icons/<name>.bmp                        →  build/UI/icons/<name>.bmp
-  - assets/backgrounds/<name>.bmp                     →  build/Background/<name>.bmp
+  - assets/ui/buttons/<name>.bmp                       →  build/UI/buttons/<name>.bmp
+  - assets/ui/icons/<name>.bmp                         →  build/UI/icons/<name>.bmp
+  - assets/backgrounds/<name>.bmp                      →  build/Background/<name>.bmp
 """
 import os
 import re
@@ -72,56 +73,48 @@ def title_case(name):
 def collect_digimon_sprites():
     """Copy assets/digimon/<line>/<stage>/<state>/<file>.bmp → build/<Stage>/<file>.bmp.
 
+    Source layout keeps the line/stage/state hierarchy (good for organizing
+    multiple digimon lines in the repo). Build flattens it to a single
+    <Stage>/ per digimon on the device — the runtime only cares about the
+    stage name in the path, not which line it came from.
+
     Layout:
       assets/digimon/<line>/<stage>/<state>/<file>.bmp
         → build/<Stage>/<file>.bmp
 
-    The <line> wrapper and the <state> subdirectory are both collapsed. The
-    device runtime loads sprites by stage name, not by line, so multiple
-    digimon lines can share the same device folders (e.g. /Egg/ is the egg
-    for any line).
+    The <line> wrapper and the <state> subdirectory are both collapsed.
 
     Example:
       assets/digimon/digimon1/egg/idle/hatch_atlas.bmp
         → build/Egg/hatch_atlas.bmp
+      assets/digimon/digimon1/baby/idle/idle_atlas.bmp
+        → build/Baby/idle_atlas.bmp
       assets/digimon/digimon1/baby/eat/eat_1.bmp
         → build/Baby/eat_1.bmp
-      assets/digimon/digimon2/rookie/idle/idle_atlas.bmp
-        → build/Rookie/idle_atlas.bmp   (overwrites if same name)
     """
     src_dir = ASSETS / "digimon"
     if not src_dir.exists():
         print(f"  WARN: {src_dir} not present")
         return
     n = 0
-    # Find all lines (subdirs of digimon/)
-    for line_dir in sorted(src_dir.iterdir()):
-        if not line_dir.is_dir():
+    # Walk: <line>/<stage>/<state>/<file>.bmp
+    # Skip files directly in <line>/ (defensive)
+    for bmp in src_dir.rglob("*.bmp"):
+        rel = bmp.relative_to(src_dir)
+        parts = rel.parts
+        if len(parts) < 3:
+            # Wrong depth: not <line>/<stage>/<state>/<file>
+            print(f"  WARN: skipping {rel} (expected <line>/<stage>/<state>/<file>.bmp)")
             continue
-        if line_dir.name.startswith("."):
-            continue
-        # Find all stages within this line
-        for stage_dir in sorted(line_dir.iterdir()):
-            if not stage_dir.is_dir():
-                continue
-            if stage_dir.name.startswith("."):
-                continue
-            target_dir = BUILD / title_case(stage_dir.name)
-            target_dir.mkdir(parents=True, exist_ok=True)
-            # Find all BMPs in this stage's subdirs
-            for bmp in stage_dir.rglob("*.bmp"):
-                rel = bmp.relative_to(stage_dir)
-                # Drop the first dir (the state) so the file goes directly into
-                # build/<Stage>/. Multi-level state subdirs (e.g. for state-variants)
-                # are preserved.
-                parts = rel.parts
-                if len(parts) >= 2:
-                    target = target_dir / Path(*parts[1:])
-                else:
-                    target = target_dir / rel
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(bmp, target)
-                n += 1
+        # parts = ('<line>', '<stage>', '<state>', '<file>')
+        line, stage, state, *rest = parts
+        target_dir = BUILD / title_case(stage)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        # Drop the <state> level, keep the rest of the path
+        target = target_dir / Path(*rest)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(bmp, target)
+        n += 1
     print(f"  collected {n} digimon sprite(s) from {src_dir}")
 
 
