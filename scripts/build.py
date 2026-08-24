@@ -5,15 +5,15 @@ This script does 3 things:
   1. Concatenates src/*.py into build/code.py (CircuitPython doesn't support
      multi-file user modules on the root FS).
   2. Walks assets/digimon/<line>/<stage>/<state>/ and copies the BMPs into
-     build/<Stage>/, so the runtime can find them at /<Stage>/<file>.bmp.
-     The <line> wrapper and <state> subdirectory are collapsed in the build.
+     build/<Line>/<Stage>/, so the runtime can find them at
+     /<Line>/<Stage>/<file>.bmp. The <state> subdirectory is collapsed.
   3. Walks assets/ui/ and assets/backgrounds/ and copies the BMPs into build/UI/
      and build/Background/ respectively.
 
 The deploy.py script later copies build/ to /Volumes/CIRCUITPY/.
 
 Asset source-of-truth:
-  - assets/digimon/<line>/<stage>/<state>/<file>.bmp  →  build/<Stage>/<file>.bmp
+  - assets/digimon/<line>/<stage>/<state>/<file>.bmp  →  build/<Line>/<Stage>/<file>.bmp
   - assets/ui/buttons/<name>.bmp                       →  build/UI/buttons/<name>.bmp
   - assets/ui/icons/<name>.bmp                         →  build/UI/icons/<name>.bmp
   - assets/backgrounds/<name>.bmp                      →  build/Background/<name>.bmp
@@ -71,26 +71,24 @@ def title_case(name):
 
 
 def collect_digimon_sprites():
-    """Copy assets/digimon/<line>/<stage>/<state>/<file>.bmp → build/<Stage>/<file>.bmp.
+    """Copy assets/digimon/<line>/<stage>/<state>/<file>.bmp
+        → build/<Line>/<Stage>/<file>.bmp.
 
-    Source layout keeps the line/stage/state hierarchy (good for organizing
-    multiple digimon lines in the repo). Build flattens it to a single
-    <Stage>/ per digimon on the device — the runtime only cares about the
-    stage name in the path, not which line it came from.
-
-    Layout:
+    Source layout (3 levels):
       assets/digimon/<line>/<stage>/<state>/<file>.bmp
-        → build/<Stage>/<file>.bmp
+        → build/<Line>/<Stage>/<file>.bmp
 
-    The <line> wrapper and the <state> subdirectory are both collapsed.
+    The <line> wrapper and <stage> are kept in the build (so the runtime
+    reads /<Line>/<Stage>/<file>.bmp). Only the <state> subdirectory is
+    collapsed.
 
     Example:
       assets/digimon/digimon1/egg/idle/hatch_atlas.bmp
-        → build/Egg/hatch_atlas.bmp
+        → build/digimon1/Egg/hatch_atlas.bmp
       assets/digimon/digimon1/baby/idle/idle_atlas.bmp
-        → build/Baby/idle_atlas.bmp
+        → build/digimon1/Baby/idle_atlas.bmp
       assets/digimon/digimon1/baby/eat/eat_1.bmp
-        → build/Baby/eat_1.bmp
+        → build/digimon1/Baby/eat_1.bmp
     """
     src_dir = ASSETS / "digimon"
     if not src_dir.exists():
@@ -107,9 +105,9 @@ def collect_digimon_sprites():
             continue
         # parts = ('<line>', '<stage>', '<state>', '<file>')
         line, stage, state, *rest = parts
-        target_dir = BUILD / title_case(stage)
+        target_dir = BUILD / line / title_case(stage)
         target_dir.mkdir(parents=True, exist_ok=True)
-        # Target = build/<Stage>/<file>.bmp  (drop both <line> and <state>)
+        # Target = build/<Line>/<Stage>/<file>.bmp  (drop only <state>)
         target = target_dir / Path(*rest)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(bmp, target)

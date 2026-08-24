@@ -535,17 +535,17 @@ def load_pet_sprite(species, state, x=32, y=4):
     Returns (tile_grid, n_frames). The caller must append the tile_grid to the
     display group.
 
-    Sprite path convention: /<Stage>/<file>.bmp
+    Sprite path convention: /digimon1/<Stage>/<file>.bmp
     where Stage = species.capitalize() (e.g. "egg" → "Egg", "baby" → "Baby").
     The runtime picks:
-      - state=EGG / HATCHING → /<Stage>/hatch_atlas.bmp  (multi-frame animation)
-      - state=LIVE          → /<Stage>/idle_atlas.bmp  (multi-frame idle)
+      - state=EGG / HATCHING → /digimon1/<Stage>/hatch_atlas.bmp  (multi-frame animation)
+      - state=LIVE          → /digimon1/<Stage>/idle_atlas.bmp  (multi-frame idle)
     """
     stage_dir = species.capitalize()
     if state in (STATE_EGG, STATE_HATCHING):
-        path = f"/{stage_dir}/hatch_atlas.bmp"
+        path = f"/digimon1/{stage_dir}/hatch_atlas.bmp"
     else:
-        path = f"/{stage_dir}/idle_atlas.bmp"
+        path = f"/digimon1/{stage_dir}/idle_atlas.bmp"
     bmp = load_bmp(path, transparent_index=0)
     tg = make_tile_grid(bmp, x=x, y=y, tile_width=64, tile_height=64)
     return tg, bmp.width // 64
