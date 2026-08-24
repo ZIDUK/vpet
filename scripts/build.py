@@ -98,7 +98,6 @@ def collect_digimon_sprites():
         return
     n = 0
     # Walk: <line>/<stage>/<state>/<file>.bmp
-    # Skip files directly in <line>/ (defensive)
     for bmp in src_dir.rglob("*.bmp"):
         rel = bmp.relative_to(src_dir)
         parts = rel.parts
@@ -110,7 +109,7 @@ def collect_digimon_sprites():
         line, stage, state, *rest = parts
         target_dir = BUILD / title_case(stage)
         target_dir.mkdir(parents=True, exist_ok=True)
-        # Drop the <state> level, keep the rest of the path
+        # Target = build/<Stage>/<file>.bmp  (drop both <line> and <state>)
         target = target_dir / Path(*rest)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(bmp, target)
