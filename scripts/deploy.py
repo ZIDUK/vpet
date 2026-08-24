@@ -88,29 +88,53 @@ def collect_bmps_to_deploy():
     return paths
 
 
+def safe_copy2(src, dst, max_retries=3, delay=0.5):
+    """Copy a file with retry on transient errors (EINVAL on CIRCUITPY during reload)."""
+    import time
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            shutil.copy2(src, dst)
+            return
+        except OSError as e:
+            last_err = e
+            if e.errno == 22:  # EINVAL — Pico autoreload race
+                time.sleep(delay * (attempt + 1))
+            else:
+                raise
+    raise last_err
+
+
 def deploy_runtime_files():
-    """Copy code.py, settings.toml, and referenced BMPs to device."""
+    """Copy code.py, settings.toml, and referenced BMPs to device.
+
+    ORDER MATTERS:
+    1. Settings + BMPs first (no autoreload)
+    2. code.py LAST (triggers autoreload, but at this point all assets are in place)
+    """
     referenced = collect_bmps_to_deploy()
     print(f"  referenced BMPs: {sorted(referenced)}")
 
-    # code.py
-    shutil.copy2(BUILD / "code.py", CIRCUITPY / "code.py")
-    print(f"  copied code.py")
-
-    # settings.toml
+    # settings.toml first
     if (BUILD / "settings.toml").exists():
-        shutil.copy2(BUILD / "settings.toml", CIRCUITPY / "settings.toml")
+        safe_copy2(BUILD / "settings.toml", CIRCUITPY / "settings.toml")
         print(f"  copied settings.toml")
 
-    # Sprite + background dirs (only referenced files)
+    # Sprite + background BMPs
     for ref in referenced:
-        rel = ref.lstrip("/")  # /Agumon/idle.bmp → Agumon/idle.bmp
+        rel = ref.lstrip("/")  # /Egg/hatch_atlas.bmp → Egg/hatch_atlas.bmp
         src = BUILD / rel
         dst = CIRCUITPY / rel
         if src.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+            safe_copy2(src, dst)
             print(f"  copied {ref}")
+
+    # code.py LAST — triggers autoreload, but all assets are already in place.
+    # The autoreload takes ~1-2s. We sleep before returning so the caller
+    # doesn't immediately try to read the FS.
+    safe_copy2(BUILD / "code.py", CIRCUITPY / "code.py")
+    print(f"  copied code.py (autoreload will fire)")
 
 
 def sync_libs():
