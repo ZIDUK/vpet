@@ -1,0 +1,15 @@
+{
+  "name": "???",
+  "line": "custom_line",
+  "stage": "mega",
+  "sprite": "/Mega/idle_atlas.bmp",
+  "evolves_to": null,
+  "min_age_seconds": 600,
+  "battles_required": 15,
+  "requirements": {
+    "h": 80,
+    "e": 80,
+    "p": 80,
+    "hp": 95
+  }
+}

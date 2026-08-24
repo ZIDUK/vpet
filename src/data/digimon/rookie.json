@@ -1,0 +1,15 @@
+{
+  "name": "Sprouto",
+  "line": "custom_line",
+  "stage": "rookie",
+  "sprite": "/Rookie/idle_atlas.bmp",
+  "evolves_to": "champion",
+  "min_age_seconds": 60,
+  "battles_required": 0,
+  "requirements": {
+    "h": 55,
+    "e": 55,
+    "p": 55,
+    "hp": 75
+  }
+}

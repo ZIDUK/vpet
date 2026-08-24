@@ -30,7 +30,7 @@ def test_pet_starts_as_egg(fake_time):
     p = Pet()
     assert p.is_egg
     assert not p.is_live
-    assert p.species == "sproutspore"
+    assert p.species == "egg"
     # Stats still initialized
     assert p.get("h") == 70
 
@@ -116,15 +116,15 @@ def test_hatch_state_transition(fake_time):
     assert p.is_egg
     p.start_hatch()
     assert p.is_hatching
-    p.complete_hatch("sprouto")
+    p.complete_hatch("baby")
     assert p.is_live
-    assert p.species == "sprouto"
+    assert p.species == "baby"
 
 
 def test_hatch_boosts_stats(fake_time):
     from core.pet import Pet
     p = Pet(state="hatching")
-    p.complete_hatch("sprouto")
+    p.complete_hatch("baby")
     # Each stat should have a +15 boost from the signature move
     for s in ["h", "e", "p", "hp"]:
         assert p.get(s) == 85  # 70 + 15
@@ -146,11 +146,11 @@ def test_hatch_progress_complete(fake_time):
 
 
 def test_evolution_json_files_exist():
-    """All 4 sprout_line JSONs are present and parseable."""
+    """All 6 stage JSONs (egg, baby, rookie, champion, ultimate, mega) are present."""
     import json
     from pathlib import Path
     data_dir = Path(__file__).parent.parent / "src" / "data" / "digimon"
-    expected = ["sproutspore", "sprouto", "thornback", "hydravine"]
+    expected = ["egg", "baby", "rookie", "champion", "ultimate", "mega"]
     for name in expected:
         path = data_dir / f"{name}.json"
         assert path.exists(), f"missing {path}"
@@ -158,4 +158,3 @@ def test_evolution_json_files_exist():
         assert "name" in data
         assert "evolves_to" in data
         assert "line" in data
-        assert data["line"] == "sprout_line"

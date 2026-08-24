@@ -1,9 +1,9 @@
 {
   "name": "Hydravine",
-  "line": "sprout_line",
+  "line": "custom_line",
   "stage": "ultimate",
-  "sprite": "/Hydravine/idle_atlas.bmp",
-  "evolves_to": null,
+  "sprite": "/Ultimate/idle_atlas.bmp",
+  "evolves_to": "mega",
   "min_age_seconds": 300,
   "battles_required": 8,
   "requirements": {

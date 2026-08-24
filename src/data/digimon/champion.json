@@ -1,9 +1,9 @@
 {
   "name": "Thornback",
-  "line": "sprout_line",
+  "line": "custom_line",
   "stage": "champion",
-  "sprite": "/Thornback/idle_atlas.bmp",
-  "evolves_to": "hydravine",
+  "sprite": "/Champion/idle_atlas.bmp",
+  "evolves_to": "ultimate",
   "min_age_seconds": 180,
   "battles_required": 3,
   "requirements": {

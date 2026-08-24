@@ -1,0 +1,15 @@
+{
+  "name": "Sproutspore",
+  "line": "custom_line",
+  "stage": "baby",
+  "sprite": "/Baby/idle_atlas.bmp",
+  "evolves_to": "rookie",
+  "min_age_seconds": 0,
+  "battles_required": 0,
+  "requirements": {
+    "h": 50,
+    "e": 50,
+    "p": 50,
+    "hp": 70
+  }
+}

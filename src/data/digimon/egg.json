@@ -1,0 +1,13 @@
+{
+  "name": "Egg",
+  "line": "custom_line",
+  "stage": "egg",
+  "sprite": "/Egg/hatch_atlas.bmp",
+  "hatch_atlas": "/Egg/hatch_atlas.bmp",
+  "hatch_duration_seconds": 8,
+  "hatch_frame_count": 4,
+  "evolves_to": "baby",
+  "min_age_seconds": 0,
+  "battles_required": 0,
+  "requirements": {}
+}

@@ -42,9 +42,20 @@ STATE_EGG = "egg"
 STATE_HATCHING = "hatching"
 STATE_LIVE = "live"
 
-# Default species the pet starts as (the egg)
-DEFAULT_SPECIES = "sproutspore"
-DEFAULT_LINE = "sprout_line"
+# Default species the pet starts as (the egg stage)
+DEFAULT_SPECIES = "egg"
+DEFAULT_LINE = "custom_line"
+
+# Canonical stage progression. Sprites live in /<Stage>/<file>.bmp on the device.
+STAGE_ORDER = ["egg", "baby", "rookie", "champion", "ultimate", "mega"]
+STAGE_FRIENDLY = {
+    "egg": "Egg",
+    "baby": "Sproutspore",   # user-defined display name for this stage
+    "rookie": "Sprouto",
+    "champion": "Thornback",
+    "ultimate": "Hydravine",
+    "mega": "???",           # no name yet, future evolution
+}
 
 
 class Pet:
