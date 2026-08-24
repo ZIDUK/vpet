@@ -1,8 +1,12 @@
-# macOS AppleDouble noise on FAT filesystems (e.g. CIRCUITPY)
+# ─────────────────────────────────────────────────────────────────
+# System noise
+# ─────────────────────────────────────────────────────────────────
+# macOS AppleDouble on FAT filesystems (e.g. CIRCUITPY)
 ._*
 .Trashes
 .fseventsd
 .metadata_never_index
+.DS_Store
 
 # Python
 __pycache__/
@@ -12,40 +16,31 @@ __pycache__/
 
 # Editor
 .vscode/
-.DS_Store
 *.swp
 
 # Bundle download cache
 .cache/
 
-# ──────────────────────────────────────────────────────────────
-# Repo layout: src/ + assets/ + build/ + tests/ + docs/
-# build/ is the only thing deployed to the Pico.
-# assets/ has raw sources (not deployed).
-# ──────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# Repo layout policy
+#
+#   src/      — Python source (committed, small text files)
+#   assets/   — raw art, NOT deployed. Dev only. NEVER committed.
+#   build/    — generated output, deployed to Pico.
+#               CONTENTS ARE COMMITTED so other devs get the same
+#               starting point. Regenerate locally with `make build`.
+#   tests/    — pytest, committed
+#   docs/     — committed
+#   .plan/    — committed
+#
+# Anything else is legacy or vendored.
+# ─────────────────────────────────────────────────────────────────
 
-# Old single-file code versions (legacy from v7, v13)
-code.py.v7
-code.py.v13tmp
-code.py.bak
-code.py.old
-code.py.new
-code_pico_lcd144_v13.py
-code_v7_backup.py
-_backup_v6/
+# assets/ is dev-only. Sprites/icons/backgrounds raw sources go here
+# but you commit build/Placeholder/ etc instead.
+assets/
 
-# Old single-file PLAN
-PLAN.md
-
-# Agumon asset processing (raw source, not deployed)
-Agumon_atlas/
-sprites/
-sprites_clean/
-sprites_raw/
-reference/
-mockups/
-fonts/
-icons/
+# Legacy dirs that may still exist from older code paths
 Egg/
 Greymon/
 Greymon_32/
@@ -55,17 +50,24 @@ Gabumon/
 Garurumon/
 WereGarurumon/
 MetalGarurumon/
-pygame_v1/
-
-# Anything in assets/ is dev-only, never deployed
-assets/
-
-# lib/ at root was a legacy duplicate (moved to assets/raw/lib/)
-lib/
-icons/
-Egg/
-Greymon/
-Greymon_32/
-MetalGreymon/
 Agumon_atlas/
+sprites/
+sprites_clean/
+sprites_raw/
+reference/
+mockups/
+fonts/
+icons/
+pygame_v1/
+lib/
 _backup_v6/
+
+# Old code.py versions (before we moved to src/+ build/)
+code.py.v7
+code.py.v13tmp
+code.py.bak
+code.py.old
+code.py.new
+code_pico_lcd144_v13.py
+code_v7_backup.py
+PLAN.md

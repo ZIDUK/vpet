@@ -55,16 +55,43 @@ def download_bundle():
     return BUNDLE_CACHE
 
 
-def scan_code_for_bmps():
-    """Find BMP paths referenced in build/code.py."""
+def collect_bmps_to_deploy():
+    """Find all BMP files under build/ that should be deployed to the device.
+
+    Two strategies combined:
+      1. BMPs explicitly referenced as string literals in build/code.py
+      2. All BMPs in build/<Species>/ (runtime sprites, named by directory)
+    """
+    paths = set()
+    # Strategy 1: explicit string literals
     code = (BUILD / "code.py").read_text()
-    return set(re.findall(r'"(/[A-Za-z0-9_/]+\.bmp)"', code))
+    paths.update(re.findall(r'"(/[A-Za-z0-9_/]+\.bmp)"', code))
+    # Strategy 2: any .bmp under build/ that lives in a species dir or UI/ or Background/
+    skip_dirs = {"lib"}  # .mpy libs, not BMPs
+    for p in BUILD.rglob("*.bmp"):
+        rel = p.relative_to(BUILD)
+        if any(part in skip_dirs for part in rel.parts):
+            continue
+        # Match: build/<X>/<file>.bmp → deploy as /<X>/<file>.bmp
+        # (X is the top-level dir under build/, like "Background", "UI", or a species name)
+        parts = rel.parts
+        if len(parts) >= 2:
+            paths.add("/" + "/".join(parts))
+    # Strategy 3: handle f-string sprite paths
+    if 'f"/{sprite_species_dir}/idle.bmp"' in code or 'f"/{pet.species.capitalize()}/idle.bmp"' in code:
+        # The runtime default species is the first dir under build/ that isn't
+        # Background, UI, lib, or settings.toml
+        for d in BUILD.iterdir():
+            if d.is_dir() and d.name not in ("Background", "UI", "lib"):
+                paths.add(f"/{d.name}/idle.bmp")
+                break
+    return paths
 
 
 def deploy_runtime_files():
     """Copy code.py, settings.toml, and referenced BMPs to device."""
-    referenced = scan_code_for_bmps()
-    print(f"  referenced BMPs: {referenced}")
+    referenced = collect_bmps_to_deploy()
+    print(f"  referenced BMPs: {sorted(referenced)}")
 
     # code.py
     shutil.copy2(BUILD / "code.py", CIRCUITPY / "code.py")

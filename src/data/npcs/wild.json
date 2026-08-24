@@ -1,39 +1,11 @@
 {
   "wild": [
     {
-      "id": "goburimon",
-      "name": "Goburimon",
+      "id": "wild_placeholder",
+      "name": "Wild One",
       "hp": 30,
       "attack": 8,
-      "sprite": "/NPCs/goburimon.bmp"
-    },
-    {
-      "id": "kunemon",
-      "name": "Kunemon",
-      "hp": 40,
-      "attack": 10,
-      "sprite": "/NPCs/kunemon.bmp"
-    },
-    {
-      "id": "betamon",
-      "name": "Betamon",
-      "hp": 50,
-      "attack": 12,
-      "sprite": "/NPCs/betamon.bmp"
-    },
-    {
-      "id": "gabumon_wild",
-      "name": "Gabumon",
-      "hp": 60,
-      "attack": 14,
-      "sprite": "/NPCs/gabumon.bmp"
-    },
-    {
-      "id": "meramon",
-      "name": "Meramon",
-      "hp": 80,
-      "attack": 18,
-      "sprite": "/NPCs/meramon.bmp"
+      "sprite": "/NPCs/wild_placeholder.bmp"
     }
   ]
 }

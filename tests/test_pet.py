@@ -30,7 +30,7 @@ def test_pet_starts_at_70(monkeypatch_time):
     assert p.get("e") == 70
     assert p.get("p") == 70
     assert p.get("hp") == 70
-    assert p.species == "agumon"
+    assert p.species == "placeholder"
 
 
 def test_apply_action_feed(monkeypatch_time):
@@ -75,16 +75,15 @@ def test_to_dict_roundtrip(monkeypatch_time):
     p2.load_from_dict(data)
     assert p2.get("h") == 42
     assert p2.battles_won == 7
-    assert p2.species == "agumon"
+    assert p2.species == "placeholder"
 
 
 def test_evolution_json_files_exist():
-    """Sanity: all 8 evolution JSONs are present and parseable."""
+    """Sanity: the placeholder digimon JSON is present and parseable."""
     import json
     from pathlib import Path
     data_dir = Path(__file__).parent.parent / "src" / "data" / "digimon"
-    expected = ["agumon", "greymon", "metalgreymon", "wargreymon",
-                "gabumon", "garurumon", "weregarurumon", "metalgarurumon"]
+    expected = ["placeholder"]
     for name in expected:
         path = data_dir / f"{name}.json"
         assert path.exists(), f"missing {path}"

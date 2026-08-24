@@ -37,9 +37,9 @@ ACTION_EFFECTS = {
 class Pet:
     """Holds pet state: stats, age, species, line."""
 
-    def __init__(self, species="agumon", line="agumon_line"):
-        self.species = species      # current form: "agumon", "greymon", ...
-        self.line = line            # evolution line: "agumon_line" | "gabumon_line"
+    def __init__(self, species="placeholder", line="custom_line"):
+        self.species = species      # current form: maps to /<TitleCase>/ sprite dir on device
+        self.line = line            # evolution line: any string for grouping
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
         self.born_at = time.monotonic()
         self.last_decay = time.monotonic()

@@ -1,4 +1,9 @@
-"""Tests for the data layer (JSON files)."""
+"""Tests for the data layer (JSON files).
+
+The data model is now: any number of digimon JSONs, each defines a form
+in an evolution chain. Tests verify the JSON files are well-formed and
+the chain is consistent.
+"""
 import json
 from pathlib import Path
 
@@ -26,69 +31,55 @@ def test_evolution_chain_is_consistent():
             )
 
 
-STAGE_ORDER = ["rookie", "champion", "ultimate", "mega"]
-
-
-def test_agumon_line_has_4_forms():
-    digimon_dir = DATA / "digimon"
-    agumon_line = [
-        json.loads(p.read_text())
-        for p in digimon_dir.glob("*.json")
-    ]
-    agumon_line = [d for d in agumon_line if d["line"] == "agumon_line"]
-    agumon_line.sort(key=lambda d: STAGE_ORDER.index(d["stage"]))
-    assert len(agumon_line) == 4
-    names = [d["name"] for d in agumon_line]
-    assert names == ["Agumon", "Greymon", "MetalGreymon", "WarGreymon"]
-
-
-def test_gabumon_line_has_4_forms():
-    digimon_dir = DATA / "digimon"
-    forms = [
-        json.loads(p.read_text())
-        for p in digimon_dir.glob("*.json")
-    ]
-    gabumon_line = [d for d in forms if d["line"] == "gabumon_line"]
-    gabumon_line.sort(key=lambda d: STAGE_ORDER.index(d["stage"]))
-    assert len(gabumon_line) == 4
-    names = [d["name"] for d in gabumon_line]
-    assert names == ["Gabumon", "Garurumon", "WereGarurumon", "MetalGarurumon"]
-
-
 def test_final_forms_have_no_evolution():
     digimon_dir = DATA / "digimon"
     forms = [json.loads(p.read_text()) for p in digimon_dir.glob("*.json")]
     final = [d for d in forms if d["stage"] == "mega"]
-    assert len(final) == 2  # WarGreymon + MetalGarurumon
     for d in final:
         assert d["evolves_to"] is None
+
+
+def test_placeholder_digimon_is_present():
+    """The starter form should always exist so Pet() can default to it."""
+    digimon_dir = DATA / "digimon"
+    placeholder = digimon_dir / "placeholder.json"
+    assert placeholder.exists(), "placeholder.json must exist (starter form)"
+    data = json.loads(placeholder.read_text())
+    # The JSON's filename (without .json) is the species id
+    assert data["name"] == "Placeholder"
+    # Placeholder doesn't evolve yet (single-form game until you add more)
+    assert data["evolves_to"] is None
 
 
 def test_requirements_increase_through_stages():
     """Each non-final stage should require more than the previous (final = no reqs)."""
     digimon_dir = DATA / "digimon"
     forms = [json.loads(p.read_text()) for p in digimon_dir.glob("*.json")]
-    for line in ("agumon_line", "gabumon_line"):
-        stages = [d for d in forms if d["line"] == line]
-        stages.sort(key=lambda d: STAGE_ORDER.index(d["stage"]))
-        # Only check non-final stages (final = no evolution possible, reqs = {})
+    # Group by line
+    by_line = {}
+    for f in forms:
+        by_line.setdefault(f["line"], []).append(f)
+    for line_name, stages in by_line.items():
+        stages.sort(key=lambda d: ["rookie", "champion", "ultimate", "mega"].index(d["stage"]))
         prev_sum = 0
         for stage in stages:
             if stage["evolves_to"] is None:
-                # Final form, skip
-                continue
+                continue  # skip final forms
             cur_sum = sum(stage.get("requirements", {}).values())
             assert cur_sum >= prev_sum, (
-                f"{stage['name']} requires less than previous stage in {line}"
+                f"{stage['name']} requires less than previous in {line_name}"
             )
             prev_sum = cur_sum
 
 
 def test_npcs_have_required_fields():
     npcs_dir = DATA / "npcs"
+    if not npcs_dir.exists():
+        return  # NPCs optional
     for path in npcs_dir.glob("*.json"):
         data = json.loads(path.read_text())
-        assert "wild" in data
+        if "wild" not in data:
+            continue
         for npc in data["wild"]:
             assert {"id", "name", "hp", "attack", "sprite"} <= set(npc.keys()), (
                 f"{path.name} -> {npc.get('id', '?')} missing fields"

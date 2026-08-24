@@ -81,9 +81,9 @@ ACTION_EFFECTS = {
 class Pet:
     """Holds pet state: stats, age, species, line."""
 
-    def __init__(self, species="agumon", line="agumon_line"):
-        self.species = species      # current form: "agumon", "greymon", ...
-        self.line = line            # evolution line: "agumon_line" | "gabumon_line"
+    def __init__(self, species="placeholder", line="custom_line"):
+        self.species = species      # current form: maps to /<TitleCase>/ sprite dir on device
+        self.line = line            # evolution line: any string for grouping
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
         self.born_at = time.monotonic()
         self.last_decay = time.monotonic()
@@ -309,6 +309,15 @@ def draw_stat_bar(bmp, value, max_value=100):
 
 
 # ---------- Action Button (24x24) ----------
+#
+# A button is either:
+#   (a) A solid color square with a centered letter glyph (the original 4x7 pixel
+#       F/H/P/E style), or
+#   (b) A solid color background with a 24x24 BMP icon drawn on top
+#       (loaded from /UI/buttons/<name>.bmp).
+#
+# Use make_button_letter() for (a), make_button_icon() for (b), or make_button()
+# which auto-detects: tries to load the icon first, falls back to letter.
 
 # Pixel-art 4x7 letter glyphs centered in 24x24 (offset = +8)
 GLYPHS = {
@@ -325,22 +334,74 @@ GLYPHS = {
 }
 
 
-def make_button(x, y, bg_color, label, size=24):
-    """Create a colored button with a centered letter label."""
-    bmp = displayio.Bitmap(size, size, 2)
-    pal = displayio.Palette(2)
-    pal[0] = bg_color
-    pal[1] = 0xffffff
-    # Default: all bg
+def _load_icon_or_none(path):
+    """Try to load a 24x24 BMP icon from disk. Returns (bmp, palette) or None."""
+    try:
+        bmp = displayio.OnDiskBitmap(path)
+        # Make the first palette entry transparent so the icon blends onto the bg
+        bmp.pixel_shader.make_transparent(0)
+        return bmp
+    except (OSError, ValueError):
+        return None
+
+
+def make_button(x, y, bg_color, label, size=24, icon_path=None):
+    """Create an action button at (x, y).
+
+    Args:
+        x, y: pixel position
+        bg_color: 0xRRGGBB color of the button background
+        label: short string (F, H, P, E, etc.) used for the letter fallback
+        size: button size in pixels (default 24x24)
+        icon_path: optional path to a 24x24 BMP icon. If given AND the file
+                   exists, the icon is used. Otherwise the letter glyph is used.
+
+    Returns:
+        (bg_bmp, bg_tg, icon_tg_or_None) — icon_tg is None if no icon was used.
+        You must append BOTH the bg_tg and (if not None) the icon_tg to your
+        displayio group, in that order.
+    """
+    # Background bitmap
+    bg = displayio.Bitmap(size, size, 1)
+    bg_pal = displayio.Palette(1)
+    bg_pal[0] = bg_color
     for xi in range(size):
         for yi in range(size):
-            bmp[xi, yi] = 0
-    # Draw glyph
-    for gx, gy in GLYPHS[label]:
+            bg[xi, yi] = 0  # fill with bg color (index 0)
+    bg_tg = displayio.TileGrid(bg, pixel_shader=bg_pal, x=x, y=y)
+
+    # Try to load an icon
+    icon_tg = None
+    if icon_path:
+        icon_bmp = _load_icon_or_none(icon_path)
+        if icon_bmp:
+            # Use the icon's own palette (already transparent-set on index 0)
+            icon_tg = displayio.TileGrid(
+                icon_bmp, pixel_shader=icon_bmp.pixel_shader, x=x, y=y
+            )
+            return bg, bg_tg, icon_tg
+
+    # Fallback: draw letter glyph
+    glyph = GLYPHS.get(label, [])
+    for gx, gy in glyph:
         if 0 <= gx + 8 < size and 0 <= gy + 8 < size:
-            bmp[gx + 8, gy + 8] = 1
-    tg = displayio.TileGrid(bmp, pixel_shader=pal, x=x, y=y)
-    return bmp, tg
+            # Need a 2-color bitmap for the bg so the glyph can use color 1
+            # Replace the bg we just made with a 2-color one
+            bg2 = displayio.Bitmap(size, size, 2)
+            bg2_pal = displayio.Palette(2)
+            bg2_pal[0] = bg_color
+            bg2_pal[1] = 0xffffff
+            for xi in range(size):
+                for yi in range(size):
+                    bg2[xi, yi] = 0
+            for gx, gy in glyph:
+                if 0 <= gx + 8 < size and 0 <= gy + 8 < size:
+                    bg2[gx + 8, gy + 8] = 1
+            # Replace the TileGrid with the 2-color version
+            bg2_tg = displayio.TileGrid(bg2, pixel_shader=bg2_pal, x=x, y=y)
+            return bg2, bg2_tg, None
+
+    return bg, bg_tg, None
 
 
 # ---------- Selection Ring (24x24 white border) ----------
@@ -370,7 +431,15 @@ def make_selection_ring(x, y, size=24):
 # (import flattened)
 
 # ---------- Menu config ----------
-BUTTON_LABELS = ["F", "H", "P", "E"]  # Feed, Heal, Play, rest (sleep)
+# 4 action buttons. Each has a letter label (F=Feed, H=Heal, P=Play, E=Rest)
+# and an optional icon path. The icon is loaded from disk if the file exists.
+BUTTON_LABELS = ["F", "H", "P", "E"]
+BUTTON_ICONS = [
+    "/UI/buttons/feed.bmp",    # bowl of food
+    "/UI/buttons/heal.bmp",    # cross / potion
+    "/UI/buttons/play.bmp",    # ball
+    "/UI/buttons/rest.bmp",    # bed / Z
+]
 BUTTON_COLORS = [0xf0b41e, 0xd03030, 0x32c850, 0x2850a0]
 BUTTON_X = [8 + i * 29 for i in range(4)]
 BUTTON_Y = 92
@@ -378,12 +447,17 @@ BUTTON_Y = 92
 BAR_X = [6 + i * 29 for i in range(4)]
 BAR_Y = 78
 
+# Default starting species. Change this once you have your own digimon.
+# The species name maps to /<TitleCase>/<state>.bmp on the device.
+DEFAULT_SPECIES = "placeholder"
+
+
 # ---------- Init hardware ----------
 display = hal.init_display()
 next_btn, action_btn = hal.init_buttons()
 
 # ---------- Init pet ----------
-pet = Pet()
+pet = Pet(species=DEFAULT_SPECIES, line="custom_line")
 load_pet(pet)  # ignore failure on first boot
 
 # ---------- Init displayio group ----------
@@ -391,11 +465,14 @@ g = displayio.Group()
 display.root_group = g
 
 # Background
-bg_bmp = load_bmp("/Background/registerjungle.bmp")
+bg_bmp = load_bmp("/Background/jungle.bmp")
 g.append(make_tile_grid(bg_bmp, x=-16, y=0))
 
-# Sprite (placeholder until we have real Agumon frames)
-idle_bmp = load_bmp("/Agumon/idle.bmp", transparent_index=0)
+# Sprite (idle animation: N frames of 64x64 in a single BMP strip)
+# Path is /<Species>/idle.bmp where <Species> is title-case of pet.species
+sprite_species_dir = pet.species.capitalize()
+SPRITE_PATH = f"/{sprite_species_dir}/idle.bmp"
+idle_bmp = load_bmp(SPRITE_PATH, transparent_index=0)
 sp_tg = make_tile_grid(idle_bmp, x=32, y=4, tile_width=64, tile_height=64)
 g.append(sp_tg)
 n_idle = idle_bmp.width // 64
@@ -407,10 +484,17 @@ for i, stat in enumerate(STAT_ORDER):
     g.append(tg)
     bar_bmps.append(bmp)
 
-# 4 action buttons
+# 4 action buttons (with optional icon overlay)
 for i, label in enumerate(BUTTON_LABELS):
-    _, tg = make_button(BUTTON_X[i], BUTTON_Y, BUTTON_COLORS[i], label)
-    g.append(tg)
+    bg, bg_tg, icon_tg = make_button(
+        BUTTON_X[i], BUTTON_Y,
+        bg_color=BUTTON_COLORS[i],
+        label=label,
+        icon_path=BUTTON_ICONS[i],
+    )
+    g.append(bg_tg)
+    if icon_tg is not None:
+        g.append(icon_tg)
 
 # Selection ring
 _, sel_tg = make_selection_ring(BUTTON_X[0], BUTTON_Y)
