@@ -1,0 +1,13 @@
+{
+  "name": "Sproutspore",
+  "line": "sprout_line",
+  "stage": "baby",
+  "sprite": "/Sproutspore/idle_atlas.bmp",
+  "hatch_atlas": "/Sproutspore/hatch_atlas.bmp",
+  "hatch_duration_seconds": 8,
+  "hatch_frame_count": 4,
+  "evolves_to": "sprouto",
+  "min_age_seconds": 0,
+  "battles_required": 0,
+  "requirements": {}
+}

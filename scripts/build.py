@@ -70,7 +70,17 @@ def title_case(name):
 
 
 def collect_digimon_sprites():
-    """Copy assets/digimon/<species>/<state>.bmp → build/<Species>/<state>.bmp."""
+    """Copy assets/digimon/<species>/<state>/<file>.bmp → build/<Species>/<file>.bmp.
+
+    The intermediate <state> subdirectory is collapsed so all sprites for a
+    digimon end up flat in one device folder, matching how the runtime loads them.
+
+    Example:
+      assets/digimon/sproutspore/idle/hatch_atlas.bmp
+        → build/Sproutspore/hatch_atlas.bmp
+      assets/digimon/sproutspore/eat/eat_1.bmp
+        → build/Sproutspore/eat_1.bmp
+    """
     src_dir = ASSETS / "digimon"
     if not src_dir.exists():
         print(f"  WARN: {src_dir} not present")
@@ -81,13 +91,18 @@ def collect_digimon_sprites():
             continue
         if species_dir.name.startswith("."):
             continue
-        species_name = species_dir.name
-        # Convention: dir name like "pikomon" → /Pikomon/ on device
-        target_dir = BUILD / title_case(species_name)
+        target_dir = BUILD / title_case(species_dir.name)
         target_dir.mkdir(parents=True, exist_ok=True)
         for bmp in species_dir.rglob("*.bmp"):
+            # Strip the <state>/ intermediate level
             rel = bmp.relative_to(species_dir)
-            target = target_dir / rel
+            parts = rel.parts
+            if len(parts) >= 2:
+                # Drop the first dir (the state) and keep the rest flat
+                target = target_dir / Path(*parts[1:])
+            else:
+                # File directly in species dir (rare)
+                target = target_dir / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(bmp, target)
             n += 1

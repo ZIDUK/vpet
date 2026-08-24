@@ -1,0 +1,15 @@
+{
+  "name": "Sprouto",
+  "line": "sprout_line",
+  "stage": "rookie",
+  "sprite": "/Sprouto/idle_atlas.bmp",
+  "evolves_to": "thornback",
+  "min_age_seconds": 60,
+  "battles_required": 0,
+  "requirements": {
+    "h": 50,
+    "e": 50,
+    "p": 50,
+    "hp": 70
+  }
+}
