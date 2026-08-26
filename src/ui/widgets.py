@@ -123,10 +123,17 @@ def make_button(x, y, bg_color, label, size=24, icon_path=None):
 # ---------- Selection Ring (24x24 white border) ----------
 
 def make_selection_ring(x, y, size=24):
-    """Create a 1-bit white border for highlighting the selected button."""
-    bmp = displayio.Bitmap(size, size, 1)
-    pal = displayio.Palette(1)
-    pal[0] = 0xffffff
+    """Create a 1-bit white border for highlighting the selected button.
+
+    Uses 2-color palette: index 0 = transparent (so the inside of the ring
+    is invisible and the underlying button shows through), index 1 = white
+    (only the border pixels use this).
+    """
+    bmp = displayio.Bitmap(size, size, 2)
+    pal = displayio.Palette(2)
+    pal[0] = 0x000000
+    pal.make_transparent(0)
+    pal[1] = 0xffffff
     for xi in range(size):
         bmp[xi, 0] = 1
         bmp[xi, size - 1] = 1

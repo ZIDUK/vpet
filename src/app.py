@@ -13,10 +13,14 @@ import time
 
 import hal
 import displayio
+import supervisor
 from core.pet import Pet, STAT_ORDER, STAT_COLORS, STATE_EGG, STATE_HATCHING
 from core.save import save_pet, load_pet
 from ui.sprites import load_bmp, make_tile_grid
 from ui.widgets import make_stat_bar, draw_stat_bar, make_button, make_selection_ring
+
+# Disable autoreload (so edits to other files don't restart us mid-loop).
+supervisor.runtime.autoreload = False
 
 # ---------- Menu config ----------
 BUTTON_LABELS = ["F", "H", "P", "E"]
@@ -73,9 +77,11 @@ if pet.state == STATE_EGG and pet.hatch_started_at is None:
 g = displayio.Group()
 display.root_group = g
 
-# Background
-bg_bmp = load_bmp("/Background/jungle.bmp")
-g.append(make_tile_grid(bg_bmp, x=-16, y=0))
+# Background — load WITHOUT transparent_index so palette[0] (background
+# color of the jungle scene) stays opaque. The default load_bmp() makes
+# palette index 0 transparent, which made the entire background invisible.
+bg_bmp = load_bmp("/Background/jungle.bmp", transparent_index=None)
+g.append(make_tile_grid(bg_bmp, x=0, y=0))
 
 # Pet sprite
 sp_tg, n_idle = load_pet_sprite(pet.species, pet.state)
@@ -128,7 +134,10 @@ def swap_sprite(new_species, new_state):
 
 draw_bars()
 draw_menu()
-print("vPet ready, state=" + pet.state)
+# NOTE: don't print() here — it activates CIRCUITPYTHON_TERMINAL which
+# takes over the display and shows the REPL on screen.
+# (The code is running successfully; we just keep that fact silent on the
+# device's own display.)
 
 
 # ---------- Hatch animation state ----------
@@ -147,6 +156,12 @@ last_save = time.monotonic()
 SAVE_INTERVAL = 30
 
 while True:
+    # Re-assert our group as the display root. CP 10.2.1 may attach its
+    # CIRCUITPYTHON_TERMINAL group to the display when the REPL is opened
+    # by the serial monitor; we want our sprites to stay on screen.
+    if display.root_group is not g:
+        display.root_group = g
+
     next_btn.update()
     action_btn.update()
 

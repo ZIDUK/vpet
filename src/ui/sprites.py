@@ -4,9 +4,15 @@ import displayio
 
 def load_bmp(path, transparent_index=0):
     """Load a BMP from disk and return (bitmap, palette).
-    Use the palette's make_transparent() if needed."""
+
+    transparent_index:
+      - int  → that palette index is made transparent
+      - None → no transparency applied (e.g. for backgrounds where
+                palette[0] is a real visible color)
+    """
     bmp = displayio.OnDiskBitmap(path)
-    bmp.pixel_shader.make_transparent(transparent_index)
+    if transparent_index is not None:
+        bmp.pixel_shader.make_transparent(transparent_index)
     return bmp
 
 

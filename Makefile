@@ -11,12 +11,13 @@ BUILD_OUTPUT := Baby Rookie Champion Ultimate Mega Egg Background UI
 help:
 	@echo "vPet dev workflow"
 	@echo ""
-	@echo "  make build    src/ + assets/ → build/  (clean rebuild)"
-	@echo "  make deploy   build/ → /Volumes/CIRCUITPY/  (the Pico)"
-	@echo "  make sim      Run the vPet in a pygame window on Mac"
-	@echo "  make test     Run pytest in tests/"
-	@echo "  make all      clean + build + test + deploy"
-	@echo "  make clean    Remove everything in build/ except code.py and settings.toml"
+	@echo "  make build        src/ + assets/ → build/  (clean rebuild)"
+	@echo "  make deploy       build/ → /Volumes/CIRCUITPY/  (the Pico)"
+	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
+	@echo "  make sim-record   Same as sim, but saves every frame as PNG to out/sim_frames/"
+	@echo "  make test         Run pytest in tests/"
+	@echo "  make all          clean + build + test + deploy"
+	@echo "  make clean        Remove everything in build/ except code.py and settings.toml"
 
 build: clean
 	$(PY) scripts/build.py
@@ -25,7 +26,12 @@ deploy: build
 	$(PY) scripts/deploy.py
 
 sim:
-	$(PY) scripts/simulator.py
+	@if [ ! -d "build/Background" ]; then echo "  build/ not generated, running build first..."; $(MAKE) build; fi
+	$(PY) scripts/sim.py
+
+sim-record:
+	@if [ ! -d "build/Background" ]; then echo "  build/ not generated, running build first..."; $(MAKE) build; fi
+	$(PY) scripts/sim.py --record out/sim_frames
 
 test:
 	$(PY) -m pytest tests/ -v

@@ -161,17 +161,61 @@ def copy_settings():
         print(f"  copied settings.toml")
 
 
+def normalize_bmps():
+    """Force every BMP under build/ to use positive height + bottom-up rows.
+
+    CircuitPython 10.2.1's displayio.OnDiskBitmap has a bug reading BMPs
+    stored with negative (top-down) height — it interprets the height as a
+    huge unsigned value and fails to render correctly (blank or solid clear
+    color on screen). This was the root cause of the jungle.bmp showing
+    solid black instead of the actual green image.
+
+    This step:
+      - finds all .bmp under build/
+      - opens with PIL, flips vertically if height is negative
+      - re-saves with positive height (bottom-up rows)
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        print("  WARN: PIL not installed, skipping BMP normalization")
+        return
+
+    n_fixed = 0
+    n_total = 0
+    for bmp in BUILD.rglob("*.bmp"):
+        n_total += 1
+        # peek at the height (bytes 22-26 of the BMP header)
+        with open(bmp, "rb") as f:
+            f.seek(22)
+            import struct
+            (h,) = struct.unpack("<i", f.read(4))
+        if h < 0:
+            # already-loaded BMP, flip and re-save
+            img = Image.open(bmp)
+            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            img.save(bmp)
+            n_fixed += 1
+    if n_total:
+        if n_fixed:
+            print(f"  normalized {n_fixed}/{n_total} BMP(s) to positive height (CP 10.2.1 fix)")
+        else:
+            print(f"  {n_total} BMP(s) already positive-height, OK")
+
+
 def main():
     print("=== build.py ===")
-    print("[1/4] Flattening src/ → build/code.py")
+    print("[1/5] Flattening src/ → build/code.py")
     flatten_code()
-    print("[2/4] Collecting digimon sprites")
+    print("[2/5] Collecting digimon sprites")
     collect_digimon_sprites()
-    print("[3/4] Collecting UI assets")
+    print("[3/5] Collecting UI assets")
     collect_ui()
-    print("[4/4] Collecting backgrounds + settings")
+    print("[4/5] Collecting backgrounds + settings")
     collect_backgrounds()
     copy_settings()
+    print("[5/5] Normalizing BMPs (CP 10.2.1 height-sign fix)")
+    normalize_bmps()
     print("OK")
 
 

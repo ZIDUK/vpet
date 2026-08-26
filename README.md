@@ -4,9 +4,9 @@ A Digimon-style virtual pet on a Raspberry Pi Pico W with a Waveshare Pico-LCD-1
 
 ## What it is
 
-Two evolution lines (Agumon, Gabumon), 4 stages each. Real stats (hunger/energy/happiness/HP),
-real actions (feed/heal/play/rest), real turn-based battles, real persistence across reboots.
-It's a Tamagotchi that grows up, evolves, and remembers what happened.
+Two evolution lines (Sprout, Agumon), 6 stages each (egg → baby → rookie → champion → ultimate → mega).
+Real stats (hunger/energy/happiness/HP), real actions (feed/heal/play/rest), real turn-based battles,
+real persistence across reboots. It's a Tamagotchi that grows up, evolves, and remembers what happened.
 
 ## Hardware
 
@@ -25,31 +25,33 @@ src/           — modular Python (the source of truth)
   hal.py       — display + button init
   core/        — game logic (pet, evolution, battle, save)
   ui/          — display widgets (bars, buttons, sprites)
-  data/        — JSON config: 8 evolution forms + NPCs
+  data/        — JSON config: 6 evolution forms + NPCs
   app.py       — entrypoint / main loop
 
 assets/        — raw art, dev only (NOT deployed)
-  raw/         — original source files (Agumon_atlas, Greymon, etc.)
-  atlas/       — generated sprite atlases
+  digimon/     — sprite BMPs by line/stage/state
+  ui/          — button icons
   backgrounds/ — background BMPs
-  mockups/     — UI sketches
 
 build/         — generated output (deployed to the Pico)
   code.py      — flattened from src/ by scripts/build.py
-  Agumon/      — sprite BMPs
+  digimon1/    — sprite BMPs (collapsed <line>/<stage>/<file>.bmp)
   Background/  — background BMPs
+  UI/buttons/  — button icon BMPs
   settings.toml
 
 scripts/       — dev tooling
-  build.py     — src/ → build/code.py
+  build.py     — src/ + assets/ → build/ (with BMP height-sign normalization)
   deploy.py    — build/ → /Volumes/CIRCUITPY/
-  simulator.py — run vPet on Mac in pygame (TODO)
+  sim.py       — pygame simulator (preview UI on Mac without flashing)
 
 tests/         — pytest, run on Mac
-docs/          — architecture, hardware notes, ADRs
+docs/          — architecture, hardware notes
   hardware.md  — Pico-LCD-1.44 spec, pinout, SPI protocol
   architecture.md — software architecture, data flow, module map
 .plan/         — roadmap, current sprint, ideas
+
+boot.py        — runs before code.py on every Pico boot (disables REPL display)
 ```
 
 ## Quick start (first time, on a new machine)
@@ -59,16 +61,20 @@ docs/          — architecture, hardware notes, ADRs
 git clone git@github.com:ZIDUK/vpet.git
 cd vpet
 
-# 2. Make sure Python 3.10+ is installed (for build, test, deploy scripts)
+# 2. Make sure Python 3.10+ is installed
 python3 --version
 
-# 3. Install pytest (only dev dep)
-python3 -m pip install pytest
+# 3. Install dev deps (for build, test, deploy)
+python3 -m pip install pytest pillow
 
-# 4. Plug in the Pico W (must already have CircuitPython 10.2.1 firmware)
+# 4. (Optional, for the simulator) install pygame
+# Use the system Python that has displayio/adafruit-blinka
+/usr/bin/python3 -m pip install --user pygame
+
+# 5. Plug in the Pico W (must already have CircuitPython 10.2.1 firmware)
 ls /Volumes/CIRCUITPY/  # if you see boot_out.txt, you're good
 
-# 5. Build + test + deploy
+# 6. Build + test + deploy
 make all
 ```
 
@@ -78,21 +84,51 @@ After `make all`, the Pico reboots and shows the vPet on the display.
 
 | Command | What it does |
 |---|---|
-| `make build` | Flatten `src/*.py` → `build/code.py` (single file CircuitPython can run) |
-| `make test` | Run pytest (24 tests) |
+| `make build` | Flatten `src/*.py` → `build/code.py`, copy + normalize BMPs |
+| `make test` | Run pytest (game logic tests) |
 | `make deploy` | Copy `build/*` to `/Volumes/CIRCUITPY/` (Pico must be plugged in) |
-| `make all` | build + test + deploy in one shot |
-| `make sim` | Run the vPet in a pygame window on Mac (TODO) |
-| `make clean` | Delete `build/code.py` |
+| `make all` | clean + build + test + deploy in one shot |
+| `make sim` | Open the vPet in a pygame window on Mac (no Pico needed) |
+| `make sim-record` | Same as sim but saves every frame as PNG to `out/sim_frames/` |
+| `make clean` | Delete `build/*` except `code.py` and `settings.toml` |
 
-## Deployment guide (the step-by-step)
+## Simulator (preview UI on Mac)
+
+The `make sim` target runs `scripts/sim.py` which renders the same UI the
+Pico shows, in a pygame window on your Mac. Same BMPs, same layout, same
+colors — but you can iterate in milliseconds instead of flashing the device.
+
+**Setup** (one time):
+```bash
+# pygame
+/usr/bin/python3 -m pip install --user pygame
+# PIL is already needed for the build pipeline
+```
+
+**Run**:
+```bash
+make sim
+```
+
+A 512×512 window opens (4× scale of the 128×128 internal framebuffer).
+The simulator reads from `build/` so run `make build` first if you
+changed sprites in `assets/`.
+
+**Keys while running**:
+- `n` — NEXT button (cycle menu selection)
+- `a` — ACTION button (apply selected action; raises the focused stat)
+- `r` — reset all stat values to defaults
+- `1`-`6` — switch digimon (egg / baby / rookie / champion / ultimate / mega)
+- `q` / `ESC` — quit
+
+## Deployment guide
 
 ### A. First time — flash CircuitPython firmware
 
 The Pico W must be running CircuitPython 10.2.1 or newer.
 
 1. Download firmware: https://circuitpython.org/board/raspberry_pi_pico_w/
-   - Pick the latest stable `.uf2` for Pico W.
+   Pick the latest stable `.uf2` for Pico W.
 2. Enter bootloader mode:
    - Hold the **BOOT** button on the Pico.
    - While holding, plug the USB cable into your Mac.
@@ -112,20 +148,21 @@ make deploy
 
 This will:
 1. Build `src/ → build/code.py` (one flattened file).
-2. Copy `code.py`, `settings.toml`, `Agumon/`, `Background/` to the device.
+2. Copy `code.py`, `boot.py`, `settings.toml`, `digimon1/`, `Background/`, `UI/buttons/` to the device.
 3. Download CircuitPython 10 lib bundle (cached in `~/.cache/vpet/cp10_bundle.zip`).
 4. Sync the needed `.mpy` files to `/Volumes/CIRCUITPY/lib/`.
-5. Clean macOS AppleDouble metadata (`._*` files).
+5. Normalize all BMPs to positive height (CP 10.2.1 bug workaround).
+6. Clean macOS AppleDouble metadata (`._*` files).
 
 After ~10 seconds, the Pico reboots and shows the vPet on screen.
 
 ### C. Day-to-day — change code and re-deploy
 
 ```bash
-# 1. Edit src/app.py or any module
-# 2. (Optional) Run tests on Mac
-make test
-# 3. Build + deploy
+# 1. Edit src/ or assets/
+# 2. (Optional) Preview the UI on Mac
+make sim
+# 3. Build + test + deploy
 make deploy
 # 4. Pico auto-reboots (via CircuitPython's autoreload on file write)
 #    If autoreload is disabled, press the physical RESET button on the Pico
@@ -169,23 +206,32 @@ python3 -m mpremote connect /dev/cu.usbmodem1301 exec "import supervisor; superv
 # 3. Re-run make deploy
 ```
 
-## What works now (M0 + M1)
+## What works now
 
 - [x] Display: jungle background, animated sprite, 4 stat bars, 4 action buttons
 - [x] Buttons: navigate menu, apply action
 - [x] Stats: hunger, energy, happiness, HP — decay over time, action effects, caps at 100
+- [x] State machine: egg → hatching (8s animation) → live
 - [x] Persistence: save/load to `/pet_save.json` (survives reboot)
-- [x] Build pipeline: src/ → build/code.py
+- [x] Build pipeline: src/ → build/code.py + asset normalization
 - [x] Deploy pipeline: build/ → /Volumes/CIRCUITPY/
-- [x] Tests: 24/24 passing on Mac
+- [x] Pygame simulator: preview UI on Mac without flashing
+- [x] Tests: 32/32 passing on Mac
 
-## What's next
+## Hardware gotchas (CP 10.2.1)
 
-- [ ] Real Agumon sprite (placeholder is just colored squares)
-- [ ] Other 7 evolution forms (greymon, metalgreymon, wargreymon, gabumon, garurumon, weregarurumon, metalgarurumon)
-- [ ] Battle UI on the screen
-- [ ] Pygame simulator (test on Mac without flashing Pico)
-- [ ] Evolution animation (flash + sprite swap)
+- `displayio.OnDiskBitmap` misreads BMPs with **negative height** (top-down) — bug in 10.2.1. The build
+  pipeline normalizes all BMPs to positive height + bottom-up rows. Symptom: blank black or
+  garbled sprites that load fine on the Mac.
+- `displayio.Palette` with 1 entry and a single index, no `make_transparent` call, can render the
+  whole bitmap as the display's clear color. Use 2+ entry palettes for anything with transparency.
+- `print()` in `code.py` activates `CIRCUITPYTHON_TERMINAL` which takes over the display. We silence
+  prints at runtime; use the REPL for debug output.
+- `supervisor.runtime.display = None` is brittle; we set it from `boot.py` instead, which runs before
+  the auto-attached REPL display claim.
+- macOS AppleDouble (`._*`) files: 40KB+ of waste on every deploy. `make deploy` cleans them up.
+- The autoreload race on `code.py` write: deploy copies other files first, `code.py` last, with
+  retry on `OSError: [Errno 22]`.
 
 ## Quick reference
 
@@ -193,4 +239,3 @@ python3 -m mpremote connect /dev/cu.usbmodem1301 exec "import supervisor; superv
 - **Architecture**: see `docs/architecture.md`
 - **Roadmap**: see `.plan/roadmap.md`
 - **Current sprint**: see `.plan/current-sprint.md`
-- **Hardware gotchas**: see `docs/hardware-notes.md` (CP 10.2.1 API, lib version, AppleDouble, etc.)

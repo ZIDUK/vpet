@@ -39,8 +39,8 @@ def init_display():
         width=128,
         height=128,
         colstart=2,
-        rowstart=2,
-        rotation=180,
+        rowstart=3,
+        rotation=0,
     )
 
 

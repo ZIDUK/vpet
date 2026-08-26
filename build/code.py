@@ -33,8 +33,8 @@ def init_display():
         width=128,
         height=128,
         colstart=2,
-        rowstart=2,
-        rotation=180,
+        rowstart=3,
+        rotation=0,
     )
 
 
@@ -351,9 +351,15 @@ def load_pet(pet):
 # (import flattened)
 def load_bmp(path, transparent_index=0):
     """Load a BMP from disk and return (bitmap, palette).
-    Use the palette's make_transparent() if needed."""
+
+    transparent_index:
+      - int  → that palette index is made transparent
+      - None → no transparency applied (e.g. for backgrounds where
+                palette[0] is a real visible color)
+    """
     bmp = displayio.OnDiskBitmap(path)
-    bmp.pixel_shader.make_transparent(transparent_index)
+    if transparent_index is not None:
+        bmp.pixel_shader.make_transparent(transparent_index)
     return bmp
 
 
@@ -488,10 +494,17 @@ def make_button(x, y, bg_color, label, size=24, icon_path=None):
 # ---------- Selection Ring (24x24 white border) ----------
 
 def make_selection_ring(x, y, size=24):
-    """Create a 1-bit white border for highlighting the selected button."""
-    bmp = displayio.Bitmap(size, size, 1)
-    pal = displayio.Palette(1)
-    pal[0] = 0xffffff
+    """Create a 1-bit white border for highlighting the selected button.
+
+    Uses 2-color palette: index 0 = transparent (so the inside of the ring
+    is invisible and the underlying button shows through), index 1 = white
+    (only the border pixels use this).
+    """
+    bmp = displayio.Bitmap(size, size, 2)
+    pal = displayio.Palette(2)
+    pal[0] = 0x000000
+    pal.make_transparent(0)
+    pal[1] = 0xffffff
     for xi in range(size):
         bmp[xi, 0] = 1
         bmp[xi, size - 1] = 1
@@ -510,6 +523,10 @@ def make_selection_ring(x, y, size=24):
 # (import flattened)
 # (import flattened)
 # (import flattened)
+# (import flattened)
+
+# Disable autoreload (so edits to other files don't restart us mid-loop).
+supervisor.runtime.autoreload = False
 
 # ---------- Menu config ----------
 BUTTON_LABELS = ["F", "H", "P", "E"]
@@ -566,9 +583,11 @@ if pet.state == STATE_EGG and pet.hatch_started_at is None:
 g = displayio.Group()
 display.root_group = g
 
-# Background
-bg_bmp = load_bmp("/Background/jungle.bmp")
-g.append(make_tile_grid(bg_bmp, x=-16, y=0))
+# Background — load WITHOUT transparent_index so palette[0] (background
+# color of the jungle scene) stays opaque. The default load_bmp() makes
+# palette index 0 transparent, which made the entire background invisible.
+bg_bmp = load_bmp("/Background/jungle.bmp", transparent_index=None)
+g.append(make_tile_grid(bg_bmp, x=0, y=0))
 
 # Pet sprite
 sp_tg, n_idle = load_pet_sprite(pet.species, pet.state)
@@ -621,7 +640,10 @@ def swap_sprite(new_species, new_state):
 
 draw_bars()
 draw_menu()
-print("vPet ready, state=" + pet.state)
+# NOTE: don't print() here — it activates CIRCUITPYTHON_TERMINAL which
+# takes over the display and shows the REPL on screen.
+# (The code is running successfully; we just keep that fact silent on the
+# device's own display.)
 
 
 # ---------- Hatch animation state ----------
@@ -640,6 +662,12 @@ last_save = time.monotonic()
 SAVE_INTERVAL = 30
 
 while True:
+    # Re-assert our group as the display root. CP 10.2.1 may attach its
+    # CIRCUITPYTHON_TERMINAL group to the display when the REPL is opened
+    # by the serial monitor; we want our sprites to stay on screen.
+    if display.root_group is not g:
+        display.root_group = g
+
     next_btn.update()
     action_btn.update()
 
