@@ -32,6 +32,8 @@ public:
     void setDiscovered(bool champion, bool ultimate);
     void openEvolutionTree();
     void select(SpeciesId species);
+    void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; }
+    void setPanelIndex(uint8_t index) { panelIndex_ = index; }
     EvolutionNode selectedEvolutionNode() const;
 
     PanelId panel() const { return panel_; }

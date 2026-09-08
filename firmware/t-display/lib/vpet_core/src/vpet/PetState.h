@@ -13,6 +13,8 @@ public:
     bool beginAction(Action action);
     bool completeAction();
     void evolveTo(SpeciesId species);
+    void restore(SpeciesId species, int hunger, int energy, int happiness, int effort, int health, uint32_t ageSeconds);
+    bool hasDiscovered(SpeciesId species) const;
 
     SpeciesId species() const { return species_; }
     int hunger() const { return hunger_; }
@@ -41,6 +43,8 @@ private:
     int battles_ = 0;
     uint32_t ageMs_ = 0;
     uint32_t decayMs_ = 0;
+    bool championDiscovered_ = false;
+    bool ultimateDiscovered_ = false;
 };
 
 }  // namespace vpet

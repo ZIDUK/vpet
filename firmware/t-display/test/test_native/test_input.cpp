@@ -13,6 +13,9 @@ void test_action_animation_returns_to_idle();
 void test_menu_opens_expected_panels();
 void test_hidden_branch_does_not_reveal_identity();
 void test_back_returns_from_detail_to_same_tree_node();
+void test_missing_save_keeps_current_species_discovered();
+void test_credentials_are_saved_only_after_internet_capable_connection();
+void test_password_editor_cycles_groups_and_submits_masked_value();
 
 void test_short_next_press() {
     Input input(25, 700);
@@ -50,5 +53,8 @@ int main(int, char**) {
     RUN_TEST(test_menu_opens_expected_panels);
     RUN_TEST(test_hidden_branch_does_not_reveal_identity);
     RUN_TEST(test_back_returns_from_detail_to_same_tree_node);
+    RUN_TEST(test_missing_save_keeps_current_species_discovered);
+    RUN_TEST(test_credentials_are_saved_only_after_internet_capable_connection);
+    RUN_TEST(test_password_editor_cycles_groups_and_submits_masked_value);
     return UNITY_END();
 }

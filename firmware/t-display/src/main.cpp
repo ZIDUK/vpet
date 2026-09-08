@@ -7,6 +7,10 @@
 #include "vpet/BoardInput.h"
 #include "vpet/Panels.h"
 #include "vpet/Renderer.h"
+#include "vpet/Esp32NetworkAdapter.h"
+#include "vpet/NvsKeyValueStore.h"
+#include "vpet/NetworkService.h"
+#include "vpet/SettingsStore.h"
 
 namespace {
 TFT_eSPI display;
@@ -14,7 +18,12 @@ vpet::AssetStore assets;
 vpet::BoardInput buttons;
 vpet::Renderer renderer(display, assets);
 vpet::Panels panels(display, assets);
-vpet::App app(renderer, panels);
+vpet::NvsKeyValueStore stateStore("vpet_state");
+vpet::NvsKeyValueStore wifiStore("vpet_wifi");
+vpet::SettingsStore settingsStore(stateStore);
+vpet::Esp32NetworkAdapter networkAdapter;
+vpet::NetworkService network(networkAdapter, wifiStore);
+vpet::App app(renderer, panels, settingsStore, network);
 
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);

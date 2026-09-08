@@ -57,6 +57,35 @@ bool PetState::completeAction() {
 
 void PetState::evolveTo(SpeciesId species) {
     species_ = species;
+    if (species == SpeciesId::Champion) championDiscovered_ = true;
+    if (species == SpeciesId::Ultimate) {
+        championDiscovered_ = true;
+        ultimateDiscovered_ = true;
+    }
+}
+
+void PetState::restore(
+    SpeciesId species,
+    int hunger,
+    int energy,
+    int happiness,
+    int effort,
+    int health,
+    uint32_t ageSeconds
+) {
+    evolveTo(species);
+    hunger_ = clampStat(hunger);
+    energy_ = clampStat(energy);
+    happiness_ = clampStat(happiness);
+    effort_ = clampStat(effort);
+    health_ = clampStat(health);
+    ageMs_ = ageSeconds * 1000U;
+}
+
+bool PetState::hasDiscovered(SpeciesId species) const {
+    if (species == SpeciesId::Rookie) return true;
+    if (species == SpeciesId::Champion) return championDiscovered_;
+    return ultimateDiscovered_;
 }
 
 }  // namespace vpet

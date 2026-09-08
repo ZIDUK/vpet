@@ -122,7 +122,61 @@ void Panels::drawOptions(uint8_t selected) {
     }
 }
 
-void Panels::draw(const Navigation& navigation, const PetState& pet) {
+void Panels::drawWifi(const Navigation& navigation, const NetworkService& network) {
+    if (!const_cast<NetworkService&>(network).scanComplete()) {
+        drawLabel("SCANNING...", 75, 78, 100, 2);
+        return;
+    }
+    const size_t count = network.networkCount();
+    const size_t visible = count > 5 ? 5 : count;
+    for (size_t index = 0; index < visible; ++index) {
+        const int16_t y = 51 + index * 15;
+        if (index == navigation.panelIndex() % (count + 1)) {
+            display_.fillRect(5, y - 2, 230, 13, TFT_YELLOW);
+        }
+        drawLabel(network.networkName(index).c_str(), 10, y, 220, 1);
+    }
+    const int16_t y = 51 + visible * 15;
+    drawLabel("BACK", 10, y, 220, 1);
+}
+
+void Panels::drawPassword(const PasswordEditor& password, const char* selectedSsid) {
+    drawLabel(selectedSsid, 8, 52, 224, 1);
+    display_.drawRect(8, 66, 224, 20, kInk);
+    String masked;
+    for (size_t index = 0; index < password.password().size(); ++index) masked += '*';
+    drawLabel(masked.c_str(), 13, 72, 214, 1);
+    drawLabel(password.groupLabel(), 8, 94, 55, 1);
+    display_.drawRect(67, 91, 165, 31, TFT_YELLOW);
+    display_.setTextDatum(MC_DATUM);
+    drawLabel(password.keyLabel(), 149, 106, 150, 2);
+    display_.setTextDatum(TL_DATUM);
+}
+
+void Panels::drawDateTime(const int* values, bool editingDate, uint8_t field) {
+    char value[32];
+    if (editingDate) snprintf(value, sizeof(value), "%04d / %02d / %02d", values[0], values[1], values[2]);
+    else snprintf(value, sizeof(value), "%02d : %02d", values[3], values[4]);
+    drawLabel(editingDate ? "EDIT DATE" : "EDIT TIME", 83, 57, 90, 1);
+    display_.drawRect(20, 76, 200, 34, TFT_YELLOW);
+    display_.setTextDatum(MC_DATUM);
+    drawLabel(value, 120, 93, 184, 2);
+    display_.setTextDatum(TL_DATUM);
+    char hint[24];
+    snprintf(hint, sizeof(hint), "FIELD %u  NEXT:+ ACTION:OK", field + 1);
+    drawLabel(hint, 32, 119, 205, 1);
+}
+
+void Panels::draw(
+    const Navigation& navigation,
+    const PetState& pet,
+    const NetworkService& network,
+    const PasswordEditor& password,
+    const char* selectedSsid,
+    const int* dateTime,
+    bool editingDate,
+    uint8_t dateField
+) {
     display_.startWrite();
     switch (navigation.panel()) {
         case PanelId::Status:
@@ -142,11 +196,20 @@ void Panels::draw(const Navigation& navigation, const PetState& pet) {
             drawEvolution(navigation, true);
             break;
         case PanelId::Options:
-        case PanelId::WifiList:
-        case PanelId::Password:
-        case PanelId::DateTime:
             drawChrome(navigation.menuIndex(), "OPTIONS");
             drawOptions(navigation.panelIndex());
+            break;
+        case PanelId::WifiList:
+            drawChrome(navigation.menuIndex(), "WIFI NETWORKS");
+            drawWifi(navigation, network);
+            break;
+        case PanelId::Password:
+            drawChrome(navigation.menuIndex(), "WIFI PASSWORD");
+            drawPassword(password, selectedSsid);
+            break;
+        case PanelId::DateTime:
+            drawChrome(navigation.menuIndex(), "DATE / TIME");
+            drawDateTime(dateTime, editingDate, dateField);
             break;
         case PanelId::Home:
             break;
