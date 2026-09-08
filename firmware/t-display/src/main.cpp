@@ -5,6 +5,7 @@
 #include "vpet/AssetStore.h"
 #include "vpet/App.h"
 #include "vpet/BoardInput.h"
+#include "vpet/Panels.h"
 #include "vpet/Renderer.h"
 
 namespace {
@@ -12,7 +13,8 @@ TFT_eSPI display;
 vpet::AssetStore assets;
 vpet::BoardInput buttons;
 vpet::Renderer renderer(display, assets);
-vpet::App app(renderer);
+vpet::Panels panels(display, assets);
+vpet::App app(renderer, panels);
 
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);

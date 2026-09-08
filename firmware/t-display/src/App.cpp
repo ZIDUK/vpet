@@ -2,8 +2,8 @@
 
 namespace vpet {
 
-App::App(Renderer& renderer)
-    : renderer_(renderer), motion_(240, 135, 24, 88) {}
+App::App(Renderer& renderer, Panels& panels)
+    : renderer_(renderer), panels_(panels), motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
     lastTickMs_ = nowMs;
@@ -13,7 +13,7 @@ void App::begin(uint32_t nowMs) {
 
 void App::activate(uint32_t nowMs) {
     Action action = Action::None;
-    switch (menuIndex_) {
+    switch (navigation_.menuIndex()) {
         case 1: action = Action::Feed; break;
         case 2: action = Action::Training; break;
         case 3: action = Action::Battle; break;
@@ -34,19 +34,27 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         pet_.completeAction();
     }
 
-    if (pet_.pendingAction() == Action::None) {
-        if (event == InputEvent::Next) {
-            menuIndex_ = (menuIndex_ + 1) % 8;
-        } else if (event == InputEvent::Action) {
+    if (pet_.pendingAction() == Action::None && event != InputEvent::None) {
+        if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
+            navigation_.menuIndex() >= 1 && navigation_.menuIndex() <= 4) {
             activate(nowMs);
-        } else if (event == InputEvent::Back) {
-            menuIndex_ = 0;
+        } else {
+            navigation_.dispatch(event);
         }
     }
 
+    navigation_.setDiscovered(
+        pet_.species() != SpeciesId::Rookie,
+        pet_.species() == SpeciesId::Ultimate
+    );
+
     if (nowMs - lastRenderMs_ >= 50) {
         lastRenderMs_ = nowMs;
-        renderer_.draw({pet_, motion_, menuIndex_});
+        if (navigation_.panel() == PanelId::Home) {
+            renderer_.draw({pet_, motion_, navigation_.menuIndex()});
+        } else {
+            panels_.draw(navigation_, pet_);
+        }
     }
 }
 

@@ -52,6 +52,25 @@ def test_renderer_outputs_tdisplay_frame_with_30_pixel_menu_cells(tmp_path):
     assert frame.getpixel((209, 0)) == (0, 0, 0)
 
 
+def test_tdisplay_panels_stay_inside_content_area(tmp_path):
+    build_dir = tmp_path / "build-tdisplay"
+    profile = get_display_profile("tdisplay")
+    build_script.main(profile_name="tdisplay", output_dir=build_dir)
+    session = OptionsSession()
+
+    for menu_index, panel_mode in ((0, "status"), (5, "inventory"), (6, "evolution"), (7, "options")):
+        frame = render_frame(
+            build_dir,
+            _rookie(),
+            menu_index=menu_index,
+            panel_mode=panel_mode,
+            options_session=session,
+            profile=profile,
+        )
+        assert frame.size == (240, 135)
+        assert frame.getpixel((239, 134)) == (214, 180, 112)
+
+
 def test_renderer_draws_eight_icon_menu_across_top_row():
     frame = render_frame(ROOT / "build", _rookie())
     background = Image.open(ROOT / "build" / "Background" / "background.bmp").convert("RGB")

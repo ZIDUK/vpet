@@ -55,7 +55,7 @@ def main():
     pygame.init()
     window_size = (profile.width * args.scale, profile.height * args.scale)
     screen = pygame.display.set_mode(window_size)
-    pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, e=EVOLVE, q=QUIT")
+    pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, b=BACK, e=EVOLVE")
     clock = pygame.time.Clock()
 
     pet = Pet(species="rookie", state=STATE_LIVE)
@@ -86,6 +86,8 @@ def main():
                 elif event.key == pygame.K_n:
                     if panel_mode == "inventory":
                         inventory_index = (inventory_index + 1) % INVENTORY_ENTRY_COUNT
+                    elif panel_mode == "evolution":
+                        inventory_index = (inventory_index + 1) % 3
                     elif panel_mode == "options":
                         options_session.next()
                     else:
@@ -120,6 +122,8 @@ def main():
                 elif event.key == pygame.K_e and pet.is_live:
                     if evolution.force(pet):
                         motion.start_evolution(pygame.time.get_ticks() / 1000)
+                elif event.key == pygame.K_b:
+                    panel_mode = None
                 elif event.key == pygame.K_r:
                     pet = Pet(species="rookie", state=STATE_LIVE)
                     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)

@@ -1,0 +1,157 @@
+#include "vpet/Panels.h"
+
+namespace vpet {
+namespace {
+constexpr const char* kMenuIcons[] = {
+    "/ui/icons/status.vpa", "/ui/icons/feed.vpa", "/ui/icons/training.vpa",
+    "/ui/icons/battle.vpa", "/ui/icons/rest.vpa", "/ui/icons/items.vpa",
+    "/ui/icons/pedia.vpa", "/ui/icons/options.vpa",
+};
+constexpr uint16_t kPanel = 0xD6B4;
+constexpr uint16_t kInk = 0x31C7;
+}
+
+Panels::Panels(TFT_eSPI& display, AssetStore& assets)
+    : display_(display), assets_(assets) {}
+
+void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font) {
+    String fitted(text);
+    while (fitted.length() > 1 && display_.textWidth(fitted, font) > width) {
+        fitted.remove(fitted.length() - 1);
+    }
+    display_.drawString(fitted, x, y, font);
+}
+
+void Panels::drawChrome(uint8_t selected, const char* title) {
+    display_.fillScreen(TFT_BLACK);
+    for (uint8_t index = 0; index < 8; ++index) {
+        assets_.drawFrame(display_, kMenuIcons[index], 0, index * 30 + 5, 2);
+    }
+    display_.drawRect((selected % 8) * 30, 0, 30, 24, TFT_YELLOW);
+    display_.fillRect(0, 24, 240, 111, kPanel);
+    display_.fillRect(3, 27, 234, 20, kInk);
+    display_.setTextDatum(MC_DATUM);
+    display_.setTextColor(TFT_WHITE, kInk);
+    drawLabel(title, 120, 37, 220, 2);
+    display_.setTextDatum(TL_DATUM);
+    display_.setTextColor(kInk, kPanel);
+}
+
+void Panels::drawStatus(const PetState& pet) {
+    char line[32];
+    snprintf(line, sizeof(line), "HP %d/100", pet.health());
+    drawLabel(line, 8, 53, 104, 2);
+    snprintf(line, sizeof(line), "HUN %d", pet.hunger());
+    drawLabel(line, 8, 75, 104, 2);
+    snprintf(line, sizeof(line), "ENE %d", pet.energy());
+    drawLabel(line, 8, 97, 104, 2);
+    snprintf(line, sizeof(line), "AGE %lus", static_cast<unsigned long>(pet.ageSeconds()));
+    drawLabel(line, 126, 53, 106, 2);
+    snprintf(line, sizeof(line), "EFF %d", pet.effort());
+    drawLabel(line, 126, 75, 106, 2);
+    snprintf(line, sizeof(line), "BAT %d", pet.battles());
+    drawLabel(line, 126, 97, 106, 2);
+    drawLabel("ACTION: CLOSE", 73, 121, 95, 1);
+}
+
+void Panels::drawInventory(uint8_t selected) {
+    constexpr const char* items[] = {"MEAT x3", "ENERGY x2", "EXP x1", "FIRE RING x1", "BACK"};
+    for (uint8_t index = 0; index < 5; ++index) {
+        const int16_t x = 8 + (index % 3) * 77;
+        const int16_t y = 53 + (index / 3) * 36;
+        display_.drawRect(x, y, 70, 30, index == selected % 5 ? TFT_YELLOW : kInk);
+        drawLabel(items[index], x + 4, y + 10, 62, 1);
+    }
+}
+
+void Panels::drawEvolution(const Navigation& navigation, bool detail) {
+    const EvolutionNode selected = navigation.selectedEvolutionNode();
+    if (detail) {
+        display_.drawRect(74, 51, 92, 72, TFT_YELLOW);
+        if (selected.hidden) {
+            display_.fillRect(76, 53, 88, 68, TFT_BLACK);
+            display_.setTextColor(TFT_WHITE, TFT_BLACK);
+            display_.setTextDatum(MC_DATUM);
+            display_.drawString("???", 120, 87, 2);
+        } else {
+            const char* portrait = selected.species == SpeciesId::Rookie
+                ? "/animations/rookie/firemon_idle.vpa"
+                : selected.species == SpeciesId::Champion
+                    ? "/animations/champion/flamemon_idle.vpa"
+                    : "/animations/ultimate/dragfiremon_idle.vpa";
+            assets_.drawFrame(display_, portrait, 0, 76, 35);
+            display_.setTextColor(kInk, kPanel);
+            display_.setTextDatum(MC_DATUM);
+            display_.drawString(selected.label, 120, 108, 2);
+        }
+        display_.setTextDatum(TL_DATUM);
+        return;
+    }
+    for (uint8_t index = 0; index < 3; ++index) {
+        const SpeciesId species = static_cast<SpeciesId>(index);
+        Navigation copy = navigation;
+        copy.select(species);
+        const EvolutionNode node = copy.selectedEvolutionNode();
+        const int16_t x = 5 + index * 79;
+        display_.drawRect(x, 52, 72, 70, index == navigation.panelIndex() ? TFT_YELLOW : kInk);
+        if (node.hidden) {
+            display_.fillRect(x + 18, 57, 36, 36, TFT_BLACK);
+            display_.setTextColor(TFT_WHITE, TFT_BLACK);
+            display_.drawString("???", x + 25, 70, 1);
+        } else {
+            const char* portrait = index == 0 ? "/ui/evolution/firemon.vpa"
+                : index == 1 ? "/ui/evolution/flamemon.vpa"
+                : "/ui/evolution/dragfiremon.vpa";
+            assets_.drawFrame(display_, portrait, 0, x + 18, 57);
+            display_.setTextColor(kInk, kPanel);
+            drawLabel(node.label, x + 4, 99, 64, 1);
+        }
+        if (index < 2) drawLabel(">", x + 73, 73, 8, 2);
+    }
+}
+
+void Panels::drawOptions(uint8_t selected) {
+    constexpr const char* options[] = {
+        "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", "WIFI", "DATE / TIME", "BACK"
+    };
+    for (uint8_t index = 0; index < 7; ++index) {
+        const int16_t y = 50 + index * 11;
+        if (index == selected % 7) display_.fillRect(5, y - 1, 230, 11, TFT_YELLOW);
+        display_.setTextColor(kInk, index == selected % 7 ? TFT_YELLOW : kPanel);
+        drawLabel(options[index], 10, y, 218, 1);
+    }
+}
+
+void Panels::draw(const Navigation& navigation, const PetState& pet) {
+    display_.startWrite();
+    switch (navigation.panel()) {
+        case PanelId::Status:
+            drawChrome(navigation.menuIndex(), "STATUS");
+            drawStatus(pet);
+            break;
+        case PanelId::Inventory:
+            drawChrome(navigation.menuIndex(), "INVENTORY");
+            drawInventory(navigation.panelIndex());
+            break;
+        case PanelId::EvolutionTree:
+            drawChrome(navigation.menuIndex(), "EVOLUTION");
+            drawEvolution(navigation, false);
+            break;
+        case PanelId::EvolutionDetail:
+            drawChrome(navigation.menuIndex(), "EVOLUTION DETAIL");
+            drawEvolution(navigation, true);
+            break;
+        case PanelId::Options:
+        case PanelId::WifiList:
+        case PanelId::Password:
+        case PanelId::DateTime:
+            drawChrome(navigation.menuIndex(), "OPTIONS");
+            drawOptions(navigation.panelIndex());
+            break;
+        case PanelId::Home:
+            break;
+    }
+    display_.endWrite();
+}
+
+}  // namespace vpet

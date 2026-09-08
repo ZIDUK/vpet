@@ -80,6 +80,83 @@ def device_path(build_dir, absolute_path):
     return Path(build_dir) / absolute_path.lstrip("/")
 
 
+def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session):
+    draw = ImageDraw.Draw(frame)
+    panel = (214, 180, 112)
+    ink = (48, 42, 55)
+    yellow = (255, 210, 74)
+    draw.rectangle((0, 24, 239, 134), fill=panel)
+    draw.rectangle((3, 27, 236, 47), fill=ink)
+    title = {
+        "status": "STATUS",
+        "inventory": "INVENTORY",
+        "evolution": "EVOLUTION",
+        "options": "OPTIONS",
+    }.get(panel_mode, "VPET")
+    draw.text((120, 37), title, fill=(255, 255, 255), anchor="mm")
+
+    if panel_mode == "status":
+        rows = (
+            ("HP", pet.stats["hp"]), ("HUN", pet.stats["h"]),
+            ("ENE", pet.stats["e"]), ("MOOD", pet.stats["p"]),
+        )
+        for index, (label, value) in enumerate(rows):
+            x = 8 + (index % 2) * 116
+            y = 55 + (index // 2) * 34
+            draw.text((x, y), f"{label} {value}/100", fill=ink)
+            draw.rectangle((x, y + 12, x + 104, y + 20), outline=ink)
+            draw.rectangle((x + 2, y + 14, x + 2 + value, y + 18), fill=(196, 70, 56))
+        draw.text((8, 122), f"AGE {int(pet.age_seconds)}s   WINS {pet.battles_won}", fill=ink)
+    elif panel_mode == "inventory":
+        items = ("MEAT x3", "TONIC x2", "MEDKIT x1", "BACK")
+        for index, label in enumerate(items):
+            x = 8 + (index % 2) * 116
+            y = 55 + (index // 2) * 34
+            draw.rectangle((x, y, x + 106, y + 27), outline=yellow if index == panel_index else ink, width=2)
+            draw.text((x + 8, y + 9), label, fill=ink)
+    elif panel_mode == "evolution":
+        species = (("Firemon", "Firemon.bmp"), ("Flamemon", "Flamemon.bmp"), ("Dragfiremon", "Dragfiremon.bmp"))
+        for index, (label, filename) in enumerate(species):
+            x = 4 + index * 79
+            draw.rectangle((x, 52, x + 72, 124), outline=yellow if index == panel_index else ink, width=2)
+            with Image.open(Path(build_dir) / "UIEvolution" / filename) as opened:
+                portrait = opened.copy()
+            mask = portrait.point([0] + [255] * 255, mode="L")
+            frame.paste(portrait.convert("RGB"), (x + 18, 57), mask)
+            draw.text((x + 36, 101), label.upper()[:10], fill=ink, anchor="mm")
+            if index < 2:
+                draw.text((x + 76, 76), ">", fill=ink, anchor="mm")
+        draw.text((120, 130), "NEXT: MOVE   ACTION: DETAIL", fill=ink, anchor="mm")
+    elif panel_mode == "options" and options_session is not None:
+        if options_session.mode == "password":
+            draw.text((8, 54), f"WIFI: {options_session.selected_ssid[:24]}", fill=ink)
+            draw.rectangle((8, 69, 231, 88), outline=ink, width=2)
+            draw.text((13, 75), "*" * len(options_session.password), fill=ink)
+            draw.text((8, 96), f"MODE {options_session.password_group_label}", fill=ink)
+            draw.rectangle((74, 94, 231, 122), outline=yellow, width=2)
+            draw.text((152, 108), options_session.password_key, fill=ink, anchor="mm")
+        elif options_session.mode == "wifi":
+            entries = list(options_session.networks[:5]) + ["BACK"]
+            for index, label in enumerate(entries):
+                y = 51 + index * 15
+                if index == options_session.index:
+                    draw.rectangle((5, y - 2, 234, y + 11), fill=yellow)
+                draw.text((10, y), label[:28], fill=ink)
+        elif options_session.mode in ("date", "time"):
+            draw.text((120, 67), options_session.mode.upper(), fill=ink, anchor="mm")
+            value = " / ".join(str(item) for item in options_session.values)
+            draw.rectangle((25, 79, 214, 111), outline=yellow, width=2)
+            draw.text((120, 95), value, fill=ink, anchor="mm")
+        else:
+            labels = ("LANGUAGE", "SOUND", "SAVE", "LOAD", "WIFI", "DATE", "TIME", "BACK")
+            for index, label in enumerate(labels):
+                x = 6 + (index % 2) * 117
+                y = 51 + (index // 2) * 19
+                if index == options_session.index:
+                    draw.rectangle((x, y - 2, x + 109, y + 14), fill=yellow)
+                draw.text((x + 5, y), label, fill=ink)
+
+
 def render_frame(
     build_dir,
     pet,
@@ -209,6 +286,11 @@ def render_frame(
     if status_visible and panel_mode is None:
         panel_mode = "status"
     if panel_mode is not None:
+        if profile.name == "tdisplay":
+            _draw_wide_panel(
+                frame, build_dir, pet, panel_mode, panel_index, options_session
+            )
+            return frame
         status = Image.new("P", (STATUS_WIDTH, STATUS_HEIGHT))
         palette = []
         for color in STATUS_COLORS:
