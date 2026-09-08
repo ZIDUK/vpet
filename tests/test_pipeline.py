@@ -23,6 +23,9 @@ def test_makefile_keeps_explicit_pico_compatibility_targets():
 
     assert "deploy-pico:" in makefile
     assert "sim-pico:" in makefile
+    assert "build-pico:" in makefile
+    assert "build-tdisplay:" in makefile
+    assert "scripts/sim.py --profile tdisplay --build-dir build-tdisplay" in makefile
     assert "scripts/deploy.py" in makefile
 
 
@@ -126,7 +129,6 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
             tile = atlas.crop((frame_index * 64, 0, (frame_index + 1) * 64, 64))
             assert tile.getpixel((0, 0)) == 0
             assert tile.getbbox() is not None
-
     with Image.open(output / "digimon1" / "Rookie" / "firemon_walk_atlas.bmp") as atlas:
         assert atlas.mode == "P"
         assert atlas.size == (22 * 64, 64)
@@ -211,6 +213,21 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
 
     manifest = json.loads((output / ".vpet-manifest.json").read_text())
     assert sorted(manifest["files"]) == sorted(files - {".vpet-manifest.json"})
+
+
+def test_build_produces_tdisplay_sized_visual_assets(tmp_path):
+    output = tmp_path / "build-tdisplay"
+
+    build_script.main(profile_name="tdisplay", output_dir=output)
+
+    with Image.open(output / "Background" / "background.bmp") as background:
+        assert background.size == (240, 135)
+    with Image.open(output / "UIIcons" / "Status.bmp") as icon:
+        assert icon.size == (20, 20)
+    with Image.open(output / "UIEvolution" / "Firemon.bmp") as portrait:
+        assert portrait.size == (36, 36)
+    with Image.open(output / "digimon1" / "Rookie" / "firemon_idle_atlas.bmp") as atlas:
+        assert atlas.size == (19 * 88, 88)
 
 
 def test_transparent_quantization_does_not_create_a_dark_alpha_halo():

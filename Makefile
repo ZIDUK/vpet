@@ -8,12 +8,14 @@ SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Py
 	fi; \
 done)
 
-.PHONY: help build deploy deploy-pico sim sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay deploy deploy-pico sim sim-pico sim-record test clean all
 
 help:
 	@echo "vPet dev workflow"
 	@echo ""
-	@echo "  make build        src/ + assets/ → build/  (clean rebuild)"
+	@echo "  make build        Build both T-Display and Pico artifacts"
+	@echo "  make build-pico   Build the preserved 128x128 CircuitPython artifact"
+	@echo "  make build-tdisplay Build the 240x135 T-Display simulator artifact"
 	@echo "  make deploy       Build + test + verified deploy + serial startup check"
 	@echo "  make deploy-pico  Deploy the preserved CircuitPython build"
 	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
@@ -23,26 +25,31 @@ help:
 	@echo "  make all          Same verified pipeline as make deploy"
 	@echo "  make clean        Remove the generated build/ directory"
 
-build:
-	$(PY) scripts/build.py
+build: build-pico build-tdisplay
+
+build-pico:
+	$(PY) scripts/build.py --profile pico --output build
+
+build-tdisplay:
+	$(PY) scripts/build.py --profile tdisplay --output build-tdisplay
 
 deploy: build test
 	$(PY) scripts/deploy.py
 
-deploy-pico: build test
+deploy-pico: build-pico test
 	$(PY) scripts/deploy.py
 
-sim: build
+sim: build-tdisplay
+	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
+	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay
+
+sim-pico: build-pico
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
 	$(SIM_PY) scripts/sim.py --profile pico --build-dir build
 
-sim-pico: build
+sim-record: build-tdisplay
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
-	$(SIM_PY) scripts/sim.py --profile pico --build-dir build
-
-sim-record: build
-	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
-	$(SIM_PY) scripts/sim.py --record out/sim_frames
+	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay --record out/sim_frames
 
 test:
 	$(PY) -m pytest tests/ -v
@@ -50,5 +57,5 @@ test:
 all: deploy
 
 clean:
-	@echo "  removing generated build/"
-	@rm -rf build
+	@echo "  removing generated build directories"
+	@rm -rf build build-tdisplay

@@ -62,7 +62,12 @@ def main():
     menu_index = 0
     panel_mode = None
     inventory_index = 0
-    motion = PetMotion(pygame.time.get_ticks() / 1000)
+    motion_kwargs = {
+        "min_x": 0,
+        "max_x": profile.width - profile.pet_size,
+        "start_x": (profile.width - profile.pet_size) / 2,
+    }
+    motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = SimulatorServices(ROOT)
     services.auto_connect()
@@ -117,7 +122,7 @@ def main():
                         motion.start_evolution(pygame.time.get_ticks() / 1000)
                 elif event.key == pygame.K_r:
                     pet = Pet(species="rookie", state=STATE_LIVE)
-                    motion = PetMotion(pygame.time.get_ticks() / 1000)
+                    motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                     panel_mode = None
                     inventory_index = 0
 
@@ -139,6 +144,7 @@ def main():
             inventory_index,
             options_session,
             services.get_datetime(),
+            profile=profile,
         )
         surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
         scaled = pygame.transform.scale(surface, window_size)
