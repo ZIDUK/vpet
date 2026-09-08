@@ -55,10 +55,18 @@ def encode_vpa(frames, width, height):
         dither=Image.Dither.NONE,
     )
     palette_source = quantized.getpalette()
-    indexed = bytes(
+    strip_indices = bytes(
         0 if alpha_value < 128 else color_index + 1
         for color_index, alpha_value in zip(quantized.getdata(), alpha.getdata())
     )
+    indexed = bytearray()
+    strip_width = width * len(frames)
+    for frame_index in range(len(frames)):
+        frame_x = frame_index * width
+        for row in range(height):
+            start = row * strip_width + frame_x
+            indexed.extend(strip_indices[start:start + width])
+    indexed = bytes(indexed)
     used = max(indexed, default=0)
     palette = [0]
     for index in range(used):

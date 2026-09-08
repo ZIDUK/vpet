@@ -27,7 +27,9 @@ void Panels::drawChrome(uint8_t selected, const char* title) {
     for (uint8_t index = 0; index < 8; ++index) {
         assets_.drawFrame(display_, kMenuIcons[index], 0, index * 30 + 5, 2);
     }
-    display_.drawRect((selected % 8) * 30, 0, 30, 24, TFT_YELLOW);
+    const int16_t selectorX = (selected % 8) * 30;
+    display_.drawRect(selectorX, 0, 30, 24, TFT_YELLOW);
+    display_.drawRect(selectorX + 1, 1, 28, 22, TFT_YELLOW);
     display_.fillRect(0, 24, 240, 111, kPanel);
     display_.fillRect(3, 27, 234, 20, kInk);
     display_.setTextDatum(MC_DATUM);

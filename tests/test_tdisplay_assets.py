@@ -32,6 +32,8 @@ def test_vpa_round_trip_preserves_transparency_and_dimensions():
     assert decoded.transparent_index == 0
     assert decoded.frames[0].getpixel((0, 0))[3] == 0
     assert decoded.frames[1].getpixel((10, 5))[:3] == (255, 80, 0)
+    assert decoded.frames[0].getbbox() == source[0].getbbox()
+    assert decoded.frames[1].getbbox() == source[1].getbbox()
 
 
 def test_native_manifest_covers_every_registered_animation(tmp_path):

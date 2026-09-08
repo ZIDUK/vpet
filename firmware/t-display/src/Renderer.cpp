@@ -66,7 +66,9 @@ void Renderer::drawMenu(uint8_t selected) {
     for (uint8_t index = 0; index < 8; ++index) {
         assets_.drawFrame(canvas_, kMenuIcons[index], 0, index * 30 + 5, 2);
     }
-    canvas_.drawRect((selected % 8) * 30, 0, 30, 24, TFT_YELLOW);
+    const int16_t x = (selected % 8) * 30;
+    canvas_.drawRect(x, 0, 30, 24, TFT_YELLOW);
+    canvas_.drawRect(x + 1, 1, 28, 22, TFT_YELLOW);
 }
 
 void Renderer::draw(const AppViewModel& model) {
