@@ -2,13 +2,15 @@
 # make help to see all targets
 
 PY ?= python3
+PORT ?=
+UPLOAD_SPEED ?= 921600
 SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 /usr/bin/python3; do \
 	if [ -x "$$p" ] || command -v "$$p" >/dev/null 2>&1; then \
 		"$$p" -c 'import pygame, PIL' >/dev/null 2>&1 && echo "$$p" && break; \
 	fi; \
 done)
 
-.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test deploy deploy-pico sim sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-pico sim sim-pico sim-record test clean all
 
 help:
 	@echo "vPet dev workflow"
@@ -18,6 +20,7 @@ help:
 	@echo "  make build-tdisplay Build the 240x135 T-Display simulator artifact"
 	@echo "  make firmware     Compile the native ESP32 firmware"
 	@echo "  make native-test  Test portable firmware logic on this Mac"
+	@echo "  make preflight    Detect board and check memory without writing"
 	@echo "  make deploy       Build + test + verified deploy + serial startup check"
 	@echo "  make deploy-pico  Deploy the preserved CircuitPython build"
 	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
@@ -45,8 +48,11 @@ native-test: bootstrap-pio
 firmware: build-tdisplay bootstrap-pio
 	.venv-platformio/bin/pio run -d firmware/t-display -e tdisplay
 
-deploy: build test
-	$(PY) scripts/deploy.py
+deploy: test native-test firmware
+	.venv-platformio/bin/python scripts/deploy_tdisplay.py --port "$(PORT)" --upload-speed "$(UPLOAD_SPEED)"
+
+preflight: firmware
+	.venv-platformio/bin/python scripts/deploy_tdisplay.py --preflight --port "$(PORT)"
 
 deploy-pico: build-pico test
 	$(PY) scripts/deploy.py

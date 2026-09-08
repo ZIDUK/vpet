@@ -385,7 +385,7 @@ def test_make_deploy_runs_tests_before_writing_board():
         text=True,
         check=True,
     )
-    assert result.stdout.index("pytest") < result.stdout.index("scripts/deploy.py")
+    assert result.stdout.index("pytest") < result.stdout.index("scripts/deploy_tdisplay.py")
 
 
 def test_capacity_preflight_reports_flash_shortage(tmp_path, monkeypatch):
