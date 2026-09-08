@@ -44,6 +44,7 @@ void setup() {
     digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
     display.init();
     display.setRotation(1);
+    display.setSwapBytes(true);
     buttons.begin();
     const vpet::AssetStatus status = assets.begin();
     drawBoot(status);
