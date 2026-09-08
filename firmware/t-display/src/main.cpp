@@ -3,12 +3,16 @@
 #include <TFT_eSPI.h>
 
 #include "vpet/AssetStore.h"
+#include "vpet/App.h"
 #include "vpet/BoardInput.h"
+#include "vpet/Renderer.h"
 
 namespace {
 TFT_eSPI display;
 vpet::AssetStore assets;
 vpet::BoardInput buttons;
+vpet::Renderer renderer(display, assets);
+vpet::App app(renderer);
 
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);
@@ -41,6 +45,7 @@ void setup() {
         status.mounted ? LittleFS.totalBytes() : 0,
         status.version.c_str()
     );
+    app.begin(millis());
 }
 
 void loop() {
@@ -48,5 +53,6 @@ void loop() {
     if (event != vpet::InputEvent::None) {
         Serial.printf("VPET_INPUT event=%u\n", static_cast<unsigned>(event));
     }
+    app.tick(millis(), event);
     delay(2);
 }

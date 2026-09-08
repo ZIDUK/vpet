@@ -1,0 +1,46 @@
+#pragma once
+
+#include <stdint.h>
+
+namespace vpet {
+
+enum class SpeciesId : uint8_t { Rookie, Champion, Ultimate };
+enum class Action : uint8_t { None, Feed, Training, Battle, Rest };
+
+class PetState {
+public:
+    void tick(uint32_t elapsedMs);
+    bool beginAction(Action action);
+    bool completeAction();
+    void evolveTo(SpeciesId species);
+
+    SpeciesId species() const { return species_; }
+    int hunger() const { return hunger_; }
+    int energy() const { return energy_; }
+    int happiness() const { return happiness_; }
+    int effort() const { return effort_; }
+    int health() const { return health_; }
+    int meals() const { return meals_; }
+    int trainingSessions() const { return trainingSessions_; }
+    int battles() const { return battles_; }
+    uint32_t ageSeconds() const { return ageMs_ / 1000; }
+    Action pendingAction() const { return pendingAction_; }
+
+private:
+    static int clampStat(int value);
+
+    SpeciesId species_ = SpeciesId::Rookie;
+    Action pendingAction_ = Action::None;
+    int hunger_ = 80;
+    int energy_ = 80;
+    int happiness_ = 80;
+    int effort_ = 0;
+    int health_ = 100;
+    int meals_ = 0;
+    int trainingSessions_ = 0;
+    int battles_ = 0;
+    uint32_t ageMs_ = 0;
+    uint32_t decayMs_ = 0;
+};
+
+}  // namespace vpet

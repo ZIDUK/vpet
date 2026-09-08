@@ -6,6 +6,11 @@ using vpet::ButtonSample;
 using vpet::Input;
 using vpet::InputEvent;
 
+void test_feed_updates_stats_once_when_animation_completes();
+void test_training_updates_effort_once();
+void test_dragfiremon_moves_with_fly_state();
+void test_action_animation_returns_to_idle();
+
 void test_short_next_press() {
     Input input(25, 700);
     TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 100));
@@ -35,5 +40,9 @@ int main(int, char**) {
     RUN_TEST(test_short_next_press);
     RUN_TEST(test_long_next_press_becomes_back);
     RUN_TEST(test_action_has_no_long_press_mapping);
+    RUN_TEST(test_feed_updates_stats_once_when_animation_completes);
+    RUN_TEST(test_training_updates_effort_once);
+    RUN_TEST(test_dragfiremon_moves_with_fly_state);
+    RUN_TEST(test_action_animation_returns_to_idle);
     return UNITY_END();
 }
