@@ -3,7 +3,7 @@
 
 PY ?= python3
 PORT ?=
-UPLOAD_SPEED ?= 921600
+UPLOAD_SPEED ?= 115200
 SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 /usr/bin/python3; do \
 	if [ -x "$$p" ] || command -v "$$p" >/dev/null 2>&1; then \
 		"$$p" -c 'import pygame, PIL' >/dev/null 2>&1 && echo "$$p" && break; \

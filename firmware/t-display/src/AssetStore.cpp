@@ -7,7 +7,7 @@ namespace vpet {
 
 AssetStatus AssetStore::begin() {
     AssetStatus status;
-    status.mounted = LittleFS.begin(false);
+    status.mounted = LittleFS.begin(false, "/littlefs", 10, "littlefs");
     if (!status.mounted) {
         return status;
     }

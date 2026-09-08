@@ -13,6 +13,9 @@ FS_FREE_RATIO_MIN = 0.10
 STARTUP_HEAP_MIN = 64 * 1024
 MIN_HEAP_MIN = 48 * 1024
 READY_TIMEOUT_SECONDS = 15
+BACKUP_BAUD = 115200
+CRITICAL_BACKUP_OFFSET = 0x8000
+CRITICAL_BACKUP_SIZE = 0x6000
 ROOT = Path(__file__).parent.parent
 PIO_PYTHON = ROOT / ".venv-platformio" / "bin" / "python"
 ESPTOOL = Path.home() / ".platformio" / "packages" / "tool-esptoolpy" / "esptool.py"
@@ -116,13 +119,42 @@ def ensure_backup(board, output, runner=subprocess.run):
         runner,
         _esptool_command(
             board.port,
-            ["--baud", "921600", "read_flash", "0x0", hex(board.flash_size), str(target)],
+            ["--baud", str(BACKUP_BAUD), "read_flash", "0x0", hex(board.flash_size), str(target)],
         ),
     )
     if target.stat().st_size != board.flash_size:
         raise RuntimeError(
             f"Backup size mismatch: expected {board.flash_size}, got {target.stat().st_size}"
         )
+    digest = _sha256(target)
+    target.with_suffix(target.suffix + ".sha256").write_text(f"{digest}  {target.name}\n")
+    return target
+
+
+def ensure_critical_backup(board, output, runner=subprocess.run):
+    """Preserve the partition table and NVS without a slow full-flash read."""
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    pattern = f"{board.chip_id}-*-critical.bin"
+    for candidate in sorted(output.glob(pattern)):
+        checksum = candidate.with_suffix(candidate.suffix + ".sha256")
+        if candidate.stat().st_size == CRITICAL_BACKUP_SIZE and checksum.is_file():
+            if checksum.read_text().split()[0] == _sha256(candidate):
+                return candidate
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    target = output / f"{board.chip_id}-{stamp}-critical.bin"
+    _run(
+        runner,
+        _esptool_command(
+            board.port,
+            [
+                "--baud", str(BACKUP_BAUD), "read_flash",
+                hex(CRITICAL_BACKUP_OFFSET), hex(CRITICAL_BACKUP_SIZE), str(target),
+            ],
+        ),
+    )
+    if target.stat().st_size != CRITICAL_BACKUP_SIZE:
+        raise RuntimeError("Critical board-state backup is incomplete")
     digest = _sha256(target)
     target.with_suffix(target.suffix + ".sha256").write_text(f"{digest}  {target.name}\n")
     return target

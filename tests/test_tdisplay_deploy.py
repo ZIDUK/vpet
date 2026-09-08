@@ -43,6 +43,7 @@ def test_first_deploy_reads_flash_before_upload(tmp_path):
     read_index = next(i for i, call in enumerate(runner.calls) if "read_flash" in call)
     upload_index = next(i for i, call in enumerate(runner.calls) if "upload" in call)
     assert read_index < upload_index
+    assert "115200" in runner.calls[read_index]
 
 
 @pytest.mark.parametrize(

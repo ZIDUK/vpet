@@ -19,7 +19,7 @@ from scripts.tdisplay_device import (
     ReadyTelemetry,
     classify_memory,
     detect_board,
-    ensure_backup,
+    ensure_critical_backup,
     parse_ready_line,
 )
 
@@ -89,7 +89,7 @@ def _fail_on_diagnostics(report, telemetry=None):
 
 def deploy(
     port=None,
-    upload_speed=921600,
+    upload_speed=115200,
     board=None,
     output=BACKUPS,
     runner=subprocess.run,
@@ -101,11 +101,11 @@ def deploy(
         raise RuntimeError(f"Expected 16 MB flash, detected {board.flash_size} bytes")
     report = build_report or inspect_build(runner)
     _fail_on_diagnostics(report)
-    if upload_speed != 921600:
+    if upload_speed != 115200:
         raise RuntimeError(
-            "UPLOAD_SPEED must match firmware/t-display/platformio.ini (921600)"
+            "UPLOAD_SPEED must match firmware/t-display/platformio.ini (115200)"
         )
-    backup = ensure_backup(board, output, runner=runner)
+    backup = ensure_critical_backup(board, output, runner=runner)
     print(f"Board: {board.chip} id={board.chip_id} flash={board.flash_size} port={board.port}")
     print(f"Backup: {backup}")
     common = [
@@ -127,7 +127,7 @@ def deploy(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port")
-    parser.add_argument("--upload-speed", type=int, default=921600)
+    parser.add_argument("--upload-speed", type=int, default=115200)
     parser.add_argument("--preflight", action="store_true")
     args = parser.parse_args()
     board = detect_board(args.port)
