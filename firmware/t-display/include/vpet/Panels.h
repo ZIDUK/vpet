@@ -12,7 +12,7 @@ namespace vpet {
 
 class Panels {
 public:
-    Panels(TFT_eSPI& display, AssetStore& assets);
+    Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets);
     void draw(
         const Navigation& navigation,
         const PetState& pet,
@@ -35,7 +35,8 @@ private:
     void drawDateTime(const int* values, bool editingDate, uint8_t field);
     void drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font = 1);
 
-    TFT_eSPI& display_;
+    TFT_eSPI& output_;
+    TFT_eSprite& display_;
     AssetStore& assets_;
 };
 

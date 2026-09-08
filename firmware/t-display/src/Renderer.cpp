@@ -32,8 +32,8 @@ const char* petName(SpeciesId species) {
 }
 }
 
-Renderer::Renderer(TFT_eSPI& display, AssetStore& assets)
-    : display_(display), assets_(assets) {}
+Renderer::Renderer(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
+    : display_(display), canvas_(canvas), assets_(assets) {}
 
 const char* Renderer::animationPath(const AppViewModel& model) const {
     static char path[72];
@@ -62,32 +62,33 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
 }
 
 void Renderer::drawMenu(uint8_t selected) {
-    display_.fillRect(0, 0, 240, 24, TFT_BLACK);
+    canvas_.fillRect(0, 0, 240, 24, TFT_BLACK);
     for (uint8_t index = 0; index < 8; ++index) {
-        assets_.drawFrame(display_, kMenuIcons[index], 0, index * 30 + 5, 2);
+        assets_.drawFrame(canvas_, kMenuIcons[index], 0, index * 30 + 5, 2);
     }
-    display_.drawRect((selected % 8) * 30, 0, 30, 24, TFT_YELLOW);
+    canvas_.drawRect((selected % 8) * 30, 0, 30, 24, TFT_YELLOW);
 }
 
 void Renderer::draw(const AppViewModel& model) {
-    display_.startWrite();
     const char* background = model.motion.state() == MotionState::Sleep
         ? "/backgrounds/background_night.vpa"
         : "/backgrounds/background.vpa";
-    assets_.drawFrame(display_, background, 0, 0, 0);
+    assets_.drawFrame(canvas_, background, 0, 0, 0);
     drawMenu(model.menuIndex);
     const bool evolution = model.motion.state() == MotionState::Evolution;
     const int16_t spriteSize = evolution ? 111 : 88;
     const int16_t x = evolution ? (240 - spriteSize) / 2 : model.motion.x();
     const int16_t y = evolution ? 24 : model.motion.y();
     assets_.drawFrame(
-        display_,
+        canvas_,
         animationPath(model),
         model.motion.frame(),
         x,
         y,
         model.motion.direction() < 0 && !evolution
     );
+    display_.startWrite();
+    canvas_.pushSprite(0, 0);
     display_.endWrite();
 }
 

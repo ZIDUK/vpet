@@ -67,3 +67,15 @@ def test_ready_telemetry_parser():
     assert ready.heap_free == 121000
     assert ready.flash_size == 16 << 20
     assert ready.manifest == "1"
+
+
+def test_firmware_presents_complete_frames_from_a_sprite_buffer():
+    root = Path(__file__).parent.parent / "firmware" / "t-display"
+    main = (root / "src" / "main.cpp").read_text()
+    renderer = (root / "src" / "Renderer.cpp").read_text()
+    panels = (root / "src" / "Panels.cpp").read_text()
+
+    assert "TFT_eSprite framebuffer" in main
+    assert "createSprite(240, 135)" in main
+    assert "canvas_.pushSprite(0, 0)" in renderer
+    assert "display_.pushSprite(0, 0)" in panels

@@ -11,8 +11,8 @@ constexpr uint16_t kPanel = 0xD6B4;
 constexpr uint16_t kInk = 0x31C7;
 }
 
-Panels::Panels(TFT_eSPI& display, AssetStore& assets)
-    : display_(display), assets_(assets) {}
+Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
+    : output_(display), display_(canvas), assets_(assets) {}
 
 void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font) {
     String fitted(text);
@@ -177,7 +177,7 @@ void Panels::draw(
     bool editingDate,
     uint8_t dateField
 ) {
-    display_.startWrite();
+    output_.startWrite();
     switch (navigation.panel()) {
         case PanelId::Status:
             drawChrome(navigation.menuIndex(), "STATUS");
@@ -214,7 +214,8 @@ void Panels::draw(
         case PanelId::Home:
             break;
     }
-    display_.endWrite();
+    display_.pushSprite(0, 0);
+    output_.endWrite();
 }
 
 }  // namespace vpet

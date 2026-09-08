@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-class TFT_eSPI;
+class TFT_eSprite;
 
 namespace vpet {
 
@@ -16,7 +16,7 @@ class AssetStore {
 public:
     AssetStatus begin();
     bool drawFrame(
-        TFT_eSPI& display,
+        TFT_eSprite& canvas,
         const char* path,
         uint16_t frame,
         int16_t x,

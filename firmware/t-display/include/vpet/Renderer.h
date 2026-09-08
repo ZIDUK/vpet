@@ -17,7 +17,7 @@ struct AppViewModel {
 
 class Renderer {
 public:
-    Renderer(TFT_eSPI& display, AssetStore& assets);
+    Renderer(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets);
     void draw(const AppViewModel& model);
 
 private:
@@ -25,6 +25,7 @@ private:
     void drawMenu(uint8_t selected);
 
     TFT_eSPI& display_;
+    TFT_eSprite& canvas_;
     AssetStore& assets_;
 };
 

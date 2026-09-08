@@ -39,7 +39,7 @@ uint32_t read32(File& file) {
 }
 
 bool AssetStore::drawFrame(
-    TFT_eSPI& display,
+    TFT_eSprite& canvas,
     const char* path,
     uint16_t frame,
     int16_t x,
@@ -103,7 +103,7 @@ bool AssetStore::drawFrame(
                 colors[runLength++] = palette[paletteIndex];
                 ++column;
             }
-            display.pushImage(x + runStart, y + row, runLength, 1, colors);
+            canvas.pushImage(x + runStart, y + row, runLength, 1, colors);
         }
     }
     file.close();
