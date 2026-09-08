@@ -70,6 +70,12 @@ fonts/
 icons/
 pygame_v1/
 lib/
+!firmware/t-display/lib/
+!firmware/t-display/lib/vpet_core/
+!firmware/t-display/lib/vpet_core/src/
+!firmware/t-display/lib/vpet_core/src/vpet/
+!firmware/t-display/lib/vpet_core/src/vpet/*.h
+!firmware/t-display/lib/vpet_core/src/vpet/*.cpp
 _backup_v6/
 
 # Old code.py versions (before we moved to src/+ build/)

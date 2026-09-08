@@ -8,7 +8,7 @@ SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Py
 	fi; \
 done)
 
-.PHONY: help build build-pico build-tdisplay deploy deploy-pico sim sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test deploy deploy-pico sim sim-pico sim-record test clean all
 
 help:
 	@echo "vPet dev workflow"
@@ -16,6 +16,8 @@ help:
 	@echo "  make build        Build both T-Display and Pico artifacts"
 	@echo "  make build-pico   Build the preserved 128x128 CircuitPython artifact"
 	@echo "  make build-tdisplay Build the 240x135 T-Display simulator artifact"
+	@echo "  make firmware     Compile the native ESP32 firmware"
+	@echo "  make native-test  Test portable firmware logic on this Mac"
 	@echo "  make deploy       Build + test + verified deploy + serial startup check"
 	@echo "  make deploy-pico  Deploy the preserved CircuitPython build"
 	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
@@ -33,6 +35,15 @@ build-pico:
 build-tdisplay:
 	$(PY) scripts/build.py --profile tdisplay --output build-tdisplay
 	$(PY) scripts/build_tdisplay.py --sim-build build-tdisplay
+
+bootstrap-pio:
+	@bash scripts/bootstrap_platformio.sh
+
+native-test: bootstrap-pio
+	.venv-platformio/bin/pio test -d firmware/t-display -e native
+
+firmware: build-tdisplay bootstrap-pio
+	.venv-platformio/bin/pio run -d firmware/t-display -e tdisplay
 
 deploy: build test
 	$(PY) scripts/deploy.py
