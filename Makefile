@@ -32,6 +32,7 @@ build-pico:
 
 build-tdisplay:
 	$(PY) scripts/build.py --profile tdisplay --output build-tdisplay
+	$(PY) scripts/build_tdisplay.py --sim-build build-tdisplay
 
 deploy: build test
 	$(PY) scripts/deploy.py
