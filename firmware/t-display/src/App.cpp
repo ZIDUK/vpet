@@ -177,7 +177,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         pet_.species() == SpeciesId::Ultimate
     );
 
-    if (nowMs - lastRenderMs_ >= 50) {
+    if (nowMs - lastRenderMs_ >= 33) {
         lastRenderMs_ = nowMs;
         if (navigation_.panel() == PanelId::Home) {
             renderer_.draw({pet_, motion_, navigation_.menuIndex()});

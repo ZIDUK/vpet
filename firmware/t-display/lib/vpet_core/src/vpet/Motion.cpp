@@ -64,13 +64,13 @@ uint16_t Motion::frameCount() const {
 
 uint16_t Motion::frameInterval() const {
     switch (state_) {
-        case MotionState::Idle: return 120;
-        case MotionState::Walk: return 90;
-        case MotionState::Eat: return 100;
-        case MotionState::Punch: return 80;
-        case MotionState::Cast: return 90;
-        case MotionState::Sleep: return 140;
-        case MotionState::Evolution: return 120;
+        case MotionState::Idle: return 85;
+        case MotionState::Walk: return 65;
+        case MotionState::Eat: return 75;
+        case MotionState::Punch: return 65;
+        case MotionState::Cast: return 70;
+        case MotionState::Sleep: return 105;
+        case MotionState::Evolution: return 85;
     }
     return 100;
 }

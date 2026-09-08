@@ -79,3 +79,13 @@ def test_firmware_presents_complete_frames_from_a_sprite_buffer():
     assert "createSprite(240, 135)" in main
     assert "canvas_.pushSprite(0, 0)" in renderer
     assert "display_.pushSprite(0, 0)" in panels
+
+
+def test_physical_buttons_use_left_for_next_and_right_for_action():
+    source = (
+        Path(__file__).parent.parent
+        / "firmware" / "t-display" / "src" / "BoardInput.cpp"
+    ).read_text()
+
+    assert "kNextPin = 0" in source
+    assert "kActionPin = 35" in source

@@ -17,16 +17,25 @@ struct AppViewModel {
 
 class Renderer {
 public:
-    Renderer(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets);
+    Renderer(
+        TFT_eSPI& display,
+        TFT_eSprite& canvas,
+        TFT_eSprite& staticScene,
+        AssetStore& assets
+    );
     void draw(const AppViewModel& model);
 
 private:
     const char* animationPath(const AppViewModel& model) const;
-    void drawMenu(uint8_t selected);
+    void rebuildStaticScene(bool night);
+    void drawSelector(uint8_t selected);
 
     TFT_eSPI& display_;
     TFT_eSprite& canvas_;
+    TFT_eSprite& staticScene_;
     AssetStore& assets_;
+    bool staticSceneReady_ = false;
+    bool staticSceneNight_ = false;
 };
 
 }  // namespace vpet

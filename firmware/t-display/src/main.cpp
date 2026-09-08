@@ -15,9 +15,10 @@
 namespace {
 TFT_eSPI display;
 TFT_eSprite framebuffer(&display);
+TFT_eSprite staticScene(&display);
 vpet::AssetStore assets;
 vpet::BoardInput buttons;
-vpet::Renderer renderer(display, framebuffer, assets);
+vpet::Renderer renderer(display, framebuffer, staticScene, assets);
 vpet::Panels panels(display, framebuffer, assets);
 vpet::NvsKeyValueStore stateStore("vpet_state");
 vpet::NvsKeyValueStore wifiStore("vpet_wifi");
@@ -55,6 +56,15 @@ void setup() {
         while (true) delay(1000);
     }
     framebuffer.setSwapBytes(true);
+    staticScene.setColorDepth(16);
+    if (staticScene.createSprite(240, 135) == nullptr) {
+        display.fillScreen(TFT_BLACK);
+        display.setTextColor(TFT_RED, TFT_BLACK);
+        display.drawString("SCENE BUFFER ERROR", 16, 60, 2);
+        Serial.println("VPET_FATAL code=SCENE_BUFFER_ALLOCATION");
+        while (true) delay(1000);
+    }
+    staticScene.setSwapBytes(true);
     buttons.begin();
     const vpet::AssetStatus status = assets.begin();
     drawBoot(status);

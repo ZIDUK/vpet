@@ -1,5 +1,7 @@
 #include "vpet/Renderer.h"
 
+#include <cstring>
+
 namespace vpet {
 namespace {
 constexpr const char* kMenuIcons[] = {
@@ -32,8 +34,13 @@ const char* petName(SpeciesId species) {
 }
 }
 
-Renderer::Renderer(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
-    : display_(display), canvas_(canvas), assets_(assets) {}
+Renderer::Renderer(
+    TFT_eSPI& display,
+    TFT_eSprite& canvas,
+    TFT_eSprite& staticScene,
+    AssetStore& assets
+)
+    : display_(display), canvas_(canvas), staticScene_(staticScene), assets_(assets) {}
 
 const char* Renderer::animationPath(const AppViewModel& model) const {
     static char path[72];
@@ -61,22 +68,35 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
     return path;
 }
 
-void Renderer::drawMenu(uint8_t selected) {
-    canvas_.fillRect(0, 0, 240, 24, TFT_BLACK);
+void Renderer::rebuildStaticScene(bool night) {
+    assets_.drawFrame(
+        staticScene_,
+        night ? "/backgrounds/background_night.vpa" : "/backgrounds/background.vpa",
+        0,
+        0,
+        0
+    );
+    staticScene_.fillRect(0, 0, 240, 24, TFT_BLACK);
     for (uint8_t index = 0; index < 8; ++index) {
-        assets_.drawFrame(canvas_, kMenuIcons[index], 0, index * 30 + 5, 2);
+        assets_.drawFrame(staticScene_, kMenuIcons[index], 0, index * 30 + 5, 2);
     }
+    staticSceneReady_ = true;
+    staticSceneNight_ = night;
+}
+
+void Renderer::drawSelector(uint8_t selected) {
     const int16_t x = (selected % 8) * 30;
     canvas_.drawRect(x, 0, 30, 24, TFT_YELLOW);
     canvas_.drawRect(x + 1, 1, 28, 22, TFT_YELLOW);
 }
 
 void Renderer::draw(const AppViewModel& model) {
-    const char* background = model.motion.state() == MotionState::Sleep
-        ? "/backgrounds/background_night.vpa"
-        : "/backgrounds/background.vpa";
-    assets_.drawFrame(canvas_, background, 0, 0, 0);
-    drawMenu(model.menuIndex);
+    const bool night = model.motion.state() == MotionState::Sleep;
+    if (!staticSceneReady_ || staticSceneNight_ != night) {
+        rebuildStaticScene(night);
+    }
+    memcpy(canvas_.getPointer(), staticScene_.getPointer(), 240 * 135 * 2);
+    drawSelector(model.menuIndex);
     const bool evolution = model.motion.state() == MotionState::Evolution;
     const int16_t spriteSize = evolution ? 111 : 88;
     const int16_t x = evolution ? (240 - spriteSize) / 2 : model.motion.x();
