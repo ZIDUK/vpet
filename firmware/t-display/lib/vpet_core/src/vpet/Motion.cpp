@@ -51,12 +51,17 @@ void Motion::enterIdle(uint32_t nowMs) {
 
 uint16_t Motion::frameCount() const {
     switch (state_) {
-        case MotionState::Idle: return species_ == SpeciesId::Rookie ? 19 : 15;
-        case MotionState::Walk: return species_ == SpeciesId::Ultimate ? 22 : (species_ == SpeciesId::Rookie ? 22 : 15);
+        case MotionState::Idle:
+            if (species_ == SpeciesId::Egg) return 16;
+            if (species_ == SpeciesId::Baby) return 25;
+            return species_ == SpeciesId::Rookie ? 19 : 15;
+        case MotionState::Walk:
+            if (species_ == SpeciesId::Baby) return 25;
+            return species_ == SpeciesId::Ultimate ? 22 : (species_ == SpeciesId::Rookie ? 22 : 15);
         case MotionState::Eat: return 25;
         case MotionState::Punch: return 15;
         case MotionState::Cast: return 15;
-        case MotionState::Sleep: return 15;
+        case MotionState::Sleep: return species_ == SpeciesId::Baby ? 25 : 15;
         case MotionState::Evolution: return 15;
     }
     return 1;
@@ -106,6 +111,8 @@ void Motion::tick(uint32_t nowMs) {
         }
         frame_ = next % frameCount();
     }
+
+    if (species_ == SpeciesId::Egg) return;
 
     if ((state_ == MotionState::Idle || state_ == MotionState::Walk) && nowMs >= stateUntilMs_) {
         if (state_ == MotionState::Idle) {

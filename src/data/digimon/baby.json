@@ -1,15 +1,12 @@
 {
-  "name": "Sproutspore",
+  "name": "Sparkmon",
   "line": "custom_line",
   "stage": "baby",
-  "sprite": "/Baby/idle_atlas.bmp",
+  "sprite": "/digimon1/Baby/sparkmon_idle_atlas.bmp",
   "evolves_to": "rookie",
   "min_age_seconds": 0,
   "battles_required": 0,
-  "requirements": {
-    "h": 50,
-    "e": 50,
-    "p": 50,
-    "hp": 70
-  }
+  "automatic": false,
+  "requirements_pending": true,
+  "requirements": {}
 }

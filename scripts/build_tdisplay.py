@@ -16,6 +16,8 @@ from scripts.tdisplay_assets import write_asset, write_catalog_header, write_man
 
 
 SPECIES = {
+    "Egg": "egg",
+    "Baby": "baby",
     "Rookie": "rookie",
     "Champion": "champion",
     "Ultimate": "ultimate",
@@ -95,12 +97,16 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
         "format": 1,
         "display": {"width": 240, "height": 135, "menu_height": 24},
         "species": {
-            "rookie": {"name": "Firemon", "stage": 0},
-            "champion": {"name": "Flamemon", "stage": 1},
-            "ultimate": {"name": "Dragfiremon", "stage": 2},
+            "egg": {"name": "Egg", "stage": 0},
+            "baby": {"name": "Sparkmon", "stage": 1},
+            "rookie": {"name": "Firemon", "stage": 2},
+            "champion": {"name": "Flamemon", "stage": 3},
+            "ultimate": {"name": "Dragfiremon", "stage": 4},
         },
         "animations": sorted(animations, key=lambda item: (item["species"], item["action"])),
         "evolution": [
+            {"from": "egg", "to": "baby", "requirements_pending": False},
+            {"from": "baby", "to": "rookie", "requirements_pending": True},
             {"from": "rookie", "to": "champion", "requirements_pending": False},
             {"from": "champion", "to": "ultimate", "requirements_pending": True},
         ],

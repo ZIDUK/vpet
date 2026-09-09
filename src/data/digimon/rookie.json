@@ -1,8 +1,8 @@
 {
-  "name": "Sprouto",
+  "name": "Firemon",
   "line": "custom_line",
   "stage": "rookie",
-  "sprite": "/Rookie/idle_atlas.bmp",
+  "sprite": "/digimon1/Rookie/firemon_idle_atlas.bmp",
   "evolves_to": "champion",
   "min_age_seconds": 60,
   "battles_required": 0,

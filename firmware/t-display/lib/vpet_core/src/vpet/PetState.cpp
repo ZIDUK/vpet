@@ -8,6 +8,7 @@ int PetState::clampStat(int value) {
 
 void PetState::tick(uint32_t elapsedMs) {
     ageMs_ += elapsedMs;
+    if (species_ == SpeciesId::Egg) return;
     decayMs_ += elapsedMs;
     while (decayMs_ >= 30000) {
         decayMs_ -= 30000;
@@ -19,6 +20,10 @@ void PetState::tick(uint32_t elapsedMs) {
 
 bool PetState::beginAction(Action action) {
     if (action == Action::None || pendingAction_ != Action::None) {
+        return false;
+    }
+    if (species_ == SpeciesId::Egg) return false;
+    if (species_ == SpeciesId::Baby && (action == Action::Training || action == Action::Battle)) {
         return false;
     }
     pendingAction_ = action;
@@ -57,8 +62,10 @@ bool PetState::completeAction() {
 
 void PetState::evolveTo(SpeciesId species) {
     species_ = species;
+    if (species == SpeciesId::Rookie) rookieDiscovered_ = true;
     if (species == SpeciesId::Champion) championDiscovered_ = true;
     if (species == SpeciesId::Ultimate) {
+        rookieDiscovered_ = true;
         championDiscovered_ = true;
         ultimateDiscovered_ = true;
     }
@@ -83,7 +90,8 @@ void PetState::restore(
 }
 
 bool PetState::hasDiscovered(SpeciesId species) const {
-    if (species == SpeciesId::Rookie) return true;
+    if (species == SpeciesId::Egg || species == SpeciesId::Baby) return true;
+    if (species == SpeciesId::Rookie) return rookieDiscovered_;
     if (species == SpeciesId::Champion) return championDiscovered_;
     return ultimateDiscovered_;
 }

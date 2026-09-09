@@ -90,11 +90,19 @@ def test_to_dict_roundtrip(fake_time):
     p1 = Pet(state="live")
     p1.stats["h"] = 42
     p1.battles_won = 7
+    p1.inventory["meat"] = 1
+    p1.language = "ES"
+    p1.sound_enabled = False
+    fake_time.advance(12)
     data = p1.to_dict()
     p2 = Pet()
     p2.load_from_dict(data)
     assert p2.get("h") == 42
     assert p2.battles_won == 7
+    assert p2.inventory["meat"] == 1
+    assert p2.language == "ES"
+    assert p2.sound_enabled is False
+    assert 12 <= p2.age_seconds < 13
     assert p2.state == "live"
 
 

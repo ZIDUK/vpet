@@ -1,15 +1,21 @@
 """Deterministic renderer shared by simulator tests and pygame."""
 from pathlib import Path
+from functools import lru_cache
 
 from PIL import Image, ImageDraw
 
 from display_profiles import get_display_profile
 
 from config import (
+    BABY_SPECIES,
     BACKGROUND_PATH,
     BACKGROUND_NIGHT_PATH,
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
+    EGG_EVOLUTION_THUMB_PATH,
+    EGG_IDLE_FRAME_COUNT,
+    EGG_IDLE_IMAGE_PATH,
+    EGG_SPECIES,
     DRAGFIREMON_CAST_IMAGE_PATH,
     DRAGFIREMON_EAT_IMAGE_PATH,
     DRAGFIREMON_EVOLUTION_THUMB_PATH,
@@ -60,6 +66,12 @@ from config import (
     PET_X,
     PET_Y,
     FIREMON_EVOLUTION_THUMB_PATH,
+    SPARKMON_EAT_IMAGE_PATH,
+    SPARKMON_EVOLUTION_THUMB_PATH,
+    SPARKMON_FRAME_COUNT,
+    SPARKMON_IDLE_IMAGE_PATH,
+    SPARKMON_SLEEP_IMAGE_PATH,
+    SPARKMON_WALK_IMAGE_PATH,
     ULTIMATE_SPECIES,
 )
 from ui.status import (
@@ -78,6 +90,12 @@ from ui.status import (
 
 def device_path(build_dir, absolute_path):
     return Path(build_dir) / absolute_path.lstrip("/")
+
+
+@lru_cache(maxsize=64)
+def _load_image(path):
+    with Image.open(path) as opened:
+        return opened.copy()
 
 
 def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session):
@@ -115,16 +133,26 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             draw.rectangle((x, y, x + 106, y + 27), outline=yellow if index == panel_index else ink, width=2)
             draw.text((x + 8, y + 9), label, fill=ink)
     elif panel_mode == "evolution":
-        species = (("Firemon", "Firemon.bmp"), ("Flamemon", "Flamemon.bmp"), ("Dragfiremon", "Dragfiremon.bmp"))
-        for index, (label, filename) in enumerate(species):
-            x = 4 + index * 79
+        species = (
+            ("Egg", "Egg.bmp"),
+            ("Sparkmon", "Sparkmon.bmp"),
+            ("Firemon", "Firemon.bmp"),
+            ("Flamemon", "Flamemon.bmp"),
+            ("Dragfiremon", "Dragfiremon.bmp"),
+        )
+        current_stage = {"egg": 0, "baby": 1, "rookie": 2, "champion": 3, "ultimate": 4}.get(pet.species, 0)
+        window_start = max(0, min(panel_index - 1, len(species) - 3))
+        for slot, index in enumerate(range(window_start, window_start + 3)):
+            label, filename = species[index]
+            x = 4 + slot * 79
             draw.rectangle((x, 52, x + 72, 124), outline=yellow if index == panel_index else ink, width=2)
-            with Image.open(Path(build_dir) / "UIEvolution" / filename) as opened:
-                portrait = opened.copy()
+            portrait = _load_image(Path(build_dir) / "UIEvolution" / filename)
             mask = portrait.point([0] + [255] * 255, mode="L")
-            frame.paste(portrait.convert("RGB"), (x + 18, 57), mask)
-            draw.text((x + 36, 101), label.upper()[:10], fill=ink, anchor="mm")
-            if index < 2:
+            hidden = index > current_stage
+            art = Image.new("RGB", portrait.size, (20, 20, 24)) if hidden else portrait.convert("RGB")
+            frame.paste(art, (x + 18, 57), mask)
+            draw.text((x + 36, 101), "???" if hidden else label.upper()[:10], fill=ink, anchor="mm")
+            if index < len(species) - 1 and slot < 2:
                 draw.text((x + 76, 76), ">", fill=ink, anchor="mm")
         draw.text((120, 130), "NEXT: MOVE   ACTION: DETAIL", fill=ink, anchor="mm")
     elif panel_mode == "options" and options_session is not None:
@@ -176,8 +204,7 @@ def render_frame(
     profile = profile or get_display_profile("pico")
     build_dir = Path(build_dir)
     background_path = BACKGROUND_NIGHT_PATH if motion_state == "sleep" else BACKGROUND_PATH
-    with Image.open(device_path(build_dir, background_path)) as opened:
-        frame = opened.convert("RGB")
+    frame = _load_image(device_path(build_dir, background_path)).convert("RGB")
     if frame.size != (profile.width, profile.height):
         raise ValueError(f"Background must be {profile.width}x{profile.height}")
 
@@ -186,8 +213,7 @@ def render_frame(
         fill=(0, 0, 0),
     )
     for index, path in enumerate(MENU_ICON_PATHS):
-        with Image.open(device_path(build_dir, path)) as opened:
-            icon = opened.convert("RGB")
+        icon = _load_image(device_path(build_dir, path)).convert("RGB")
         icon_x = index * profile.cell_width + (profile.cell_width - profile.icon_size) // 2
         icon_y = (profile.menu_height - profile.icon_size) // 2
         frame.paste(icon, (icon_x, icon_y))
@@ -207,7 +233,18 @@ def render_frame(
     sprite_size = profile.pet_size
     sprite_x = int(pet_x)
     sprite_y = PET_Y if profile.name == "pico" else profile.height - sprite_size - 4
-    if motion_state == "evolution":
+    if pet.species == EGG_SPECIES:
+        image_path = EGG_IDLE_IMAGE_PATH
+        frame_count = EGG_IDLE_FRAME_COUNT
+        sprite_x = (profile.width - sprite_size) // 2
+    elif pet.species == BABY_SPECIES:
+        image_path = {
+            "walk": SPARKMON_WALK_IMAGE_PATH,
+            "eat": SPARKMON_EAT_IMAGE_PATH,
+            "sleep": SPARKMON_SLEEP_IMAGE_PATH,
+        }.get(motion_state, SPARKMON_IDLE_IMAGE_PATH)
+        frame_count = SPARKMON_FRAME_COUNT
+    elif motion_state == "evolution":
         image_path = (
             FLAMEMON_EVOLUTION_IMAGE_PATH
             if pet.species == ULTIMATE_SPECIES
@@ -273,8 +310,7 @@ def render_frame(
         else:
             image_path = PET_IDLE_IMAGE_PATH
             frame_count = PET_IDLE_FRAME_COUNT
-    with Image.open(device_path(build_dir, image_path)) as opened:
-        atlas = opened.copy()
+    atlas = _load_image(device_path(build_dir, image_path))
     frame_index = sprite_frame % frame_count
     rookie = atlas.crop(
         (frame_index * sprite_size, 0, (frame_index + 1) * sprite_size, sprite_size)
@@ -324,8 +360,7 @@ def render_frame(
                 (FLAMEMON_EVOLUTION_THUMB_PATH, EVOLUTION_FLAMEMON_THUMB_X),
                 (DRAGFIREMON_EVOLUTION_THUMB_PATH, EVOLUTION_DRAGFIREMON_THUMB_X),
             ):
-                with Image.open(device_path(build_dir, path)) as opened:
-                    portrait = opened.copy()
+                portrait = _load_image(device_path(build_dir, path))
                 mask = portrait.point([0] + [255] * 255, mode="L")
                 frame.paste(portrait.convert("RGB"), (x, EVOLUTION_THUMB_Y), mask)
     return frame

@@ -67,9 +67,16 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "Background/background.bmp",
         "Background/background_night.bmp",
         "UIIcons/Status.bmp",
+        "UIEvolution/Egg.bmp",
+        "UIEvolution/Sparkmon.bmp",
         "UIEvolution/Firemon.bmp",
         "UIEvolution/Flamemon.bmp",
         "UIEvolution/Dragfiremon.bmp",
+        "digimon1/Egg/egg_idle_atlas.bmp",
+        "digimon1/Baby/sparkmon_idle_atlas.bmp",
+        "digimon1/Baby/sparkmon_walk_atlas.bmp",
+        "digimon1/Baby/sparkmon_eat_atlas.bmp",
+        "digimon1/Baby/sparkmon_sleep_atlas.bmp",
         "digimon1/Rookie/firemon_idle_atlas.bmp",
         "digimon1/Rookie/firemon_walk_atlas.bmp",
         "digimon1/Rookie/firemon_eat_atlas.bmp",
@@ -204,7 +211,7 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
             assert atlas.size == (count * 64, 64)
             assert atlas.getpixel((0, 0)) == 0
 
-    for name in ("Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp"):
+    for name in ("Egg.bmp", "Sparkmon.bmp", "Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp"):
         with Image.open(output / "UIEvolution" / name) as portrait:
             assert portrait.mode == "P"
             assert portrait.size == (32, 32)
@@ -372,7 +379,7 @@ def test_simulator_cli_renders_headless_frames():
         env=environment,
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=20,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 

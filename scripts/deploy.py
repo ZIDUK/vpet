@@ -1,174 +1,435 @@
 #!/usr/bin/env python3
-"""Deploy build/ to /Volumes/CIRCUITPY/ (the Pico's flash).
-
-Steps:
-  1. Verify CIRCUITPY is mounted.
-  2. Copy code.py, settings.toml from build/ to /Volumes/CIRCUITPY/.
-  3. Copy subdirs (Agumon/, Background/) only with files actually referenced in code.py.
-  4. Sync CircuitPython libs to /Volumes/CIRCUITPY/lib/ from the cached bundle.
-  5. Clean macOS AppleDouble noise (._*).
-
-Does NOT delete files on the device that aren't in build/ — that's by design
-to avoid wiping data the user might have added (e.g. /pet_save.json).
-"""
+"""Synchronize the generated build artifact to a CircuitPython device."""
+import json
+import glob
+import hashlib
+import errno
 import os
-import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
 
+
 CIRCUITPY = Path("/Volumes/CIRCUITPY")
-BUNDLE_URL = "https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/download/20251008/adafruit-circuitpython-bundle-10.x-mpy-20251008.zip"
-BUNDLE_CACHE = Path.home() / ".cache" / "vpet" / "cp10_bundle.zip"
 BUNDLE_VERSION = "20251008"
+BUNDLE_URL = (
+    "https://github.com/adafruit/Adafruit_CircuitPython_Bundle/releases/download/"
+    f"{BUNDLE_VERSION}/adafruit-circuitpython-bundle-10.x-mpy-{BUNDLE_VERSION}.zip"
+)
+BUNDLE_CACHE = Path.home() / ".cache" / "vpet" / "cp10_bundle.zip"
 
 ROOT = Path(__file__).parent.parent
 BUILD = ROOT / "build"
+MANIFEST = ".vpet-manifest.json"
+LEGACY_RUNTIME_FILES = {
+    "app.py",
+    "hal.py",
+    "config.py",
+    "boot.py",
+    "code.py",
+    "settings.toml",
+}
+LEGACY_ASSET_FILES = {
+    "Background/jungle.bmp",
+    "UI/buttons/feed.bmp",
+    "UI/buttons/heal.bmp",
+    "UI/buttons/play.bmp",
+    "UI/buttons/rest.bmp",
+    "digimon1/Baby/idle_atlas.bmp",
+    "digimon1/Champion/idle_atlas.bmp",
+    "digimon1/Mega/idle_atlas.bmp",
+    "digimon1/Rookie/idle_atlas.bmp",
+    "digimon1/Rookie/rookie_screenshot.bmp",
+    "digimon1/Ultimate/idle_atlas.bmp",
+}
+LEGACY_EMPTY_DIRECTORIES = (
+    "lib/adafruit_imageload/pnm/pgm",
+    "lib/adafruit_imageload/pnm",
+    "lib/adafruit_imageload/bmp",
+    "lib/adafruit_imageload",
+    "data/digimon",
+    "data/npcs",
+    "data",
+    "UI/buttons",
+    "UI",
+    "UIAssets/buttons",
+    "UIAssets",
+    "digimon1/Baby",
+    "digimon1/Champion",
+    "digimon1/Egg",
+    "digimon1/Mega",
+    "digimon1/Ultimate",
+)
 
 
-def verify_mounted():
-    if not CIRCUITPY.exists():
-        sys.exit(f"ERR: {CIRCUITPY} not mounted. Plug in Pico.")
+class DeploymentSpaceError(RuntimeError):
+    pass
 
 
-def clean_apple_double():
-    """Remove macOS ._* metadata files that leak onto FAT filesystems."""
+class DeploymentVerificationError(RuntimeError):
+    pass
+
+
+class DeploymentRuntimeError(RuntimeError):
+    pass
+
+
+def verify_mounted(target=CIRCUITPY):
+    if not target.is_dir():
+        sys.exit(f"ERR: {target} not mounted. Plug in Pico.")
+
+
+def _load_manifest(path):
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return set()
+    return set(data.get("files", []))
+
+
+def _allocated_size(size, block_size):
+    return ((size + block_size - 1) // block_size) * block_size
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(8192), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def files_match(source, target):
+    """Return whether two files contain exactly the same bytes."""
+    try:
+        return source.is_file() and target.is_file() and _sha256(source) == _sha256(target)
+    except OSError:
+        return False
+
+
+def check_capacity(source, target, block_size=None, safety_margin=16 * 1024):
+    """Fail before copying when the generated artifact cannot fit in flash."""
+    files = _load_manifest(source / MANIFEST)
+    if not files:
+        raise ValueError(f"Missing or empty build manifest: {source / MANIFEST}")
+    if block_size is None:
+        # st_blksize is 1 MiB for macOS FAT mounts even when the volume's
+        # allocation unit is 512 bytes. statvfs.f_frsize reflects the latter.
+        block_size = max(512, os.statvfs(target).f_frsize)
+
+    old_files = _load_manifest(target / MANIFEST)
+    changed_files = {
+        relative
+        for relative in files
+        if not files_match(source / relative, target / relative)
+    }
+
+    required = safety_margin
+    for relative in changed_files:
+        required += _allocated_size((source / relative).stat().st_size, block_size)
+        required += block_size  # transient AppleDouble metadata on macOS
+
+    reclaimable = 0
+    replaceable_files = changed_files | (old_files - files)
+    for relative in replaceable_files:
+        try:
+            reclaimable += _allocated_size((target / relative).stat().st_size, block_size)
+        except OSError:
+            pass
+    free = shutil.disk_usage(target).free
+    available = free + reclaimable
+    if required > available:
+        raise DeploymentSpaceError(
+            "CIRCUITPY flash capacity check failed: "
+            f"required {required} bytes, available {available} bytes "
+            f"({free} free + {reclaimable} reclaimable). "
+            "Reduce BMP sizes or remove unused runtime files."
+        )
+    return {
+        "required": required,
+        "free": free,
+        "reclaimable": reclaimable,
+        "changed": len(changed_files),
+    }
+
+
+def verify_deploy(source, target):
+    """Verify every managed file byte-for-byte after copying."""
+    mismatches = []
+    for relative in sorted(_load_manifest(source / MANIFEST)):
+        source_path = source / relative
+        target_path = target / relative
+        try:
+            matches = _sha256(source_path) == _sha256(target_path)
+        except OSError:
+            matches = False
+        if not matches:
+            mismatches.append(relative)
+    if mismatches:
+        raise DeploymentVerificationError(
+            "Post-deploy hash verification failed: " + ", ".join(mismatches)
+        )
+    return len(_load_manifest(source / MANIFEST))
+
+
+def runtime_error(output):
+    """Return a user-facing diagnosis for CircuitPython serial output."""
+    if "MemoryError" in output:
+        return "CircuitPython RAM error: MemoryError reported during startup."
+    markers = ("Traceback", "ImportError", "SyntaxError", "NameError", "OSError:")
+    if any(marker in output for marker in markers):
+        return "CircuitPython runtime error reported during startup."
+    return None
+
+
+def open_serial_monitor():
+    ports = sorted(glob.glob("/dev/cu.usbmodem*"))
+    if not ports:
+        raise DeploymentRuntimeError("No CircuitPython serial port found for runtime verification.")
+    try:
+        import serial
+    except ImportError as error:
+        raise DeploymentRuntimeError(
+            "pyserial is required for runtime verification: python3 -m pip install pyserial"
+        ) from error
+    try:
+        connection = serial.Serial(ports[0], 115200, timeout=0.1)
+        connection.reset_input_buffer()
+        return connection, ports[0]
+    except OSError as error:
+        raise DeploymentRuntimeError(f"Cannot open CircuitPython serial port {ports[0]}: {error}") from error
+
+
+def restart_and_monitor(connection, seconds=6):
+    """Soft-reboot CircuitPython and capture startup output."""
+    connection.write(b"\x03")
+    connection.flush()
+    time.sleep(0.3)
+    connection.reset_input_buffer()
+    connection.write(b"\x04")
+    connection.flush()
+
+    deadline = time.monotonic() + seconds
+    chunks = []
+    while time.monotonic() < deadline:
+        waiting = connection.in_waiting
+        data = connection.read(waiting or 1)
+        if data:
+            chunks.append(data)
+        time.sleep(0.05)
+    output = b"".join(chunks).decode("utf-8", errors="replace")
+    diagnosis = runtime_error(output)
+    if diagnosis:
+        raise DeploymentRuntimeError(f"{diagnosis}\n--- serial output ---\n{output.strip()}")
+    return output
+
+
+def clear_extended_attributes(path):
+    """Remove macOS metadata before it accumulates as 4 KB FAT sidecars."""
+    try:
+        subprocess.run(
+            ["/usr/bin/xattr", "-c", str(path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except FileNotFoundError:
+        pass
+    safe_unlink(path.parent / ("._" + path.name))
+
+
+def safe_copy2(source, target, max_retries=3, delay=0.5):
+    """Copy bytes without extended metadata, with retries for the Pico race."""
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            safe_unlink(target.parent / ("._" + target.name))
+            safe_unlink(target)
+            with open(source, "rb") as source_handle, open(target, "wb") as target_handle:
+                shutil.copyfileobj(source_handle, target_handle, length=8192)
+                target_handle.flush()
+                os.fsync(target_handle.fileno())
+            clear_extended_attributes(target)
+            return
+        except OSError as error:
+            last_error = error
+            if error.errno != 22:
+                raise
+            time.sleep(delay * (attempt + 1))
+    raise last_error
+
+
+def safe_unlink(path, max_retries=3, delay=0.2):
+    for attempt in range(max_retries):
+        try:
+            path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except OSError as error:
+            if error.errno != 22 or attempt == max_retries - 1:
+                raise
+            time.sleep(delay * (attempt + 1))
+
+
+def safe_rmdir(path, max_retries=3, delay=0.2):
+    """Remove a known legacy directory only when it is empty."""
+    for attempt in range(max_retries):
+        try:
+            path.rmdir()
+            return True
+        except FileNotFoundError:
+            return False
+        except OSError as error:
+            if error.errno in (errno.ENOTEMPTY, errno.EEXIST):
+                return False
+            if error.errno != errno.EINVAL or attempt == max_retries - 1:
+                raise
+            time.sleep(delay * (attempt + 1))
+
+
+def sync_build(source, target):
+    """Make all vPet-managed files on target match a build manifest."""
+    manifest_path = source / MANIFEST
+    new_files = _load_manifest(manifest_path)
+    if not new_files:
+        raise ValueError(f"Missing or empty build manifest: {manifest_path}")
+
+    target.mkdir(parents=True, exist_ok=True)
+    old_files = _load_manifest(target / MANIFEST)
+
+    # Remove root-level files that belonged to an older manifest.
+    for relative in sorted(old_files - new_files):
+        safe_unlink(target / relative)
+
+    for filename in LEGACY_RUNTIME_FILES - new_files:
+        safe_unlink(target / filename)
+    for relative in LEGACY_ASSET_FILES - new_files:
+        safe_unlink(target / relative)
+    for relative in LEGACY_EMPTY_DIRECTORIES:
+        safe_rmdir(target / relative)
+
+    changed_files = {
+        relative
+        for relative in new_files
+        if not files_match(source / relative, target / relative)
+    }
+
+    copied = 0
+    for relative in sorted(new_files - {"code.py"}):
+        source_path = source / relative
+        if not source_path.is_file():
+            raise FileNotFoundError(f"Manifest entry does not exist: {source_path}")
+        if relative not in changed_files:
+            continue
+        target_path = target / relative
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        safe_copy2(source_path, target_path)
+        copied += 1
+
+    if not files_match(manifest_path, target / MANIFEST):
+        safe_copy2(manifest_path, target / MANIFEST)
+
+    # code.py is copied last so CircuitPython reloads only after every module
+    # and asset needed by the new application is already present.
+    code_source = source / "code.py"
+    if "code.py" not in new_files or not code_source.is_file():
+        raise FileNotFoundError("build/code.py is missing from the manifest")
+    if changed_files:
+        safe_copy2(code_source, target / "code.py")
+        copied += 1
+    return copied
+
+
+def clean_apple_double(target=CIRCUITPY):
     count = 0
-    for p in CIRCUITPY.rglob("._*"):
-        if p.is_file():
-            p.unlink()
+    for path in target.rglob("._*"):
+        if path.is_file():
+            path.unlink()
             count += 1
-    # .Trashes and .fseventsd always come back, ignore them
     return count
 
 
 def download_bundle():
-    """Download CircuitPython lib bundle if not cached."""
     BUNDLE_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    if BUNDLE_CACHE.exists():
-        return BUNDLE_CACHE
-    print(f"  downloading {BUNDLE_URL}...")
-    urllib.request.urlretrieve(BUNDLE_URL, BUNDLE_CACHE)
+    if not BUNDLE_CACHE.exists():
+        print(f"  downloading {BUNDLE_URL}...")
+        urllib.request.urlretrieve(BUNDLE_URL, BUNDLE_CACHE)
     return BUNDLE_CACHE
 
 
-def collect_bmps_to_deploy():
-    """Find all BMP files under build/ that should be deployed to the device.
-
-    Two strategies combined:
-      1. BMPs explicitly referenced as string literals in build/code.py
-      2. All BMPs in build/<Species>/ (runtime sprites, named by directory)
-    """
-    paths = set()
-    # Strategy 1: explicit string literals
-    code = (BUILD / "code.py").read_text()
-    paths.update(re.findall(r'"(/[A-Za-z0-9_/]+\.bmp)"', code))
-    # Strategy 2: any .bmp under build/ that lives in a species dir or UI/ or Background/
-    skip_dirs = {"lib"}  # .mpy libs, not BMPs
-    for p in BUILD.rglob("*.bmp"):
-        rel = p.relative_to(BUILD)
-        if any(part in skip_dirs for part in rel.parts):
-            continue
-        # Match: build/<X>/<file>.bmp → deploy as /<X>/<file>.bmp
-        # (X is the top-level dir under build/, like "Background", "UI", or a species name)
-        parts = rel.parts
-        if len(parts) >= 2:
-            paths.add("/" + "/".join(parts))
-    # Strategy 3: handle f-string sprite paths
-    if 'f"/{sprite_species_dir}/idle.bmp"' in code or 'f"/{pet.species.capitalize()}/idle.bmp"' in code:
-        # The runtime default species is the first dir under build/ that isn't
-        # Background, UI, lib, or settings.toml
-        for d in BUILD.iterdir():
-            if d.is_dir() and d.name not in ("Background", "UI", "lib"):
-                paths.add(f"/{d.name}/idle.bmp")
-                break
-    return paths
-
-
-def safe_copy2(src, dst, max_retries=3, delay=0.5):
-    """Copy a file with retry on transient errors (EINVAL on CIRCUITPY during reload)."""
-    import time
-    last_err = None
-    for attempt in range(max_retries):
-        try:
-            shutil.copy2(src, dst)
-            return
-        except OSError as e:
-            last_err = e
-            if e.errno == 22:  # EINVAL — Pico autoreload race
-                time.sleep(delay * (attempt + 1))
-            else:
-                raise
-    raise last_err
-
-
-def deploy_runtime_files():
-    """Copy code.py, settings.toml, and referenced BMPs to device.
-
-    ORDER MATTERS:
-    1. Settings + BMPs first (no autoreload)
-    2. code.py LAST (triggers autoreload, but at this point all assets are in place)
-    """
-    referenced = collect_bmps_to_deploy()
-    print(f"  referenced BMPs: {sorted(referenced)}")
-
-    # settings.toml first
-    if (BUILD / "settings.toml").exists():
-        safe_copy2(BUILD / "settings.toml", CIRCUITPY / "settings.toml")
-        print(f"  copied settings.toml")
-
-    # Sprite + background BMPs
-    for ref in referenced:
-        rel = ref.lstrip("/")  # /Egg/hatch_atlas.bmp → Egg/hatch_atlas.bmp
-        src = BUILD / rel
-        dst = CIRCUITPY / rel
-        if src.exists():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            safe_copy2(src, dst)
-            print(f"  copied {ref}")
-
-    # code.py LAST — triggers autoreload, but all assets are already in place.
-    # The autoreload takes ~1-2s. We sleep before returning so the caller
-    # doesn't immediately try to read the FS.
-    safe_copy2(BUILD / "code.py", CIRCUITPY / "code.py")
-    print(f"  copied code.py (autoreload will fire)")
-
-
-def sync_libs():
-    """Ensure CP 10 .mpy libs are on the device."""
+def sync_libs(target=CIRCUITPY):
+    """Install the CircuitPython 10 libraries required by the runtime."""
     bundle = download_bundle()
-    needed = ["adafruit_st7735r.mpy", "adafruit_debouncer.mpy", "adafruit_ticks.mpy"]
-    needed_pkg = ["adafruit_imageload"]
-    with zipfile.ZipFile(bundle) as zf:
-        for name in needed:
-            target = f"adafruit-circuitpython-bundle-10.x-mpy-{BUNDLE_VERSION}/lib/{name}"
-            with zf.open(target) as src, open(CIRCUITPY / "lib" / name, "wb") as dst:
-                shutil.copyfileobj(src, dst)
-            print(f"  synced lib/{name}")
-        for pkg in needed_pkg:
-            base = f"adafruit-circuitpython-bundle-10.x-mpy-{BUNDLE_VERSION}/lib/{pkg}"
-            for entry in zf.namelist():
-                if entry.startswith(base + "/") and entry.endswith(".mpy"):
-                    rel = entry.split("lib/")[1]
-                    target = CIRCUITPY / "lib" / rel
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    with zf.open(entry) as src, open(target, "wb") as dst:
-                        shutil.copyfileobj(src, dst)
-            print(f"  synced lib/{pkg}/")
+    library_dir = target / "lib"
+    library_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"adafruit-circuitpython-bundle-10.x-mpy-{BUNDLE_VERSION}/lib/"
+    standalone = ("adafruit_st7735r.mpy", "adafruit_debouncer.mpy", "adafruit_ticks.mpy")
+
+    unused_package = library_dir / "adafruit_imageload"
+    if unused_package.exists():
+        for path in unused_package.rglob("*"):
+            if path.is_file():
+                safe_unlink(path)
+
+    with zipfile.ZipFile(bundle) as archive:
+        for filename in standalone:
+            target_path = library_dir / filename
+            payload = archive.read(prefix + filename)
+            try:
+                unchanged = target_path.read_bytes() == payload
+            except OSError:
+                unchanged = False
+            if unchanged:
+                continue
+            safe_unlink(target_path.parent / ("._" + target_path.name))
+            safe_unlink(target_path)
+            with open(target_path, "wb") as output:
+                output.write(payload)
+                output.flush()
+                os.fsync(output.fileno())
+            clear_extended_attributes(target_path)
 
 
 def main():
     print("=== deploy.py ===")
     verify_mounted()
-    print(f"  CIRCUITPY mounted at {CIRCUITPY}")
-    deploy_runtime_files()
-    sync_libs()
-    n = clean_apple_double()
-    print(f"  cleaned {n} ._* files")
-    print("OK. Reboot Pico to see changes.")
+    try:
+        clean_apple_double()
+        sync_libs()
+        capacity = check_capacity(BUILD, CIRCUITPY)
+        print(
+            f"  flash preflight: {capacity['required']} required, "
+            f"{capacity['free']} free, {capacity['reclaimable']} reclaimable, "
+            f"{capacity['changed']} changed"
+        )
+        serial_connection, serial_port = open_serial_monitor()
+        try:
+            copied = sync_build(BUILD, CIRCUITPY)
+            cleaned = clean_apple_double()
+            verified = verify_deploy(BUILD, CIRCUITPY)
+            print(f"  synced {copied} build files")
+            print(f"  verified {verified} file hashes")
+            print(f"  cleaned {cleaned} AppleDouble files")
+            print(f"  runtime check: soft reboot via {serial_port}")
+            restart_and_monitor(serial_connection)
+        finally:
+            serial_connection.close()
+    except DeploymentSpaceError as error:
+        sys.exit(f"ERR: {error}")
+    except DeploymentVerificationError as error:
+        sys.exit(f"ERR: {error}")
+    except DeploymentRuntimeError as error:
+        sys.exit(f"ERR: {error}")
+    except OSError as error:
+        if error.errno == 28:
+            sys.exit("ERR: CIRCUITPY flash is full (ENOSPC). Build was not activated.")
+        raise
+    print("OK. Build verified and CircuitPython started without reported errors.")
 
 
 if __name__ == "__main__":

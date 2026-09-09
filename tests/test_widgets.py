@@ -83,6 +83,8 @@ def test_requirements_increase_through_stages():
         for stage in stages:
             if stage["evolves_to"] is None:
                 continue  # skip final forms
+            if stage.get("requirements_pending"):
+                continue
             cur_sum = sum(stage.get("requirements", {}).values())
             assert cur_sum >= prev_sum, (
                 f"{stage['name']} requires less than previous in {line_name}"

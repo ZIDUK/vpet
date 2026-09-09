@@ -89,3 +89,15 @@ def test_physical_buttons_use_left_for_next_and_right_for_action():
 
     assert "kNextPin = 0" in source
     assert "kActionPin = 35" in source
+
+
+def test_tdisplay_options_render_all_actions_and_wifi_result():
+    source = (
+        Path(__file__).parent.parent
+        / "firmware" / "t-display" / "src" / "Panels.cpp"
+    ).read_text()
+
+    assert '\"DATE\", \"TIME\", \"BACK\"' in source
+    assert "index < 8" in source
+    assert 'wifi = \"WIFI: ONLINE\"' in source
+    assert 'wifi = \"WIFI: NO INTERNET\"' in source

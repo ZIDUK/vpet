@@ -29,7 +29,7 @@ private:
     void drawStatus(const PetState& pet);
     void drawInventory(uint8_t selected);
     void drawEvolution(const Navigation& navigation, bool detail);
-    void drawOptions(uint8_t selected);
+    void drawOptions(uint8_t selected, ConnectResult networkStatus);
     void drawWifi(const Navigation& navigation, const NetworkService& network);
     void drawPassword(const PasswordEditor& password, const char* selectedSsid);
     void drawDateTime(const int* values, bool editingDate, uint8_t field);

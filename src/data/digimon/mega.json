@@ -2,7 +2,7 @@
   "name": "???",
   "line": "custom_line",
   "stage": "mega",
-  "sprite": "/Mega/idle_atlas.bmp",
+  "sprite": "/digimon1/Mega/idle_atlas.bmp",
   "evolves_to": null,
   "min_age_seconds": 600,
   "battles_required": 15,

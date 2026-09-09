@@ -36,7 +36,7 @@ void drawBoot(const vpet::AssetStatus& status) {
     display.setTextColor(status.manifestPresent ? TFT_GREEN : TFT_RED, TFT_BLACK);
     display.drawString(status.manifestPresent ? "ASSETS OK" : "ASSETS MISSING", 120, 76, 2);
     display.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    display.drawString("NEXT: GPIO35  ACTION: GPIO0", 120, 108, 1);
+    display.drawString("NEXT: GPIO0  ACTION: GPIO35", 120, 108, 1);
 }
 }
 

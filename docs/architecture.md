@@ -1,306 +1,175 @@
-# Software Architecture
+# Arquitectura de software
 
-This document describes the vPet software architecture: how the modules fit together,
-the data flow, and the technical constraints of running on a Pico W.
+## Plataforma vigente
 
-> **Companion doc**: [hardware.md](hardware.md) covers the board, display protocol,
-> and pinout. Read both for full context.
+La plataforma principal es la LILYGO TTGO T-Display clasica con ESP32,
+pantalla ST7789 de 240x135 y 16 MB de flash. El firmware es C++ sobre Arduino,
+compilado con PlatformIO y renderizado con TFT_eSPI.
 
-## High-level design
+La implementacion Pico W/CircuitPython permanece disponible como compatibilidad
+legada. No define la arquitectura principal ni el formato de despliegue actual.
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                         DEV MACHINE (macOS)                        │
-│                                                                    │
-│  src/app.py        ──┐                                              │
-│  src/core/pet.py     ├──┐                                           │
-│  src/core/evolution. ├──┤  (editable Python modules)                │
-│  src/core/battle.py  ├──┤                                           │
-│  src/core/save.py    ├──┘                                           │
-│  src/hal.py          ──┘                                           │
-│  src/ui/*, src/data/*                                              │
-│         │                                                          │
-│         │  python3 scripts/build.py                                │
-│         ▼                                                          │
-│  build/code.py  (single file, ~13 KB)                              │
-│         │                                                          │
-│         │  python3 scripts/deploy.py                               │
-│         ▼                                                          │
-│              /Volumes/CIRCUITPY/code.py                            │
-└────────────────────────────────────────────────────────────────────┘
+## Flujo de datos
 
-┌────────────────────────────────────────────────────────────────────┐
-│                         TARGET BOARD (Pico W)                      │
-│                                                                    │
-│   /code.py  ──runs on boot──→  app + hal + core + ui (flattened)   │
-│   /lib/*.mpy                   adafruit drivers (downloaded once)  │
-│   /Agumon/*.bmp                sprite assets                       │
-│   /Background/*.bmp            background art                      │
-│   /pet_save.json               runtime state (auto-saved)          │
-│   /settings.toml               future: WiFi creds, config          │
-└────────────────────────────────────────────────────────────────────┘
+```text
+assets/*.png + src/data
+          |
+          | scripts/build.py --profile tdisplay
+          v
+build-tdisplay/ (BMP y catalogo intermedio)
+          |
+          | scripts/build_tdisplay.py
+          v
+firmware/t-display/data/*.vpa + manifest.json
+firmware/t-display/include/generated/catalog.h
+          |
+          | PlatformIO
+          v
+firmware.bin + littlefs.bin
+          |
+          | scripts/deploy_tdisplay.py
+          v
+ESP32 app partition + LittleFS
 ```
 
-## Why the build step?
+`make sim` consume el arte generado para T-Display. `make deploy` ejecuta el
+mismo build antes de compilar y cargar la placa. Esto mantiene paridad visual
+sin hacer de los directorios generados una fuente editable.
 
-CircuitPython has constraints that shape our architecture:
+## Capas
 
-1. **No user packages on the root FS.** You can `import` from `lib/`, but you can't
-   `from src.core import pet` because `src/` is not a package the import system knows
-   about. So either:
-   - (a) flatten all our modules into a single `code.py`, **or**
-   - (b) install each module as a `.mpy` in `lib/`.
+| Capa | Ruta | Responsabilidad |
+|---|---|---|
+| Arte fuente | `assets/` | PNG originales del fondo, iconos y sprites |
+| Modelo Python | `src/core/` | Reglas usadas por el simulador y pipeline legado |
+| Herramientas | `scripts/` | Conversion VPA, simulador, validacion y despliegue |
+| Nucleo C++ | `firmware/t-display/lib/vpet_core/` | Estado, movimiento, navegacion, opciones y red abstracta |
+| Plataforma ESP32 | `firmware/t-display/src/` | TFT, botones, WiFi, NVS y LittleFS |
+| Recursos generados | `firmware/t-display/data/` | Payload LittleFS; no se versiona |
+| Catalogo generado | `firmware/t-display/include/generated/` | Registro C++ derivado; no se versiona |
 
-   We chose (a) — simpler, easier to debug, single source of truth.
+Las reglas portables no incluyen Arduino, TFT_eSPI, WiFi ni Preferences. Esto
+permite ejecutar sus pruebas como binarios nativos en macOS.
 
-2. **Author-time vs run-time split.** All human-edited code lives in `src/`. The
-   `build/code.py` is generated and **should never be hand-edited**. The
-   `deploy.py` script copies `build/*` to the device.
+## Componentes del firmware
 
-3. **Why `.mpy` libs at all?** The Adafruit driver code (`adafruit_st7735r.py`,
-   `adafruit_debouncer.py`, etc.) is compiled to `.mpy` bytecode by Adafruit and
-   shipped in their lib bundle. Compiling ahead-of-time saves RAM on the Pico.
-   We download the matching bundle for our CircuitPython version (10.2.1) on first
-   `make deploy` and cache it in `~/.cache/vpet/cp10_bundle.zip`.
+| Componente | Funcion |
+|---|---|
+| `main.cpp` | Inicializa pantalla, buffers, recursos, entradas y servicios |
+| `App` | Coordina el loop, acciones, paneles, red y persistencia |
+| `Renderer` | Dibuja fondo, menu, selector y animaciones sin parpadeo |
+| `Panels` | Dibuja estado, inventario, evolucion, opciones y WiFi |
+| `AssetStore` | Monta LittleFS, valida VPA1 y dibuja frames indexados |
+| `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
+| `PetState` | Estadisticas, acciones, descubrimientos y evolucion |
+| `Motion` | Idle, caminar/volar y animaciones de una sola ejecucion |
+| `Navigation` | Menu superior, paneles y seleccion interna |
+| `SettingsStore` | Serializacion versionada de estado y preferencias |
+| `NetworkService` | Flujo portable de conexion y politica de credenciales |
+| `Esp32NetworkAdapter` | WiFi, DNS, HTTP y NTP sobre Arduino ESP32 |
+| `NvsKeyValueStore` | Adaptador de Preferences/NVS |
 
-## Module map
+## Renderizado
 
-| File | Imports | RAM cost | Purpose |
-|------|---------|----------|---------|
-| `hal.py` | board, busio, displayio, digitalio, fourwire, adafruit_st7735r, adafruit_debouncer | low | Hardware init: SPI display + 2 buttons |
-| `core/pet.py` | time | ~300B | Pet model: stats dict, decay, apply_action |
-| `core/evolution.py` | time | ~500B | Evolution class with registry check |
-| `core/battle.py` | random | ~400B | Turn-based battle vs NPC |
-| `core/save.py` | json (built-in) | ~200B | JSON load/save to /pet_save.json |
-| `ui/sprites.py` | displayio | low | BMP loading + TileGrid helpers |
-| `ui/widgets.py` | displayio | ~400B | Stat bar, action button, selection ring |
-| `app.py` | all of the above | ~1KB | Main loop, state machine, draw dispatch |
+La pantalla trabaja en RGB565. Se mantienen dos sprites TFT de 240x135:
 
-Total code footprint: ~3 KB compiled. The displayio + framebuffer + adafruit libs
-take most of the Pico's 264 KB RAM. We have plenty of headroom for new features.
+1. `staticScene` conserva fondo y menu sin elementos animados.
+2. `framebuffer` recibe una copia completa de la escena estatica.
+3. El selector y el frame actual de la mascota se dibujan en memoria.
+4. `pushSprite()` presenta el frame completo en una sola transaccion SPI.
 
-## Data flow (one frame of the main loop)
+Este doble buffer evita limpiar directamente la pantalla y elimina el parpadeo
+visible. Las animaciones normales usan frames de 88x88. Las evoluciones usan
+111x111 y ocupan el area bajo el menu.
 
-```
-                       ┌─────────────────┐
-                       │   Pico W boot   │
-                       └────────┬────────┘
-                                │ runs /code.py
-                                ▼
-        ┌───────────────────────────────────────────┐
-        │  hal.init_display()    → ST7735R(...)      │
-        │  hal.init_buttons()    → Debouncer × 2     │
-        │  Pet()                 → stats = {70,70,..}│
-        │  load_pet(pet)         → restore from JSON │
-        │  Build displayio.Group → BG + sprite + bars│
-        └───────────────────────────┬───────────────┘
-                                    │
-                                    ▼
-   ┌──────────── Main loop (every 50ms) ────────────┐
-   │                                                │
-   │  b0.update() / b1.update()  ── sample pins     │
-   │      │                                         │
-   │      ├── b0.fell (KEY0 pressed)                │
-   │      │     menu_idx = (menu_idx + 1) % 4       │
-   │      │     sel_tg.x = 8 + menu_idx * 29        │
-   │      │                                         │
-   │      └── b1.fell (KEY1 pressed)                │
-   │            pet.apply_action(menu_idx)          │
-   │              → ACTION_EFFECTS[menu_idx]        │
-   │              → stats[stat] += delta (cap 100)  │
-   │            draw_bars()                         │
-   │                                                │
-   │  time.monotonic() every 0.12s                  │
-   │      → sp_tg[0] = (frame + 1) % n_idle         │
-   │      (sprite frame advance)                    │
-   │                                                │
-   │  pet.decay_if_due() every 3s                   │
-   │      → stats[stat] -= 1 for all stats          │
-   │      → draw_bars()                             │
-   │                                                │
-   │  time.monotonic() every 30s                    │
-   │      → save_pet(pet) → /pet_save.json          │
-   │                                                │
-   │  time.sleep(0.05)                              │
-   │                                                │
-   └────────────────────────────────────────────────┘
+Los VPA1 contienen cabecera, paleta RGB565, offsets de frame y un byte indexado
+por pixel. El indice transparente permite dibujar solamente los segmentos
+opacos sobre el fondo.
+
+## Ciclo de vida actual
+
+```text
+Egg --8 s--> Sparkmon --> Firemon --> Flamemon --> Dragfiremon
 ```
 
-## State management
+Una partida nueva comienza en `SpeciesId::Egg`. La eclosion cambia y guarda el
+estado como `Baby/Sparkmon`; una partida NVS existente conserva su especie. Los
+valores persistidos originales `Rookie=0`, `Champion=1` y `Ultimate=2` no se
+renumeran. Los requisitos de Sparkmon a Firemon y Flamemon a Dragfiremon siguen
+marcados como pendientes. El arbol muestra tres nodos por ventana y desplaza la
+linea de izquierda a derecha; las etapas futuras permanecen ocultas.
 
-The app holds all in-memory state in a single `Pet` object (see `src/core/pet.py`):
+## Entrada
 
-```python
-@dataclass-like:
-  species: str           # "agumon", "greymon", ...
-  line: str              # "agumon_line" | "gabumon_line"
-  stats: dict[str, int]  # {"h": 70, "e": 70, "p": 70, "hp": 70}
-  born_at: float         # time.monotonic() at creation
-  last_decay: float      # time.monotonic() of last decay
-  battles_won: int
+```text
+Boton izquierdo / GPIO0
+  corto   -> NEXT
+  largo   -> BACK
+
+Boton derecho / GPIO35
+  corto   -> ACTION
 ```
 
-The Pet is serialized to JSON on every state change, plus every 30s as a safety
-net. The save file lives at `/pet_save.json` on the device's flash. Format:
+El debounce y la deteccion de pulsacion larga viven en `Input`, dentro del
+nucleo portable. La interfaz principal siempre contiene ocho iconos.
 
-```json
-{
-  "species": "agumon",
-  "line": "agumon_line",
-  "stats": {"h": 70, "e": 70, "p": 70, "hp": 70},
-  "battles_won": 0
-}
+## Persistencia
+
+La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
+
+- `vpet_state`: mascota, estadisticas, descubrimientos y preferencias.
+- `vpet_wifi`: SSID y contrasena aceptados.
+
+El esquema actual es version 1. Las credenciales se guardan solo cuando la
+asociacion WiFi y la prueba de Internet terminan correctamente. Un despliegue
+normal no borra NVS.
+
+LittleFS comienza en `0x410000`, mide `0xBE0000` y contiene exclusivamente
+recursos reconstruibles. El estado del usuario nunca debe depender de LittleFS.
+
+## Conectividad
+
+La red sigue este estado:
+
+```text
+Idle -> Connecting -> InternetAvailable
+                   -> LocalOnly
+                   -> NoAssociation
 ```
 
-`born_at` and `last_decay` are NOT persisted — they're reset to `time.monotonic()` on
-load. This means a pet loaded from disk has its age "reset" to 0, but in practice
-this is fine because evolution thresholds are based on `pet.age_seconds` (which is
-just `now - born_at`).
+El adaptador ejecuta escaneo asincrono, asociacion WiFi, resolucion DNS,
+peticion HTTP de conectividad y NTP. El panel Opciones muestra el resultado.
 
-## Data model: Digimon forms
+Bluetooth no forma parte del firmware actual. La futura integracion sera BLE y
+se mantendra detras de una interfaz de plataforma. Su uso recomendado es
+aprovisionamiento, estado y comandos pequenos; los paquetes se transferiran por
+WiFi o USB.
 
-Each form (8 total) is a JSON file in `src/data/digimon/`:
+## Paquetes extensibles
 
-```json
-{
-  "name": "Agumon",
-  "line": "agumon_line",
-  "stage": "rookie",
-  "sprite": "/Agumon/agumon_idle.bmp",
-  "evolves_to": "greymon",
-  "min_age_seconds": 60,
-  "battles_required": 0,
-  "requirements": {"h": 50, "e": 50, "p": 50, "hp": 70}
-}
-```
+La direccion aprobada es contenido declarativo y sin codigo ejecutable. Un
+paquete externo tendra manifiesto versionado, hashes, compatibilidad, previews y
+archivos VPA. El dispositivo validara identidad, tamano y firma antes de activar
+un paquete. Consulta [content-packages.md](content-packages.md).
 
-The evolution rules in `core/evolution.py` check these fields:
+## Seguridad
 
-1. `species.evolves_to` is not null (else already at final form)
-2. `pet.age_seconds >= min_age_seconds`
-3. For each `(stat, min)` in `requirements`: `pet.get(stat) >= min`
-4. `pet.battles_won >= battles_required`
+El entorno de desarrollo conserva carga serial, logs y capacidad de recuperacion.
+Secure Boot, Flash Encryption, bloqueo de interfaces y claves de produccion solo
+se habilitaran en dispositivos destinados a usuarios finales. Consulta
+[security.md](security.md).
 
-If all pass for `STABILITY_SECONDS` (30s) continuously, evolution triggers.
+## Contrato de despliegue
 
-The 8 forms, in order:
+`make deploy`:
 
-| Line | Stage 0 | Stage 1 | Stage 2 | Stage 3 |
-|---|---|---|---|---|
-| agumon_line | Agumon (rookie) | Greymon (champion) | MetalGreymon (ultimate) | WarGreymon (mega) |
-| gabumon_line | Gabumon (rookie) | Garurumon (champion) | WereGarurumon (ultimate) | MetalGarurumon (mega) |
+1. Regenera recursos.
+2. Ejecuta pruebas Python y C++.
+3. Compila firmware y LittleFS.
+4. Detecta chip, revision y flash.
+5. Valida presupuesto de app, LittleFS, RAM estatica y heap.
+6. Crea backup antes de la primera escritura administrada.
+7. Carga sin borrar toda la flash ni NVS.
+8. Reinicia y exige telemetria `VPET_READY` valida.
 
-## Data model: NPCs
-
-Wild digimon to fight (in `src/data/npcs/wild.json`):
-
-| id | name | HP | attack |
-|---|---|---|---|
-| goburimon | Goburimon | 30 | 8 |
-| kunemon | Kunemon | 40 | 10 |
-| betamon | Betamon | 50 | 12 |
-| gabumon_wild | Gabumon | 60 | 14 |
-| meramon | Meramon | 80 | 18 |
-
-The battle system (in `core/battle.py`) is turn-based. Each round, the pet attacks
-(power = (happiness + energy) / 4, ±3 random), then the NPC attacks (attack stat,
-±2 random). Battle ends when either HP hits 0. Win → `battles_won++`. Loss →
-`happiness -= 20`.
-
-## Adding a new Digimon
-
-1. Create `src/data/digimon/<name>.json` with the schema above.
-2. Add the sprite BMP to `build/<species>/<name>_idle.bmp`.
-3. Update `app.py` to load it: see `app.py`'s sprite loading section.
-4. `make test` (verifies JSON is valid + chain is consistent).
-5. `make deploy`.
-
-## Adding a new action
-
-1. Add effects to `ACTION_EFFECTS` in `src/core/pet.py`:
-   ```python
-   ACTION_EFFECTS[4] = {"h": +50}  # new "GIVE_DRINK" action
-   ```
-2. Add a button label to `BUTTON_LABELS` in `src/app.py`:
-   ```python
-   BUTTON_LABELS = ["F", "H", "P", "E", "D"]  # 5 actions now
-   ```
-3. Add the letter glyph to `GLYPHS` in `src/ui/widgets.py`:
-   ```python
-   "D": [(0,0),(0,1),...]
-   ```
-4. Update `BUTTON_X` spacing if 5 buttons don't fit (currently spaced 29 px apart,
-   4 buttons span 8 + 3*29 + 24 = 119 px, fits 128 px width).
-5. `make test && make deploy`.
-
-## Adding a new screen
-
-Currently there's only the home screen. To add a new screen (battle, evolution
-animation, settings):
-
-1. Create `src/ui/screens/<name>.py` with a class:
-   ```python
-   class BattleScreen:
-       def __init__(self, display, group, pet):
-           ...
-       def update(self, buttons, now) -> "self | HomeScreen":
-           ...
-       def draw(self):
-           ...
-   ```
-2. Add a state variable in `app.py`:
-   ```python
-   current_screen = HomeScreen(...)
-   while True:
-       next_screen = current_screen.update(...)
-       if next_screen is not current_screen:
-           current_screen = next_screen
-           # rebuild displayio group
-   ```
-3. Persist the pet between screens.
-
-## Why CircuitPython 10.2.1?
-
-- **displayio** is mature, easy to use
-- **adafruit_debouncer** handles button bounce well
-- **adafruit_st7735r** is the canonical driver for ST7735S
-- CP 10 added the `fourwire` module that decouples SPI from the display driver
-  (CP 8 had `displayio.FourWire` baked in, which made the 4-wire display protocol
-  a bit confusing)
-- CP 10 .mpy files have `0x4306` magic, distinct from CP 8's `0x4305`
-
-## Memory budget (Pico W = 264 KB RAM)
-
-```
-CircuitPython 10.2.1 runtime:  ~80 KB
-displayio + framebuffer (128×128×2 bytes):  ~32 KB
-adafruit_st7735r.mpy:          ~5 KB
-adafruit_debouncer.mpy:        ~3 KB
-adafruit_imageload/*.mpy:      ~10 KB
-adafruit_ticks.mpy:            ~1 KB
-Our code (flattened):          ~3 KB
-Heap (free for Python objects): ~130 KB
-```
-
-Plenty of headroom. We can load 10+ sprites, complex UI trees, etc. without worry.
-
-The constraint that DOES bite us is **flash** (2 MB total, ~491 KB free after
-CircuitPython firmware). Each BMP eats a few KB. We're at ~50 KB used so far.
-
-## Testing strategy
-
-- **Unit tests on Mac** (pytest, 24 tests): cover the data model and game logic.
-  The `tests/conftest.py` adds `src/` to `sys.path` so tests can `from core.pet
-  import Pet` directly without a build step.
-- **No on-device tests** (yet). The Pico is too slow to run pytest, and we'd need
-  a way to inject mocks for `time.monotonic()`. Future: a CircuitPython test
-  runner that uses mocks.
-- **Manual smoke test**: `make deploy` then eyeball the Pico. Verify BG, sprite,
-  bars, buttons all visible. Press buttons, verify response.
-
-## References
-
-- [CircuitPython displayio docs](https://docs.circuitpython.org/en/latest/shared-bindings/displayio/)
-- [Adafruit ST7735R library](https://github.com/adafruit/Adafruit_CircuitPython_ST7735R)
-- [Adafruit Debouncer library](https://github.com/adafruit/Adafruit_CircuitPython_Debouncer)
-- [CircuitPython 10 release notes](https://github.com/adafruit/circuitpython/releases)
+La placa no se considera desplegada solo porque `esptool` termino sin error.

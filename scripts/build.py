@@ -210,6 +210,8 @@ def _build_firemon_atlas(
     output_size,
     frame_indices=None,
     tile_size=FIREMON_OUTPUT_SIZE,
+    columns=FIREMON_COLUMNS,
+    frame_size=FIREMON_FRAME_SIZE,
 ):
     if not source.is_file():
         raise FileNotFoundError(f"Missing Firemon spritesheet: {source}")
@@ -227,19 +229,19 @@ def _build_firemon_atlas(
             sheet.putalpha(alpha)
         else:
             raise ValueError(f"{source} must use alpha or a paletted background")
-    expected = (FIREMON_COLUMNS * FIREMON_FRAME_SIZE, rows * FIREMON_FRAME_SIZE)
+    expected = (columns * frame_size, rows * frame_size)
     if sheet.size != expected:
         raise ValueError(f"{source} must be {expected[0]}x{expected[1]}, got {sheet.size}")
 
     frames = []
     for row in range(rows):
-        for column in range(FIREMON_COLUMNS):
+        for column in range(columns):
             cell = sheet.crop(
                 (
-                    column * FIREMON_FRAME_SIZE,
-                    row * FIREMON_FRAME_SIZE,
-                    (column + 1) * FIREMON_FRAME_SIZE,
-                    (row + 1) * FIREMON_FRAME_SIZE,
+                    column * frame_size,
+                    row * frame_size,
+                    (column + 1) * frame_size,
+                    (row + 1) * frame_size,
                 )
             )
             if cell.getchannel("A").getbbox() is None:
@@ -268,10 +270,32 @@ def _build_firemon_atlas(
 
 
 def collect_pet_images():
+    egg_dir = ASSETS / "digimon" / "digimon1" / "egg" / "idle"
+    baby_dir = ASSETS / "digimon" / "digimon1" / "baby" / "idle"
     rookie_dir = ASSETS / "digimon" / "digimon1" / "rookie" / "idle"
     champion_dir = ASSETS / "digimon" / "digimon1" / "champion" / "idle"
     ultimate_dir = ASSETS / "digimon" / "digimon1" / "ultimate" / "idle"
     animations = (
+        (
+            "Egg", "idle", egg_dir / "egg_hatch.png", 4, 16,
+            (60, 30, 200, 208), (50, 64), None, 64,
+        ),
+        (
+            "Baby", "idle", baby_dir / "sparkmon_idle.png", 5, 25,
+            (46, 38, 207, 220), (57, 64), None, 64,
+        ),
+        (
+            "Baby", "walk", baby_dir / "sparkmon_walk.png", 5, 25,
+            (36, 36, 207, 224), (58, 64), None, 64,
+        ),
+        (
+            "Baby", "eat", baby_dir / "sparkmon_eat.png", 5, 25,
+            (38, 34, 207, 224), (57, 64), None, 64,
+        ),
+        (
+            "Baby", "sleep", baby_dir / "sparkmon_sleep.png", 5, 25,
+            (24, 24, 214, 218), (63, 64), None, 64,
+        ),
         ("Rookie", "idle", rookie_dir / "firemon_idle.png", FIREMON_ROWS, 19, (48, 52, 184, 216), (53, 64), None, 64),
         ("Rookie", "walk", rookie_dir / "firemon_walk.png", 5, 22, (40, 48, 180, 208), (56, 64), None, 64),
         ("Rookie", "eat", rookie_dir / "firemon_eat.png", 5, 25, (44, 48, 204, 216), (61, 64), None, 64),
@@ -388,9 +412,12 @@ def collect_pet_images():
             output_size,
             frame_indices,
             tile_size,
+            columns=4 if stage == "Egg" else FIREMON_COLUMNS,
         )
         frame_count = atlas.width // tile_size
         prefix = {
+            "Egg": "egg",
+            "Baby": "sparkmon",
             "Rookie": "firemon",
             "Champion": "flamemon",
             "Ultimate": "dragfiremon",
@@ -426,6 +453,8 @@ def collect_ui():
 def collect_evolution_thumbnails():
     """Generate small portraits from the same idle atlases used by the pet."""
     portraits = (
+        (BUILD / "digimon1" / "Egg" / "egg_idle_atlas.bmp", "Egg.bmp"),
+        (BUILD / "digimon1" / "Baby" / "sparkmon_idle_atlas.bmp", "Sparkmon.bmp"),
         (BUILD / "digimon1" / "Rookie" / "firemon_idle_atlas.bmp", "Firemon.bmp"),
         (BUILD / "digimon1" / "Champion" / "flamemon_idle_atlas.bmp", "Flamemon.bmp"),
         (BUILD / "digimon1" / "Ultimate" / "dragfiremon_idle_atlas.bmp", "Dragfiremon.bmp"),
@@ -441,7 +470,21 @@ def collect_evolution_thumbnails():
         else:
             frame = frame.convert("RGBA")
         size = ACTIVE_PROFILE.portrait_size
-        return frame.resize((size, size), Image.Resampling.NEAREST)
+        bounds = frame.getchannel("A").getbbox()
+        if bounds:
+            frame = frame.crop(bounds)
+        available = size - 4
+        scale = min(available / frame.width, available / frame.height)
+        fitted = frame.resize(
+            (max(1, round(frame.width * scale)), max(1, round(frame.height * scale))),
+            Image.Resampling.NEAREST,
+        )
+        portrait = Image.new("RGBA", (size, size))
+        portrait.alpha_composite(
+            fitted,
+            ((size - fitted.width) // 2, (size - fitted.height) // 2),
+        )
+        return portrait
 
     for source, filename in portraits:
         target = BUILD / "UIEvolution" / filename
@@ -459,6 +502,11 @@ def validate_runtime_assets():
     required = [
         "Background/background.bmp",
         "Background/background_night.bmp",
+        "digimon1/Egg/egg_idle_atlas.bmp",
+        "digimon1/Baby/sparkmon_idle_atlas.bmp",
+        "digimon1/Baby/sparkmon_walk_atlas.bmp",
+        "digimon1/Baby/sparkmon_eat_atlas.bmp",
+        "digimon1/Baby/sparkmon_sleep_atlas.bmp",
         "digimon1/Rookie/firemon_idle_atlas.bmp",
         "digimon1/Rookie/firemon_walk_atlas.bmp",
         "digimon1/Rookie/firemon_eat_atlas.bmp",
@@ -479,6 +527,8 @@ def validate_runtime_assets():
         "digimon1/Ultimate/dragfiremon_punch_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_sleep_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_cast_atlas.bmp",
+        "UIEvolution/Egg.bmp",
+        "UIEvolution/Sparkmon.bmp",
         "UIEvolution/Firemon.bmp",
         "UIEvolution/Flamemon.bmp",
         "UIEvolution/Dragfiremon.bmp",

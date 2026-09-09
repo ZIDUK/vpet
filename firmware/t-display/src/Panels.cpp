@@ -9,6 +9,21 @@ constexpr const char* kMenuIcons[] = {
 };
 constexpr uint16_t kPanel = 0xD6B4;
 constexpr uint16_t kInk = 0x31C7;
+constexpr SpeciesId kEvolutionStages[] = {
+    SpeciesId::Egg, SpeciesId::Baby, SpeciesId::Rookie,
+    SpeciesId::Champion, SpeciesId::Ultimate,
+};
+
+const char* portraitPath(SpeciesId species, bool thumbnail) {
+    switch (species) {
+        case SpeciesId::Egg: return thumbnail ? "/ui/evolution/egg.vpa" : "/animations/egg/egg_idle.vpa";
+        case SpeciesId::Baby: return thumbnail ? "/ui/evolution/sparkmon.vpa" : "/animations/baby/sparkmon_idle.vpa";
+        case SpeciesId::Rookie: return thumbnail ? "/ui/evolution/firemon.vpa" : "/animations/rookie/firemon_idle.vpa";
+        case SpeciesId::Champion: return thumbnail ? "/ui/evolution/flamemon.vpa" : "/animations/champion/flamemon_idle.vpa";
+        case SpeciesId::Ultimate: return thumbnail ? "/ui/evolution/dragfiremon.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
+    }
+    return "/ui/evolution/egg.vpa";
+}
 }
 
 Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
@@ -76,12 +91,7 @@ void Panels::drawEvolution(const Navigation& navigation, bool detail) {
             display_.setTextDatum(MC_DATUM);
             display_.drawString("???", 120, 87, 2);
         } else {
-            const char* portrait = selected.species == SpeciesId::Rookie
-                ? "/animations/rookie/firemon_idle.vpa"
-                : selected.species == SpeciesId::Champion
-                    ? "/animations/champion/flamemon_idle.vpa"
-                    : "/animations/ultimate/dragfiremon_idle.vpa";
-            assets_.drawFrame(display_, portrait, 0, 76, 35);
+            assets_.drawFrame(display_, portraitPath(selected.species, false), 0, 76, 35);
             display_.setTextColor(kInk, kPanel);
             display_.setTextDatum(MC_DATUM);
             display_.drawString(selected.label, 120, 108, 2);
@@ -89,37 +99,45 @@ void Panels::drawEvolution(const Navigation& navigation, bool detail) {
         display_.setTextDatum(TL_DATUM);
         return;
     }
-    for (uint8_t index = 0; index < 3; ++index) {
-        const SpeciesId species = static_cast<SpeciesId>(index);
+    const uint8_t selectedIndex = navigation.panelIndex() % 5;
+    const uint8_t windowStart = selectedIndex == 0 ? 0 : (selectedIndex >= 4 ? 2 : selectedIndex - 1);
+    for (uint8_t slot = 0; slot < 3; ++slot) {
+        const uint8_t index = windowStart + slot;
+        const SpeciesId species = kEvolutionStages[index];
         Navigation copy = navigation;
         copy.select(species);
         const EvolutionNode node = copy.selectedEvolutionNode();
-        const int16_t x = 5 + index * 79;
-        display_.drawRect(x, 52, 72, 70, index == navigation.panelIndex() ? TFT_YELLOW : kInk);
+        const int16_t x = 5 + slot * 79;
+        display_.drawRect(x, 52, 72, 70, index == selectedIndex ? TFT_YELLOW : kInk);
         if (node.hidden) {
             display_.fillRect(x + 18, 57, 36, 36, TFT_BLACK);
             display_.setTextColor(TFT_WHITE, TFT_BLACK);
             display_.drawString("???", x + 25, 70, 1);
         } else {
-            const char* portrait = index == 0 ? "/ui/evolution/firemon.vpa"
-                : index == 1 ? "/ui/evolution/flamemon.vpa"
-                : "/ui/evolution/dragfiremon.vpa";
-            assets_.drawFrame(display_, portrait, 0, x + 18, 57);
+            assets_.drawFrame(display_, portraitPath(species, true), 0, x + 18, 57);
             display_.setTextColor(kInk, kPanel);
             drawLabel(node.label, x + 4, 99, 64, 1);
         }
-        if (index < 2) drawLabel(">", x + 73, 73, 8, 2);
+        if (index < 4 && slot < 2) drawLabel(">", x + 73, 73, 8, 2);
     }
 }
 
-void Panels::drawOptions(uint8_t selected) {
-    constexpr const char* options[] = {
-        "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", "WIFI", "DATE / TIME", "BACK"
+void Panels::drawOptions(uint8_t selected, ConnectResult networkStatus) {
+    const char* wifi = "WIFI: OFF";
+    switch (networkStatus) {
+        case ConnectResult::Connecting: wifi = "WIFI: CONNECTING"; break;
+        case ConnectResult::NoAssociation: wifi = "WIFI: FAILED"; break;
+        case ConnectResult::LocalOnly: wifi = "WIFI: NO INTERNET"; break;
+        case ConnectResult::InternetAvailable: wifi = "WIFI: ONLINE"; break;
+        case ConnectResult::Idle: break;
+    }
+    const char* options[] = {
+        "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", wifi, "DATE", "TIME", "BACK"
     };
-    for (uint8_t index = 0; index < 7; ++index) {
-        const int16_t y = 50 + index * 11;
-        if (index == selected % 7) display_.fillRect(5, y - 1, 230, 11, TFT_YELLOW);
-        display_.setTextColor(kInk, index == selected % 7 ? TFT_YELLOW : kPanel);
+    for (uint8_t index = 0; index < 8; ++index) {
+        const int16_t y = 50 + index * 10;
+        if (index == selected % 8) display_.fillRect(5, y - 1, 230, 10, TFT_YELLOW);
+        display_.setTextColor(kInk, index == selected % 8 ? TFT_YELLOW : kPanel);
         drawLabel(options[index], 10, y, 218, 1);
     }
 }
@@ -199,7 +217,7 @@ void Panels::draw(
             break;
         case PanelId::Options:
             drawChrome(navigation.menuIndex(), "OPTIONS");
-            drawOptions(navigation.panelIndex());
+            drawOptions(navigation.panelIndex(), network.status());
             break;
         case PanelId::WifiList:
             drawChrome(navigation.menuIndex(), "WIFI NETWORKS");

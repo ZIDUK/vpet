@@ -122,3 +122,58 @@ def test_evolve_increases_stats_as_signature_move():
     # All stats should have gotten a boost
     assert p.stats["h"] == 60  # 50 + 10 boost
     assert p.stats["e"] == 60
+
+
+def test_force_evolution_uses_registered_next_form():
+    from core.evolution import Evolution
+    from core.pet import Pet
+
+    p = Pet(species="rookie", state="live")
+    ev = Evolution({"rookie": {"evolves_to": "champion"}})
+
+    assert ev.force(p) is True
+    assert p.species == "champion"
+    assert ev.force(p) is False
+
+
+def test_runtime_registry_evolves_ready_rookie_to_flamemon():
+    from config import EVOLUTION_REGISTRY
+    from core.evolution import Evolution
+    from core.pet import Pet
+
+    p = Pet(species="rookie", state="live")
+    p.born_at -= 61
+    for stat in p.stats:
+        p.stats[stat] = 100
+
+    assert Evolution(EVOLUTION_REGISTRY).evolve(p) is True
+    assert p.species == "champion"
+
+
+def test_flamemon_automatic_evolution_is_pending():
+    from config import EVOLUTION_REGISTRY
+    from core.evolution import Evolution
+    from core.pet import Pet
+
+    p = Pet(species="champion", state="live")
+    p.born_at -= 10000
+    p.battles_won = 99
+    for stat in p.stats:
+        p.stats[stat] = 100
+
+    assert Evolution(EVOLUTION_REGISTRY).check(p) == (None, None)
+
+
+def test_force_evolution_reaches_dragfiremon_one_stage_at_a_time():
+    from config import EVOLUTION_REGISTRY
+    from core.evolution import Evolution
+    from core.pet import Pet
+
+    p = Pet(species="rookie", state="live")
+    evolution = Evolution(EVOLUTION_REGISTRY)
+
+    assert evolution.force(p) is True
+    assert p.species == "champion"
+    assert evolution.force(p) is True
+    assert p.species == "ultimate"
+    assert evolution.force(p) is False

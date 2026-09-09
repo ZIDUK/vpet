@@ -8,6 +8,8 @@ using vpet::InputEvent;
 
 void test_feed_updates_stats_once_when_animation_completes();
 void test_training_updates_effort_once();
+void test_new_pet_starts_as_egg_and_baby_cannot_attack();
+void test_persisted_species_values_remain_compatible();
 void test_dragfiremon_moves_with_fly_state();
 void test_action_animation_returns_to_idle();
 void test_menu_opens_expected_panels();
@@ -48,6 +50,8 @@ int main(int, char**) {
     RUN_TEST(test_action_has_no_long_press_mapping);
     RUN_TEST(test_feed_updates_stats_once_when_animation_completes);
     RUN_TEST(test_training_updates_effort_once);
+    RUN_TEST(test_new_pet_starts_as_egg_and_baby_cannot_attack);
+    RUN_TEST(test_persisted_species_values_remain_compatible);
     RUN_TEST(test_dragfiremon_moves_with_fly_state);
     RUN_TEST(test_action_animation_returns_to_idle);
     RUN_TEST(test_menu_opens_expected_panels);

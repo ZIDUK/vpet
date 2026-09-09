@@ -45,7 +45,7 @@ private:
 
     int maxX_;
     int y_;
-    SpeciesId species_ = SpeciesId::Rookie;
+    SpeciesId species_ = SpeciesId::Egg;
     MotionState state_ = MotionState::Idle;
     int x_;
     int32_t xMilli_;

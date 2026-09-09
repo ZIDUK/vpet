@@ -6,11 +6,12 @@ import displayio
 
 # ---------- Stat Bar (5px tall) ----------
 
-def make_stat_bar(x, y, color, width=26, height=5):
-    """Create a 1-bit bar that can be filled/unfilled via draw_stat_bar()."""
-    bmp = displayio.Bitmap(width, height, 1)
-    pal = displayio.Palette(1)
-    pal[0] = color
+def make_stat_bar(x, y, color, width=26, height=5, bg_color=0x282828):
+    """Create a two-color bar that can be filled via draw_stat_bar()."""
+    bmp = displayio.Bitmap(width, height, 2)
+    pal = displayio.Palette(2)
+    pal[0] = bg_color
+    pal[1] = color
     tg = displayio.TileGrid(bmp, pixel_shader=pal, x=x, y=y)
     return bmp, tg
 
@@ -30,7 +31,7 @@ def draw_stat_bar(bmp, value, max_value=100):
 #   (a) A solid color square with a centered letter glyph (the original 4x7 pixel
 #       F/H/P/E style), or
 #   (b) A solid color background with a 24x24 BMP icon drawn on top
-#       (loaded from /UI/buttons/<name>.bmp).
+#       (loaded from /UIAssets/buttons/<name>.bmp).
 #
 # Use make_button_letter() for (a), make_button_icon() for (b), or make_button()
 # which auto-detects: tries to load the icon first, falls back to letter.

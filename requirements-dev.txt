@@ -1,0 +1,4 @@
+Pillow>=10
+pygame>=2.5
+pyserial>=3.5
+pytest>=8

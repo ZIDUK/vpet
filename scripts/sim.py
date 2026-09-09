@@ -16,6 +16,7 @@ import pygame
 from config import (
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
+    HATCH_DURATION_SECONDS,
     EVOLUTION_REGISTRY,
     MENU_ICON_PATHS,
     MENU_INVENTORY_INDEX,
@@ -28,7 +29,7 @@ from core.evolution import Evolution
 from core.inventory import INVENTORY_ENTRY_COUNT, use_inventory_item
 from core.menu import activate_menu_item
 from core.motion import MOTION_IDLE, PetMotion
-from core.pet import Pet, STATE_LIVE
+from core.pet import Pet
 from core.options import OptionsSession
 from scripts.sim_renderer import render_frame
 from scripts.sim_services import SimulatorServices
@@ -58,7 +59,8 @@ def main():
     pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, b=BACK, e=EVOLVE")
     clock = pygame.time.Clock()
 
-    pet = Pet(species="rookie", state=STATE_LIVE)
+    pet = Pet()
+    pet.start_hatch()
     menu_index = 0
     panel_mode = None
     inventory_index = 0
@@ -87,7 +89,7 @@ def main():
                     if panel_mode == "inventory":
                         inventory_index = (inventory_index + 1) % INVENTORY_ENTRY_COUNT
                     elif panel_mode == "evolution":
-                        inventory_index = (inventory_index + 1) % 3
+                        inventory_index = (inventory_index + 1) % 5
                     elif panel_mode == "options":
                         options_session.next()
                     else:
@@ -111,6 +113,7 @@ def main():
                         panel_mode = "evolution"
                     elif menu_index == MENU_OPTIONS_INDEX:
                         options_session = OptionsSession()
+                        options_session.network_status = services.wifi_status
                         panel_mode = "options"
                     else:
                         activate_menu_item(
@@ -125,13 +128,17 @@ def main():
                 elif event.key == pygame.K_b:
                     panel_mode = None
                 elif event.key == pygame.K_r:
-                    pet = Pet(species="rookie", state=STATE_LIVE)
+                    pet = Pet()
+                    pet.start_hatch()
                     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                     panel_mode = None
                     inventory_index = 0
 
         pet.decay_if_due()
         now = pygame.time.get_ticks() / 1000
+        if pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
+            pet.complete_hatch("baby")
+            motion = PetMotion(now, **motion_kwargs)
         if motion.state == MOTION_IDLE and evolution.evolve(pet):
             motion.start_evolution(now)
         motion.update(now)

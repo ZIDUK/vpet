@@ -4,7 +4,8 @@
 
 namespace vpet {
 
-enum class SpeciesId : uint8_t { Rookie, Champion, Ultimate };
+// Keep the original numeric values stable because they are persisted in NVS.
+enum class SpeciesId : uint8_t { Rookie = 0, Champion = 1, Ultimate = 2, Egg = 3, Baby = 4 };
 enum class Action : uint8_t { None, Feed, Training, Battle, Rest };
 
 class PetState {
@@ -31,7 +32,7 @@ public:
 private:
     static int clampStat(int value);
 
-    SpeciesId species_ = SpeciesId::Rookie;
+    SpeciesId species_ = SpeciesId::Egg;
     Action pendingAction_ = Action::None;
     int hunger_ = 80;
     int energy_ = 80;
@@ -45,6 +46,7 @@ private:
     uint32_t decayMs_ = 0;
     bool championDiscovered_ = false;
     bool ultimateDiscovered_ = false;
+    bool rookieDiscovered_ = false;
 };
 
 }  // namespace vpet

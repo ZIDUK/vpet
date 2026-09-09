@@ -248,6 +248,19 @@ def test_flamemon_to_dragfiremon_uses_flamemon_evolution_sprite():
     ).tobytes()
 
 
+def test_renderer_uses_egg_and_sparkmon_assets():
+    from core.pet import STATE_EGG
+
+    egg = render_frame(ROOT / "build", Pet(species="egg", state=STATE_EGG), sprite_frame=8)
+    sparkmon = render_frame(
+        ROOT / "build", Pet(species="baby", state=STATE_LIVE), sprite_frame=8, motion_state="walk"
+    )
+
+    assert egg.crop((32, 46, 96, 110)).getbbox() is not None
+    assert sparkmon.crop((32, 46, 96, 110)).getbbox() is not None
+    assert egg.tobytes() != sparkmon.tobytes()
+
+
 def test_first_menu_item_opens_dynamic_status_panel():
     pet = _rookie()
     pet.stats.update({"hp": 83, "h": 61, "e": 74, "p": 92})

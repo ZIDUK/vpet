@@ -18,6 +18,7 @@ void App::begin(uint32_t nowMs) {
     settingsStore_.load(pet_, settings_);
     network_.autoConnect();
     motion_.setSpecies(pet_.species());
+    eggStartedMs_ = nowMs;
 }
 
 void App::beginDateTime(bool date) {
@@ -155,6 +156,11 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
     pet_.tick(elapsed);
+    if (pet_.species() == SpeciesId::Egg && nowMs - eggStartedMs_ >= 8000) {
+        pet_.evolveTo(SpeciesId::Baby);
+        motion_.setSpecies(SpeciesId::Baby);
+        settingsStore_.save(pet_, settings_);
+    }
     network_.poll();
     motion_.tick(nowMs);
     if (motion_.consumeActionCompleted()) {
@@ -172,10 +178,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         }
     }
 
-    navigation_.setDiscovered(
-        pet_.species() != SpeciesId::Rookie,
-        pet_.species() == SpeciesId::Ultimate
-    );
+    navigation_.setCurrentSpecies(pet_.species());
 
     if (nowMs - lastRenderMs_ >= 33) {
         lastRenderMs_ = nowMs;

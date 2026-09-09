@@ -17,6 +17,8 @@ constexpr const char* kMenuIcons[] = {
 
 const char* speciesName(SpeciesId species) {
     switch (species) {
+        case SpeciesId::Egg: return "egg";
+        case SpeciesId::Baby: return "baby";
         case SpeciesId::Rookie: return "rookie";
         case SpeciesId::Champion: return "champion";
         case SpeciesId::Ultimate: return "ultimate";
@@ -26,6 +28,8 @@ const char* speciesName(SpeciesId species) {
 
 const char* petName(SpeciesId species) {
     switch (species) {
+        case SpeciesId::Egg: return "egg";
+        case SpeciesId::Baby: return "sparkmon";
         case SpeciesId::Rookie: return "firemon";
         case SpeciesId::Champion: return "flamemon";
         case SpeciesId::Ultimate: return "dragfiremon";
@@ -46,6 +50,10 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
     static char path[72];
     const MotionState state = model.motion.state();
     const char* action = "idle";
+    if (model.pet.species() == SpeciesId::Egg) {
+        snprintf(path, sizeof(path), "/animations/egg/egg_idle.vpa");
+        return path;
+    }
     switch (state) {
         case MotionState::Walk:
             action = model.pet.species() == SpeciesId::Ultimate ? "fly" : "walk";
@@ -56,6 +64,11 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         case MotionState::Sleep: action = "sleep"; break;
         case MotionState::Evolution: action = "evolution"; break;
         case MotionState::Idle: break;
+    }
+    if (model.pet.species() == SpeciesId::Baby &&
+        strcmp(action, "idle") != 0 && strcmp(action, "walk") != 0 &&
+        strcmp(action, "eat") != 0 && strcmp(action, "sleep") != 0) {
+        action = "idle";
     }
     snprintf(
         path,

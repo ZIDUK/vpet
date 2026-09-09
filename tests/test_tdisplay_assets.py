@@ -50,12 +50,14 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     )
 
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
-    assert set(manifest["species"]) == {"rookie", "champion", "ultimate"}
+    assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
-    assert len(manifest["animations"]) == 20
+    assert len(manifest["animations"]) == 25
     assert (data_dir / "manifest.json").is_file()
     catalog = (include_dir / "catalog.h").read_text()
     assert "rookie" in catalog
+    assert "sparkmon_idle.vpa" in catalog
+    assert '{"egg", "baby", false}' in catalog
     assert "dragfiremon_fly.vpa" in catalog
 
 

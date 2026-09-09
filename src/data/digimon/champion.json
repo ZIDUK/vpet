@@ -1,15 +1,10 @@
 {
-  "name": "Thornback",
+  "name": "Flamemon",
   "line": "custom_line",
   "stage": "champion",
-  "sprite": "/Champion/idle_atlas.bmp",
+  "sprite": "/digimon1/Champion/flamemon_idle_atlas.bmp",
   "evolves_to": "ultimate",
-  "min_age_seconds": 180,
-  "battles_required": 3,
-  "requirements": {
-    "h": 60,
-    "e": 60,
-    "p": 60,
-    "hp": 80
-  }
+  "automatic": false,
+  "requirements_pending": true,
+  "requirements": {}
 }

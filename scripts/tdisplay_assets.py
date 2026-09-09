@@ -168,10 +168,12 @@ def write_catalog_header(include_dir, catalog):
         )
     lines.extend([
         "};",
-        "inline constexpr const char* kSpecies[] = {\"rookie\", \"champion\", \"ultimate\"};",
+        "inline constexpr const char* kSpecies[] = {\"egg\", \"baby\", \"rookie\", \"champion\", \"ultimate\"};",
         "inline constexpr uint8_t kMenuActions[] = {0, 1, 2, 3, 4, 5, 6, 7};",
         "struct EvolutionEdge { const char* from; const char* to; bool requirementsPending; };",
         "inline constexpr EvolutionEdge kEvolutionEdges[] = {",
+        '    {"egg", "baby", false},',
+        '    {"baby", "rookie", true},',
         '    {"rookie", "champion", false},',
         '    {"champion", "ultimate", true},',
         "};",

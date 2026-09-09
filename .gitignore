@@ -19,6 +19,7 @@ __pycache__/
 # Editor
 .vscode/
 *.swp
+.superpowers/
 
 # Bundle download cache
 .cache/
@@ -27,7 +28,7 @@ __pycache__/
 # Repo layout policy
 #
 #   src/      — Python source (committed, small text files)
-#   assets/   — raw art, NOT deployed. Dev only. NEVER committed.
+#   assets/   — curated source art required for reproducible builds.
 #   build/    — generated output, deployed to Pico.
 #               CONTENTS ARE COMMITTED so other devs get the same
 #               starting point. Regenerate locally with `make build`.
@@ -38,9 +39,46 @@ __pycache__/
 # Anything else is legacy or vendored.
 # ─────────────────────────────────────────────────────────────────
 
-# assets/ is dev-only. Sprites/icons/backgrounds raw sources go here
-# but you commit build/Placeholder/ etc instead.
-assets/
+# Track only the source art used by the current build. Legacy atlases,
+# vendored CircuitPython libraries and experiments remain local.
+assets/*
+!assets/backgrounds/
+assets/backgrounds/*
+!assets/backgrounds/bg5 1.png
+!assets/digimon/
+assets/digimon/*
+!assets/digimon/digimon1/
+assets/digimon/digimon1/*
+!assets/digimon/digimon1/rookie/
+!assets/digimon/digimon1/champion/
+!assets/digimon/digimon1/ultimate/
+!assets/digimon/digimon1/egg/
+!assets/digimon/digimon1/baby/
+assets/digimon/digimon1/egg/*
+assets/digimon/digimon1/baby/*
+!assets/digimon/digimon1/egg/idle/
+!assets/digimon/digimon1/baby/idle/
+assets/digimon/digimon1/egg/idle/*
+assets/digimon/digimon1/baby/idle/*
+!assets/digimon/digimon1/egg/idle/*.png
+!assets/digimon/digimon1/baby/idle/*.png
+assets/digimon/digimon1/rookie/*
+assets/digimon/digimon1/champion/*
+assets/digimon/digimon1/ultimate/*
+!assets/digimon/digimon1/rookie/idle/
+!assets/digimon/digimon1/champion/idle/
+!assets/digimon/digimon1/ultimate/idle/
+assets/digimon/digimon1/rookie/idle/*
+assets/digimon/digimon1/champion/idle/*
+assets/digimon/digimon1/ultimate/idle/*
+!assets/digimon/digimon1/rookie/idle/*.png
+!assets/digimon/digimon1/champion/idle/*.png
+!assets/digimon/digimon1/ultimate/idle/*.png
+!assets/ui/
+assets/ui/*
+!assets/ui/icons/
+assets/ui/icons/*
+!assets/ui/icons/*.png
 build-tdisplay/
 out/
 
@@ -51,25 +89,25 @@ firmware/t-display/include/generated/*
 !firmware/t-display/include/generated/.gitkeep
 
 # Legacy dirs that may still exist from older code paths
-Egg/
-Greymon/
-Greymon_32/
-MetalGreymon/
-WarGreymon/
-Gabumon/
-Garurumon/
-WereGarurumon/
-MetalGarurumon/
-Agumon_atlas/
-sprites/
-sprites_clean/
-sprites_raw/
-reference/
-mockups/
-fonts/
-icons/
-pygame_v1/
-lib/
+/Egg/
+/Greymon/
+/Greymon_32/
+/MetalGreymon/
+/WarGreymon/
+/Gabumon/
+/Garurumon/
+/WereGarurumon/
+/MetalGarurumon/
+/Agumon_atlas/
+/sprites/
+/sprites_clean/
+/sprites_raw/
+/reference/
+/mockups/
+/fonts/
+/icons/
+/pygame_v1/
+/lib/
 !firmware/t-display/lib/
 !firmware/t-display/lib/vpet_core/
 !firmware/t-display/lib/vpet_core/src/

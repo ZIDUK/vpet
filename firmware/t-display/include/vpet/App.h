@@ -39,6 +39,7 @@ private:
     Navigation navigation_;
     uint32_t lastTickMs_ = 0;
     uint32_t lastRenderMs_ = 0;
+    uint32_t eggStartedMs_ = 0;
 };
 
 }  // namespace vpet

@@ -1,28 +1,48 @@
 #include "vpet/Navigation.h"
 
 namespace vpet {
+namespace {
+constexpr SpeciesId kEvolutionStages[] = {
+    SpeciesId::Egg, SpeciesId::Baby, SpeciesId::Rookie,
+    SpeciesId::Champion, SpeciesId::Ultimate,
+};
+
+uint8_t stageIndex(SpeciesId species) {
+    for (uint8_t index = 0; index < 5; ++index) {
+        if (kEvolutionStages[index] == species) return index;
+    }
+    return 0;
+}
+}
 
 void Navigation::setDiscovered(bool champion, bool ultimate) {
     championDiscovered_ = champion;
     ultimateDiscovered_ = ultimate;
+    currentStage_ = ultimate ? 4 : (champion ? 3 : 2);
+}
+
+void Navigation::setCurrentSpecies(SpeciesId species) {
+    currentStage_ = stageIndex(species);
+    championDiscovered_ = currentStage_ >= 3;
+    ultimateDiscovered_ = currentStage_ >= 4;
 }
 
 void Navigation::openEvolutionTree() {
     panel_ = PanelId::EvolutionTree;
     panelIndex_ = 0;
-    selectedSpecies_ = SpeciesId::Rookie;
+    selectedSpecies_ = kEvolutionStages[0];
 }
 
 void Navigation::select(SpeciesId species) {
     selectedSpecies_ = species;
-    panelIndex_ = static_cast<uint8_t>(species);
+    panelIndex_ = stageIndex(species);
 }
 
 EvolutionNode Navigation::selectedEvolutionNode() const {
-    const bool hidden =
-        (selectedSpecies_ == SpeciesId::Champion && !championDiscovered_) ||
-        (selectedSpecies_ == SpeciesId::Ultimate && !ultimateDiscovered_);
-    const char* label = "FIREMON";
+    const bool hidden = stageIndex(selectedSpecies_) > currentStage_;
+    const char* label = "EGG";
+    if (!hidden && selectedSpecies_ == SpeciesId::Baby) label = "SPARKMON";
+    if (!hidden && selectedSpecies_ == SpeciesId::Rookie) label = "FIREMON";
     if (!hidden && selectedSpecies_ == SpeciesId::Champion) label = "FLAMEMON";
     if (!hidden && selectedSpecies_ == SpeciesId::Ultimate) label = "DRAGFIREMON";
     if (hidden) label = "???";
@@ -52,8 +72,8 @@ void Navigation::dispatch(InputEvent event) {
     }
     if (event == InputEvent::Next) {
         if (panel_ == PanelId::EvolutionTree) {
-            panelIndex_ = (panelIndex_ + 1) % 3;
-            selectedSpecies_ = static_cast<SpeciesId>(panelIndex_);
+            panelIndex_ = (panelIndex_ + 1) % 5;
+            selectedSpecies_ = kEvolutionStages[panelIndex_];
         } else {
             panelIndex_ = (panelIndex_ + 1) % 8;
         }

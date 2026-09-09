@@ -30,6 +30,7 @@ public:
     void dispatch(InputEvent event);
     void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }
     void setDiscovered(bool champion, bool ultimate);
+    void setCurrentSpecies(SpeciesId species);
     void openEvolutionTree();
     void select(SpeciesId species);
     void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; }
@@ -47,7 +48,8 @@ private:
     PanelId panel_ = PanelId::Home;
     uint8_t menuIndex_ = 0;
     uint8_t panelIndex_ = 0;
-    SpeciesId selectedSpecies_ = SpeciesId::Rookie;
+    SpeciesId selectedSpecies_ = SpeciesId::Egg;
+    uint8_t currentStage_ = 0;
     bool championDiscovered_ = true;
     bool ultimateDiscovered_ = true;
 };
