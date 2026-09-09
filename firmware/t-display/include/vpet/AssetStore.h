@@ -21,7 +21,8 @@ public:
         uint16_t frame,
         int16_t x,
         int16_t y,
-        bool flipHorizontal = false
+        bool flipHorizontal = false,
+        int32_t tint = -1
     );
 };
 

@@ -101,3 +101,13 @@ def test_tdisplay_options_render_all_actions_and_wifi_result():
     assert "index < 8" in source
     assert 'wifi = \"WIFI: ONLINE\"' in source
     assert 'wifi = \"WIFI: NO INTERNET\"' in source
+
+
+def test_hidden_evolutions_use_real_tinted_portraits():
+    root = Path(__file__).parent.parent / "firmware" / "t-display"
+    panels = (root / "src" / "Panels.cpp").read_text()
+    assets = (root / "src" / "AssetStore.cpp").read_text()
+
+    assert "portraitPath(species, true)" in panels
+    assert "TFT_BLACK" in panels
+    assert "tint >= 0" in assets

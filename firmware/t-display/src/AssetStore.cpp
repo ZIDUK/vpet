@@ -44,7 +44,8 @@ bool AssetStore::drawFrame(
     uint16_t frame,
     int16_t x,
     int16_t y,
-    bool flipHorizontal
+    bool flipHorizontal,
+    int32_t tint
 ) {
     File file = LittleFS.open(path, "r");
     if (!file) {
@@ -100,7 +101,7 @@ bool AssetStore::drawFrame(
                 if (paletteIndex == transparent) {
                     break;
                 }
-                colors[runLength++] = palette[paletteIndex];
+                colors[runLength++] = tint >= 0 ? static_cast<uint16_t>(tint) : palette[paletteIndex];
                 ++column;
             }
             canvas.pushImage(x + runStart, y + row, runLength, 1, colors);

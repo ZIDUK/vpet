@@ -86,10 +86,10 @@ void Panels::drawEvolution(const Navigation& navigation, bool detail) {
     if (detail) {
         display_.drawRect(74, 51, 92, 72, TFT_YELLOW);
         if (selected.hidden) {
-            display_.fillRect(76, 53, 88, 68, TFT_BLACK);
-            display_.setTextColor(TFT_WHITE, TFT_BLACK);
+            assets_.drawFrame(display_, portraitPath(selected.species, false), 0, 76, 35, false, TFT_BLACK);
+            display_.setTextColor(kInk, kPanel);
             display_.setTextDatum(MC_DATUM);
-            display_.drawString("???", 120, 87, 2);
+            display_.drawString("???", 120, 112, 2);
         } else {
             assets_.drawFrame(display_, portraitPath(selected.species, false), 0, 76, 35);
             display_.setTextColor(kInk, kPanel);
@@ -110,9 +110,9 @@ void Panels::drawEvolution(const Navigation& navigation, bool detail) {
         const int16_t x = 5 + slot * 79;
         display_.drawRect(x, 52, 72, 70, index == selectedIndex ? TFT_YELLOW : kInk);
         if (node.hidden) {
-            display_.fillRect(x + 18, 57, 36, 36, TFT_BLACK);
-            display_.setTextColor(TFT_WHITE, TFT_BLACK);
-            display_.drawString("???", x + 25, 70, 1);
+            assets_.drawFrame(display_, portraitPath(species, true), 0, x + 18, 57, false, TFT_BLACK);
+            display_.setTextColor(kInk, kPanel);
+            drawLabel("???", x + 25, 99, 36, 1);
         } else {
             assets_.drawFrame(display_, portraitPath(species, true), 0, x + 18, 57);
             display_.setTextColor(kInk, kPanel);
