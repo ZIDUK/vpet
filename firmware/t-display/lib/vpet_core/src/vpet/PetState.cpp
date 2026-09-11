@@ -60,6 +60,17 @@ bool PetState::completeAction() {
     return false;
 }
 
+bool PetState::forceNextForm() {
+    switch (species_) {
+        case SpeciesId::Egg: evolveTo(SpeciesId::Baby); return true;
+        case SpeciesId::Baby: evolveTo(SpeciesId::Rookie); return true;
+        case SpeciesId::Rookie: evolveTo(SpeciesId::Champion); return true;
+        case SpeciesId::Champion: evolveTo(SpeciesId::Ultimate); return true;
+        case SpeciesId::Ultimate: return false;
+    }
+    return false;
+}
+
 void PetState::evolveTo(SpeciesId species) {
     species_ = species;
     if (species == SpeciesId::Rookie) rookieDiscovered_ = true;

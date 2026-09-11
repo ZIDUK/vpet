@@ -3,18 +3,19 @@
 #include <stdint.h>
 
 #include "vpet/Input.h"
+#include "vpet/BleService.h"
 #include "vpet/Motion.h"
 #include "vpet/Navigation.h"
 #include "vpet/Panels.h"
-#include "vpet/PasswordEditor.h"
 #include "vpet/PetState.h"
 #include "vpet/Renderer.h"
+#include "vpet/SettingsStore.h"
 
 namespace vpet {
 
 class App {
 public:
-    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, NetworkService& network);
+    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth);
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
 
@@ -27,10 +28,8 @@ private:
     Renderer& renderer_;
     Panels& panels_;
     SettingsStore& settingsStore_;
-    NetworkService& network_;
+    BleService& bluetooth_;
     Settings settings_;
-    PasswordEditor password_;
-    std::string selectedSsid_;
     int dateTime_[5] = {2026, 1, 1, 0, 0};
     bool editingDate_ = true;
     uint8_t dateField_ = 0;

@@ -4,12 +4,11 @@
 
 #include "vpet/AssetStore.h"
 #include "vpet/App.h"
+#include "vpet/BleService.h"
 #include "vpet/BoardInput.h"
 #include "vpet/Panels.h"
 #include "vpet/Renderer.h"
-#include "vpet/Esp32NetworkAdapter.h"
 #include "vpet/NvsKeyValueStore.h"
-#include "vpet/NetworkService.h"
 #include "vpet/SettingsStore.h"
 
 namespace {
@@ -21,11 +20,9 @@ vpet::BoardInput buttons;
 vpet::Renderer renderer(display, framebuffer, staticScene, assets);
 vpet::Panels panels(display, framebuffer, assets);
 vpet::NvsKeyValueStore stateStore("vpet_state");
-vpet::NvsKeyValueStore wifiStore("vpet_wifi");
 vpet::SettingsStore settingsStore(stateStore);
-vpet::Esp32NetworkAdapter networkAdapter;
-vpet::NetworkService network(networkAdapter, wifiStore);
-vpet::App app(renderer, panels, settingsStore, network);
+vpet::BleService bluetooth;
+vpet::App app(renderer, panels, settingsStore, bluetooth);
 
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);
@@ -66,6 +63,7 @@ void setup() {
     }
     staticScene.setSwapBytes(true);
     buttons.begin();
+    bluetooth.begin();
     const vpet::AssetStatus status = assets.begin();
     drawBoot(status);
     Serial.printf(

@@ -122,7 +122,7 @@ descritos en [content-packages.md](content-packages.md).
 
 `make native-test` compila y prueba el nucleo C++ sin hardware. `make firmware`
 es adicionalmente obligatorio porque detecta errores en adaptadores Arduino,
-TFT, WiFi, NVS y LittleFS que el target nativo no enlaza.
+TFT, NimBLE, NVS y LittleFS que el target nativo no enlaza.
 
 ## Despliegue seguro
 
@@ -138,14 +138,18 @@ TFT, WiFi, NVS y LittleFS que el target nativo no enlaza.
 Los recursos LittleFS son reemplazables. El estado y las credenciales viven en
 NVS y sobreviven al despliegue.
 
-## WiFi durante desarrollo
+## Bluetooth durante desarrollo
 
-La contrasena se escribe desde la interfaz de dos botones. El firmware guarda
-las credenciales en NVS despues de obtener acceso a Internet. No estan dentro
-del repositorio ni del filesystem de assets.
+No hay UI WiFi. Para probar radio:
 
-Para ver el estado, abre engrane -> Opciones y revisa la fila WiFi. Consulta
-[connectivity.md](connectivity.md) para el flujo completo.
+1. Despliega con `make deploy`.
+2. Abre engrane; la primera fila es Bluetooth.
+3. Activa hasta `ADVERTISING`.
+4. Empareja desde Ajustes del iPhone o abre LightBlue / nRF Connect.
+5. Confirma `CONNECTED` en la placa y `VPET_BLE` en serial.
+
+La preferencia vive en `vpet_state` / `bluetooth`. Consulta
+[connectivity.md](connectivity.md).
 
 ## Compatibilidad Pico
 

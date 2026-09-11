@@ -20,6 +20,7 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
     );
     settings.language = store_.getString("language", "ES");
     settings.soundEnabled = store_.getInt("sound", 1) != 0;
+    settings.bluetoothEnabled = store_.getInt("bluetooth", 0) != 0;
     return LoadResult::Loaded;
 }
 
@@ -34,6 +35,7 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("age", pet.ageSeconds()) && ok;
     ok = store_.putString("language", settings.language.c_str()) && ok;
     ok = store_.putInt("sound", settings.soundEnabled ? 1 : 0) && ok;
+    ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
     return ok;
 }
 

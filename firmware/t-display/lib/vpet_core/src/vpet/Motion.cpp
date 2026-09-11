@@ -41,6 +41,12 @@ void Motion::startEvolution(uint32_t nowMs) {
     lastFrameMs_ = nowMs;
 }
 
+void Motion::wake(uint32_t nowMs) {
+    if (state_ != MotionState::Sleep) return;
+    actionCompleted_ = true;
+    enterIdle(nowMs);
+}
+
 void Motion::enterIdle(uint32_t nowMs) {
     state_ = MotionState::Idle;
     frame_ = 0;
@@ -62,7 +68,7 @@ uint16_t Motion::frameCount() const {
         case MotionState::Punch: return 15;
         case MotionState::Cast: return 15;
         case MotionState::Sleep: return species_ == SpeciesId::Baby ? 25 : 15;
-        case MotionState::Evolution: return 15;
+        case MotionState::Evolution: return species_ == SpeciesId::Rookie ? 16 : 15;
     }
     return 1;
 }
@@ -103,6 +109,10 @@ void Motion::tick(uint32_t nowMs) {
         const uint32_t steps = frameElapsed / interval;
         const uint32_t next = frame_ + steps;
         lastFrameMs_ += steps * interval;
+        if (state_ == MotionState::Sleep) {
+            frame_ = next % frameCount();
+            return;
+        }
         const bool action = state_ != MotionState::Idle && state_ != MotionState::Walk;
         if (action && next >= frameCount()) {
             actionCompleted_ = state_ != MotionState::Evolution;

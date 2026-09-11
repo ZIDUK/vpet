@@ -54,14 +54,17 @@ EVOLVED_SPECIES = "champion"
 ULTIMATE_SPECIES = "ultimate"
 EGG_SPECIES = "egg"
 BABY_SPECIES = "baby"
+ROOKIE_SPECIES = "rookie"
 
 EGG_IDLE_IMAGE_PATH = "/digimon1/Egg/egg_idle_atlas.bmp"
 SPARKMON_IDLE_IMAGE_PATH = "/digimon1/Baby/sparkmon_idle_atlas.bmp"
 SPARKMON_WALK_IMAGE_PATH = "/digimon1/Baby/sparkmon_walk_atlas.bmp"
 SPARKMON_EAT_IMAGE_PATH = "/digimon1/Baby/sparkmon_eat_atlas.bmp"
 SPARKMON_SLEEP_IMAGE_PATH = "/digimon1/Baby/sparkmon_sleep_atlas.bmp"
+SPARKMON_EVOLUTION_IMAGE_PATH = "/digimon1/Baby/sparkmon_evolution_atlas.bmp"
 EGG_IDLE_FRAME_COUNT = 16
 SPARKMON_FRAME_COUNT = 25
+SPARKMON_EVOLUTION_FRAME_COUNT = 16
 HATCH_DURATION_SECONDS = 8
 
 PET_IDLE_IMAGE_PATH = "/digimon1/Rookie/firemon_idle_atlas.bmp"

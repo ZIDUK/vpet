@@ -43,8 +43,8 @@ sin hacer de los directorios generados una fuente editable.
 | Arte fuente | `assets/` | PNG originales del fondo, iconos y sprites |
 | Modelo Python | `src/core/` | Reglas usadas por el simulador y pipeline legado |
 | Herramientas | `scripts/` | Conversion VPA, simulador, validacion y despliegue |
-| Nucleo C++ | `firmware/t-display/lib/vpet_core/` | Estado, movimiento, navegacion, opciones y red abstracta |
-| Plataforma ESP32 | `firmware/t-display/src/` | TFT, botones, WiFi, NVS y LittleFS |
+| Nucleo C++ | `firmware/t-display/lib/vpet_core/` | Estado, movimiento, navegacion y politica BLE portable |
+| Plataforma ESP32 | `firmware/t-display/src/` | TFT, botones, BLE, NVS y LittleFS |
 | Recursos generados | `firmware/t-display/data/` | Payload LittleFS; no se versiona |
 | Catalogo generado | `firmware/t-display/include/generated/` | Registro C++ derivado; no se versiona |
 
@@ -56,17 +56,17 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | Componente | Funcion |
 |---|---|
 | `main.cpp` | Inicializa pantalla, buffers, recursos, entradas y servicios |
-| `App` | Coordina el loop, acciones, paneles, red y persistencia |
+| `App` | Coordina el loop, acciones, paneles, Bluetooth y persistencia |
 | `Renderer` | Dibuja fondo, menu, selector y animaciones sin parpadeo |
-| `Panels` | Dibuja estado, inventario, evolucion, opciones y WiFi |
+| `Panels` | Dibuja estado, inventario, evolucion y opciones |
 | `AssetStore` | Monta LittleFS, valida VPA1 y dibuja frames indexados |
 | `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
 | `PetState` | Estadisticas, acciones, descubrimientos y evolucion |
 | `Motion` | Idle, caminar/volar y animaciones de una sola ejecucion |
 | `Navigation` | Menu superior, paneles y seleccion interna |
 | `SettingsStore` | Serializacion versionada de estado y preferencias |
-| `NetworkService` | Flujo portable de conexion y politica de credenciales |
-| `Esp32NetworkAdapter` | WiFi, DNS, HTTP y NTP sobre Arduino ESP32 |
+| `BleAdvertiseSession` | Primera vez configura el ADV; reconnect solo `start()` |
+| `BleService` | NimBLE bajo demanda: HID teclado, DIS y bateria |
 | `NvsKeyValueStore` | Adaptador de Preferences/NVS |
 
 ## Renderizado
@@ -104,46 +104,71 @@ linea de izquierda a derecha; las etapas futuras permanecen ocultas.
 ```text
 Boton izquierdo / GPIO0
   corto   -> NEXT
-  largo   -> BACK
+  2 s     -> BACK
 
 Boton derecho / GPIO35
   corto   -> ACTION
 ```
 
 El debounce y la deteccion de pulsacion larga viven en `Input`, dentro del
-nucleo portable. La interfaz principal siempre contiene ocho iconos.
+nucleo portable. Un flanco de GPIO0 emite `NEXT` al instante; a los 2 s emite
+`BACK`. En Home, `BACK` se ignora. En Opciones, `BACK` tambien se ignora. En el resto,
+`BACK` vuelve a Home (o al arbol desde el detalle de evolucion). `NEXT`
+emite en el flanco de pulsacion: una pulsacion, una fila, sin auto-avance.
+
+Opciones muestra cuatro filas grandes. El orden real es Bluetooth, idioma,
+sonido, guardar, cargar, fecha, hora, evolucionar y volver. `EVOLVE` fuerza
+la siguiente forma, guarda NVS y reproduce la animacion en Home.
+
+El estado `Sleep` reproduce su atlas en bucle y permanece activo. Solo volver a
+activar el icono del foco ejecuta `wake`; navegar o abrir otro panel no despierta
+a la mascota.
 
 ## Persistencia
 
 La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
 
-- `vpet_state`: mascota, estadisticas, descubrimientos y preferencias.
-- `vpet_wifi`: SSID y contrasena aceptados.
+- `vpet_state`: especie, hambre, energia, animo, esfuerzo, salud, edad,
+  idioma, sonido y `bluetooth` (apagado por defecto).
+- `vpet_wifi`: namespace legado reservado; el firmware actual no lo consulta.
 
-El esquema actual es version 1. Las credenciales se guardan solo cuando la
-asociacion WiFi y la prueba de Internet terminan correctamente. Un despliegue
-normal no borra NVS.
+No se serializan batallas, comidas, entrenamientos, inventario ni flags de
+descubrimiento. El esquema actual es version 1. Un despliegue normal no borra
+NVS. `App::begin` aplica `bluetoothEnabled` al radio al arrancar.
 
 LittleFS comienza en `0x410000`, mide `0xBE0000` y contiene exclusivamente
 recursos reconstruibles. El estado del usuario nunca debe depender de LittleFS.
 
 ## Conectividad
 
-La red sigue este estado:
+Bluetooth se controla desde Opciones (indice 0) y sigue este estado:
 
 ```text
-Idle -> Connecting -> InternetAvailable
-                   -> LocalOnly
-                   -> NoAssociation
+Off -> Advertising <-> Connected
+        |
+        -> Error
 ```
 
-El adaptador ejecuta escaneo asincrono, asociacion WiFi, resolucion DNS,
-peticion HTTP de conectividad y NTP. El panel Opciones muestra el resultado.
+`BleService` vive solo en la placa. Usa `h2zero/NimBLE-Arduino@2.5.1` como
+periferico (central y observer desactivados, una conexion). Al activarse:
 
-Bluetooth no forma parte del firmware actual. La futura integracion sera BLE y
-se mantendra detras de una interfaz de plataforma. Su uso recomendado es
-aprovisionamiento, estado y comandos pequenos; los paquetes se transferiran por
-WiFi o USB.
+1. Inicia NimBLE con nombre `vPet-XXXX`, donde `XXXX` son los 16 bits bajos
+   de `ESP.getEfuseMac()` (en esta placa, `vPet-F908`).
+2. Activa bonding Just Works (`setSecurityAuth(true, false, true)`).
+3. Crea `NimBLEHIDDevice`: HID `0x1812` (teclado, appearance `0x03C1`),
+   Device Information `0x180A` y Battery `0x180F`.
+4. Publica DIS de solo lectura: modelo `vPet T-Display`, firmware `0.1.0`,
+   serial igual al nombre.
+5. Anuncia el UUID HID y el nombre. El mapa HID existe para iOS Settings;
+   no se envian informes de teclas.
+6. `BleAdvertiseSession` configura el payload ADV una sola vez; un
+   disconnect solo reanuda el anuncio (`advertiseOnDisconnect`).
+
+El simulador 240x135 refleja el toggle y el texto de estado. No usa la radio
+del Mac. WiFi esta deshabilitado hasta una futura fase de aprovisionamiento.
+Los paquetes se transferiran por WiFi o USB, nunca por BLE.
+
+Consulta [connectivity.md](connectivity.md) para el flujo de telefono.
 
 ## Paquetes extensibles
 

@@ -33,21 +33,18 @@ Derecho   GPIO35 = ACTION
 GPIO35 no tiene pull-up interno. No intercambies los nombres por la posicion
 que muestra una fotografia rotada.
 
-## WiFi
-
-El escaneo es asincrono. Mientras se ejecuta, la pantalla muestra
-`SCANNING...`. Despues de `CONNECT`, espera unos segundos y vuelve a Opciones:
-
-- `WIFI: ONLINE`: Internet confirmado.
-- `WIFI: NO INTERNET`: red local sin salida confirmada.
-- `WIFI: FAILED`: asociacion fallida o timeout.
-- `WIFI: CONNECTING`: operacion en curso.
-
 ## Bluetooth
 
-El hardware lo soporta, pero el firmware actual no inicia BLE ni Bluetooth
-Classic. Por tanto no debe aparecer un indicador Bluetooth activo ni un nombre
-vPet en el telefono. Eso sera una funcion nueva, no un ajuste de configuracion.
+Abre el engrane: la primera fila es `BLUETOOTH`. `ACTION` debe pasar a
+`ADVERTISING`. En iPhone, Ajustes > Bluetooth, Otros dispositivos, toca
+`vPet-XXXX` (en esta placa, `vPet-F908`). Tambien aparece en nRF Connect o
+LightBlue. Tras conectar, la fila dice `CONNECTED`; al desconectar, vuelve a
+anunciarse. No escribe teclas.
+
+Si no sale en Ajustes, cierra LightBlue, olvida el accesorio y reinicia el
+Bluetooth del telefono.
+
+WiFi esta deshabilitado y no aparece en el menu actual.
 
 ## Recuperacion
 

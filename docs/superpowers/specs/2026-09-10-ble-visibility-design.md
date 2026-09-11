@@ -1,5 +1,11 @@
 # BLE Visibility And WiFi Deferral
 
+> **Estado vivo:** este spec describe el recorte inicial (DIS + toggle). La
+> implementacion actual anuncia HID teclado para Ajustes de iOS, pone
+> Bluetooth en la primera fila de Opciones y usa `BleAdvertiseSession`.
+> La fuente de verdad es [architecture.md](../../architecture.md) y
+> [connectivity.md](../../connectivity.md).
+
 ## Goal
 
 Make the TTGO T-Display discoverable from a mobile phone through Bluetooth Low

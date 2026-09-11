@@ -77,6 +77,7 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "digimon1/Baby/sparkmon_walk_atlas.bmp",
         "digimon1/Baby/sparkmon_eat_atlas.bmp",
         "digimon1/Baby/sparkmon_sleep_atlas.bmp",
+        "digimon1/Baby/sparkmon_evolution_atlas.bmp",
         "digimon1/Rookie/firemon_idle_atlas.bmp",
         "digimon1/Rookie/firemon_walk_atlas.bmp",
         "digimon1/Rookie/firemon_eat_atlas.bmp",
@@ -163,6 +164,11 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
     with Image.open(output / "digimon1" / "Rookie" / "firemon_evolution_atlas.bmp") as atlas:
         assert atlas.mode == "P"
         assert atlas.size == (15 * 112, 112)
+        assert atlas.getpixel((0, 0)) == 0
+
+    with Image.open(output / "digimon1" / "Baby" / "sparkmon_evolution_atlas.bmp") as atlas:
+        assert atlas.mode == "P"
+        assert atlas.size == (16 * 112, 112)
         assert atlas.getpixel((0, 0)) == 0
 
     with Image.open(output / "digimon1" / "Champion" / "flamemon_idle_atlas.bmp") as atlas:

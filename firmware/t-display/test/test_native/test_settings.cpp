@@ -2,8 +2,7 @@
 #include <string>
 #include <unity.h>
 
-#include "vpet/NetworkService.h"
-#include "vpet/PasswordEditor.h"
+#include "vpet/BleAdvertiseSession.h"
 #include "vpet/SettingsStore.h"
 
 class FakeStore : public vpet::KeyValueStore {
@@ -20,18 +19,6 @@ public:
     std::map<std::string, std::string> strings;
 };
 
-class FakeNetwork : public vpet::NetworkAdapter {
-public:
-    void startScan() override {}
-    bool scanComplete() override { return true; }
-    size_t networkCount() const override { return 1; }
-    std::string networkName(size_t) const override { return "Home"; }
-    void beginConnect(const char*, const char*) override {}
-    vpet::ConnectResult connectionResult() override { return result; }
-    bool syncClock() override { return true; }
-    vpet::ConnectResult result = vpet::ConnectResult::Connecting;
-};
-
 void test_missing_save_keeps_current_species_discovered() {
     FakeStore store;
     vpet::PetState pet;
@@ -41,26 +28,25 @@ void test_missing_save_keeps_current_species_discovered() {
     TEST_ASSERT_TRUE(pet.hasDiscovered(vpet::SpeciesId::Champion));
 }
 
-void test_credentials_are_saved_only_after_internet_capable_connection() {
-    FakeStore store;
-    FakeNetwork wifi;
-    vpet::NetworkService service(wifi, store);
-    service.connect("Home", "secret");
-    wifi.result = vpet::ConnectResult::LocalOnly;
-    service.poll();
-    TEST_ASSERT_EQUAL_STRING("", store.getString("ssid", "").c_str());
-    wifi.result = vpet::ConnectResult::InternetAvailable;
-    service.poll();
-    TEST_ASSERT_EQUAL_STRING("Home", store.getString("ssid", "").c_str());
-    TEST_ASSERT_EQUAL_STRING("secret", store.getString("password", "").c_str());
+void test_first_advertise_configures_payload_later_restarts_only() {
+    vpet::BleAdvertiseSession session;
+    TEST_ASSERT_EQUAL(vpet::BleAdvertiseStep::Configure, session.nextStart());
+    TEST_ASSERT_EQUAL(vpet::BleAdvertiseStep::StartOnly, session.nextStart());
+    TEST_ASSERT_EQUAL(vpet::BleAdvertiseStep::StartOnly, session.nextStart());
+    session.reset();
+    TEST_ASSERT_EQUAL(vpet::BleAdvertiseStep::Configure, session.nextStart());
 }
 
-void test_password_editor_cycles_groups_and_submits_masked_value() {
-    vpet::PasswordEditor editor;
-    editor.select();
-    TEST_ASSERT_EQUAL_STRING("A", editor.password().c_str());
-    editor.selectCommand(vpet::PasswordCommand::Mode);
-    editor.select();
-    TEST_ASSERT_EQUAL_STRING("Aa", editor.password().c_str());
-    TEST_ASSERT_TRUE(editor.selectCommand(vpet::PasswordCommand::Connect));
+void test_settings_persist_bluetooth_preference() {
+    FakeStore store;
+    vpet::PetState saved;
+    vpet::Settings before;
+    before.bluetoothEnabled = true;
+    TEST_ASSERT_TRUE(vpet::SettingsStore(store).save(saved, before));
+
+    vpet::PetState restored;
+    vpet::Settings after;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded,
+                      vpet::SettingsStore(store).load(restored, after));
+    TEST_ASSERT_TRUE(after.bluetoothEnabled);
 }

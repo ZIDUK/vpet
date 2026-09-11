@@ -23,3 +23,29 @@ void test_action_animation_returns_to_idle() {
     motion.tick(3000);
     TEST_ASSERT_EQUAL(vpet::MotionState::Idle, motion.state());
 }
+
+void test_sleep_loops_until_explicit_wake() {
+    vpet::Motion motion(240, 135, 24, 88);
+    motion.setSpecies(vpet::SpeciesId::Rookie);
+    motion.startAction(vpet::Action::Rest, 100);
+
+    motion.tick(4000);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Sleep, motion.state());
+
+    motion.wake(4100);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Idle, motion.state());
+    TEST_ASSERT_TRUE(motion.consumeActionCompleted());
+}
+
+void test_sparkmon_evolution_uses_sixteen_frames() {
+    vpet::Motion motion(240, 135, 24, 88);
+    motion.setSpecies(vpet::SpeciesId::Rookie);
+    motion.startEvolution(100);
+
+    motion.tick(100 + 15 * 85);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Evolution, motion.state());
+    TEST_ASSERT_EQUAL(15, motion.frame());
+
+    motion.tick(100 + 16 * 85);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Idle, motion.state());
+}

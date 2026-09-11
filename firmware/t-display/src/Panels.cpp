@@ -122,55 +122,27 @@ void Panels::drawEvolution(const Navigation& navigation, bool detail) {
     }
 }
 
-void Panels::drawOptions(uint8_t selected, ConnectResult networkStatus) {
-    const char* wifi = "WIFI: OFF";
-    switch (networkStatus) {
-        case ConnectResult::Connecting: wifi = "WIFI: CONNECTING"; break;
-        case ConnectResult::NoAssociation: wifi = "WIFI: FAILED"; break;
-        case ConnectResult::LocalOnly: wifi = "WIFI: NO INTERNET"; break;
-        case ConnectResult::InternetAvailable: wifi = "WIFI: ONLINE"; break;
-        case ConnectResult::Idle: break;
+void Panels::drawOptions(uint8_t selected, BleStatus bluetoothStatus) {
+    const char* bluetooth = "BLUETOOTH: OFF";
+    switch (bluetoothStatus) {
+        case BleStatus::Advertising: bluetooth = "BLUETOOTH: ADVERTISING"; break;
+        case BleStatus::Connected: bluetooth = "BLUETOOTH: CONNECTED"; break;
+        case BleStatus::Error: bluetooth = "BLUETOOTH: ERROR"; break;
+        case BleStatus::Off: break;
     }
     const char* options[] = {
-        "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", wifi, "DATE", "TIME", "BACK"
+        bluetooth, "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK"
     };
-    for (uint8_t index = 0; index < 8; ++index) {
-        const int16_t y = 50 + index * 10;
-        if (index == selected % 8) display_.fillRect(5, y - 1, 230, 10, TFT_YELLOW);
-        display_.setTextColor(kInk, index == selected % 8 ? TFT_YELLOW : kPanel);
-        drawLabel(options[index], 10, y, 218, 1);
+    const uint8_t current = selected % 9;
+    const uint8_t windowStart = current < 4 ? 0 : (current < 8 ? 4 : 5);
+    for (uint8_t slot = 0; slot < 4; ++slot) {
+        const uint8_t index = windowStart + slot;
+        const int16_t y = 52 + slot * 20;
+        const bool active = index == current;
+        if (active) display_.fillRect(5, y - 2, 230, 19, TFT_YELLOW);
+        display_.setTextColor(kInk, active ? TFT_YELLOW : kPanel);
+        drawLabel(options[index], 10, y, 218, 2);
     }
-}
-
-void Panels::drawWifi(const Navigation& navigation, const NetworkService& network) {
-    if (!const_cast<NetworkService&>(network).scanComplete()) {
-        drawLabel("SCANNING...", 75, 78, 100, 2);
-        return;
-    }
-    const size_t count = network.networkCount();
-    const size_t visible = count > 5 ? 5 : count;
-    for (size_t index = 0; index < visible; ++index) {
-        const int16_t y = 51 + index * 15;
-        if (index == navigation.panelIndex() % (count + 1)) {
-            display_.fillRect(5, y - 2, 230, 13, TFT_YELLOW);
-        }
-        drawLabel(network.networkName(index).c_str(), 10, y, 220, 1);
-    }
-    const int16_t y = 51 + visible * 15;
-    drawLabel("BACK", 10, y, 220, 1);
-}
-
-void Panels::drawPassword(const PasswordEditor& password, const char* selectedSsid) {
-    drawLabel(selectedSsid, 8, 52, 224, 1);
-    display_.drawRect(8, 66, 224, 20, kInk);
-    String masked;
-    for (size_t index = 0; index < password.password().size(); ++index) masked += '*';
-    drawLabel(masked.c_str(), 13, 72, 214, 1);
-    drawLabel(password.groupLabel(), 8, 94, 55, 1);
-    display_.drawRect(67, 91, 165, 31, TFT_YELLOW);
-    display_.setTextDatum(MC_DATUM);
-    drawLabel(password.keyLabel(), 149, 106, 150, 2);
-    display_.setTextDatum(TL_DATUM);
 }
 
 void Panels::drawDateTime(const int* values, bool editingDate, uint8_t field) {
@@ -190,15 +162,16 @@ void Panels::drawDateTime(const int* values, bool editingDate, uint8_t field) {
 void Panels::draw(
     const Navigation& navigation,
     const PetState& pet,
-    const NetworkService& network,
-    const PasswordEditor& password,
-    const char* selectedSsid,
+    BleStatus bluetoothStatus,
     const int* dateTime,
     bool editingDate,
     uint8_t dateField
 ) {
     output_.startWrite();
-    switch (navigation.panel()) {
+    const PanelId panel = navigation.panel();
+    const bool panelChanged = panel != lastPanel_;
+    lastPanel_ = panel;
+    switch (panel) {
         case PanelId::Status:
             drawChrome(navigation.menuIndex(), "STATUS");
             drawStatus(pet);
@@ -216,16 +189,12 @@ void Panels::draw(
             drawEvolution(navigation, true);
             break;
         case PanelId::Options:
-            drawChrome(navigation.menuIndex(), "OPTIONS");
-            drawOptions(navigation.panelIndex(), network.status());
-            break;
-        case PanelId::WifiList:
-            drawChrome(navigation.menuIndex(), "WIFI NETWORKS");
-            drawWifi(navigation, network);
-            break;
-        case PanelId::Password:
-            drawChrome(navigation.menuIndex(), "WIFI PASSWORD");
-            drawPassword(password, selectedSsid);
+            if (panelChanged) {
+                drawChrome(navigation.menuIndex(), "OPTIONS");
+            } else {
+                display_.fillRect(0, 48, 240, 87, kPanel);
+            }
+            drawOptions(navigation.panelIndex(), bluetoothStatus);
             break;
         case PanelId::DateTime:
             drawChrome(navigation.menuIndex(), "DATE / TIME");

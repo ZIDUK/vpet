@@ -14,6 +14,7 @@ public:
     bool beginAction(Action action);
     bool completeAction();
     void evolveTo(SpeciesId species);
+    bool forceNextForm();
     void restore(SpeciesId species, int hunger, int energy, int happiness, int effort, int health, uint32_t ageSeconds);
     bool hasDiscovered(SpeciesId species) const;
 

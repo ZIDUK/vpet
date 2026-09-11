@@ -54,6 +54,18 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         snprintf(path, sizeof(path), "/animations/egg/egg_idle.vpa");
         return path;
     }
+    if (state == MotionState::Evolution) {
+        switch (model.pet.species()) {
+            case SpeciesId::Rookie:
+                return "/animations/baby/sparkmon_evolution.vpa";
+            case SpeciesId::Champion:
+                return "/animations/rookie/firemon_evolution.vpa";
+            case SpeciesId::Ultimate:
+                return "/animations/champion/flamemon_evolution.vpa";
+            default:
+                return "/animations/baby/sparkmon_evolution.vpa";
+        }
+    }
     switch (state) {
         case MotionState::Walk:
             action = model.pet.species() == SpeciesId::Ultimate ? "fly" : "walk";
@@ -62,7 +74,7 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         case MotionState::Punch: action = "punch"; break;
         case MotionState::Cast: action = "cast"; break;
         case MotionState::Sleep: action = "sleep"; break;
-        case MotionState::Evolution: action = "evolution"; break;
+        case MotionState::Evolution: break;
         case MotionState::Idle: break;
     }
     if (model.pet.species() == SpeciesId::Baby &&

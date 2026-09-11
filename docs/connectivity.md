@@ -1,105 +1,112 @@
 # Conectividad
 
-## Matriz actual
+## Estado actual
 
 | Funcion | Estado | Confirmacion visible |
 |---|---|---|
-| Escaneo WiFi | Implementado | Lista de redes o `SCANNING...` |
-| Entrada de contrasena | Implementado | Campo enmascarado y teclado de dos botones |
-| Asociacion WiFi | Implementado | Estado en la fila WiFi |
-| Acceso a Internet | Implementado | `WIFI: ONLINE` |
-| Reconexion al arrancar | Implementado | Usa credenciales NVS guardadas |
-| Sincronizacion NTP | Implementado | Se inicia al confirmar Internet |
-| Bluetooth Classic | No implementado | Ninguno |
-| Bluetooth LE | No implementado | Ninguno |
+| Bluetooth LE | Implementado bajo demanda | `BLUETOOTH: ADVERTISING` o `CONNECTED` |
+| HID teclado | Anunciado; no envia teclas | iOS Ajustes > Bluetooth |
+| Device Information | Solo lectura | Modelo, firmware y serial |
+| Bateria GATT | Fija al 100% | Caracteristica `0x2A19` |
+| Emparejamiento | Just Works, sin PIN | Serial `VPET_BLE status=PAIRED` |
+| WiFi | Aplazado y deshabilitado | No aparece en Opciones |
 | Descarga remota de paquetes | Disenado, no implementado | Ninguno |
 
-## Conectar la placa a Internet
+## Activar Bluetooth
 
-1. Pulsa brevemente el boton izquierdo hasta seleccionar el engrane.
-2. Pulsa el boton derecho para abrir Opciones.
-3. Con el izquierdo, selecciona `WIFI`.
-4. Pulsa el derecho y espera a que termine `SCANNING...`.
-5. Selecciona el SSID con el izquierdo y confirma con el derecho.
-6. En `WIFI PASSWORD`, recorre caracteres con el izquierdo y agregalos con el
-   derecho.
-7. Selecciona `MODE` para cambiar entre `UPPER`, `LOWER`, `NUM` y `SYM`.
-8. Usa `DEL` para borrar, `CANCEL` para cancelar o `CONNECT` para conectar.
-9. Regresa a Opciones y revisa la fila WiFi.
+1. Pulsa `NEXT` hasta el engrane y abrelo con `ACTION`.
+2. La primera fila ya es `BLUETOOTH`. Pulsa `ACTION` para encenderlo.
+3. Con `ADVERTISING`, en el iPhone abre Ajustes > Bluetooth.
+   `vPet-XXXX` debe aparecer en Otros dispositivos. Pulsalo para emparejar.
+   iOS lo trata como teclado BLE y no escribe teclas.
+4. Tambien puedes abrirlo en nRF Connect o LightBlue.
+5. Al conectar, la fila de Opciones cambia a `CONNECTED`.
+6. Cada `NEXT` corto baja una fila al instante. Baja hasta `BACK` y pulsa
+   `ACTION` para salir. La fila `EVOLVE` fuerza la siguiente forma en la placa.
 
-Una pulsacion larga del boton izquierdo regresa a la pantalla anterior.
+El sufijo `XXXX` es `ESP.getEfuseMac() & 0xFFFF` en hexadecimal. En la placa
+de desarrollo actual el nombre es `vPet-F908`. La preferencia se guarda en
+NVS (`bluetooth`, apagada por defecto) y se restaura al reiniciar. Para
+apagar Bluetooth, selecciona la misma fila y pulsa `ACTION` otra vez.
 
-## Estados WiFi
+Si un cliente ya estaba unido (por ejemplo LightBlue), cierralo o olvida el
+accesorio en Ajustes antes de volver a emparejar.
+
+## Contrato BLE
+
+Stack: `h2zero/NimBLE-Arduino@2.5.1`. No se usa Bluetooth Classic. El radio
+solo vive mientras la opcion esta activa; `setEnabled(false)` hace
+`NimBLEDevice::deinit(true)`.
+
+| Pieza | UUID / valor | Notas |
+|---|---|---|
+| Nombre ADV | `vPet-XXXX` | Tambien en scan response |
+| Appearance | `0x03C1` (HID keyboard) | Necesario para Ajustes de iOS |
+| HID | `0x1812` | Mapa de teclado; cero informes enviados |
+| Battery | `0x180F` / `0x2A19` | Nivel fijo 100 |
+| DIS modelo | `0x180A` / `0x2A24` | `vPet T-Display` |
+| DIS firmware | `0x2A26` | `0.1.0` |
+| DIS serial | `0x2A25` | Igual al nombre ADV |
+| DIS fabricante | `0x2A29` | `vPet` |
+
+La seguridad es bonding Just Works (`bonding=true`, `MITM=false`,
+Secure Connections=`true`, IO cap `NO_IO`). Al conectar, el firmware llama
+`startSecurity`. El serial imprime `PAIRED` o `PAIR_FAILED`.
+
+`BleAdvertiseSession` evita volver a meter nombre y UUID en el payload ADV
+tras cada disconnect. NimBLE 2.x no anuncia nombre ni scan response por
+defecto; ambos se configuran una vez al activar.
+
+Esto permite ver la placa en Ajustes o en un scanner sin app propia. No hay
+aprovisionamiento, comandos remotos ni transferencia de sprites por BLE.
+
+## Opciones
+
+Orden en firmware y simulador T-Display:
+
+1. Bluetooth (indice 0)
+2. Language
+3. Sound
+4. Save
+5. Load
+6. Date
+7. Time
+8. Back
+
+El panel muestra cuatro filas a la vez. Language y Sound se guardan en NVS,
+pero el texto del firmware sigue pintando `LANGUAGE: ES` y `SOUND: ON`.
+
+## Estados
 
 | Texto | Significado |
 |---|---|
-| `WIFI: OFF` | No hay intento ni credenciales activas |
-| `WIFI: CONNECTING` | Asociacion en progreso |
-| `WIFI: FAILED` | No se asocio antes del timeout |
-| `WIFI: NO INTERNET` | Tiene red local, pero fallo la prueba externa |
-| `WIFI: ONLINE` | Asociacion, DNS y HTTP confirmados |
+| `BLUETOOTH: OFF` | Stack BLE detenido y radio no anunciado por vPet |
+| `BLUETOOTH: ADVERTISING` | Visible y listo para una conexion o emparejamiento |
+| `BLUETOOTH: CONNECTED` | Un cliente BLE esta conectado |
+| `BLUETOOTH: ERROR` | No se pudo iniciar el stack; revisar serial |
 
-El estado `ONLINE` es el indicador actual. Todavia no existe un glifo WiFi
-permanente sobre el escenario, para no cubrir la mascota ni los ocho iconos.
+Al desconectarse el telefono, vPet vuelve a `ADVERTISING`.
 
-## Implementacion
+## WiFi futuro
 
-`Esp32NetworkAdapter` usa modo station:
-
-1. `WiFi.scanNetworks()` busca puntos de acceso.
-2. `WiFi.begin()` inicia la asociacion.
-3. `WiFi.hostByName()` confirma DNS.
-4. Una solicitud a `connectivitycheck.gstatic.com/generate_204` confirma salida.
-5. `configTzTime()` configura la zona `America/Bogota` mediante NTP.
-
-La prueba de conectividad usa HTTP solo para detectar salida. Cualquier dato,
-cuenta, firmware o paquete futuro debe descargarse por HTTPS con verificacion de
-certificado.
-
-## Credenciales
-
-El namespace NVS `vpet_wifi` guarda `ssid` y `password` solo despues de obtener
-`InternetAvailable`. El password se muestra enmascarado, pero queda accesible al
-firmware en texto recuperable. Flash Encryption puede protegerlo en dispositivos
-de produccion.
-
-Nunca guardes credenciales en:
-
-- `platformio.ini`;
-- `settings.toml`;
-- archivos bajo `assets/`;
-- pruebas o capturas;
-- GitHub Actions sin secrets protegidos.
-
-## Bluetooth
-
-La placa soporta Bluetooth, pero vPet no incluye actualmente stack, servicio
-GATT, advertising, emparejamiento ni opcion de activacion. Un telefono no puede
-conectarse todavia al vPet por Bluetooth.
-
-La implementacion recomendada es BLE con estas responsabilidades:
-
-- anunciar identidad y version del dispositivo;
-- aprovisionar WiFi desde un telefono;
-- informar bateria, firmware y conectividad;
-- solicitar una descarga por WiFi;
-- indicar `OFF`, `ADVERTISING`, `CONNECTED` o `ERROR` en Opciones.
-
-BLE no debe transportar paquetes graficos grandes. WiFi o USB son los canales
-de instalacion.
-
-Antes de activar BLE hay que medir heap con pantalla y WiFi activos. La placa no
-tiene PSRAM y mantiene dos buffers RGB565 completos.
+WiFi se retiro de la interfaz. Las credenciales previas en `vpet_wifi` no se
+leen ni se usan. La proxima fase podra aprovisionar WiFi desde una app y usar
+HTTPS para catalogo y descargas. BLE no transportara paquetes graficos.
 
 ## Diagnostico
 
-Si no aparece la red:
+Si `vPet-XXXX` no aparece en Ajustes:
 
-- confirma que sea una red 2.4 GHz;
-- repite el escaneo cerca del punto de acceso;
-- evita caracteres no incluidos por el editor actual;
-- verifica la contrasena y el modo de seguridad del router;
-- reinicia la placa para probar la reconexion NVS.
+- confirma `BLUETOOTH: ADVERTISING` en la placa;
+- espera en Otros dispositivos, no en Mis dispositivos, si nunca se emparejo;
+- apaga y enciende Bluetooth del telefono;
+- olvida un emparejamiento previo o cierra LightBlue;
+- detén e inicia de nuevo el escaneo en nRF Connect o LightBlue;
+- revisa serial: `VPET_BLE status=ADVERTISING name=...` y luego `PAIRED`;
+- mantén la pantalla y el telefono cerca.
 
-El siguiente incremento de diagnostico debe agregar telemetria serial
-`VPET_NET status=<estado> ssid=<red>` sin imprimir contrasenas.
+Heap de arranque (antes de activar BLE) se imprime en `VPET_READY`. Al
+anunciar, `VPET_BLE` incluye `heap_free` y `heap_min`.
+
+No publiques secretos ni credenciales en el nombre BLE, serial, logs o
+capturas.

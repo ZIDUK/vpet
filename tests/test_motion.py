@@ -102,7 +102,7 @@ def test_punch_action_plays_once_then_returns_to_idle():
     assert subject.frame == 0
 
 
-def test_sleep_action_plays_once_then_returns_to_idle():
+def test_sleep_action_loops_until_explicit_wake():
     motion_module = _motion_module()
     subject = motion_module.PetMotion(now=0, random_source=MinimumRandom())
 
@@ -110,8 +110,10 @@ def test_sleep_action_plays_once_then_returns_to_idle():
     assert subject.state == motion_module.MOTION_SLEEP
 
     subject.update(0.5 + motion_module.PET_SLEEP_FRAME_COUNT * 0.14)
+    assert subject.state == motion_module.MOTION_SLEEP
+
+    subject.wake(3)
     assert subject.state == motion_module.MOTION_IDLE
-    assert subject.frame == 0
 
 
 def test_cast_action_plays_once_then_returns_to_idle():
@@ -136,3 +138,17 @@ def test_evolution_plays_once_then_returns_to_idle():
     subject.update(0.5 + motion_module.PET_EVOLUTION_FRAME_COUNT * 0.12)
     assert subject.state == motion_module.MOTION_IDLE
     assert subject.frame == 0
+
+
+def test_sparkmon_evolution_can_play_all_sixteen_frames():
+    motion_module = _motion_module()
+    subject = motion_module.PetMotion(now=0, random_source=MinimumRandom())
+
+    subject.start_evolution(0.5, frame_count=16)
+    subject.update(0.5 + 15 * motion_module.PET_EVOLUTION_FRAME_INTERVAL)
+
+    assert subject.state == motion_module.MOTION_EVOLUTION
+    assert subject.frame == 15
+
+    subject.update(0.5 + 16 * motion_module.PET_EVOLUTION_FRAME_INTERVAL)
+    assert subject.state == motion_module.MOTION_IDLE

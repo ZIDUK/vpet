@@ -23,6 +23,8 @@ from config import (
     MENU_OPTIONS_INDEX,
     MENU_PEDIA_INDEX,
     MENU_STATUS_INDEX,
+    ROOKIE_SPECIES,
+    SPARKMON_EVOLUTION_FRAME_COUNT,
 )
 from display_profiles import get_display_profile
 from core.evolution import Evolution
@@ -72,7 +74,6 @@ def main():
     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = SimulatorServices(ROOT)
-    services.auto_connect()
     options_session = None
     frame_number = 0
     rendered_frames = 0
@@ -100,7 +101,16 @@ def main():
                         if use_inventory_item(pet, inventory_index) == "back":
                             panel_mode = None
                     elif panel_mode == "options":
-                        if not options_session.action(pet, services):
+                        staying = options_session.action(pet, services)
+                        if options_session.message == "EVOLVED":
+                            motion.start_evolution(
+                                pygame.time.get_ticks() / 1000,
+                                SPARKMON_EVOLUTION_FRAME_COUNT
+                                if pet.species == ROOKIE_SPECIES
+                                else None,
+                            )
+                            panel_mode = None
+                        elif not staying:
                             panel_mode = None
                     elif panel_mode is not None:
                         panel_mode = None
@@ -113,7 +123,6 @@ def main():
                         panel_mode = "evolution"
                     elif menu_index == MENU_OPTIONS_INDEX:
                         options_session = OptionsSession()
-                        options_session.network_status = services.wifi_status
                         panel_mode = "options"
                     else:
                         activate_menu_item(
@@ -124,7 +133,12 @@ def main():
                         )
                 elif event.key == pygame.K_e and pet.is_live:
                     if evolution.force(pet):
-                        motion.start_evolution(pygame.time.get_ticks() / 1000)
+                        motion.start_evolution(
+                            pygame.time.get_ticks() / 1000,
+                            SPARKMON_EVOLUTION_FRAME_COUNT
+                            if pet.species == ROOKIE_SPECIES
+                            else None,
+                        )
                 elif event.key == pygame.K_b:
                     panel_mode = None
                 elif event.key == pygame.K_r:
@@ -140,7 +154,12 @@ def main():
             pet.complete_hatch("baby")
             motion = PetMotion(now, **motion_kwargs)
         if motion.state == MOTION_IDLE and evolution.evolve(pet):
-            motion.start_evolution(now)
+            motion.start_evolution(
+                now,
+                SPARKMON_EVOLUTION_FRAME_COUNT
+                if pet.species == ROOKIE_SPECIES
+                else None,
+            )
         motion.update(now)
         frame = render_frame(
             build_dir,

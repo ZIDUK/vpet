@@ -8,17 +8,17 @@ from core.options import (
     OPTION_SAVE,
     OPTION_SOUND,
     OPTION_TIME,
-    OPTION_WIFI,
+    OPTION_BLUETOOTH,
+    OPTION_COUNT,
+    OPTION_EVOLVE,
     OptionsSession,
 )
 from core.pet import Pet, STATE_LIVE
-from scripts.sim_services import SimulatorServices
 
 
 class FakeServices:
     def __init__(self):
         self.saved = None
-        self.connected = None
         self.date = (2026, 9, 5)
         self.time = (10, 15)
 
@@ -31,13 +31,6 @@ class FakeServices:
             return False
         pet.load_from_dict(self.saved)
         return True
-
-    def scan_wifi(self):
-        return ["HOME", "PHONE"]
-
-    def connect_wifi(self, ssid, password):
-        self.connected = (ssid, password)
-        return "ONLINE"
 
     def get_datetime(self):
         return (*self.date, *self.time)
@@ -83,58 +76,34 @@ def test_save_and_load_restore_current_pet_state():
     assert session.message == "LOADED"
 
 
-def test_wifi_selection_opens_password_editor():
-    pet = _pet()
-    services = FakeServices()
+def test_next_wraps_around_all_options():
     session = OptionsSession()
-    session.index = OPTION_WIFI
-
-    session.action(pet, services)
-    assert session.mode == "wifi"
-    assert session.networks == ["HOME", "PHONE"]
-    session.next()
-    session.action(pet, services)
-
-    assert session.mode == "password"
-    assert session.selected_ssid == "PHONE"
-    assert services.connected is None
+    for expected in range(OPTION_COUNT):
+        assert session.index == expected
+        session.next()
+    assert session.index == OPTION_BLUETOOTH
 
 
-def test_password_editor_types_changes_mode_deletes_and_connects():
-    pet = _pet()
-    services = FakeServices()
+def test_bluetooth_is_the_first_option():
     session = OptionsSession()
-    session.networks = ["HOME"]
-    session.mode = "wifi"
+    assert session.index == OPTION_BLUETOOTH
+    assert OPTION_BLUETOOTH == 0
 
-    session.action(pet, services)
-    session.action(pet, services)  # A
-    session.password_key_index = len(session.password_keys) - 4  # MODE
-    session.action(pet, services)
-    session.password_key_index = 1
-    session.action(pet, services)  # b
-    session.password_key_index = len(session.password_keys) - 3  # DEL
-    session.action(pet, services)
-    session.password_key_index = len(session.password_keys) - 2  # CONNECT
-    session.action(pet, services)
-
-    assert services.connected == ("HOME", "A")
-    assert session.mode == "options"
-    assert session.message == "ONLINE"
-    assert session.password == ""
+    assert session.action(_pet(), FakeServices()) is True
+    assert session.bluetooth_status == "ADVERTISING"
 
 
-def test_password_editor_can_enter_lowercase_numbers_and_symbols():
+def test_bluetooth_option_toggles_advertising_state():
     session = OptionsSession()
-    session.mode = "password"
-    session.selected_ssid = "HOME"
+    session.index = OPTION_BLUETOOTH
 
-    for group, character in ((1, "z"), (2, "7"), (3, "!")):
-        session.password_group = group
-        session.password_key_index = session.password_keys.index(character)
-        session.action(_pet(), FakeServices())
+    assert session.action(_pet(), FakeServices()) is True
+    assert session.bluetooth_enabled is True
+    assert session.bluetooth_status == "ADVERTISING"
 
-    assert session.password == "z7!"
+    session.action(_pet(), FakeServices())
+    assert session.bluetooth_enabled is False
+    assert session.bluetooth_status == "OFF"
 
 
 def test_date_editor_changes_each_field_then_commits():
@@ -173,21 +142,24 @@ def test_time_editor_wraps_hours_and_commits():
     assert session.mode == "options"
 
 
+def test_evolve_option_forces_next_form():
+    pet = _pet()
+    session = OptionsSession()
+    session.index = OPTION_EVOLVE
+
+    assert session.action(pet, FakeServices()) is True
+    assert pet.species == "champion"
+    assert session.message == "EVOLVED"
+
+    session.action(pet, FakeServices())
+    assert pet.species == "ultimate"
+    session.action(pet, FakeServices())
+    assert pet.species == "ultimate"
+    assert session.message == "NO EVO"
+
+
 def test_back_closes_options_panel():
     session = OptionsSession()
     session.index = OPTION_BACK
 
     assert session.action(_pet(), FakeServices()) is False
-
-
-def test_simulator_saves_wifi_password_and_auto_reconnects(tmp_path, monkeypatch):
-    services = SimulatorServices(tmp_path)
-    monkeypatch.setattr(services, "_has_internet", lambda: True)
-
-    assert services.connect_wifi("HOME", "Secret7!") == "SIM ONLINE"
-    assert services.wifi_path.read_text() == '{"ssid": "HOME", "password": "Secret7!"}'
-
-    restored = SimulatorServices(tmp_path)
-    monkeypatch.setattr(restored, "_has_internet", lambda: True)
-    assert restored.auto_connect() == "SIM ONLINE"
-    assert restored.connected_ssid == "HOME"

@@ -14,8 +14,6 @@ enum class PanelId : uint8_t {
     EvolutionTree,
     EvolutionDetail,
     Options,
-    WifiList,
-    Password,
     DateTime,
 };
 
@@ -27,6 +25,8 @@ struct EvolutionNode {
 
 class Navigation {
 public:
+    static constexpr uint8_t kOptionCount = 9;
+
     void dispatch(InputEvent event);
     void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }
     void setDiscovered(bool champion, bool ultimate);

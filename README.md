@@ -17,13 +17,15 @@ secundaria mediante los comandos terminados en `-pico`.
   comer y dormir; entrenamiento y batalla se habilitan desde Firemon.
 - Menu superior de ocho iconos y navegacion completa con dos botones.
 - Estado, mochila, guia visual de evolucion y opciones persistentes.
-- Fondo nocturno durante el descanso.
-- WiFi con escaneo, teclado de contrasena, reconexion, verificacion de Internet
-  y sincronizacion NTP.
-- Estado WiFi visible en Opciones: `OFF`, `CONNECTING`, `FAILED`,
-  `NO INTERNET` u `ONLINE`.
-- Guardado de mascota, descubrimientos, idioma, sonido y WiFi en NVS.
-- Bluetooth pendiente; el firmware actual no anuncia ningun servicio BLE.
+- El foco alterna descanso persistente: fondo nocturno y mascota dormida hasta
+  volver a pulsar el mismo icono.
+- Bluetooth LE bajo demanda, visible como `vPet-XXXX` en Ajustes del iPhone
+  (teclado HID) y en LightBlue o nRF Connect.
+- Estado Bluetooth visible en Opciones: `OFF`, `ADVERTISING`, `CONNECTED` o
+  `ERROR`. La primera fila de Opciones es Bluetooth.
+- Guardado de especie, estadisticas, idioma, sonido y preferencia Bluetooth
+  en NVS. Los descubrimientos y el inventario firmware no se persisten.
+- WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
 - Criterios de Sparkmon a Firemon y de Flamemon a Dragfiremon pendientes.
 
 ## Hardware principal
@@ -34,7 +36,7 @@ secundaria mediante los comandos terminados en `-pico`.
 | MCU | ESP32-D0WDQ6-V3, sin PSRAM |
 | Flash | 16 MB |
 | Pantalla | ST7789, 1.14 pulgadas, 240x135 |
-| Boton izquierdo | GPIO0, `NEXT`; mantener para `BACK` |
+| Boton izquierdo | GPIO0, `NEXT`; mantener 2 segundos para `BACK` |
 | Boton derecho | GPIO35, `ACTION` |
 | Framework | Arduino ESP32 2.0.17 |
 | Build | PlatformIO, `platformio/espressif32@7.0.1` |
@@ -78,8 +80,14 @@ mascota se conservan.
 En la placa:
 
 - Pulsacion corta del boton izquierdo: siguiente.
-- Pulsacion larga del boton izquierdo: regresar.
+- Mantener el boton izquierdo durante 2 segundos: regresar.
 - Pulsacion corta del boton derecho: seleccionar o ejecutar.
+
+En Opciones, cada `NEXT` corto baja una fila al instante y envuelve.
+La letra es grande (4 filas visibles). Hay una fila `EVOLVE` que fuerza
+la siguiente forma y muestra la animacion. Para salir, baja hasta `BACK`
+y pulsa `ACTION`. El hold de 2 s no cierra Opciones. Fuera de Opciones,
+ese `BACK` cierra el panel (en Home se ignora).
 
 En el simulador:
 
@@ -90,23 +98,21 @@ En el simulador:
 - `r`: reiniciar el estado simulado.
 - `q` o `Esc`: salir.
 
-## Conectar a Internet
+## Conectar por Bluetooth
 
 1. Con `NEXT`, mueve el borde amarillo hasta el engrane.
-2. Pulsa `ACTION` para abrir Opciones.
-3. Selecciona `WIFI` y pulsa `ACTION`.
-4. Selecciona una red encontrada y pulsa `ACTION`.
-5. En el editor, `NEXT` recorre letras y comandos; `ACTION` agrega el caracter.
-6. Usa `MODE` para mayusculas, minusculas, numeros y simbolos.
-7. Selecciona `CONNECT` y pulsa `ACTION`.
-8. Regresa a Opciones y comprueba `WIFI: ONLINE`.
+2. Pulsa `ACTION` para abrir Opciones. La primera fila es `BLUETOOTH`.
+3. Pulsa `ACTION` otra vez. La fila cambia a `BLUETOOTH: ADVERTISING`.
+4. En el iPhone, Ajustes > Bluetooth. `vPet-XXXX` aparece en Otros
+   dispositivos; pulsalo para emparejar. Tambien vale nRF Connect o LightBlue.
+5. Al conectarse, la fila muestra `BLUETOOTH: CONNECTED`.
 
-`WIFI: NO INTERNET` significa que existe asociacion local pero fallo la prueba
-externa. `WIFI: FAILED` indica que no fue posible asociarse al punto de acceso.
-Las credenciales solo se guardan despues de confirmar acceso a Internet.
+Pulsa `ACTION` de nuevo para apagarlo. iOS pide emparejamiento Just Works (sin
+PIN) porque el anuncio es un teclado HID; vPet no envia teclas ni archivos.
+WiFi esta aplazado y no puede configurarse desde el dispositivo.
 
-Consulta [connectivity.md](docs/connectivity.md) para diagnostico y seguridad de
-red. Bluetooth todavia no esta disponible en la interfaz.
+Consulta [connectivity.md](docs/connectivity.md) para diagnostico y el contrato
+BLE.
 
 ## Estructura del repositorio
 

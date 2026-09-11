@@ -53,6 +53,12 @@ def test_rest_menu_recovers_pet_and_starts_sleep_animation():
     assert pet.stats["hp"] == 60
     assert motion.state == MOTION_SLEEP
 
+    assert not activate_menu_item(pet, motion, menu_index=1, now=1)
+    assert motion.state == MOTION_SLEEP
+
+    assert activate_menu_item(pet, motion, menu_index=4, now=1.5)
+    assert motion.state != MOTION_SLEEP
+
 
 def test_battle_menu_starts_cast_animation_without_changing_stats():
     from core.menu import activate_menu_item

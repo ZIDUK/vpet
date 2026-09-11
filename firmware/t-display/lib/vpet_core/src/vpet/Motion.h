@@ -28,6 +28,7 @@ public:
     void startWalking(uint32_t nowMs);
     void startAction(Action action, uint32_t nowMs);
     void startEvolution(uint32_t nowMs);
+    void wake(uint32_t nowMs);
     void tick(uint32_t nowMs);
     bool consumeActionCompleted();
 

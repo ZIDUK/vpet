@@ -5,18 +5,18 @@
 
 namespace vpet {
 
-App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, NetworkService& network)
+App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth)
     : renderer_(renderer),
       panels_(panels),
       settingsStore_(settingsStore),
-      network_(network),
+      bluetooth_(bluetooth),
       motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
     lastTickMs_ = nowMs;
     lastRenderMs_ = nowMs - 50;
     settingsStore_.load(pet_, settings_);
-    network_.autoConnect();
+    bluetooth_.setEnabled(settings_.bluetoothEnabled);
     motion_.setSpecies(pet_.species());
     eggStartedMs_ = nowMs;
 }
@@ -50,7 +50,6 @@ void App::applyDateTime() {
 }
 
 void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
-    (void)nowMs;
     const PanelId panel = navigation_.panel();
     if (panel == PanelId::Options) {
         if (event == InputEvent::Next || event == InputEvent::Back) {
@@ -60,61 +59,37 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         if (event != InputEvent::Action) return;
         switch (navigation_.panelIndex()) {
             case 0:
-                settings_.language = settings_.language == "ES" ? "EN" : "ES";
-                break;
-            case 1:
-                settings_.soundEnabled = !settings_.soundEnabled;
-                break;
-            case 2:
+                settings_.bluetoothEnabled = !settings_.bluetoothEnabled;
+                if (!bluetooth_.setEnabled(settings_.bluetoothEnabled)) {
+                    settings_.bluetoothEnabled = false;
+                }
                 settingsStore_.save(pet_, settings_);
                 break;
+            case 1:
+                settings_.language = settings_.language == "ES" ? "EN" : "ES";
+                break;
+            case 2:
+                settings_.soundEnabled = !settings_.soundEnabled;
+                break;
             case 3:
-                settingsStore_.load(pet_, settings_);
-                motion_.setSpecies(pet_.species());
+                settingsStore_.save(pet_, settings_);
                 break;
             case 4:
-                network_.startScan();
-                navigation_.setPanel(PanelId::WifiList);
+                settingsStore_.load(pet_, settings_);
+                motion_.setSpecies(pet_.species());
+                bluetooth_.setEnabled(settings_.bluetoothEnabled);
                 break;
             case 5: beginDateTime(true); break;
             case 6: beginDateTime(false); break;
-            case 7: navigation_.setPanel(PanelId::Home); break;
-        }
-        return;
-    }
-    if (panel == PanelId::WifiList) {
-        if (event == InputEvent::Back) {
-            navigation_.setPanel(PanelId::Options, 4);
-            return;
-        }
-        if (!network_.scanComplete()) return;
-        const size_t count = network_.networkCount();
-        if (event == InputEvent::Next) {
-            navigation_.setPanelIndex((navigation_.panelIndex() + 1) % (count + 1));
-        } else if (event == InputEvent::Action) {
-            if (navigation_.panelIndex() >= count) {
-                navigation_.setPanel(PanelId::Options, 4);
-            } else {
-                selectedSsid_ = network_.networkName(navigation_.panelIndex());
-                password_.clear();
-                navigation_.setPanel(PanelId::Password);
-            }
-        }
-        return;
-    }
-    if (panel == PanelId::Password) {
-        if (event == InputEvent::Back) {
-            password_.clear();
-            navigation_.setPanel(PanelId::WifiList);
-        } else if (event == InputEvent::Next) {
-            password_.next();
-        } else if (event == InputEvent::Action) {
-            if (password_.select()) {
-                network_.connect(selectedSsid_, password_.password());
-                navigation_.setPanel(PanelId::Options, 4);
-            } else if (password_.consumeCancelled()) {
-                navigation_.setPanel(PanelId::WifiList);
-            }
+            case 7:
+                if (pet_.forceNextForm()) {
+                    motion_.setSpecies(pet_.species());
+                    motion_.startEvolution(nowMs);
+                    settingsStore_.save(pet_, settings_);
+                    navigation_.setPanel(PanelId::Home);
+                }
+                break;
+            case 8: navigation_.setPanel(PanelId::Home); break;
         }
         return;
     }
@@ -139,6 +114,10 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
 }
 
 void App::activate(uint32_t nowMs) {
+    if (motion_.state() == MotionState::Sleep) {
+        if (navigation_.menuIndex() == 4) motion_.wake(nowMs);
+        return;
+    }
     Action action = Action::None;
     switch (navigation_.menuIndex()) {
         case 1: action = Action::Feed; break;
@@ -161,13 +140,16 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         motion_.setSpecies(SpeciesId::Baby);
         settingsStore_.save(pet_, settings_);
     }
-    network_.poll();
     motion_.tick(nowMs);
     if (motion_.consumeActionCompleted()) {
         pet_.completeAction();
     }
 
-    if (pet_.pendingAction() == Action::None && event != InputEvent::None) {
+    const bool acceptsInput =
+        navigation_.panel() != PanelId::Home ||
+        pet_.pendingAction() == Action::None ||
+        motion_.state() == MotionState::Sleep;
+    if (acceptsInput && event != InputEvent::None) {
         if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
             navigation_.menuIndex() >= 1 && navigation_.menuIndex() <= 4) {
             activate(nowMs);
@@ -180,13 +162,13 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     navigation_.setCurrentSpecies(pet_.species());
 
-    if (nowMs - lastRenderMs_ >= 33) {
+    if (event != InputEvent::None || nowMs - lastRenderMs_ >= 33) {
         lastRenderMs_ = nowMs;
         if (navigation_.panel() == PanelId::Home) {
             renderer_.draw({pet_, motion_, navigation_.menuIndex()});
         } else {
             panels_.draw(
-                navigation_, pet_, network_, password_, selectedSsid_.c_str(),
+                navigation_, pet_, bluetooth_.status(),
                 dateTime_, editingDate_, dateField_
             );
         }

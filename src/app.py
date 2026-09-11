@@ -93,9 +93,7 @@ from ui.status import (
     draw_datetime_editor,
     draw_inventory,
     draw_options,
-    draw_password_editor,
     draw_status,
-    draw_wifi,
 )
 
 
@@ -361,7 +359,6 @@ def run():
     motion = PetMotion(now)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = DeviceServices()
-    services.auto_connect()
     options_session = None
     last_save = now
 
@@ -385,7 +382,11 @@ def run():
                 if use_inventory_item(pet, inventory_index) == "back":
                     panel_mode = None
             elif panel_mode == "options":
-                if not options_session.action(pet, services):
+                staying = options_session.action(pet, services)
+                if options_session.message == "EVOLVED":
+                    motion.start_evolution(time.monotonic())
+                    panel_mode = None
+                elif not staying:
                     panel_mode = None
             elif panel_mode is not None:
                 panel_mode = None
@@ -542,22 +543,14 @@ def run():
                 options_session.index,
                 options_session.field,
                 tuple(options_session.values),
-                tuple(options_session.networks),
-                options_session.selected_ssid,
-                options_session.password,
-                options_session.password_group,
-                options_session.password_key_index,
+                options_session.bluetooth_status,
                 options_session.message,
                 pet.language,
                 pet.sound_enabled,
                 current_datetime,
             )
             if next_snapshot != panel_snapshot:
-                if options_session.mode == "wifi":
-                    draw_wifi(panel_bitmap, pet, options_session)
-                elif options_session.mode == "password":
-                    draw_password_editor(panel_bitmap, pet, options_session)
-                elif options_session.mode in ("date", "time"):
+                if options_session.mode in ("date", "time"):
                     draw_datetime_editor(panel_bitmap, pet, options_session)
                 else:
                     draw_options(panel_bitmap, pet, options_session, current_datetime)

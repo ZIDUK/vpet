@@ -1,6 +1,11 @@
 #include "vpet/Input.h"
 
 namespace vpet {
+namespace {
+// Mechanical buttons can bounce for a few milliseconds.  Lock subsequent
+// press edges briefly, but emit the first edge immediately for responsive UI.
+constexpr uint32_t kPressLockoutMs = 70;
+}
 
 Input::Input(uint32_t debounceMs, uint32_t longPressMs)
     : debounceMs_(debounceMs), longPressMs_(longPressMs) {}
@@ -16,19 +21,36 @@ InputEvent Input::updateButton(
         button.raw = down;
         button.changedAt = nowMs;
     }
-    if (button.raw == button.stable || nowMs - button.changedAt < debounceMs_) {
+
+    if (button.raw && !button.stable) {
+        button.stable = true;
+        button.pressedAt = nowMs;
+        button.longEmitted = false;
+        if (nowMs - button.lastShortEventAt < kPressLockoutMs) {
+            return InputEvent::None;
+        }
+        button.lastShortEventAt = nowMs;
+        return shortEvent;
+    }
+
+    // Releasing is debounced so a noisy release cannot become another press.
+    if (!button.raw && button.stable && nowMs - button.changedAt >= debounceMs_) {
+        button.stable = false;
         return InputEvent::None;
     }
 
-    button.stable = button.raw;
-    if (button.stable) {
-        button.pressedAt = nowMs;
-        return InputEvent::None;
-    }
-    if (supportsLongPress && nowMs - button.pressedAt >= longPressMs_) {
+    if (
+        supportsLongPress &&
+        button.stable &&
+        button.raw &&
+        !button.longEmitted &&
+        nowMs - button.pressedAt >= longPressMs_
+    ) {
+        button.longEmitted = true;
         return InputEvent::Back;
     }
-    return shortEvent;
+
+    return InputEvent::None;
 }
 
 InputEvent Input::poll(ButtonSample sample, uint32_t nowMs) {

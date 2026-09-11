@@ -296,6 +296,10 @@ def collect_pet_images():
             "Baby", "sleep", baby_dir / "sparkmon_sleep.png", 5, 25,
             (24, 24, 214, 218), (63, 64), None, 64,
         ),
+        (
+            "Baby", "evolution", baby_dir / "sparkmon_evolution.png", 4, 16,
+            (0, 0, 256, 256), (112, 112), None, 112,
+        ),
         ("Rookie", "idle", rookie_dir / "firemon_idle.png", FIREMON_ROWS, 19, (48, 52, 184, 216), (53, 64), None, 64),
         ("Rookie", "walk", rookie_dir / "firemon_walk.png", 5, 22, (40, 48, 180, 208), (56, 64), None, 64),
         ("Rookie", "eat", rookie_dir / "firemon_eat.png", 5, 25, (44, 48, 204, 216), (61, 64), None, 64),
@@ -412,7 +416,11 @@ def collect_pet_images():
             output_size,
             frame_indices,
             tile_size,
-            columns=4 if stage == "Egg" else FIREMON_COLUMNS,
+            columns=(
+                4
+                if stage == "Egg" or (stage == "Baby" and name == "evolution")
+                else FIREMON_COLUMNS
+            ),
         )
         frame_count = atlas.width // tile_size
         prefix = {
@@ -507,6 +515,7 @@ def validate_runtime_assets():
         "digimon1/Baby/sparkmon_walk_atlas.bmp",
         "digimon1/Baby/sparkmon_eat_atlas.bmp",
         "digimon1/Baby/sparkmon_sleep_atlas.bmp",
+        "digimon1/Baby/sparkmon_evolution_atlas.bmp",
         "digimon1/Rookie/firemon_idle_atlas.bmp",
         "digimon1/Rookie/firemon_walk_atlas.bmp",
         "digimon1/Rookie/firemon_eat_atlas.bmp",

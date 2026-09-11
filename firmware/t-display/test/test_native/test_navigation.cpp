@@ -11,6 +11,45 @@ void test_menu_opens_expected_panels() {
     TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
 }
 
+void test_next_moves_options_cursor() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(7);
+    navigation.dispatch(vpet::InputEvent::Action);
+
+    TEST_ASSERT_EQUAL(vpet::PanelId::Options, navigation.panel());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+
+    navigation.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(1, navigation.panelIndex());
+}
+
+void test_options_next_wraps_like_header_menu() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(7);
+    navigation.dispatch(vpet::InputEvent::Action);
+
+    for (uint8_t step = 0; step < 9; ++step) {
+        TEST_ASSERT_EQUAL(step, navigation.panelIndex());
+        navigation.dispatch(vpet::InputEvent::Next);
+    }
+
+    TEST_ASSERT_EQUAL(vpet::PanelId::Options, navigation.panel());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+}
+
+void test_back_in_options_is_ignored() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(7);
+    navigation.dispatch(vpet::InputEvent::Action);
+    navigation.dispatch(vpet::InputEvent::Next);
+    navigation.dispatch(vpet::InputEvent::Next);
+
+    TEST_ASSERT_EQUAL(2, navigation.panelIndex());
+    navigation.dispatch(vpet::InputEvent::Back);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Options, navigation.panel());
+    TEST_ASSERT_EQUAL(2, navigation.panelIndex());
+}
+
 void test_hidden_branch_does_not_reveal_identity() {
     vpet::Navigation navigation;
     navigation.setDiscovered(false, false);

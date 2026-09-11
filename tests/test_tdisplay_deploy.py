@@ -91,16 +91,56 @@ def test_physical_buttons_use_left_for_next_and_right_for_action():
     assert "kActionPin = 35" in source
 
 
-def test_tdisplay_options_render_all_actions_and_wifi_result():
+def test_tdisplay_options_render_all_actions_and_bluetooth_status():
     source = (
         Path(__file__).parent.parent
         / "firmware" / "t-display" / "src" / "Panels.cpp"
     ).read_text()
+    app = (
+        Path(__file__).parent.parent
+        / "firmware" / "t-display" / "src" / "App.cpp"
+    ).read_text()
 
-    assert '\"DATE\", \"TIME\", \"BACK\"' in source
-    assert "index < 8" in source
-    assert 'wifi = \"WIFI: ONLINE\"' in source
-    assert 'wifi = \"WIFI: NO INTERNET\"' in source
+    assert 'bluetooth, "LANGUAGE: ES"' in source
+    assert '"DATE", "TIME", "EVOLVE", "BACK"' in source
+    assert "selected % 9" in source
+    assert 'bluetooth = "BLUETOOTH: ADVERTISING"' in source
+    assert 'bluetooth = "BLUETOOTH: CONNECTED"' in source
+    assert "WIFI:" not in source
+    assert "case 0:\n                settings_.bluetoothEnabled" in app
+    assert "forceNextForm" in app
+
+
+def test_ble_advertising_is_discoverable_to_phones():
+    source = (
+        Path(__file__).parent.parent
+        / "firmware"
+        / "t-display"
+        / "src"
+        / "BleService.cpp"
+    ).read_text()
+
+    assert "enableScanResponse(true)" in source
+    assert "advertiseOnDisconnect(true)" in source
+    assert "setDiscoverableMode" in source
+    assert "setConnectableMode" in source
+    assert "setName(deviceName_)" in source
+
+
+def test_ble_advertises_hid_keyboard_for_ios_settings():
+    source = (
+        Path(__file__).parent.parent
+        / "firmware"
+        / "t-display"
+        / "src"
+        / "BleService.cpp"
+    ).read_text()
+
+    assert "NimBLEHIDDevice" in source
+    assert "HID_KEYBOARD" in source
+    assert "setSecurityAuth(true, false, true)" in source
+    assert "getHidService()" in source
+    assert "setAppearance(HID_KEYBOARD)" in source
 
 
 def test_hidden_evolutions_use_real_tinted_portraits():

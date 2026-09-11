@@ -54,7 +54,10 @@ void Navigation::openSelectedMenu() {
         case 0: panel_ = PanelId::Status; break;
         case 5: panel_ = PanelId::Inventory; break;
         case 6: openEvolutionTree(); break;
-        case 7: panel_ = PanelId::Options; break;
+        case 7:
+            panel_ = PanelId::Options;
+            panelIndex_ = 0;
+            break;
         default: break;
     }
 }
@@ -67,6 +70,7 @@ void Navigation::dispatch(InputEvent event) {
         return;
     }
     if (event == InputEvent::Back) {
+        if (panel_ == PanelId::Options) return;
         panel_ = panel_ == PanelId::EvolutionDetail ? PanelId::EvolutionTree : PanelId::Home;
         return;
     }
@@ -74,6 +78,8 @@ void Navigation::dispatch(InputEvent event) {
         if (panel_ == PanelId::EvolutionTree) {
             panelIndex_ = (panelIndex_ + 1) % 5;
             selectedSpecies_ = kEvolutionStages[panelIndex_];
+        } else if (panel_ == PanelId::Options) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kOptionCount);
         } else {
             panelIndex_ = (panelIndex_ + 1) % 8;
         }

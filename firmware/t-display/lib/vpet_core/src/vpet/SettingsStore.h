@@ -19,6 +19,7 @@ public:
 struct Settings {
     std::string language = "ES";
     bool soundEnabled = true;
+    bool bluetoothEnabled = false;
     int64_t manualEpochOffset = 0;
 };
 

@@ -66,7 +66,10 @@ from config import (
     PET_X,
     PET_Y,
     FIREMON_EVOLUTION_THUMB_PATH,
+    ROOKIE_SPECIES,
     SPARKMON_EAT_IMAGE_PATH,
+    SPARKMON_EVOLUTION_FRAME_COUNT,
+    SPARKMON_EVOLUTION_IMAGE_PATH,
     SPARKMON_EVOLUTION_THUMB_PATH,
     SPARKMON_FRAME_COUNT,
     SPARKMON_IDLE_IMAGE_PATH,
@@ -82,9 +85,7 @@ from ui.status import (
     draw_datetime_editor,
     draw_inventory,
     draw_options,
-    draw_password_editor,
     draw_status,
-    draw_wifi,
 )
 
 
@@ -156,33 +157,25 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 draw.text((x + 76, 76), ">", fill=ink, anchor="mm")
         draw.text((120, 130), "NEXT: MOVE   ACTION: DETAIL", fill=ink, anchor="mm")
     elif panel_mode == "options" and options_session is not None:
-        if options_session.mode == "password":
-            draw.text((8, 54), f"WIFI: {options_session.selected_ssid[:24]}", fill=ink)
-            draw.rectangle((8, 69, 231, 88), outline=ink, width=2)
-            draw.text((13, 75), "*" * len(options_session.password), fill=ink)
-            draw.text((8, 96), f"MODE {options_session.password_group_label}", fill=ink)
-            draw.rectangle((74, 94, 231, 122), outline=yellow, width=2)
-            draw.text((152, 108), options_session.password_key, fill=ink, anchor="mm")
-        elif options_session.mode == "wifi":
-            entries = list(options_session.networks[:5]) + ["BACK"]
-            for index, label in enumerate(entries):
-                y = 51 + index * 15
-                if index == options_session.index:
-                    draw.rectangle((5, y - 2, 234, y + 11), fill=yellow)
-                draw.text((10, y), label[:28], fill=ink)
-        elif options_session.mode in ("date", "time"):
+        if options_session.mode in ("date", "time"):
             draw.text((120, 67), options_session.mode.upper(), fill=ink, anchor="mm")
             value = " / ".join(str(item) for item in options_session.values)
             draw.rectangle((25, 79, 214, 111), outline=yellow, width=2)
             draw.text((120, 95), value, fill=ink, anchor="mm")
         else:
-            labels = ("LANGUAGE", "SOUND", "SAVE", "LOAD", "WIFI", "DATE", "TIME", "BACK")
-            for index, label in enumerate(labels):
-                x = 6 + (index % 2) * 117
-                y = 51 + (index // 2) * 19
-                if index == options_session.index:
-                    draw.rectangle((x, y - 2, x + 109, y + 14), fill=yellow)
-                draw.text((x + 5, y), label, fill=ink)
+            labels = (
+                f"BLUETOOTH: {options_session.bluetooth_status}",
+                "LANGUAGE: ES", "SOUND: ON", "SAVE", "LOAD", "DATE", "TIME",
+                "EVOLVE", "BACK",
+            )
+            current = options_session.index % 9
+            window_start = 0 if current < 4 else (4 if current < 8 else 5)
+            for slot in range(4):
+                index = window_start + slot
+                y = 52 + slot * 20
+                if index == current:
+                    draw.rectangle((5, y - 2, 234, y + 16), fill=yellow)
+                draw.text((10, y), labels[index], fill=ink)
 
 
 def render_frame(
@@ -245,12 +238,15 @@ def render_frame(
         }.get(motion_state, SPARKMON_IDLE_IMAGE_PATH)
         frame_count = SPARKMON_FRAME_COUNT
     elif motion_state == "evolution":
-        image_path = (
-            FLAMEMON_EVOLUTION_IMAGE_PATH
-            if pet.species == ULTIMATE_SPECIES
-            else PET_EVOLUTION_IMAGE_PATH
-        )
-        frame_count = PET_EVOLUTION_FRAME_COUNT
+        if pet.species == ROOKIE_SPECIES:
+            image_path = SPARKMON_EVOLUTION_IMAGE_PATH
+            frame_count = SPARKMON_EVOLUTION_FRAME_COUNT
+        elif pet.species == ULTIMATE_SPECIES:
+            image_path = FLAMEMON_EVOLUTION_IMAGE_PATH
+            frame_count = PET_EVOLUTION_FRAME_COUNT
+        else:
+            image_path = PET_EVOLUTION_IMAGE_PATH
+            frame_count = PET_EVOLUTION_FRAME_COUNT
         sprite_size = (
             PET_EVOLUTION_SIZE
             if profile.name == "pico"
@@ -337,11 +333,7 @@ def render_frame(
         elif panel_mode == "evolution":
             draw_evolution_guide(status.load(), pet)
         elif panel_mode == "options" and options_session is not None:
-            if options_session.mode == "wifi":
-                draw_wifi(status.load(), pet, options_session)
-            elif options_session.mode == "password":
-                draw_password_editor(status.load(), pet, options_session)
-            elif options_session.mode in ("date", "time"):
+            if options_session.mode in ("date", "time"):
                 draw_datetime_editor(status.load(), pet, options_session)
             else:
                 draw_options(status.load(), pet, options_session, current_datetime)

@@ -30,6 +30,7 @@
     "core/pet.py",
     "core/save.py",
     "digimon1/Baby/sparkmon_eat_atlas.bmp",
+    "digimon1/Baby/sparkmon_evolution_atlas.bmp",
     "digimon1/Baby/sparkmon_idle_atlas.bmp",
     "digimon1/Baby/sparkmon_sleep_atlas.bmp",
     "digimon1/Baby/sparkmon_walk_atlas.bmp",

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from core.options import OPTION_DATE, OPTION_WIFI, OptionsSession
+from core.options import OPTION_BLUETOOTH, OPTION_DATE, OptionsSession
 from core.pet import Pet, STATE_LIVE
 from display_profiles import get_display_profile
 from scripts import build as build_script
@@ -18,9 +18,6 @@ def _rookie():
 
 
 class FakeOptionsServices:
-    def scan_wifi(self):
-        return ["HOME", "PHONE"]
-
     def get_datetime(self):
         return 2026, 9, 5, 10, 15
 
@@ -248,6 +245,21 @@ def test_flamemon_to_dragfiremon_uses_flamemon_evolution_sprite():
     ).tobytes()
 
 
+def test_sparkmon_to_firemon_uses_sparkmon_evolution_sprite():
+    firemon = Pet(species="rookie", state=STATE_LIVE)
+    flamemon = Pet(species="champion", state=STATE_LIVE)
+
+    sparkmon_evolution = render_frame(
+        ROOT / "build", firemon, sprite_frame=10, motion_state="evolution"
+    )
+    firemon_evolution = render_frame(
+        ROOT / "build", flamemon, sprite_frame=10, motion_state="evolution"
+    )
+
+    area = (8, 16, 120, 128)
+    assert sparkmon_evolution.crop(area).tobytes() != firemon_evolution.crop(area).tobytes()
+
+
 def test_renderer_uses_egg_and_sparkmon_assets():
     from core.pet import STATE_EGG
 
@@ -326,7 +338,7 @@ def test_book_panel_highlights_current_evolution_form():
 
 def test_gear_panel_draws_options_and_selected_row():
     session = OptionsSession()
-    session.index = OPTION_WIFI
+    session.index = OPTION_BLUETOOTH
     options = render_frame(
         ROOT / "build",
         _rookie(),
@@ -337,15 +349,15 @@ def test_gear_panel_draws_options_and_selected_row():
     )
 
     assert options.getpixel((112, 0)) == (255, 215, 0)
-    assert options.getpixel((6, 76)) == (255, 210, 74)
+    assert options.getpixel((6, 36)) == (255, 210, 74)
 
 
-def test_options_renderer_draws_wifi_and_date_subpanels():
+def test_options_renderer_draws_bluetooth_and_date_panels():
     pet = _rookie()
     session = OptionsSession()
-    session.index = OPTION_WIFI
+    session.index = OPTION_BLUETOOTH
     session.action(pet, FakeOptionsServices())
-    wifi = render_frame(
+    bluetooth = render_frame(
         ROOT / "build",
         pet,
         menu_index=7,
@@ -366,26 +378,7 @@ def test_options_renderer_draws_wifi_and_date_subpanels():
         current_datetime=(2026, 9, 5, 10, 15),
     )
 
-    assert wifi.crop((0, 16, 128, 128)).tobytes() != date.crop((0, 16, 128, 128)).tobytes()
-
-
-def test_options_renderer_draws_masked_password_editor():
-    pet = _rookie()
-    session = OptionsSession()
-    session.mode = "password"
-    session.selected_ssid = "HOME"
-    session.password = "Secret7!"
-    password = render_frame(
-        ROOT / "build",
-        pet,
-        menu_index=7,
-        panel_mode="options",
-        options_session=session,
-        current_datetime=(2026, 9, 5, 10, 15),
-    )
-
-    assert password.getpixel((112, 0)) == (255, 215, 0)
-    assert password.getpixel((20, 97)) == (255, 210, 74)
+    assert bluetooth.crop((0, 16, 128, 128)).tobytes() != date.crop((0, 16, 128, 128)).tobytes()
 
 
 def test_renderer_has_no_legacy_stat_bars_or_action_buttons():

@@ -13,11 +13,11 @@ no la T-Display S3. La unidad detectada por el proyecto reporta:
 | PSRAM | No disponible |
 | Pantalla | ST7789 IPS, 240x135, RGB565 |
 | Conexion USB | Puente USB a UART |
-| WiFi | 2.4 GHz 802.11 b/g/n |
-| Bluetooth | Bluetooth Classic y BLE soportados por el chip |
+| WiFi | 2.4 GHz 802.11 b/g/n; deshabilitado en vPet actual |
+| Bluetooth | BLE NimBLE 2.5.1 bajo demanda; Classic no se usa |
 
-Que el chip soporte Bluetooth no significa que vPet ya lo active. El firmware
-actual implementa WiFi; BLE esta pendiente.
+vPet activa BLE solo desde Opciones (primera fila) y lo anuncia como
+`vPet-XXXX` con perfil HID teclado para Ajustes de iOS. WiFi queda aplazado.
 
 ## Pantalla
 
@@ -52,14 +52,16 @@ Mirando la placa con la pantalla de frente y el conector USB abajo:
 
 | Boton | GPIO | Funcion |
 |---|---|---|
-| Izquierdo | 0 | NEXT; pulsacion larga BACK |
+| Izquierdo | 0 | NEXT; mantener 2 segundos para BACK |
 | Derecho | 35 | ACTION |
 
 GPIO0 usa pull-up interno. GPIO35 es solo entrada y no dispone de pull-up
 interno; la placa proporciona su circuito de boton.
 
-Una pulsacion se confirma al soltar el boton despues del debounce. Mantener
-GPIO0 aproximadamente 700 ms produce `BACK` y no tambien `NEXT`.
+Una pulsacion corta emite su accion al detectarse y un bloqueo de 70 ms evita
+rebotes. Mantener GPIO0 inicia con un `NEXT` y, al llegar a 2 segundos, emite
+`BACK`. En Home y en Opciones ese `BACK` se ignora. Cada `NEXT` corto
+avanza una fila al instante. En los demas paneles `BACK` cierra.
 
 ## Particiones
 
@@ -82,7 +84,7 @@ WiFi, pantalla y brillo elevan el consumo. Durante desarrollo:
 - usa un cable USB estable;
 - evita desconectar durante una escritura de flash;
 - no cubras el regulador;
-- reduce brillo y apaga WiFi cuando se agregue gestion de bateria;
+- reduce brillo y apaga Bluetooth cuando no se use;
 - mide temperatura y consumo antes de definir un modo always-on.
 
 El proyecto no controla todavia bateria ni carga LiPo.
@@ -92,8 +94,11 @@ El proyecto no controla todavia bateria ni carga LiPo.
 - No hay PSRAM: evita decodificar PNG o ZIP completos en RAM.
 - LittleFS dispone de unos 12.45 MB, no de los 16 MB completos.
 - Los sprites deben convertirse previamente a VPA indexado.
-- WiFi y Bluetooth comparten el radio de 2.4 GHz y recursos internos.
-- Bluetooth debe activarse bajo demanda y medirse junto con los dos buffers TFT.
+- WiFi y Bluetooth comparten el radio de 2.4 GHz y recursos internos; WiFi no
+  se inicia en el firmware actual.
+- Bluetooth se activa bajo demanda (HID + DIS + bonding) y debe medirse junto
+  con los dos buffers TFT. El `VPET_READY` de arranque no incluye el heap de
+  NimBLE; ese valor sale en `VPET_BLE` al anunciar.
 - La pantalla no debe limpiarse entre frames; debe presentarse el framebuffer
   completo para evitar parpadeo.
 

@@ -59,11 +59,19 @@ Cada paquete publicado debe incluir:
 
 ## Red
 
-- Descargas y APIs usan HTTPS con verificacion de certificado.
-- La prueba HTTP actual solo detecta si existe salida a Internet.
-- Nunca se imprime la contrasena WiFi por serial.
+El firmware actual no inicia WiFi ni HTTP. Cuando vuelva la red:
+
+- Descargas y APIs usaran HTTPS con verificacion de certificado.
+- Nunca se imprimira una contrasena WiFi por serial.
+
+BLE actual:
+
+- Nombre, serial y logs no contienen secretos.
+- HID se anuncia solo para que iOS liste el accesorio; no se envian teclas.
+- El emparejamiento es Just Works, sin PIN ni MITM.
 - NVS no se agrega a backups publicos ni al repositorio.
-- Tokens del catalogo deben ser cortos, revocables y de privilegio minimo.
+- Tokens de un catalogo futuro deben ser cortos, revocables y de privilegio
+  minimo.
 
 ## Repositorio
 

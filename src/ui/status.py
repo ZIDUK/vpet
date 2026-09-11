@@ -196,24 +196,25 @@ def draw_options(target, pet, session, current_datetime):
     """Draw the main options list."""
     spanish = pet.language == "ES"
     labels = (
-        ("IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "WIFI", "FECHA", "HORA", "VOLVER")
+        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER")
         if spanish
-        else ("LANGUAGE", "SOUND", "SAVE", "LOAD", "WIFI", "DATE", "TIME", "BACK")
+        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK")
     )
     _panel(target, "OPTIONS")
     year, month, day, hour, minute = current_datetime
     values = (
+        session.bluetooth_status,
         pet.language,
         ("SI" if pet.sound_enabled else "NO") if spanish else ("ON" if pet.sound_enabled else "OFF"),
         "",
         "",
-        session.network_status,
         "%02d-%02d-%02d" % (year % 100, month, day),
         "%02d:%02d" % (hour, minute),
         "",
+        "",
     )
     for index, label in enumerate(labels):
-        y = 20 + index * 10
+        y = 16 + index * 9
         if index == session.index:
             _fill(target, 6, y, 116, 9, 8)
             _fill(target, 8, y + 1, 112, 7, 2)
@@ -224,48 +225,6 @@ def draw_options(target, pet, session, current_datetime):
     if session.message:
         message = session.message[:24]
         _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 102, message, 7)
-
-
-def draw_wifi(target, pet, session):
-    """Draw scanned networks plus a final Back entry."""
-    spanish = pet.language == "ES"
-    _panel(target, "WIFI")
-    rows = list(session.networks) + ["VOLVER" if spanish else "BACK"]
-    for index, name in enumerate(rows[:8]):
-        y = 20 + index * 10
-        if index == session.index:
-            _fill(target, 6, y, 116, 9, 8)
-            _fill(target, 8, y + 1, 112, 7, 2)
-        _text(target, 11, y + 2, name[:26], 7)
-    if session.message:
-        message = session.message[:24]
-        _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 102, message, 7)
-
-
-def draw_password_editor(target, pet, session):
-    """Draw the two-button WiFi password keyboard."""
-    spanish = pet.language == "ES"
-    _panel(target, "CLAVE WIFI" if spanish else "WIFI PASSWORD")
-    _text(target, 7, 23, "RED" if spanish else "NETWORK", 7)
-    _text(target, 7, 32, session.selected_ssid[:28], 7)
-
-    masked = "*" * min(24, len(session.password))
-    _fill(target, 6, 43, 116, 14, 0)
-    _fill(target, 8, 45, 112, 10, 2)
-    _text(target, 11, 48, masked or "-", 7)
-    count = "%02d/63" % len(session.password)
-    _text(target, 118 - _text_width(count), 60, count, 7)
-
-    key = session.password_key
-    if len(key) == 1 and session.password_group_label == "SYM":
-        key = "ASCII %02d" % ord(key)
-    _text(target, 8, 71, "MODO" if spanish else "MODE", 7)
-    _text(target, 98, 71, session.password_group_label, 7)
-    _fill(target, 20, 81, 88, 18, 8)
-    _fill(target, 22, 83, 84, 14, 2)
-    _text(target, (STATUS_WIDTH - _text_width(key, 2)) // 2, 85, key, 7, 2)
-    help_text = "N CAMBIA  A ELIGE" if spanish else "N NEXT  A SELECT"
-    _text(target, (STATUS_WIDTH - _text_width(help_text)) // 2, 103, help_text, 7)
 
 
 def draw_datetime_editor(target, pet, session):

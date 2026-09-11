@@ -61,6 +61,7 @@ class PetMotion:
         self.last_update = now
         self.last_frame = now
         self.state_until = now + self._duration(MOTION_IDLE)
+        self.action_frame_count = None
 
     def _duration(self, state):
         bounds = PET_IDLE_DURATION_MS if state == MOTION_IDLE else PET_WALK_DURATION_MS
@@ -71,6 +72,7 @@ class PetMotion:
         self.frame = 0
         self.last_frame = now
         self.last_update = now
+        self.action_frame_count = None
         self.state_until = now + self._duration(state)
         if state == MOTION_WALK:
             self.direction = self.random.choice((-1, 1))
@@ -84,24 +86,40 @@ class PetMotion:
     def start_sleep(self, now):
         self._start_action(MOTION_SLEEP, now)
 
+    def wake(self, now):
+        if self.state == MOTION_SLEEP:
+            self._enter(MOTION_IDLE, now)
+
     def start_cast(self, now):
         self._start_action(MOTION_CAST, now)
 
-    def start_evolution(self, now):
+    def start_evolution(self, now, frame_count=None):
         self._start_action(MOTION_EVOLUTION, now)
+        self.action_frame_count = frame_count or PET_EVOLUTION_FRAME_COUNT
 
     def _start_action(self, state, now):
         self.state = state
         self.frame = 0
         self.last_frame = now
         self.last_update = now
+        self.action_frame_count = None
 
     def update(self, now):
         elapsed = max(0, now - self.last_update)
         self.last_update = now
 
+        if self.state == MOTION_SLEEP:
+            frame_count, interval = ACTION_ANIMATIONS[MOTION_SLEEP]
+            elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
+            if elapsed_frames:
+                self.frame = (self.frame + elapsed_frames) % frame_count
+                self.last_frame += elapsed_frames * interval
+            return
+
         if self.state in ACTION_ANIMATIONS:
             frame_count, interval = ACTION_ANIMATIONS[self.state]
+            if self.action_frame_count is not None:
+                frame_count = self.action_frame_count
             elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
             if self.frame + elapsed_frames >= frame_count:
                 self._enter(MOTION_IDLE, now)

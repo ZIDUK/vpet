@@ -37,3 +37,17 @@ void test_persisted_species_values_remain_compatible() {
     TEST_ASSERT_EQUAL(1, static_cast<int>(vpet::SpeciesId::Champion));
     TEST_ASSERT_EQUAL(2, static_cast<int>(vpet::SpeciesId::Ultimate));
 }
+
+void test_force_next_form_walks_the_line() {
+    vpet::PetState pet;
+    TEST_ASSERT_TRUE(pet.forceNextForm());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Baby, pet.species());
+    TEST_ASSERT_TRUE(pet.forceNextForm());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Rookie, pet.species());
+    TEST_ASSERT_TRUE(pet.forceNextForm());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Champion, pet.species());
+    TEST_ASSERT_TRUE(pet.forceNextForm());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Ultimate, pet.species());
+    TEST_ASSERT_FALSE(pet.forceNextForm());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Ultimate, pet.species());
+}
