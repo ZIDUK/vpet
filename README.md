@@ -16,17 +16,23 @@ secundaria mediante los comandos terminados en `-pico`.
   descanso, ataque y transiciones de evolucion. Sparkmon incluye idle, caminar,
   comer y dormir; entrenamiento y batalla se habilitan desde Firemon.
 - Menu superior de ocho iconos y navegacion completa con dos botones.
-- Estado, mochila, guia visual de evolucion y opciones persistentes.
-- El foco alterna descanso persistente: fondo nocturno y mascota dormida hasta
-  volver a pulsar el mismo icono.
+- Estado en dos paginas: barras HP/HAM/ENE; NEXT muestra edad, esfuerzo,
+  batallas, animo y reloj.
+- Mochila gastable: Carne, Energia, EXP y Anillo. ACTION consume y se queda
+  en el menu; ATRAS cierra. El stock se guarda en NVS.
+- Guia visual de evolucion y opciones persistentes (BLE, idioma, sonido,
+  save/load, fecha/hora, EVOLVE).
+- El foco alterna descanso persistente: fondo nocturno y sprite acostado
+  (loop 12-14) hasta volver a pulsar el mismo icono.
 - Bluetooth LE bajo demanda, visible como `vPet-XXXX` en Ajustes del iPhone
   (teclado HID) y en LightBlue o nRF Connect.
 - Estado Bluetooth visible en Opciones: `OFF`, `ADVERTISING`, `CONNECTED` o
   `ERROR`. La primera fila de Opciones es Bluetooth.
-- Guardado de especie, estadisticas, idioma, sonido y preferencia Bluetooth
-  en NVS. Los descubrimientos y el inventario firmware no se persisten.
+- Guardado de especie, estadisticas, inventario, idioma, sonido y Bluetooth
+  en NVS. Los descubrimientos, comidas, entrenos y batallas no se persisten.
 - WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
 - Criterios de Sparkmon a Firemon y de Flamemon a Dragfiremon pendientes.
+- El simulador Python todavia no copia el gasto de items ni las paginas de Status.
 
 ## Hardware principal
 

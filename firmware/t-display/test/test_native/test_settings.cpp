@@ -50,3 +50,30 @@ void test_settings_persist_bluetooth_preference() {
                       vpet::SettingsStore(store).load(restored, after));
     TEST_ASSERT_TRUE(after.bluetoothEnabled);
 }
+
+void test_settings_persist_inventory_counts() {
+    FakeStore store;
+    vpet::PetState saved;
+    saved.evolveTo(vpet::SpeciesId::Rookie);
+    saved.useItem(0);
+    vpet::Settings settings;
+    TEST_ASSERT_TRUE(vpet::SettingsStore(store).save(saved, settings));
+    vpet::PetState restored;
+    vpet::Settings after;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, vpet::SettingsStore(store).load(restored, after));
+    TEST_ASSERT_EQUAL(2, restored.itemCount(0));
+    TEST_ASSERT_EQUAL(2, restored.itemCount(1));
+}
+
+void test_missing_inventory_keys_use_defaults() {
+    FakeStore store;
+    store.ints["schema"] = 1;
+    store.ints["species"] = 0;
+    vpet::PetState pet;
+    vpet::Settings settings;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, vpet::SettingsStore(store).load(pet, settings));
+    TEST_ASSERT_EQUAL(3, pet.itemCount(0));
+    TEST_ASSERT_EQUAL(2, pet.itemCount(1));
+    TEST_ASSERT_EQUAL(1, pet.itemCount(2));
+    TEST_ASSERT_EQUAL(1, pet.itemCount(3));
+}

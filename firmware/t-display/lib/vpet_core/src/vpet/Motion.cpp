@@ -86,6 +86,12 @@ uint16_t Motion::frameInterval() const {
     return 100;
 }
 
+uint16_t Motion::sleepLoopStart() const {
+    constexpr uint16_t kLieDownFrame = 12;
+    const uint16_t count = frameCount();
+    return kLieDownFrame < count ? kLieDownFrame : 0;
+}
+
 void Motion::tick(uint32_t nowMs) {
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
@@ -110,7 +116,16 @@ void Motion::tick(uint32_t nowMs) {
         const uint32_t next = frame_ + steps;
         lastFrameMs_ += steps * interval;
         if (state_ == MotionState::Sleep) {
-            frame_ = next % frameCount();
+            const uint16_t count = frameCount();
+            const uint16_t loopStart = sleepLoopStart();
+            if (next < count) {
+                frame_ = static_cast<uint16_t>(next);
+            } else {
+                const uint16_t loopLen = static_cast<uint16_t>(count - loopStart);
+                frame_ = loopLen == 0
+                    ? static_cast<uint16_t>(next % count)
+                    : static_cast<uint16_t>(loopStart + (next - count) % loopLen);
+            }
             return;
         }
         const bool action = state_ != MotionState::Idle && state_ != MotionState::Walk;

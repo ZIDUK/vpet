@@ -58,13 +58,15 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | `main.cpp` | Inicializa pantalla, buffers, recursos, entradas y servicios |
 | `App` | Coordina el loop, acciones, paneles, Bluetooth y persistencia |
 | `Renderer` | Dibuja fondo, menu, selector y animaciones sin parpadeo |
-| `Panels` | Dibuja estado, inventario, evolucion y opciones |
+| `Panels` | Dibuja estado, inventario, evolucion, opciones y fecha/hora |
 | `AssetStore` | Monta LittleFS, valida VPA1 y dibuja frames indexados |
 | `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
-| `PetState` | Estadisticas, acciones, descubrimientos y evolucion |
-| `Motion` | Idle, caminar/volar y animaciones de una sola ejecucion |
-| `Navigation` | Menu superior, paneles y seleccion interna |
-| `SettingsStore` | Serializacion versionada de estado y preferencias |
+| `PetState` | Estadisticas, inventario gastable, acciones, descubrimientos y evolucion |
+| `Motion` | Idle, caminar/volar, acciones y sueno en bucle acostado (frames 12-14) |
+| `Navigation` | Menu superior, paneles, paginas de Status e inventario |
+| `DateTimeMenu` | Filas +/- de fecha u hora; SAVE escribe el reloj ESP32 |
+| `Strings.h` | Copy EN/ES de paneles |
+| `SettingsStore` | Serializacion versionada de estado, inventario y preferencias |
 | `BleAdvertiseSession` | Primera vez configura el ADV; reconnect solo `start()` |
 | `BleService` | NimBLE bajo demanda: HID teclado, DIS y bateria |
 | `NvsKeyValueStore` | Adaptador de Preferences/NVS |
@@ -120,21 +122,30 @@ Opciones muestra cuatro filas grandes. El orden real es Bluetooth, idioma,
 sonido, guardar, cargar, fecha, hora, evolucionar y volver. `EVOLVE` fuerza
 la siguiente forma, guarda NVS y reproduce la animacion en Home.
 
-El estado `Sleep` reproduce su atlas en bucle y permanece activo. Solo volver a
-activar el icono del foco ejecuta `wake`; navegar o abrir otro panel no despierta
-a la mascota.
+El estado `Sleep` se acuesta una vez y luego buclea los frames 12-14 (acostado).
+Solo volver a activar el icono del foco ejecuta `wake`; navegar o abrir otro
+panel no despierta a la mascota.
+
+Status pagina 1 muestra barras HP / HAM / ENE. `NEXT` cicla a la pagina 2
+(edad, esfuerzo, batallas, animo y reloj). `ACTION` o `BACK` vuelven a Home.
+
+Inventario: Carne, Energia, EXP, Anillo y ATRAS. `ACTION` gasta un item
+(+20 HAM / +25 ENE / +8 ESF / +15 animo), baja el stock y se queda en el
+menu. Stock 0 no hace nada. El huevo no gasta. `ACTION` en ATRAS cierra.
 
 ## Persistencia
 
 La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
 
 - `vpet_state`: especie, hambre, energia, animo, esfuerzo, salud, edad,
-  idioma, sonido y `bluetooth` (apagado por defecto).
+  idioma, sonido, `bluetooth` (apagado por defecto) e inventario
+  (`invMeat`, `invEner`, `invExp`, `invRing`; defaults 3/2/1/1).
 - `vpet_wifi`: namespace legado reservado; el firmware actual no lo consulta.
 
-No se serializan batallas, comidas, entrenamientos, inventario ni flags de
-descubrimiento. El esquema actual es version 1. Un despliegue normal no borra
-NVS. `App::begin` aplica `bluetoothEnabled` al radio al arrancar.
+No se serializan batallas, comidas, entrenamientos ni flags de descubrimiento.
+El esquema actual es version 1. Un save viejo sin claves `inv*` arranca con
+3/2/1/1. Un despliegue normal no borra NVS. `App::begin` aplica
+`bluetoothEnabled` al radio al arrancar. Gastar un item hace autosave.
 
 LittleFS comienza en `0x410000`, mide `0xBE0000` y contiene exclusivamente
 recursos reconstruibles. El estado del usuario nunca debe depender de LittleFS.

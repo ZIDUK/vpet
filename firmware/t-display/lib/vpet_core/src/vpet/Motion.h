@@ -43,6 +43,7 @@ private:
     void enterIdle(uint32_t nowMs);
     uint16_t frameCount() const;
     uint16_t frameInterval() const;
+    uint16_t sleepLoopStart() const;
 
     int maxX_;
     int y_;

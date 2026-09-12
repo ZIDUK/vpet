@@ -51,8 +51,14 @@ EvolutionNode Navigation::selectedEvolutionNode() const {
 
 void Navigation::openSelectedMenu() {
     switch (menuIndex_) {
-        case 0: panel_ = PanelId::Status; break;
-        case 5: panel_ = PanelId::Inventory; break;
+        case 0:
+            panel_ = PanelId::Status;
+            panelIndex_ = 0;
+            break;
+        case 5:
+            panel_ = PanelId::Inventory;
+            panelIndex_ = 0;
+            break;
         case 6: openEvolutionTree(); break;
         case 7:
             panel_ = PanelId::Options;
@@ -80,12 +86,19 @@ void Navigation::dispatch(InputEvent event) {
             selectedSpecies_ = kEvolutionStages[panelIndex_];
         } else if (panel_ == PanelId::Options) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kOptionCount);
+        } else if (panel_ == PanelId::Inventory) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kInventoryCount);
+        } else if (panel_ == PanelId::Status) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % 2);
         } else {
             panelIndex_ = (panelIndex_ + 1) % 8;
         }
     } else if (event == InputEvent::Action) {
         if (panel_ == PanelId::EvolutionTree) panel_ = PanelId::EvolutionDetail;
-        else if (panel_ == PanelId::Status || panel_ == PanelId::Inventory) panel_ = PanelId::Home;
+        else if (panel_ == PanelId::Status) panel_ = PanelId::Home;
+        else if (panel_ == PanelId::Inventory && panelIndex_ == Navigation::kInventoryCount - 1) {
+            panel_ = PanelId::Home;
+        }
     }
 }
 

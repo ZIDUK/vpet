@@ -26,6 +26,7 @@ struct EvolutionNode {
 class Navigation {
 public:
     static constexpr uint8_t kOptionCount = 9;
+    static constexpr uint8_t kInventoryCount = 5;
 
     void dispatch(InputEvent event);
     void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }

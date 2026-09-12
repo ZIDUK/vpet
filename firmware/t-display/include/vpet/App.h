@@ -4,6 +4,7 @@
 
 #include "vpet/Input.h"
 #include "vpet/BleService.h"
+#include "vpet/DateTimeMenu.h"
 #include "vpet/Motion.h"
 #include "vpet/Navigation.h"
 #include "vpet/Panels.h"
@@ -30,9 +31,7 @@ private:
     SettingsStore& settingsStore_;
     BleService& bluetooth_;
     Settings settings_;
-    int dateTime_[5] = {2026, 1, 1, 0, 0};
-    bool editingDate_ = true;
-    uint8_t dateField_ = 0;
+    DateTimeMenu dateMenu_;
     PetState pet_;
     Motion motion_;
     Navigation navigation_;

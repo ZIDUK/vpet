@@ -71,10 +71,11 @@ Orden en firmware y simulador T-Display:
 5. Load
 6. Date
 7. Time
-8. Back
+8. Evolve
+9. Back
 
-El panel muestra cuatro filas a la vez. Language y Sound se guardan en NVS,
-pero el texto del firmware sigue pintando `LANGUAGE: ES` y `SOUND: ON`.
+El panel muestra cuatro filas a la vez. Language y Sound se guardan en NVS
+y el firmware pinta `IDIOMA`/`LANGUAGE` y `SONIDO`/`SOUND` segun el idioma.
 
 ## Estados
 

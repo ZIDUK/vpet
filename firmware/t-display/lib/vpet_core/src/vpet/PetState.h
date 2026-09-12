@@ -7,6 +7,7 @@ namespace vpet {
 // Keep the original numeric values stable because they are persisted in NVS.
 enum class SpeciesId : uint8_t { Rookie = 0, Champion = 1, Ultimate = 2, Egg = 3, Baby = 4 };
 enum class Action : uint8_t { None, Feed, Training, Battle, Rest };
+enum class ItemUseResult : uint8_t { Used, Empty, Blocked, Back };
 
 class PetState {
 public:
@@ -16,6 +17,14 @@ public:
     void evolveTo(SpeciesId species);
     bool forceNextForm();
     void restore(SpeciesId species, int hunger, int energy, int happiness, int effort, int health, uint32_t ageSeconds);
+    void restoreItems(uint8_t meat, uint8_t energyItem, uint8_t expItem, uint8_t ring);
+    ItemUseResult useItem(uint8_t index);
+    uint8_t itemCount(uint8_t index) const;
+    bool itemVisible(uint8_t index) const;
+    uint8_t visibleInventoryCount() const;
+    uint8_t inventoryIndexAt(uint8_t visibleSlot) const;
+    uint8_t nextVisibleInventoryIndex(uint8_t index) const;
+    uint8_t clampVisibleInventoryIndex(uint8_t index) const;
     bool hasDiscovered(SpeciesId species) const;
 
     SpeciesId species() const { return species_; }
@@ -48,6 +57,10 @@ private:
     bool championDiscovered_ = false;
     bool ultimateDiscovered_ = false;
     bool rookieDiscovered_ = false;
+    uint8_t meat_ = 3;
+    uint8_t energyItem_ = 2;
+    uint8_t expItem_ = 1;
+    uint8_t ring_ = 1;
 };
 
 }  // namespace vpet

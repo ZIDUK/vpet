@@ -37,6 +37,23 @@ void test_sleep_loops_until_explicit_wake() {
     TEST_ASSERT_TRUE(motion.consumeActionCompleted());
 }
 
+void test_dragfiremon_sleep_loops_lying_frames() {
+    vpet::Motion motion(240, 135, 24, 88);
+    motion.setSpecies(vpet::SpeciesId::Ultimate);
+    motion.startAction(vpet::Action::Rest, 100);
+
+    motion.tick(100 + 12 * 105);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Sleep, motion.state());
+    TEST_ASSERT_EQUAL(12, motion.frame());
+
+    motion.tick(100 + 15 * 105);
+    TEST_ASSERT_EQUAL(vpet::MotionState::Sleep, motion.state());
+    TEST_ASSERT_EQUAL(12, motion.frame());
+
+    motion.tick(100 + 16 * 105);
+    TEST_ASSERT_EQUAL(13, motion.frame());
+}
+
 void test_sparkmon_evolution_uses_sixteen_frames() {
     vpet::Motion motion(240, 135, 24, 88);
     motion.setSpecies(vpet::SpeciesId::Rookie);

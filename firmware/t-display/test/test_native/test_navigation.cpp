@@ -69,3 +69,51 @@ void test_back_returns_from_detail_to_same_tree_node() {
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
     TEST_ASSERT_EQUAL(vpet::SpeciesId::Ultimate, navigation.selectedSpecies());
 }
+
+void test_next_wraps_inventory_like_options() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(5);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+    for (uint8_t step = 0; step < 5; ++step) {
+        TEST_ASSERT_EQUAL(step, navigation.panelIndex());
+        navigation.dispatch(vpet::InputEvent::Next);
+    }
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+}
+
+void test_action_on_inventory_item_stays_in_menu() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(5);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
+
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+
+    navigation.dispatch(vpet::InputEvent::Next);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
+    TEST_ASSERT_EQUAL(1, navigation.panelIndex());
+
+    navigation.setPanelIndex(vpet::Navigation::kInventoryCount - 1);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
+}
+
+void test_status_next_cycles_two_pages() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(0);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Status, navigation.panel());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+    navigation.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Status, navigation.panel());
+    TEST_ASSERT_EQUAL(1, navigation.panelIndex());
+    navigation.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
+}

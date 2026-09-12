@@ -18,6 +18,12 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
         store_.getInt("health", 100),
         store_.getInt("age", 0)
     );
+    pet.restoreItems(
+        static_cast<uint8_t>(store_.getInt("invMeat", 3)),
+        static_cast<uint8_t>(store_.getInt("invEner", 2)),
+        static_cast<uint8_t>(store_.getInt("invExp", 1)),
+        static_cast<uint8_t>(store_.getInt("invRing", 1))
+    );
     settings.language = store_.getString("language", "ES");
     settings.soundEnabled = store_.getInt("sound", 1) != 0;
     settings.bluetoothEnabled = store_.getInt("bluetooth", 0) != 0;
@@ -33,6 +39,10 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("effort", pet.effort()) && ok;
     ok = store_.putInt("health", pet.health()) && ok;
     ok = store_.putInt("age", pet.ageSeconds()) && ok;
+    ok = store_.putInt("invMeat", pet.itemCount(0)) && ok;
+    ok = store_.putInt("invEner", pet.itemCount(1)) && ok;
+    ok = store_.putInt("invExp", pet.itemCount(2)) && ok;
+    ok = store_.putInt("invRing", pet.itemCount(3)) && ok;
     ok = store_.putString("language", settings.language.c_str()) && ok;
     ok = store_.putInt("sound", settings.soundEnabled ? 1 : 0) && ok;
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;

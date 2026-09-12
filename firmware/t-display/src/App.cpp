@@ -1,4 +1,5 @@
 #include "vpet/App.h"
+#include "vpet/Strings.h"
 
 #include <sys/time.h>
 #include <time.h>
@@ -22,28 +23,29 @@ void App::begin(uint32_t nowMs) {
 }
 
 void App::beginDateTime(bool date) {
-    editingDate_ = date;
-    dateField_ = 0;
+    int values[5] = {2026, 1, 1, 0, 0};
     const time_t now = time(nullptr);
     struct tm value {};
     localtime_r(&now, &value);
     if (value.tm_year + 1900 >= 2024) {
-        dateTime_[0] = value.tm_year + 1900;
-        dateTime_[1] = value.tm_mon + 1;
-        dateTime_[2] = value.tm_mday;
-        dateTime_[3] = value.tm_hour;
-        dateTime_[4] = value.tm_min;
+        values[0] = value.tm_year + 1900;
+        values[1] = value.tm_mon + 1;
+        values[2] = value.tm_mday;
+        values[3] = value.tm_hour;
+        values[4] = value.tm_min;
     }
+    dateMenu_.begin(date, values, languageIsSpanish(settings_.language.c_str()));
     navigation_.setPanel(PanelId::DateTime);
 }
 
 void App::applyDateTime() {
+    const int* values = dateMenu_.values();
     struct tm value {};
-    value.tm_year = dateTime_[0] - 1900;
-    value.tm_mon = dateTime_[1] - 1;
-    value.tm_mday = dateTime_[2];
-    value.tm_hour = dateTime_[3];
-    value.tm_min = dateTime_[4];
+    value.tm_year = values[0] - 1900;
+    value.tm_mon = values[1] - 1;
+    value.tm_mday = values[2];
+    value.tm_hour = values[3];
+    value.tm_min = values[4];
     const time_t epoch = mktime(&value);
     const timeval clock = {epoch, 0};
     settimeofday(&clock, nullptr);
@@ -93,19 +95,33 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         }
         return;
     }
-    if (panel == PanelId::DateTime) {
+    if (panel == PanelId::Inventory) {
+        navigation_.setPanelIndex(pet_.clampVisibleInventoryIndex(navigation_.panelIndex()));
         if (event == InputEvent::Back) {
-            navigation_.setPanel(PanelId::Options, editingDate_ ? 5 : 6);
-        } else if (event == InputEvent::Next) {
-            const uint8_t index = editingDate_ ? dateField_ : dateField_ + 3;
-            const int maxima[] = {2099, 12, 31, 23, 59};
-            const int minima[] = {2024, 1, 1, 0, 0};
-            dateTime_[index] = dateTime_[index] >= maxima[index] ? minima[index] : dateTime_[index] + 1;
+            navigation_.dispatch(event);
+            return;
+        }
+        if (event == InputEvent::Next) {
+            navigation_.setPanelIndex(pet_.nextVisibleInventoryIndex(navigation_.panelIndex()));
+            return;
+        }
+        if (event != InputEvent::Action) return;
+        const ItemUseResult result = pet_.useItem(navigation_.panelIndex());
+        if (result == ItemUseResult::Used) {
+            settingsStore_.save(pet_, settings_);
+            navigation_.setPanelIndex(pet_.clampVisibleInventoryIndex(navigation_.panelIndex()));
+        }
+        if (result == ItemUseResult::Back) navigation_.setPanel(PanelId::Home);
+        return;
+    }
+    if (panel == PanelId::DateTime) {
+        if (event == InputEvent::Next) {
+            dateMenu_.next();
         } else if (event == InputEvent::Action) {
-            const uint8_t fields = editingDate_ ? 3 : 2;
-            if (++dateField_ >= fields) {
-                applyDateTime();
-                navigation_.setPanel(PanelId::Options, editingDate_ ? 5 : 6);
+            const DateTimeAction result = dateMenu_.activate();
+            if (result == DateTimeAction::Saved) applyDateTime();
+            if (result != DateTimeAction::None) {
+                navigation_.setPanel(PanelId::Options, dateMenu_.editingDate() ? 5 : 6);
             }
         }
         return;
@@ -162,14 +178,25 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     navigation_.setCurrentSpecies(pet_.species());
 
-    if (event != InputEvent::None || nowMs - lastRenderMs_ >= 33) {
+    const PanelId panel = navigation_.panel();
+    uint32_t intervalMs = 33;
+    if (panel == PanelId::Status || panel == PanelId::Inventory ||
+        panel == PanelId::EvolutionTree || panel == PanelId::EvolutionDetail) {
+        intervalMs = 1000;
+    }
+    if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {
         lastRenderMs_ = nowMs;
         if (navigation_.panel() == PanelId::Home) {
+            panels_.invalidate();
             renderer_.draw({pet_, motion_, navigation_.menuIndex()});
         } else {
             panels_.draw(
-                navigation_, pet_, bluetooth_.status(),
-                dateTime_, editingDate_, dateField_
+                navigation_,
+                pet_,
+                bluetooth_.status(),
+                dateMenu_,
+                settings_.language.c_str(),
+                settings_.soundEnabled
             );
         }
     }

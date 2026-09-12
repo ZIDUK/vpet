@@ -20,6 +20,7 @@ from display_profiles import get_display_profile
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
 MENU_ICONS = ("Status", "Feed", "Training", "Battle", "Rest", "Items", "Pedia", "Options")
+STATUS_ICONS = ("Heart", "Clock")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 FIREMON_COLUMNS = 5
 FIREMON_ROWS = 4
@@ -448,14 +449,14 @@ def collect_ui():
         size = ACTIVE_PROFILE.icon_size
         return image.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
-    for name in MENU_ICONS:
+    for name in (*MENU_ICONS, *STATUS_ICONS):
         source = source_dir / f"{name}.png"
         if not source.is_file():
             raise FileNotFoundError(f"Missing menu icon: {source}")
         target = BUILD / "UIIcons" / f"{name}.bmp"
         size = ACTIVE_PROFILE.icon_size
         save_runtime_bmp(source, target, expected_size=(size, size), transform=resize_icon)
-    print(f"  menu icons: {len(MENU_ICONS)}")
+    print(f"  menu icons: {len(MENU_ICONS) + len(STATUS_ICONS)}")
 
 
 def collect_evolution_thumbnails():
@@ -542,7 +543,7 @@ def validate_runtime_assets():
         "UIEvolution/Flamemon.bmp",
         "UIEvolution/Dragfiremon.bmp",
     ]
-    required.extend(f"UIIcons/{name}.bmp" for name in MENU_ICONS)
+    required.extend(f"UIIcons/{name}.bmp" for name in (*MENU_ICONS, *STATUS_ICONS))
     missing = [path for path in required if not (BUILD / path).is_file()]
     if missing:
         raise FileNotFoundError("Missing runtime asset(s): " + ", ".join(missing))

@@ -163,10 +163,10 @@ frame). No hay buzzer en esta placa.
 NVS namespace `vpet_state` (`0x5000`). **Sí** sobrevive un reset:
 
 `species`, `hunger`, `energy`, `happy`, `effort`, `health`, `age`,
-`language`, `sound`, `bluetooth`.
+`language`, `sound`, `bluetooth`, `invMeat`, `invEner`, `invExp`, `invRing`.
 
 **No** se guardan todavía (viven solo en RAM y se pierden al apagar):
-`meals`, `trainingSessions`, `battles`, descubrimientos, inventario, CM,
+`meals`, `trainingSessions`, `battles`, descubrimientos, CM,
 call, wins/losses, peso, DP, proteína. Schema 2 del Corte 1 los añade.
 `EVOLVE` de debug **sí** persiste la nueva especie (usa el save actual).
 
