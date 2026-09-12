@@ -65,7 +65,8 @@ class Pet:
         self.species = species      # current form: "sproutspore", "sprouto", "thornback", "hydravine"
         self.line = line            # evolution line: "sprout_line"
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
-        self.inventory = {"meat": 3, "tonic": 2, "medkit": 1}
+        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1}
+        self.effort = 0
         self.language = "EN"
         self.sound_enabled = True
         self.born_at = time.monotonic()
@@ -145,6 +146,7 @@ class Pet:
             "state": self.state,
             "stats": dict(self.stats),
             "inventory": dict(self.inventory),
+            "effort": self.effort,
             "language": self.language,
             "sound_enabled": self.sound_enabled,
             "battles_won": self.battles_won,
@@ -156,7 +158,12 @@ class Pet:
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live
         self.stats = dict(d.get("stats", self.stats))
-        self.inventory = dict(d.get("inventory", self.inventory))
+        loaded = dict(d.get("inventory", self.inventory))
+        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1}
+        for key in self.inventory:
+            if key in loaded:
+                self.inventory[key] = loaded[key]
+        self.effort = int(d.get("effort", self.effort))
         self.language = d.get("language", self.language)
         self.sound_enabled = d.get("sound_enabled", self.sound_enabled)
         self.battles_won = d.get("battles_won", 0)

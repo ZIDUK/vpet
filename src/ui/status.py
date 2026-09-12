@@ -129,25 +129,30 @@ def _panel(target, title):
 
 def draw_inventory(target, pet, selected_index=0):
     """Draw the selectable consumables list and its current quantities."""
-    from core.inventory import INVENTORY_ITEMS
+    from core.inventory import (
+        INVENTORY_ITEMS,
+        clamp_visible_inventory_index,
+        visible_inventory_indexes,
+    )
 
     spanish = pet.language == "ES"
     _panel(target, "INVENTARIO" if spanish else "INVENTORY")
-    names = ("CARNE", "TONICO", "BOTIQUIN") if spanish else ("MEAT", "TONIC", "MEDKIT")
-    rows = [
-        (names[index], key, stat, amount)
-        for index, (_, key, stat, amount) in enumerate(INVENTORY_ITEMS)
-    ]
-    rows.append(("VOLVER" if spanish else "BACK", None, None, 0))
-    for index, (name, key, _, _) in enumerate(rows):
-        y = 24 + index * 20
-        border = 8 if index == selected_index else 0
+    names = ("CARNE", "ENERGIA", "EXP", "ANILLO") if spanish else ("MEAT", "ENERGY", "EXP", "RING")
+    visible = visible_inventory_indexes(pet)
+    current = clamp_visible_inventory_index(pet, selected_index)
+    selected_slot = visible.index(current) if current in visible else 0
+    window_start = 0 if selected_slot < 4 else selected_slot - 3
+    for slot, index in enumerate(visible[window_start:window_start + 4]):
+        y = 24 + slot * 20
+        border = 8 if index == current else 0
         _fill(target, 8, y, 112, 16, border)
         _fill(target, 10, y + 2, 108, 12, 2)
-        _text(target, 15, y + 5, name, 7)
-        if key is not None:
-            count = min(99, pet.inventory.get(key, 0))
-            _text(target, 96, y + 5, "X%02d" % count, 7)
+        if index < len(INVENTORY_ITEMS):
+            _, key, _, _ = INVENTORY_ITEMS[index]
+            _text(target, 15, y + 5, names[index], 7)
+            _text(target, 96, y + 5, "X%02d" % min(99, pet.inventory.get(key, 0)), 7)
+        else:
+            _text(target, 15, y + 5, "VOLVER" if spanish else "BACK", 7)
 
 
 def draw_evolution_guide(target, pet):

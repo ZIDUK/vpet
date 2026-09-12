@@ -111,6 +111,10 @@ def test_sleep_action_loops_until_explicit_wake():
 
     subject.update(0.5 + motion_module.PET_SLEEP_FRAME_COUNT * 0.14)
     assert subject.state == motion_module.MOTION_SLEEP
+    assert subject.frame == 12
+
+    subject.update(0.5 + (motion_module.PET_SLEEP_FRAME_COUNT + 1) * 0.14)
+    assert subject.frame == 13
 
     subject.wake(3)
     assert subject.state == motion_module.MOTION_IDLE

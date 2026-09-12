@@ -101,11 +101,13 @@ def test_tdisplay_options_render_all_actions_and_bluetooth_status():
         / "firmware" / "t-display" / "src" / "App.cpp"
     ).read_text()
 
-    assert 'bluetooth, "LANGUAGE: ES"' in source
-    assert '"DATE", "TIME", "EVOLVE", "BACK"' in source
+    assert "copy::language(spanish)" in source
+    assert "copy::dateTitle(spanish)" in source
+    assert "copy::evolve(spanish)" in source
+    assert "copy::back(spanish)" in source
     assert "selected % 9" in source
-    assert 'bluetooth = "BLUETOOTH: ADVERTISING"' in source
-    assert 'bluetooth = "BLUETOOTH: CONNECTED"' in source
+    assert "copy::bluetoothAdvertising(spanish)" in source
+    assert "copy::bluetoothConnected(spanish)" in source
     assert "WIFI:" not in source
     assert "case 0:\n                settings_.bluetoothEnabled" in app
     assert "forceNextForm" in app

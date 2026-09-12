@@ -32,7 +32,6 @@ secundaria mediante los comandos terminados en `-pico`.
   en NVS. Los descubrimientos, comidas, entrenos y batallas no se persisten.
 - WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
 - Criterios de Sparkmon a Firemon y de Flamemon a Dragfiremon pendientes.
-- El simulador Python todavia no copia el gasto de items ni las paginas de Status.
 
 ## Hardware principal
 

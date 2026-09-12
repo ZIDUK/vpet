@@ -112,7 +112,13 @@ class PetMotion:
             frame_count, interval = ACTION_ANIMATIONS[MOTION_SLEEP]
             elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
             if elapsed_frames:
-                self.frame = (self.frame + elapsed_frames) % frame_count
+                nxt = self.frame + elapsed_frames
+                loop_start = 12 if 12 < frame_count else 0
+                if nxt < frame_count:
+                    self.frame = nxt
+                else:
+                    loop_len = frame_count - loop_start
+                    self.frame = loop_start + (nxt - frame_count) % loop_len if loop_len else nxt % frame_count
                 self.last_frame += elapsed_frames * interval
             return
 

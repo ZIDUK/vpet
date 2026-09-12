@@ -99,7 +99,7 @@ def _load_image(path):
         return opened.copy()
 
 
-def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session):
+def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None):
     draw = ImageDraw.Draw(frame)
     panel = (214, 180, 112)
     ink = (48, 42, 55)
@@ -115,24 +115,57 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     draw.text((120, 37), title, fill=(255, 255, 255), anchor="mm")
 
     if panel_mode == "status":
-        rows = (
-            ("HP", pet.stats["hp"]), ("HUN", pet.stats["h"]),
-            ("ENE", pet.stats["e"]), ("MOOD", pet.stats["p"]),
-        )
-        for index, (label, value) in enumerate(rows):
-            x = 8 + (index % 2) * 116
-            y = 55 + (index // 2) * 34
-            draw.text((x, y), f"{label} {value}/100", fill=ink)
-            draw.rectangle((x, y + 12, x + 104, y + 20), outline=ink)
-            draw.rectangle((x + 2, y + 14, x + 2 + value, y + 18), fill=(196, 70, 56))
-        draw.text((8, 122), f"AGE {int(pet.age_seconds)}s   WINS {pet.battles_won}", fill=ink)
+        spanish = getattr(pet, "language", "EN") == "ES"
+        if panel_index % 2 == 0:
+            rows = (
+                ("PV" if spanish else "HP", pet.stats["hp"]),
+                ("HAM" if spanish else "HUN", pet.stats["h"]),
+                ("ENE", pet.stats["e"]),
+            )
+            for index, (label, value) in enumerate(rows):
+                y = 54 + index * 26
+                draw.text((6, y), f"{label} {value}", fill=ink)
+                draw.rectangle((36, y + 4, 236, y + 12), outline=ink)
+                filled = 36 + int(max(0, min(100, value)) * 200 / 100)
+                if filled > 36:
+                    draw.rectangle((36, y + 4, filled, y + 12), fill=(49, 28, 39))
+        else:
+            clock = current_datetime.strftime("%Y/%m/%d %H:%M") if current_datetime else "--"
+            rows = (
+                ("EDAD" if spanish else "AGE", f"{int(pet.age_seconds)}s"),
+                ("ESF" if spanish else "EFF", str(getattr(pet, "effort", 0))),
+                ("BAT", str(getattr(pet, "battles_won", 0))),
+                ("ANIMO" if spanish else "MOOD", str(pet.stats["p"])),
+            )
+            for index, (label, value) in enumerate(rows):
+                x = 8 + (index % 2) * 116
+                y = 55 + (index // 2) * 22
+                draw.text((x, y), f"{label} {value}", fill=ink)
+            draw.text((8, 122), clock, fill=ink)
     elif panel_mode == "inventory":
-        items = ("MEAT x3", "TONIC x2", "MEDKIT x1", "BACK")
-        for index, label in enumerate(items):
-            x = 8 + (index % 2) * 116
-            y = 55 + (index // 2) * 34
-            draw.rectangle((x, y, x + 106, y + 27), outline=yellow if index == panel_index else ink, width=2)
-            draw.text((x + 8, y + 9), label, fill=ink)
+        from core.inventory import INVENTORY_ITEMS, clamp_visible_inventory_index, visible_inventory_indexes
+
+        spanish = getattr(pet, "language", "EN") == "ES"
+        names = (
+            ("CARNE", "ENERGIA", "EXP", "ANILLO", "ATRAS")
+            if spanish
+            else ("MEAT", "ENERGY", "EXP", "FIRE RING", "BACK")
+        )
+        visible = visible_inventory_indexes(pet)
+        current = clamp_visible_inventory_index(pet, panel_index)
+        selected_slot = visible.index(current) if current in visible else 0
+        window_start = 0 if selected_slot < 4 else selected_slot - 3
+        rows = visible[window_start:window_start + 4]
+        for slot, index in enumerate(rows):
+            y = 52 + slot * 20
+            if index == current:
+                draw.rectangle((5, y - 2, 234, y + 16), fill=yellow)
+            if index < len(INVENTORY_ITEMS):
+                _, key, _, _ = INVENTORY_ITEMS[index]
+                label = f"{names[index]} x{pet.inventory.get(key, 0)}"
+            else:
+                label = names[4]
+            draw.text((10, y), label, fill=ink)
     elif panel_mode == "evolution":
         species = (
             ("Egg", "Egg.bmp"),
@@ -320,7 +353,7 @@ def render_frame(
     if panel_mode is not None:
         if profile.name == "tdisplay":
             _draw_wide_panel(
-                frame, build_dir, pet, panel_mode, panel_index, options_session
+                frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime
             )
             return frame
         status = Image.new("P", (STATUS_WIDTH, STATUS_HEIGHT))

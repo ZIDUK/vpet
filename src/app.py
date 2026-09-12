@@ -69,7 +69,11 @@ from config import (
 )
 from core.evolution import Evolution
 from core.device_services import DeviceServices
-from core.inventory import INVENTORY_ENTRY_COUNT, use_inventory_item
+from core.inventory import (
+    clamp_visible_inventory_index,
+    next_visible_inventory_index,
+    use_inventory_item,
+)
 from core.menu import activate_menu_item
 from core.motion import (
     MOTION_CAST,
@@ -370,7 +374,9 @@ def run():
         action_button.update()
         if next_button.fell:
             if panel_mode == "inventory":
-                inventory_index = (inventory_index + 1) % INVENTORY_ENTRY_COUNT
+                inventory_index = next_visible_inventory_index(pet, inventory_index)
+            elif panel_mode == "status":
+                inventory_index = 1 - inventory_index
             elif panel_mode == "options":
                 options_session.next()
             else:
@@ -379,7 +385,11 @@ def run():
                 menu_selector.x = menu_index * 16
         if action_button.fell:
             if panel_mode == "inventory":
-                if use_inventory_item(pet, inventory_index) == "back":
+                inventory_index = clamp_visible_inventory_index(pet, inventory_index)
+                result = use_inventory_item(pet, inventory_index)
+                if result == "used":
+                    inventory_index = clamp_visible_inventory_index(pet, inventory_index)
+                if result == "back":
                     panel_mode = None
             elif panel_mode == "options":
                 staying = options_session.action(pet, services)
@@ -392,9 +402,10 @@ def run():
                 panel_mode = None
             elif menu_index == MENU_STATUS_INDEX:
                 panel_mode = "status"
+                inventory_index = 0
             elif menu_index == MENU_INVENTORY_INDEX:
                 panel_mode = "inventory"
-                inventory_index = 0
+                inventory_index = clamp_visible_inventory_index(pet, 0)
             elif menu_index == MENU_PEDIA_INDEX:
                 panel_mode = "evolution"
             elif menu_index == MENU_OPTIONS_INDEX:
@@ -524,8 +535,9 @@ def run():
                 "inventory",
                 inventory_index,
                 pet.inventory.get("meat", 0),
-                pet.inventory.get("tonic", 0),
-                pet.inventory.get("medkit", 0),
+                pet.inventory.get("energy", 0),
+                pet.inventory.get("exp", 0),
+                pet.inventory.get("ring", 0),
             )
             if next_snapshot != panel_snapshot:
                 draw_inventory(panel_bitmap, pet, inventory_index)
