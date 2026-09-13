@@ -16,6 +16,7 @@ from config import (
     DRAGFIREMON_IDLE_FRAME_COUNT,
     DRAGFIREMON_IDLE_IMAGE_PATH,
     DRAGFIREMON_PUNCH_IMAGE_PATH,
+    DRAGFIREMON_SLEEP_FRAME_COUNT,
     DRAGFIREMON_SLEEP_IMAGE_PATH,
     EVOLUTION_DRAGFIREMON_THUMB_X,
     EVOLUTION_FIREMON_THUMB_X,
@@ -23,6 +24,7 @@ from config import (
     EVOLUTION_THUMB_SIZE,
     EVOLUTION_THUMB_Y,
     EVOLVED_SPECIES,
+    CARE_TIME_SCALE,
     EVOLUTION_REGISTRY,
     FLAMEMON_CAST_IMAGE_PATH,
     FLAMEMON_EAT_IMAGE_PATH,
@@ -85,6 +87,7 @@ from core.motion import (
     MOTION_WALK,
     PetMotion,
 )
+from core.dna import STATUS_PAGE_COUNT
 from core.pet import Pet, STATE_LIVE
 from core.options import OptionsSession
 from core.save import load_pet, save_pet
@@ -365,6 +368,7 @@ def run():
     services = DeviceServices()
     options_session = None
     last_save = now
+    last_now = now
 
     while True:
         if display.root_group is not group:
@@ -376,7 +380,7 @@ def run():
             if panel_mode == "inventory":
                 inventory_index = next_visible_inventory_index(pet, inventory_index)
             elif panel_mode == "status":
-                inventory_index = 1 - inventory_index
+                inventory_index = (inventory_index + 1) % STATUS_PAGE_COUNT
             elif panel_mode == "options":
                 options_session.next()
             else:
@@ -412,11 +416,31 @@ def run():
                 options_session = OptionsSession()
                 panel_mode = "options"
             else:
-                activate_menu_item(pet, motion, menu_index, time.monotonic())
+                hour = 12
+                try:
+                    hour = time.localtime().tm_hour
+                except (AttributeError, OverflowError, OSError):
+                    pass
+                activate_menu_item(pet, motion, menu_index, time.monotonic(), hour=hour)
 
         pet.decay_if_due()
         now = time.monotonic()
-        if motion.state == MOTION_IDLE and evolution.evolve(pet):
+        elapsed = now - last_now
+        last_now = now
+        if pet.is_live:
+            pet.stage_age_seconds += elapsed
+            hour = 12
+            try:
+                hour = time.localtime().tm_hour
+            except (AttributeError, OverflowError, OSError):
+                pass
+            pet.update_call(
+                int(now * 1000),
+                CARE_TIME_SCALE,
+                hour,
+                motion.state == MOTION_SLEEP,
+            )
+        if motion.state == MOTION_IDLE and evolution.evolve(pet, CARE_TIME_SCALE):
             motion.start_evolution(now)
         motion.update(now)
         sleeping = motion.state == MOTION_SLEEP
@@ -479,7 +503,11 @@ def run():
                 if pet.species == ULTIMATE_SPECIES
                 else flamemon_sleep_grid if pet.species == EVOLVED_SPECIES else sleep_grid
             )
-            active_frame_count = PET_SLEEP_FRAME_COUNT
+            active_frame_count = (
+                DRAGFIREMON_SLEEP_FRAME_COUNT
+                if pet.species == ULTIMATE_SPECIES
+                else PET_SLEEP_FRAME_COUNT
+            )
         elif motion.state == MOTION_CAST:
             active_grid = (
                 dragfiremon_cast_grid
@@ -519,16 +547,23 @@ def run():
         if panel_mode == "status":
             next_snapshot = (
                 "status",
+                inventory_index,
                 int(now),
                 pet.species,
                 pet.battles_won,
+                getattr(pet, "battles_this_form", 0),
+                getattr(pet, "care_mistakes", 0),
+                getattr(pet, "call_reason", None),
+                int(getattr(pet, "stage_age_seconds", 0)),
                 pet.stats["hp"],
                 pet.stats["h"],
                 pet.stats["e"],
                 pet.stats["p"],
+                tuple(getattr(pet, "dna", (0, 0, 0, 0))),
+                tuple(sorted(getattr(pet, "ev", {}).items())),
             )
             if next_snapshot != panel_snapshot:
-                draw_status(panel_bitmap, pet)
+                draw_status(panel_bitmap, pet, page=inventory_index)
                 panel_snapshot = next_snapshot
         elif panel_mode == "inventory":
             next_snapshot = (

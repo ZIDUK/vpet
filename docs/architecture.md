@@ -94,12 +94,20 @@ opacos sobre el fondo.
 Egg --8 s--> Sparkmon --> Firemon --> Flamemon --> Dragfiremon
 ```
 
-Una partida nueva comienza en `SpeciesId::Egg`. La eclosion cambia y guarda el
-estado como `Baby/Sparkmon`; una partida NVS existente conserva su especie. Los
-valores persistidos originales `Rookie=0`, `Champion=1` y `Ultimate=2` no se
-renumeran. Los requisitos de Sparkmon a Firemon y Flamemon a Dragfiremon siguen
-marcados como pendientes. El arbol muestra tres nodos por ventana y desplaza la
-linea de izquierda a derecha; las etapas futuras permanecen ocultas.
+Una partida nueva comienza en `SpeciesId::Egg`. La eclosion (8 s, sin scale)
+cambia y guarda el estado como `Baby/Sparkmon`. Despues, `Evolution` aplica
+timers COLOR sobre `stageAge * CARE_TIME_SCALE` (placa 1, sim 600):
+
+```text
+Sparkmon --12 h 10 min + CM<=1--> Firemon
+Firemon  --24 h + H/E/P>=55 HP>=75--> Flamemon
+Flamemon --36 h + 15 batallas de forma--> Dragfiremon
+```
+
+Win ratio 0/0 no bloquea en este corte. `EVOLVE` de debug fuerza la linea
+buena y resetea el snapshot de forma. Los valores persistidos originales
+`Rookie=0`, `Champion=1` y `Ultimate=2` no se renumeran. El arbol muestra
+tres nodos por ventana; Pedia pinta los umbrales reales del catalogo.
 
 ## Entrada
 
@@ -120,14 +128,16 @@ emite en el flanco de pulsacion: una pulsacion, una fila, sin auto-avance.
 
 Opciones muestra cuatro filas grandes. El orden real es Bluetooth, idioma,
 sonido, guardar, cargar, fecha, hora, evolucionar y volver. `EVOLVE` fuerza
-la siguiente forma, guarda NVS y reproduce la animacion en Home.
+la siguiente forma, guarda NVS y reproduce la animacion en Home. En
+Dragfiremon, `EVOLVE` reinicia la partida en huevo.
 
 El estado `Sleep` se acuesta una vez y luego buclea los frames 12-14 (acostado).
 Solo volver a activar el icono del foco ejecuta `wake`; navegar o abrir otro
 panel no despierta a la mascota.
 
 Status pagina 1 muestra barras HP / HAM / ENE. `NEXT` cicla a la pagina 2
-(edad, esfuerzo, batallas, animo y reloj). `ACTION` o `BACK` vuelven a Home.
+(edad de etapa, esfuerzo, batallas de forma, CM, call y reloj). Un Call
+activo pinta `*` en el selector. `ACTION` o `BACK` vuelven a Home.
 
 Inventario: Carne, Energia, EXP, Anillo y ATRAS. `ACTION` gasta un item
 (+20 HAM / +25 ENE / +8 ESF / +15 animo), baja el stock y se queda en el
@@ -137,15 +147,17 @@ menu. Stock 0 no hace nada. El huevo no gasta. `ACTION` en ATRAS cierra.
 
 La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
 
-- `vpet_state`: especie, hambre, energia, animo, esfuerzo, salud, edad,
-  idioma, sonido, `bluetooth` (apagado por defecto) e inventario
+- `vpet_state` schema 2: especie, barras, edad total, `stageAge`, `cm`,
+  `call`, `meals`, `training`, `battles`, `wins`, `losses`, `weight` (5),
+  `dp`, `protein`, idioma, sonido, `bluetooth` e inventario
   (`invMeat`, `invEner`, `invExp`, `invRing`; defaults 3/2/1/1).
 - `vpet_wifi`: namespace legado reservado; el firmware actual no lo consulta.
 
-No se serializan batallas, comidas, entrenamientos ni flags de descubrimiento.
-El esquema actual es version 1. Un save viejo sin claves `inv*` arranca con
-3/2/1/1. Un despliegue normal no borra NVS. `App::begin` aplica
-`bluetoothEnabled` al radio al arrancar. Gastar un item hace autosave.
+Schema 1 migra con ceros y `stageAge=0` (no evo instantanea). Schema `>2`
+es Unsupported y `App::begin` deja un huevo nuevo. El anillo de 32 eventos
+de cria vive solo en RAM. Autosave ocurre al eclosionar, evolucionar, sumar
+un care mistake, gastar un item o guardar a mano. Un despliegue normal no
+borra NVS. `App::begin` aplica `bluetoothEnabled` al radio al arrancar.
 
 LittleFS comienza en `0x410000`, mide `0xBE0000` y contiene exclusivamente
 recursos reconstruibles. El estado del usuario nunca debe depender de LittleFS.

@@ -60,13 +60,44 @@ def test_rest_menu_recovers_pet_and_starts_sleep_animation():
     assert motion.state != MOTION_SLEEP
 
 
-def test_battle_menu_starts_cast_animation_without_changing_stats():
+def test_overfeed_once_when_full_is_not_a_care_mistake():
     from core.menu import activate_menu_item
 
     pet = Pet(species="rookie", state=STATE_LIVE)
-    initial_stats = dict(pet.stats)
+    pet.stats["h"] = 100
+    motion = PetMotion(now=0)
+
+    assert activate_menu_item(pet, motion, menu_index=1, now=0.5)
+    assert pet.stats["h"] == 100
+    assert pet.overfeeds == 1
+    assert pet.care_mistakes == 0
+    assert pet.weight == 6
+    assert not activate_menu_item(pet, motion, menu_index=1, now=1.0)
+    assert pet.overfeeds == 1
+    assert motion.state == MOTION_EAT
+
+
+def test_wake_at_night_adds_care_mistake():
+    from core.menu import activate_menu_item
+
+    pet = Pet(species="rookie", state=STATE_LIVE)
+    motion = PetMotion(now=0)
+    assert activate_menu_item(pet, motion, menu_index=4, now=0.5, hour=22)
+    assert activate_menu_item(pet, motion, menu_index=4, now=1.5, hour=22)
+    assert pet.care_mistakes == 1
+    assert motion.state != MOTION_SLEEP
+
+
+def test_battle_menu_starts_cast_when_dp_available():
+    from core.menu import activate_menu_item
+
+    pet = Pet(species="rookie", state=STATE_LIVE)
+    pet.dp = 1
+    pet.battle_roll = 0
     motion = PetMotion(now=0)
 
     assert activate_menu_item(pet, motion, menu_index=3, now=0.5)
-    assert pet.stats == initial_stats
+    assert pet.dp == 0
+    assert pet.last_battle_won
     assert motion.state == MOTION_CAST
+    assert not activate_menu_item(pet, motion, menu_index=3, now=1.0)

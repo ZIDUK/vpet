@@ -22,7 +22,8 @@ public:
         int16_t x,
         int16_t y,
         bool flipHorizontal = false,
-        int32_t tint = -1
+        int32_t tint = -1,
+        uint8_t minLuma = 0
     );
 };
 

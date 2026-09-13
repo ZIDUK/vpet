@@ -45,7 +45,8 @@ bool AssetStore::drawFrame(
     int16_t x,
     int16_t y,
     bool flipHorizontal,
-    int32_t tint
+    int32_t tint,
+    uint8_t minLuma
 ) {
     File file = LittleFS.open(path, "r");
     if (!file) {
@@ -89,7 +90,12 @@ bool AssetStore::drawFrame(
         uint16_t column = 0;
         while (column < width) {
             const uint16_t source = flipHorizontal ? width - column - 1 : column;
-            if (indices[source] == transparent) {
+            const uint16_t peek = tint >= 0 ? static_cast<uint16_t>(tint) : palette[indices[source]];
+            const uint8_t red = (peek >> 11) & 0x1F;
+            const uint8_t green = (peek >> 5) & 0x3F;
+            const uint8_t blue = peek & 0x1F;
+            const uint8_t luma = static_cast<uint8_t>((red * 2 + green + blue) * 255 / 156);
+            if (indices[source] == transparent || (minLuma > 0 && luma < minLuma)) {
                 ++column;
                 continue;
             }
@@ -98,10 +104,15 @@ bool AssetStore::drawFrame(
             while (column < width) {
                 const uint16_t runSource = flipHorizontal ? width - column - 1 : column;
                 const uint8_t paletteIndex = indices[runSource];
-                if (paletteIndex == transparent) {
+                const uint16_t color = tint >= 0 ? static_cast<uint16_t>(tint) : palette[paletteIndex];
+                const uint8_t runRed = (color >> 11) & 0x1F;
+                const uint8_t runGreen = (color >> 5) & 0x3F;
+                const uint8_t runBlue = color & 0x1F;
+                const uint8_t runLuma = static_cast<uint8_t>((runRed * 2 + runGreen + runBlue) * 255 / 156);
+                if (paletteIndex == transparent || (minLuma > 0 && runLuma < minLuma)) {
                     break;
                 }
-                colors[runLength++] = tint >= 0 ? static_cast<uint16_t>(tint) : palette[paletteIndex];
+                colors[runLength++] = color;
                 ++column;
             }
             canvas.pushImage(x + runStart, y + row, runLength, 1, colors);

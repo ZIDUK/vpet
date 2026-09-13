@@ -92,6 +92,15 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
     for source, relative, transparent in singles:
         image = _rgba_image(source, transparent=transparent)
         records.append(write_asset(data_dir / relative, [image], image.size))
+    for source in sorted((sim_build / "UIFx").glob("*.bmp")):
+        if source.stem.endswith("_atlas"):
+            frames = _atlas_frames(source)
+            relative = Path("ui/fx") / f"{source.stem.removesuffix('_atlas')}.vpa"
+            records.append(write_asset(data_dir / relative, frames, frames[0].size))
+        else:
+            image = _rgba_image(source, transparent=True)
+            relative = Path("ui/fx") / f"{source.stem.lower()}.vpa"
+            records.append(write_asset(data_dir / relative, [image], image.size))
 
     catalog = {
         "format": 1,
@@ -105,10 +114,10 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
         },
         "animations": sorted(animations, key=lambda item: (item["species"], item["action"])),
         "evolution": [
-            {"from": "egg", "to": "baby", "requirements_pending": False},
-            {"from": "baby", "to": "rookie", "requirements_pending": True},
-            {"from": "rookie", "to": "champion", "requirements_pending": False},
-            {"from": "champion", "to": "ultimate", "requirements_pending": True},
+            {"from": "egg", "to": "baby", "automatic": False, "requirements_pending": False, "min_stage_age_seconds": 8},
+            {"from": "baby", "to": "rookie", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 43800, "max_care_mistakes": 1},
+            {"from": "rookie", "to": "champion", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 86400, "requirements": {"h": 55, "e": 55, "p": 55, "hp": 75}},
+            {"from": "champion", "to": "ultimate", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 129600, "battles_required": 15},
         ],
     }
     manifest_path = write_manifest(data_dir, records, catalog)

@@ -9,6 +9,21 @@ from pathlib import Path
 from core.save import load_pet, save_pet
 
 
+def clock_hour(clock, default=12):
+    """Read hour from the shared get_datetime() 5-tuple."""
+    if clock is None:
+        return default
+    return clock[3]
+
+
+def format_clock(clock, empty="--"):
+    """Format get_datetime() as YYYY/MM/DD HH:MM."""
+    if not clock:
+        return empty
+    year, month, day, hour, minute = clock
+    return "%04d/%02d/%02d %02d:%02d" % (year, month, day, hour, minute)
+
+
 class SimulatorServices:
     def __init__(self, root):
         self.save_path = Path(root) / "out" / "sim_pet_save.json"

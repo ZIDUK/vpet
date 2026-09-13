@@ -1,23 +1,37 @@
 """Two-button options menu state shared by simulator and CircuitPython."""
 
-OPTION_LANGUAGE = 0
-OPTION_SOUND = 1
-OPTION_SAVE = 2
-OPTION_LOAD = 3
-OPTION_WIFI = 4
+OPTION_BLUETOOTH = 0
+OPTION_LANGUAGE = 1
+OPTION_SOUND = 2
+OPTION_SAVE = 3
+OPTION_LOAD = 4
 OPTION_DATE = 5
 OPTION_TIME = 6
-OPTION_BACK = 7
-OPTION_COUNT = 8
+OPTION_EVOLVE = 7
+OPTION_BACK = 8
+OPTION_COUNT = 9
 
-PASSWORD_GROUPS = (
-    ("UPPER", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-    ("LOWER", "abcdefghijklmnopqrstuvwxyz"),
-    ("NUM", "0123456789"),
-    ("SYM", "!@#$%^&*()-_=+[]{};:,.?/"),
-)
-PASSWORD_COMMANDS = ("MODE", "DEL", "CONNECT", "CANCEL")
-MAX_WIFI_PASSWORD_LENGTH = 63
+_NEXT_FORM = {
+    "egg": "baby",
+    "baby": "rookie",
+    "rookie": "champion",
+    "champion": "ultimate",
+}
+
+
+def force_next_form(pet):
+    if pet.species == "ultimate":
+        pet.reset_to_egg()
+        return True
+    nxt = _NEXT_FORM.get(pet.species)
+    if not nxt:
+        return False
+    if pet.species == "egg":
+        pet.complete_hatch(nxt)
+    else:
+        from core.evolution import Evolution
+        Evolution._apply(pet, nxt)
+    return True
 
 
 def _days_in_month(year, month):
@@ -32,37 +46,15 @@ class OptionsSession:
         self.mode = "options"
         self.index = 0
         self.message = ""
-        self.networks = []
         self.values = []
         self.field = 0
-        self.selected_ssid = ""
-        self.password = ""
-        self.password_group = 0
-        self.password_key_index = 0
-        self.network_status = "OFF"
-
-    @property
-    def password_keys(self):
-        return tuple(PASSWORD_GROUPS[self.password_group][1]) + PASSWORD_COMMANDS
-
-    @property
-    def password_key(self):
-        return self.password_keys[self.password_key_index]
-
-    @property
-    def password_group_label(self):
-        return PASSWORD_GROUPS[self.password_group][0]
+        self.bluetooth_enabled = False
+        self.bluetooth_status = "OFF"
 
     def next(self):
         self.message = ""
         if self.mode == "options":
             self.index = (self.index + 1) % OPTION_COUNT
-        elif self.mode == "wifi":
-            self.index = (self.index + 1) % (len(self.networks) + 1)
-        elif self.mode == "password":
-            self.password_key_index = (
-                self.password_key_index + 1
-            ) % len(self.password_keys)
         elif self.mode == "date":
             year, month, day = self.values
             if self.field == 0:
@@ -81,41 +73,6 @@ class OptionsSession:
 
     def action(self, pet, services):
         self.message = ""
-        if self.mode == "wifi":
-            if self.index == len(self.networks):
-                self.mode = "options"
-                self.index = OPTION_WIFI
-            else:
-                self.selected_ssid = self.networks[self.index]
-                self.password = ""
-                self.password_group = 0
-                self.password_key_index = 0
-                self.mode = "password"
-            return True
-        if self.mode == "password":
-            key = self.password_key
-            if key == "MODE":
-                self.password_group = (self.password_group + 1) % len(PASSWORD_GROUPS)
-                self.password_key_index = 0
-            elif key == "DEL":
-                self.password = self.password[:-1]
-            elif key == "CONNECT":
-                self.message = services.connect_wifi(self.selected_ssid, self.password)
-                self.network_status = (
-                    "ONLINE" if self.message in ("ONLINE", "SIM ONLINE") else "NO INTERNET"
-                )
-                self.password = ""
-                self.mode = "options"
-                self.index = OPTION_WIFI
-            elif key == "CANCEL":
-                self.password = ""
-                self.mode = "wifi"
-                self.index = 0
-            elif len(self.password) < MAX_WIFI_PASSWORD_LENGTH:
-                self.password += key
-            else:
-                self.message = "MAX 63"
-            return True
         if self.mode in ("date", "time"):
             field_count = 3 if self.mode == "date" else 2
             if self.field < field_count - 1:
@@ -139,11 +96,9 @@ class OptionsSession:
             self.message = "SAVED" if services.save(pet) else "SAVE ERROR"
         elif self.index == OPTION_LOAD:
             self.message = "LOADED" if services.load(pet) else "NO SAVE"
-        elif self.index == OPTION_WIFI:
-            self.networks = services.scan_wifi()
-            self.mode = "wifi"
-            self.index = 0
-            self.message = "NO NETWORKS" if not self.networks else ""
+        elif self.index == OPTION_BLUETOOTH:
+            self.bluetooth_enabled = not self.bluetooth_enabled
+            self.bluetooth_status = "ADVERTISING" if self.bluetooth_enabled else "OFF"
         elif self.index == OPTION_DATE:
             year, month, day, _, _ = services.get_datetime()
             self.values = [year, month, day]
@@ -154,6 +109,8 @@ class OptionsSession:
             self.values = [hour, minute]
             self.field = 0
             self.mode = "time"
+        elif self.index == OPTION_EVOLVE:
+            self.message = "EVOLVED" if force_next_form(pet) else "NO EVO"
         elif self.index == OPTION_BACK:
             return False
         return True

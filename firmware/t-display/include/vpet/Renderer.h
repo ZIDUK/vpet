@@ -13,6 +13,8 @@ struct AppViewModel {
     const PetState& pet;
     const Motion& motion;
     uint8_t menuIndex;
+    uint32_t nowMs;
+    bool spanish;
 };
 
 class Renderer {
@@ -23,12 +25,13 @@ public:
         TFT_eSprite& staticScene,
         AssetStore& assets
     );
-    void draw(const AppViewModel& model);
+    void draw(const AppViewModel& model, int16_t statusSplitX = 0, bool present = true);
 
 private:
     const char* animationPath(const AppViewModel& model) const;
     void rebuildStaticScene(bool night);
-    void drawSelector(uint8_t selected);
+    void drawSelector(uint8_t selected, bool calling);
+    void drawCallCue(const AppViewModel& model);
 
     TFT_eSPI& display_;
     TFT_eSprite& canvas_;

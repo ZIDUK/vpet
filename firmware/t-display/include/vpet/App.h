@@ -5,6 +5,7 @@
 #include "vpet/Input.h"
 #include "vpet/BleService.h"
 #include "vpet/DateTimeMenu.h"
+#include "vpet/Evolution.h"
 #include "vpet/Motion.h"
 #include "vpet/Navigation.h"
 #include "vpet/Panels.h"
@@ -25,14 +26,18 @@ private:
     void handlePanelInput(uint32_t nowMs, InputEvent event);
     void beginDateTime(bool date);
     void applyDateTime();
+    uint8_t clockHour() const;
 
     Renderer& renderer_;
     Panels& panels_;
     SettingsStore& settingsStore_;
     BleService& bluetooth_;
+    static constexpr uint32_t kCareTimeScale = 1;
+
     Settings settings_;
     DateTimeMenu dateMenu_;
     PetState pet_;
+    Evolution evolution_;
     Motion motion_;
     Navigation navigation_;
     uint32_t lastTickMs_ = 0;

@@ -16,6 +16,7 @@ from config import (
     DRAGFIREMON_IDLE_FRAME_COUNT,
     DRAGFIREMON_IDLE_IMAGE_PATH,
     DRAGFIREMON_PUNCH_IMAGE_PATH,
+    DRAGFIREMON_SLEEP_FRAME_COUNT,
     DRAGFIREMON_SLEEP_IMAGE_PATH,
     EVOLUTION_DRAGFIREMON_THUMB_X,
     EVOLUTION_FIREMON_THUMB_X,
@@ -23,6 +24,7 @@ from config import (
     EVOLUTION_THUMB_SIZE,
     EVOLUTION_THUMB_Y,
     EVOLVED_SPECIES,
+    CARE_TIME_SCALE,
     EVOLUTION_REGISTRY,
     FLAMEMON_CAST_IMAGE_PATH,
     FLAMEMON_EAT_IMAGE_PATH,
@@ -69,7 +71,11 @@ from config import (
 )
 from core.evolution import Evolution
 from core.device_services import DeviceServices
-from core.inventory import INVENTORY_ENTRY_COUNT, use_inventory_item
+from core.inventory import (
+    clamp_visible_inventory_index,
+    next_visible_inventory_index,
+    use_inventory_item,
+)
 from core.menu import activate_menu_item
 from core.motion import (
     MOTION_CAST,
@@ -93,9 +99,7 @@ from ui.status import (
     draw_datetime_editor,
     draw_inventory,
     draw_options,
-    draw_password_editor,
     draw_status,
-    draw_wifi,
 )
 
 
@@ -361,9 +365,9 @@ def run():
     motion = PetMotion(now)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = DeviceServices()
-    services.auto_connect()
     options_session = None
     last_save = now
+    last_now = now
 
     while True:
         if display.root_group is not group:
@@ -373,7 +377,9 @@ def run():
         action_button.update()
         if next_button.fell:
             if panel_mode == "inventory":
-                inventory_index = (inventory_index + 1) % INVENTORY_ENTRY_COUNT
+                inventory_index = next_visible_inventory_index(pet, inventory_index)
+            elif panel_mode == "status":
+                inventory_index = 1 - inventory_index
             elif panel_mode == "options":
                 options_session.next()
             else:
@@ -382,18 +388,27 @@ def run():
                 menu_selector.x = menu_index * 16
         if action_button.fell:
             if panel_mode == "inventory":
-                if use_inventory_item(pet, inventory_index) == "back":
+                inventory_index = clamp_visible_inventory_index(pet, inventory_index)
+                result = use_inventory_item(pet, inventory_index)
+                if result == "used":
+                    inventory_index = clamp_visible_inventory_index(pet, inventory_index)
+                if result == "back":
                     panel_mode = None
             elif panel_mode == "options":
-                if not options_session.action(pet, services):
+                staying = options_session.action(pet, services)
+                if options_session.message == "EVOLVED":
+                    motion.start_evolution(time.monotonic())
+                    panel_mode = None
+                elif not staying:
                     panel_mode = None
             elif panel_mode is not None:
                 panel_mode = None
             elif menu_index == MENU_STATUS_INDEX:
                 panel_mode = "status"
+                inventory_index = 0
             elif menu_index == MENU_INVENTORY_INDEX:
                 panel_mode = "inventory"
-                inventory_index = 0
+                inventory_index = clamp_visible_inventory_index(pet, 0)
             elif menu_index == MENU_PEDIA_INDEX:
                 panel_mode = "evolution"
             elif menu_index == MENU_OPTIONS_INDEX:
@@ -404,7 +419,12 @@ def run():
 
         pet.decay_if_due()
         now = time.monotonic()
-        if motion.state == MOTION_IDLE and evolution.evolve(pet):
+        elapsed = now - last_now
+        last_now = now
+        if pet.is_live:
+            pet.stage_age_seconds += elapsed
+            pet.update_call(int(now * 1000), CARE_TIME_SCALE)
+        if motion.state == MOTION_IDLE and evolution.evolve(pet, CARE_TIME_SCALE):
             motion.start_evolution(now)
         motion.update(now)
         sleeping = motion.state == MOTION_SLEEP
@@ -467,7 +487,11 @@ def run():
                 if pet.species == ULTIMATE_SPECIES
                 else flamemon_sleep_grid if pet.species == EVOLVED_SPECIES else sleep_grid
             )
-            active_frame_count = PET_SLEEP_FRAME_COUNT
+            active_frame_count = (
+                DRAGFIREMON_SLEEP_FRAME_COUNT
+                if pet.species == ULTIMATE_SPECIES
+                else PET_SLEEP_FRAME_COUNT
+            )
         elif motion.state == MOTION_CAST:
             active_grid = (
                 dragfiremon_cast_grid
@@ -510,6 +534,10 @@ def run():
                 int(now),
                 pet.species,
                 pet.battles_won,
+                getattr(pet, "battles_this_form", 0),
+                getattr(pet, "care_mistakes", 0),
+                getattr(pet, "call_reason", None),
+                int(getattr(pet, "stage_age_seconds", 0)),
                 pet.stats["hp"],
                 pet.stats["h"],
                 pet.stats["e"],
@@ -523,8 +551,9 @@ def run():
                 "inventory",
                 inventory_index,
                 pet.inventory.get("meat", 0),
-                pet.inventory.get("tonic", 0),
-                pet.inventory.get("medkit", 0),
+                pet.inventory.get("energy", 0),
+                pet.inventory.get("exp", 0),
+                pet.inventory.get("ring", 0),
             )
             if next_snapshot != panel_snapshot:
                 draw_inventory(panel_bitmap, pet, inventory_index)
@@ -542,22 +571,14 @@ def run():
                 options_session.index,
                 options_session.field,
                 tuple(options_session.values),
-                tuple(options_session.networks),
-                options_session.selected_ssid,
-                options_session.password,
-                options_session.password_group,
-                options_session.password_key_index,
+                options_session.bluetooth_status,
                 options_session.message,
                 pet.language,
                 pet.sound_enabled,
                 current_datetime,
             )
             if next_snapshot != panel_snapshot:
-                if options_session.mode == "wifi":
-                    draw_wifi(panel_bitmap, pet, options_session)
-                elif options_session.mode == "password":
-                    draw_password_editor(panel_bitmap, pet, options_session)
-                elif options_session.mode in ("date", "time"):
+                if options_session.mode in ("date", "time"):
                     draw_datetime_editor(panel_bitmap, pet, options_session)
                 else:
                     draw_options(panel_bitmap, pet, options_session, current_datetime)

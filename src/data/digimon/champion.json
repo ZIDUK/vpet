@@ -4,7 +4,9 @@
   "stage": "champion",
   "sprite": "/digimon1/Champion/flamemon_idle_atlas.bmp",
   "evolves_to": "ultimate",
-  "automatic": false,
-  "requirements_pending": true,
+  "automatic": true,
+  "requirements_pending": false,
+  "min_stage_age_seconds": 129600,
+  "battles_required": 15,
   "requirements": {}
 }

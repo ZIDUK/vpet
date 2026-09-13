@@ -1,7 +1,10 @@
 #include "vpet/Panels.h"
+#include "vpet/Evolution.h"
+#include "vpet/Layout.h"
 #include "vpet/Strings.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 namespace vpet {
@@ -12,6 +15,7 @@ constexpr const char* kMenuIcons[] = {
     "/ui/icons/pedia.vpa", "/ui/icons/options.vpa",
 };
 constexpr uint16_t kPanel = 0xD6B4;
+constexpr uint16_t kChip = 0xC52D;
 constexpr uint16_t kInk = 0x31C7;
 constexpr SpeciesId kEvolutionStages[] = {
     SpeciesId::Egg, SpeciesId::Baby, SpeciesId::Rookie,
@@ -36,6 +40,7 @@ Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
 void Panels::invalidate() {
     lastPanel_ = PanelId::Home;
     lastSpanish_ = true;
+    lastStatusPage_ = 255;
 }
 
 void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font) {
@@ -46,7 +51,16 @@ void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, ui
     display_.drawString(fitted, x, y, font);
 }
 
-void Panels::drawChrome(uint8_t selected, const char* title) {
+void Panels::drawCallBadge(uint8_t selected, bool calling) {
+    if (!calling) return;
+    const int16_t selectorX = (selected % 8) * 30;
+    display_.setTextDatum(TR_DATUM);
+    display_.setTextColor(TFT_YELLOW, TFT_BLACK);
+    display_.drawString("*", selectorX + 28, 1, 2);
+    display_.setTextDatum(TL_DATUM);
+}
+
+void Panels::drawChrome(uint8_t selected, const char* title, bool calling) {
     display_.fillScreen(TFT_BLACK);
     for (uint8_t index = 0; index < 8; ++index) {
         assets_.drawFrame(display_, kMenuIcons[index], 0, index * 30 + 5, 2);
@@ -54,6 +68,7 @@ void Panels::drawChrome(uint8_t selected, const char* title) {
     const int16_t selectorX = (selected % 8) * 30;
     display_.drawRect(selectorX, 0, 30, 24, TFT_YELLOW);
     display_.drawRect(selectorX + 1, 1, 28, 22, TFT_YELLOW);
+    drawCallBadge(selected, calling);
     display_.fillRect(0, 24, 240, 111, kPanel);
     display_.fillRect(3, 27, 234, 20, kInk);
     display_.setTextDatum(MC_DATUM);
@@ -63,9 +78,9 @@ void Panels::drawChrome(uint8_t selected, const char* title) {
     display_.setTextColor(kInk, kPanel);
 }
 
-void Panels::beginPanel(bool panelChanged, uint8_t selected, const char* title) {
+void Panels::beginPanel(bool panelChanged, uint8_t selected, const char* title, bool calling) {
     if (panelChanged) {
-        drawChrome(selected, title);
+        drawChrome(selected, title, calling);
         return;
     }
     display_.fillRect(0, 48, 240, 87, kPanel);
@@ -73,133 +88,352 @@ void Panels::beginPanel(bool panelChanged, uint8_t selected, const char* title) 
     display_.setTextColor(kInk, kPanel);
 }
 
-void Panels::drawStat(const char* icon, const char* label, const char* value, int16_t x, int16_t y) {
-    assets_.drawFrame(display_, icon, 0, x, y);
+void Panels::drawStatusPet(const PetState& pet, uint32_t nowMs) {
+    const int16_t x = statusPetX(88);
+    const int16_t y = 47;
+    if (pet.dead()) {
+        assets_.drawFrame(display_, "/ui/fx/grave.vpa", 0, x + 6, 50);
+        return;
+    }
+    assets_.drawFrame(display_, portraitPath(pet.species(), false), nowMs / 80, x, y);
+}
+
+void Panels::drawStat(
+    const char* icon,
+    const char* label,
+    const char* value,
+    int16_t x,
+    int16_t y,
+    int16_t width,
+    const char* extra
+) {
+    constexpr uint16_t kChip = 0xC52D;
+    display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+    display_.drawRoundRect(x, y, width, kStatusCardH, 4, kInk);
+    assets_.drawFrame(display_, icon, 0, x + 2, y + 2, false, -1, 72);
+    display_.setTextColor(kInk, kChip);
+    if (extra != nullptr && extra[0] != '\0') {
+        drawLabel(label, x + 24, y + 2, 36, 2);
+        drawLabel(extra, x + 24, y + 14, width - 50, 1);
+        display_.setTextDatum(TR_DATUM);
+        drawLabel(value, x + width - 3, y + 2, 40, 2);
+    } else {
+        drawLabel(label, x + 24, y + 5, 36, 2);
+        display_.setTextDatum(TR_DATUM);
+        drawLabel(value, x + width - 3, y + 5, 40, 2);
+    }
+    display_.setTextDatum(TL_DATUM);
     display_.setTextColor(kInk, kPanel);
-    char line[24];
-    snprintf(line, sizeof(line), "%s %s", label, value);
-    drawLabel(line, x + 22, y + 3, 88, 2);
+}
+
+void Panels::drawVital(const char* icon, const char* label, int value, int16_t y) {
+    constexpr uint16_t kChip = 0xC52D;
+    const int16_t x = kStatusSplitX + 4;
+    const int16_t width = 232 - kStatusSplitX;
+    const int clamped = value < 0 ? 0 : (value > 100 ? 100 : value);
+    display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+    display_.drawRoundRect(x, y, width, kStatusCardH, 4, kInk);
+    assets_.drawFrame(display_, icon, 0, x + 2, y + 2, false, -1, 72);
+    display_.setTextColor(kInk, kChip);
+    drawLabel(label, x + 24, y + 1, 36, 2);
+    char num[8];
+    snprintf(num, sizeof(num), "%d", clamped);
+    display_.setTextDatum(TR_DATUM);
+    drawLabel(num, x + width - 3, y + 1, 28, 2);
+    display_.setTextDatum(TL_DATUM);
+    display_.drawRect(x + 24, y + 14, width - 30, 7, kInk);
+    const int16_t filled = static_cast<int16_t>((clamped * (width - 32)) / 100);
+    if (filled > 0) display_.fillRect(x + 25, y + 15, filled, 5, kInk);
+    display_.setTextColor(kInk, kPanel);
 }
 
 void Panels::drawBar(const char* label, int value, int16_t y) {
-    char line[16];
-    snprintf(line, sizeof(line), "%s %d", label, value);
-    drawLabel(line, 6, y, 50, 2);
-    display_.fillRect(36, y + 4, 200, 8, 0x8C51);
+    drawLabel(label, 6, y, 56, 2);
+    display_.fillRect(62, y + 4, 174, 8, 0x8C51);
     const int clamped = value < 0 ? 0 : (value > 100 ? 100 : value);
-    const int16_t filled = static_cast<int16_t>((clamped * 200) / 100);
-    if (filled > 0) display_.fillRect(36, y + 4, filled, 8, kInk);
+    const int16_t filled = static_cast<int16_t>((clamped * 174) / 100);
+    if (filled > 0) display_.fillRect(62, y + 4, filled, 8, kInk);
 }
 
-void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page) {
-    if ((page % 2) == 0) {
-        drawBar(copy::hp(spanish), pet.health(), 54);
-        drawBar(copy::hunger(spanish), pet.hunger(), 80);
-        drawBar(copy::energy(spanish), pet.energy(), 106);
+void Panels::drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin) {
+    const uint16_t colorA = helixColor(dna, 0);
+    const uint16_t colorB = helixColor(dna, 1);
+    const bool empty = dna == nullptr || (dna[0] | dna[1] | dna[2] | dna[3]) == 0;
+    const int width = kHelixWidth;
+    const int height = kHelixHeight;
+    const uint8_t steps = 48;
+    display_.fillRoundRect(x - 2, y - 2, width + 4, height + 4, 4, 0x2104);
+    int16_t xs[2][49];
+    int16_t ys[49];
+    for (uint8_t step = 0; step <= steps; ++step) {
+        xs[0][step] = static_cast<int16_t>(x + helixSample(0, step, steps, width, spin));
+        xs[1][step] = static_cast<int16_t>(x + helixSample(1, step, steps, width, spin));
+        ys[step] = y + static_cast<int16_t>((step * height) / steps);
+    }
+    for (uint8_t pass = 0; pass < 2; ++pass) {
+        const bool back = pass == 0;
+        for (uint8_t step = 0; step < steps; ++step) {
+            for (uint8_t strand = 0; strand < 2; ++strand) {
+                const float depth = helixDepth(strand, step, steps, spin);
+                if (back == (depth < 0)) {
+                    display_.drawLine(
+                        xs[strand][step],
+                        ys[step],
+                        xs[strand][step + 1],
+                        ys[step + 1],
+                        strand == 0 ? colorA : colorB
+                    );
+                }
+            }
+        }
+    }
+    if (!empty) {
+        for (uint8_t rung = 0; rung < kHelixRungs; ++rung) {
+            const uint8_t step = static_cast<uint8_t>(((rung + 1) * steps) / (kHelixRungs + 1));
+            const int16_t row = y + static_cast<int16_t>((step * height) / steps);
+            const int16_t x0 = static_cast<int16_t>(x + helixSample(0, step, steps, width, spin));
+            const int16_t x1 = static_cast<int16_t>(x + helixSample(1, step, steps, width, spin));
+            display_.drawLine(x0, row, x1, row, (rung % 2) == 0 ? colorA : colorB);
+            display_.fillCircle(x0, row, 1, colorA);
+            display_.fillCircle(x1, row, 1, colorB);
+        }
+    }
+}
+
+void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
+    const int16_t x = kStatusSplitX + 4;
+    const int16_t width = 232 - kStatusSplitX;
+    drawHelix(x + 2, kHelixY, pet.dna(), helixSpin(nowMs));
+    char code[20];
+    if (pet.hasDna()) {
+        snprintf(
+            code,
+            sizeof(code),
+            "DNA: %02X-%02X-%02X-%02X",
+            pet.dna()[0],
+            pet.dna()[1],
+            pet.dna()[2],
+            pet.dna()[3]
+        );
+    } else {
+        snprintf(code, sizeof(code), "DNA: -- -- -- --");
+    }
+    display_.setTextColor(kInk, kPanel);
+    drawLabel(code, x + 44, kStatusCardY, 90, 1);
+    if (!pet.hasDna()) return;
+    const char* names[] = {
+        copy::hp(spanish), copy::mp(spanish), copy::offense(spanish),
+        copy::def(spanish), copy::spd(spanish), copy::brn(spanish),
+    };
+    const CombatStat stats[] = {
+        CombatStat::Hp, CombatStat::Mp, CombatStat::Off,
+        CombatStat::Def, CombatStat::Spd, CombatStat::Brn,
+    };
+    for (uint8_t i = 0; i < 6; ++i) {
+        const int16_t y = 62 + i * 11;
+        char num[4];
+        snprintf(num, sizeof(num), "%02u", pet.combatStat(stats[i]));
+        drawLabel(names[i], x + 56, y, 26, 1);
+        drawLabel(num, x + 82, y, 16, 1);
+        const int16_t barW = width - 102;
+        display_.drawRect(x + 100, y + 2, barW, 7, kInk);
+        const int16_t filled = static_cast<int16_t>((pet.combatStat(stats[i]) * (barW - 2)) / 99);
+        if (filled > 0) display_.fillRect(x + 101, y + 3, filled, 5, helixColor(pet.dna(), 0));
+    }
+}
+
+void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_t nowMs) {
+    if ((page % Navigation::kStatusPages) == 3) {
+        drawDnaPage(pet, spanish, nowMs);
         return;
     }
-    char value[16];
-    snprintf(value, sizeof(value), "%lus", static_cast<unsigned long>(pet.ageSeconds()));
-    drawStat("/ui/icons/clock.vpa", copy::age(spanish), value, 6, 50);
-    snprintf(value, sizeof(value), "%d", pet.effort());
-    drawStat("/ui/icons/training.vpa", copy::effort(spanish), value, 6, 72);
-    snprintf(value, sizeof(value), "%d", pet.battles());
-    drawStat("/ui/icons/battle.vpa", copy::battles(spanish), value, 6, 94);
-    snprintf(value, sizeof(value), "%d", pet.happiness());
-    drawStat("/ui/icons/heart.vpa", copy::mood(spanish), value, 126, 50);
-    int clock[5] = {2026, 1, 1, 0, 0};
-    const time_t now = time(nullptr);
-    struct tm parts {};
-    localtime_r(&now, &parts);
-    if (parts.tm_year + 1900 >= 2024) {
-        clock[0] = parts.tm_year + 1900;
-        clock[1] = parts.tm_mon + 1;
-        clock[2] = parts.tm_mday;
-        clock[3] = parts.tm_hour;
-        clock[4] = parts.tm_min;
+    if ((page % Navigation::kStatusPages) == 0) {
+        drawVital("/ui/icons/heart.vpa", copy::hp(spanish), pet.health(), kStatusCardY);
+        drawVital("/ui/icons/feed.vpa", copy::hunger(spanish), pet.hunger(), kStatusCardY + kStatusCardRow);
+        drawVital("/ui/icons/energy.vpa", copy::energy(spanish), pet.energy(), kStatusCardY + kStatusCardRow * 2);
+        return;
     }
-    char line[32];
-    DateTimeMenu::writeClock(clock, line, sizeof(line));
-    assets_.drawFrame(display_, "/ui/icons/clock.vpa", 0, 6, 114);
-    display_.setTextColor(kInk, kPanel);
-    drawLabel(line, 28, 117, 204, 2);
+    const int16_t left = kStatusSplitX + 4;
+    const int16_t right = kStatusSplitX + 70;
+    const int16_t wide = 232 - kStatusSplitX;
+    char value[16];
+    if ((page % Navigation::kStatusPages) == 2) {
+        snprintf(value, sizeof(value), "%u", pet.weight());
+        drawStat("/ui/icons/weight.vpa", copy::weight(spanish), value, left, kStatusCardY);
+        snprintf(value, sizeof(value), "%u/3", pet.dp());
+        drawStat("/ui/icons/battle.vpa", copy::dp(spanish), value, right, kStatusCardY);
+        if (pet.hasWinRatio()) {
+            snprintf(value, sizeof(value), "%u%%", pet.winRatioPercent());
+        } else {
+            snprintf(value, sizeof(value), "--");
+        }
+        drawStat("/ui/icons/trophy.vpa", copy::winRatio(spanish), value, left, kStatusCardY + kStatusCardRow);
+        snprintf(value, sizeof(value), "%u/7", pet.protein());
+        drawStat("/ui/icons/protein.vpa", copy::proteinOverdose(spanish), value, right, kStatusCardY + kStatusCardRow);
+        snprintf(value, sizeof(value), "%u-%u", pet.wins(), pet.losses());
+        drawStat("/ui/icons/versus.vpa", "W-L", value, left, kStatusCardY + kStatusCardRow * 2, wide);
+        return;
+    }
+    snprintf(value, sizeof(value), "%lus", static_cast<unsigned long>(pet.stageAgeSeconds()));
+    const char* extra = nullptr;
+    char clockExtra[16] = {};
+    if (pet.callReason() == CallReason::Hunger) extra = copy::callHunger(spanish);
+    else if (pet.callReason() == CallReason::Strength) extra = copy::callStrength(spanish);
+    else if (pet.callReason() == CallReason::Lights) extra = copy::callLights(spanish);
+    else if (pet.cold()) extra = copy::frozen(spanish);
+    else if (pet.dead()) extra = copy::dead(spanish);
+    else if (pet.injured()) extra = copy::injured(spanish);
+    else {
+        int clock[5] = {2026, 1, 1, 0, 0};
+        const time_t now = time(nullptr);
+        struct tm parts {};
+        localtime_r(&now, &parts);
+        if (parts.tm_year + 1900 >= 2024) {
+            clock[1] = parts.tm_mon + 1;
+            clock[2] = parts.tm_mday;
+            clock[3] = parts.tm_hour;
+            clock[4] = parts.tm_min;
+        }
+        snprintf(clockExtra, sizeof(clockExtra), "%02d/%02d %02d:%02d", clock[1], clock[2], clock[3], clock[4]);
+        extra = clockExtra;
+    }
+    drawStat("/ui/icons/clock.vpa", copy::age(spanish), value, left, kStatusCardY, wide, extra);
+    snprintf(value, sizeof(value), "%u", pet.overfeeds());
+    drawStat("/ui/icons/feed.vpa", copy::overfeeds(spanish), value, left, kStatusCardY + kStatusCardRow);
+    snprintf(value, sizeof(value), "%d", pet.careMistakes());
+    drawStat("/ui/icons/heart.vpa", copy::careMistakes(spanish), value, right, kStatusCardY + kStatusCardRow);
+    snprintf(value, sizeof(value), "%u/4", pet.effortHearts());
+    drawStat("/ui/icons/training.vpa", copy::effort(spanish), value, left, kStatusCardY + kStatusCardRow * 2);
+    snprintf(value, sizeof(value), "%d", pet.battles());
+    drawStat("/ui/icons/battle.vpa", copy::battles(spanish), value, right, kStatusCardY + kStatusCardRow * 2);
 }
 
 void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) {
-    char meat[16];
-    char energy[16];
-    char exp[16];
-    char ring[16];
-    snprintf(meat, sizeof(meat), "%s x%u", copy::meat(spanish), pet.itemCount(0));
-    snprintf(energy, sizeof(energy), "%s x%u", copy::itemEnergy(spanish), pet.itemCount(1));
-    snprintf(exp, sizeof(exp), "%s x%u", copy::exp(spanish), pet.itemCount(2));
-    snprintf(ring, sizeof(ring), "%s x%u", copy::fireRing(spanish), pet.itemCount(3));
-    const char* labels[] = {meat, energy, exp, ring, copy::back(spanish)};
     const char* icons[] = {
         "/ui/icons/feed.vpa",
-        "/ui/icons/rest.vpa",
+        "/ui/icons/energy.vpa",
         "/ui/icons/training.vpa",
         "/ui/icons/items.vpa",
+        "/ui/icons/protein.vpa",
+        "/ui/icons/medkit.vpa",
         "/ui/icons/options.vpa",
     };
     const uint8_t current = pet.clampVisibleInventoryIndex(selected);
     const uint8_t visible = pet.visibleInventoryCount();
-    uint8_t selectedSlot = 0;
-    for (uint8_t slot = 0; slot < visible; ++slot) {
-        if (pet.inventoryIndexAt(slot) == current) selectedSlot = slot;
+    uint8_t pos = 0;
+    for (; pos < visible; ++pos) {
+        if (pet.inventoryIndexAt(pos) == current) break;
     }
-    const uint8_t windowStart = selectedSlot < 4 ? 0 : static_cast<uint8_t>(selectedSlot - 3);
-    const uint8_t rows = visible < 4 ? visible : 4;
-    for (uint8_t slot = 0; slot < rows; ++slot) {
-        const uint8_t index = pet.inventoryIndexAt(windowStart + slot);
-        const int16_t y = 52 + slot * 20;
+    const uint8_t start = inventoryWindowStart(visible, pos);
+    assets_.drawFrame(display_, icons[current], 0, 40, 70, false, -1, 72);
+    display_.setTextColor(kInk, kPanel);
+    display_.setTextDatum(MC_DATUM);
+    drawLabel(copy::itemName(current, spanish), 50, 104, 88, 2);
+    drawLabel(copy::itemBlurb(current, spanish), 50, 118, 88, 1);
+    display_.setTextDatum(TL_DATUM);
+    const int16_t x = kStatusSplitX + 4;
+    const int16_t width = 232 - kStatusSplitX;
+    const uint8_t shown = visible < kInventoryWindow ? visible : kInventoryWindow;
+    for (uint8_t slot = 0; slot < shown; ++slot) {
+        const uint8_t index = pet.inventoryIndexAt(start + slot);
+        const int16_t y = kStatusCardY + slot * kStatusCardRow;
         const bool active = index == current;
-        if (active) display_.fillRect(5, y - 2, 230, 19, TFT_YELLOW);
-        assets_.drawFrame(display_, icons[index], 0, 6, y - 1);
-        display_.setTextColor(kInk, active ? TFT_YELLOW : kPanel);
-        drawLabel(labels[index], 28, y + 2, 200, 2);
+        display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+        display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
+        assets_.drawFrame(display_, icons[index], 0, x + 2, y + 2, false, -1, 72);
+        display_.setTextColor(kInk, kChip);
+        if (index < 6) {
+            char line[20];
+            snprintf(line, sizeof(line), "%s x%u", copy::itemName(index, spanish), pet.itemCount(index));
+            drawLabel(line, x + 24, y + 5, width - 28, 2);
+        } else {
+            drawLabel(copy::itemName(index, spanish), x + 24, y + 5, width - 28, 2);
+        }
     }
 }
 
-void Panels::drawEvolution(const Navigation& navigation, bool detail, bool spanish) {
-    (void)spanish;
-    const EvolutionNode selected = navigation.selectedEvolutionNode();
-    if (detail) {
-        display_.drawRect(74, 51, 92, 72, TFT_YELLOW);
-        if (selected.hidden) {
-            assets_.drawFrame(display_, portraitPath(selected.species, false), 0, 76, 35, false, TFT_BLACK);
-            display_.setTextColor(kInk, kPanel);
-            display_.setTextDatum(MC_DATUM);
-            display_.drawString("???", 120, 112, 2);
-        } else {
-            assets_.drawFrame(display_, portraitPath(selected.species, false), 0, 76, 35);
-            display_.setTextColor(kInk, kPanel);
-            display_.setTextDatum(MC_DATUM);
-            display_.drawString(selected.label, 120, 108, 2);
-        }
-        display_.setTextDatum(TL_DATUM);
+void Panels::drawEvolutionTree(const Navigation& navigation) {
+    const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+    const int16_t stride = kEvoChip + kEvoGap;
+    const int16_t sparkX = kEvoX0 + stride;
+    const int16_t fireX = kEvoX0 + stride * 2;
+    display_.drawLine(sparkX + kEvoChip, kEvoColorY + kEvoChip / 2, fireX, kEvoColorY + kEvoChip / 2, kInk);
+    display_.drawLine(fireX, kEvoColorY + kEvoChip / 2, fireX, kEvoDarkY + kEvoChip / 2, kInk);
+    for (uint8_t index = 0; index < Navigation::kEvolutionNodeCount; ++index) {
+        const uint8_t stage = Navigation::evolutionNodeStage(index);
+        const bool dark = Navigation::evolutionNodeDark(index);
+        const SpeciesId species = kEvolutionStages[stage];
+        const int16_t x = kEvoX0 + stage * stride;
+        const int16_t y = dark ? kEvoDarkY : kEvoColorY;
+        const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
+        const bool active = index == selected;
+        display_.fillRoundRect(x, y, kEvoChip, kEvoChip, 4, kChip);
+        display_.drawRoundRect(x, y, kEvoChip, kEvoChip, 4, active ? TFT_YELLOW : kInk);
+        assets_.drawFrame(display_, portraitPath(species, true), 0, x + 2, y + 2, false, hidden ? TFT_BLACK : -1);
+    }
+}
+
+void Panels::drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail) {
+    if (!detail) {
+        drawEvolutionTree(navigation);
         return;
     }
-    const uint8_t selectedIndex = navigation.panelIndex() % 5;
-    const uint8_t windowStart = selectedIndex == 0 ? 0 : (selectedIndex >= 4 ? 2 : selectedIndex - 1);
-    for (uint8_t slot = 0; slot < 3; ++slot) {
-        const uint8_t index = windowStart + slot;
-        const SpeciesId species = kEvolutionStages[index];
-        Navigation copy = navigation;
-        copy.select(species);
-        const EvolutionNode node = copy.selectedEvolutionNode();
-        const int16_t x = 5 + slot * 79;
-        display_.drawRect(x, 52, 72, 70, index == selectedIndex ? TFT_YELLOW : kInk);
-        if (node.hidden) {
-            assets_.drawFrame(display_, portraitPath(species, true), 0, x + 18, 57, false, TFT_BLACK);
-            display_.setTextColor(kInk, kPanel);
-            drawLabel("???", x + 25, 99, 36, 1);
+    const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+    const uint8_t stage = Navigation::evolutionNodeStage(selected);
+    const bool dark = Navigation::evolutionNodeDark(selected);
+    const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
+    const SpeciesId species = kEvolutionStages[stage];
+    assets_.drawFrame(display_, portraitPath(species, true), 0, 32, 56, false, hidden ? TFT_BLACK : -1);
+    display_.setTextColor(kInk, kPanel);
+    display_.setTextDatum(MC_DATUM);
+    drawLabel(hidden ? "???" : copy::evoShort(stage, spanish), 50, 96, 88, 2);
+    if (hidden) {
+        drawLabel("???", 50, 108, 88, 1);
+    } else {
+        const bool now = stage == navigation.currentStage();
+        if (now) {
+            char status[20];
+            snprintf(
+                status,
+                sizeof(status),
+                "%s %lus CM%u",
+                copy::evoNow(spanish),
+                static_cast<unsigned long>(pet.stageAgeSeconds()),
+                pet.careMistakes()
+            );
+            drawLabel(status, 50, 108, 88, 1);
         } else {
-            assets_.drawFrame(display_, portraitPath(species, true), 0, x + 18, 57);
-            display_.setTextColor(kInk, kPanel);
-            drawLabel(node.label, x + 4, 99, 64, 1);
+            drawLabel(copy::evoReached(spanish), 50, 108, 88, 1);
         }
-        if (index < 4 && slot < 2) drawLabel(">", x + 73, 73, 8, 2);
+        char requirements[40];
+        Evolution().writeReachRequirements(species, spanish, requirements, sizeof(requirements));
+        if (requirements[0] != '\0') {
+            char* space = strchr(requirements, ' ');
+            if (space != nullptr) {
+                *space = '\0';
+                drawLabel(requirements, 50, 118, 88, 1);
+                drawLabel(space + 1, 50, 126, 88, 1);
+            } else {
+                drawLabel(requirements, 50, 118, 88, 1);
+            }
+        }
+    }
+    display_.setTextDatum(TL_DATUM);
+    const int16_t x = kStatusSplitX + 4;
+    const int16_t width = 232 - kStatusSplitX;
+    const uint8_t start = inventoryWindowStart(Navigation::kEvolutionNodeCount, selected);
+    for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
+        const uint8_t index = static_cast<uint8_t>(start + slot);
+        const uint8_t listStage = Navigation::evolutionNodeStage(index);
+        const bool listDark = Navigation::evolutionNodeDark(index);
+        const bool listHidden = (listDark && listStage >= 2) || (!listDark && listStage > navigation.currentStage());
+        const int16_t y = kStatusCardY + slot * kStatusCardRow;
+        const bool active = index == selected;
+        display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+        display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
+        assets_.drawFrame(display_, "/ui/icons/pedia.vpa", 0, x + 2, y + 2);
+        display_.setTextColor(kInk, kChip);
+        drawLabel(listHidden ? "???" : copy::evoShort(listStage, spanish), x + 24, y + 5, width - 28, 2);
     }
 }
 
@@ -210,37 +444,92 @@ void Panels::drawOptions(
     const char* language,
     bool soundEnabled
 ) {
-    const char* bluetooth = copy::bluetoothOff(spanish);
+    const char* bluetooth = "OFF";
     switch (bluetoothStatus) {
-        case BleStatus::Advertising: bluetooth = copy::bluetoothAdvertising(spanish); break;
-        case BleStatus::Connected: bluetooth = copy::bluetoothConnected(spanish); break;
-        case BleStatus::Error: bluetooth = copy::bluetoothError(spanish); break;
+        case BleStatus::Advertising: bluetooth = "ADV"; break;
+        case BleStatus::Connected: bluetooth = "ON"; break;
+        case BleStatus::Error: bluetooth = "ERR"; break;
         case BleStatus::Off: break;
     }
-    char languageLine[24];
-    char soundLine[24];
-    snprintf(languageLine, sizeof(languageLine), "%s: %s", copy::language(spanish), language);
-    snprintf(soundLine, sizeof(soundLine), "%s: %s", copy::sound(spanish), soundEnabled ? copy::on(spanish) : copy::off(spanish));
-    const char* options[] = {
-        bluetooth,
-        languageLine,
-        soundLine,
-        copy::save(spanish),
-        copy::load(spanish),
-        copy::dateTitle(spanish),
-        copy::timeTitle(spanish),
-        copy::evolve(spanish),
-        copy::back(spanish)
-    };
     const uint8_t current = selected % 9;
-    const uint8_t windowStart = current < 4 ? 0 : (current < 8 ? 4 : 5);
-    for (uint8_t slot = 0; slot < 4; ++slot) {
-        const uint8_t index = windowStart + slot;
-        const int16_t y = 52 + slot * 20;
+    const char* shortLabels[] = {"BT", "LANG", "SND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK"};
+    const char* extras[] = {
+        bluetooth,
+        language,
+        soundEnabled ? copy::on(spanish) : copy::off(spanish),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+    };
+    const char* icons[] = {
+        "/ui/icons/bluetooth.vpa",
+        "/ui/icons/language.vpa",
+        "/ui/icons/sound.vpa",
+        "/ui/icons/save.vpa",
+        "/ui/icons/load.vpa",
+        "/ui/icons/date.vpa",
+        "/ui/icons/clock.vpa",
+        "/ui/icons/evolve.vpa",
+        "/ui/icons/back.vpa",
+    };
+    for (uint8_t index = 0; index < 9; ++index) {
+        const uint8_t col = index % 3;
+        const uint8_t row = index / 3;
+        const int16_t x = 8 + col * 76;
+        const int16_t y = 54 + row * 26;
+        const bool active = index == current;
+        const uint16_t fill = active ? TFT_YELLOW : kChip;
+        display_.fillRoundRect(x, y, 72, 24, 4, fill);
+        display_.drawRoundRect(x, y, 72, 24, 4, active ? TFT_YELLOW : kInk);
+        assets_.drawFrame(display_, icons[index], 0, x + 2, y + 2, false, -1, 72);
+        display_.setTextColor(kInk, fill);
+        if (extras[index][0] != '\0') {
+            char line[16];
+            snprintf(line, sizeof(line), "%s %s", shortLabels[index], extras[index]);
+            drawLabel(line, x + 24, y + 5, 46, 1);
+        } else {
+            drawLabel(shortLabels[index], x + 24, y + 5, 46, 2);
+        }
+    }
+}
+
+void Panels::drawRest(
+    uint8_t selected,
+    bool spanish,
+    bool cold,
+    bool hasBackup,
+    SpeciesId backupSpecies
+) {
+    const char* parked = copy::emptySlot(spanish);
+    if (hasBackup) {
+        switch (backupSpecies) {
+            case SpeciesId::Baby: parked = "SPARKMON"; break;
+            case SpeciesId::Rookie: parked = "FIREMON"; break;
+            case SpeciesId::Champion: parked = "FLAMEMON"; break;
+            case SpeciesId::Ultimate: parked = "DRAGFIREMON"; break;
+            case SpeciesId::Egg: parked = "EGG"; break;
+        }
+    }
+    char coldLine[24];
+    char backupLine[28];
+    snprintf(coldLine, sizeof(coldLine), "%s: %s", copy::cold(spanish), cold ? copy::on(spanish) : copy::off(spanish));
+    snprintf(backupLine, sizeof(backupLine), "%s: %s", copy::backup(spanish), parked);
+    const char* rows[] = {
+        copy::sleep(spanish),
+        coldLine,
+        backupLine,
+        copy::back(spanish),
+    };
+    const uint8_t current = selected % Navigation::kRestCount;
+    for (uint8_t index = 0; index < Navigation::kRestCount; ++index) {
+        const int16_t y = 52 + index * 20;
         const bool active = index == current;
         if (active) display_.fillRect(5, y - 2, 230, 19, TFT_YELLOW);
         display_.setTextColor(kInk, active ? TFT_YELLOW : kPanel);
-        drawLabel(options[index], 10, y, 218, 2);
+        drawLabel(rows[index], 10, y, 218, 2);
     }
 }
 
@@ -266,40 +555,62 @@ void Panels::draw(
     BleStatus bluetoothStatus,
     const DateTimeMenu& dateMenu,
     const char* language,
-    bool soundEnabled
+    bool soundEnabled,
+    bool hasBackup,
+    SpeciesId backupSpecies,
+    uint32_t nowMs
 ) {
     output_.startWrite();
     const PanelId panel = navigation.panel();
     const bool spanish = languageIsSpanish(language);
+    const bool calling = pet.callReason() != CallReason::None;
     const bool panelChanged = panel != lastPanel_ || spanish != lastSpanish_;
     lastPanel_ = panel;
     lastSpanish_ = spanish;
     switch (panel) {
-        case PanelId::Status:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::statusTitle(spanish));
-            drawStatus(pet, spanish, navigation.panelIndex());
+        case PanelId::Status: {
+            const uint8_t page = navigation.panelIndex();
+            char title[20];
+            snprintf(
+                title,
+                sizeof(title),
+                "%s %u/%u",
+                copy::statusTitle(spanish),
+                (page % Navigation::kStatusPages) + 1,
+                Navigation::kStatusPages
+            );
+            beginPanel(panelChanged || lastStatusPage_ != page, navigation.menuIndex(), title, calling);
+            lastStatusPage_ = page;
+            drawStatusPet(pet, nowMs);
+            drawStatus(pet, spanish, page, nowMs);
             break;
+        }
         case PanelId::Inventory:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::inventoryTitle(spanish));
+            beginPanel(panelChanged, navigation.menuIndex(), copy::inventoryTitle(spanish), calling);
             drawInventory(navigation.panelIndex(), spanish, pet);
             break;
         case PanelId::EvolutionTree:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionTitle(spanish));
-            drawEvolution(navigation, false, spanish);
+            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionTitle(spanish), calling);
+            drawEvolution(navigation, spanish, pet, false);
             break;
         case PanelId::EvolutionDetail:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionDetailTitle(spanish));
-            drawEvolution(navigation, true, spanish);
+            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionDetailTitle(spanish), calling);
+            drawEvolution(navigation, spanish, pet, true);
             break;
         case PanelId::Options:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::optionsTitle(spanish));
+            beginPanel(panelChanged, navigation.menuIndex(), copy::optionsTitle(spanish), calling);
             drawOptions(navigation.panelIndex(), bluetoothStatus, spanish, language, soundEnabled);
+            break;
+        case PanelId::Rest:
+            beginPanel(panelChanged, navigation.menuIndex(), copy::restTitle(spanish), calling);
+            drawRest(navigation.panelIndex(), spanish, pet.cold(), hasBackup, backupSpecies);
             break;
         case PanelId::DateTime:
             beginPanel(
                 panelChanged,
                 navigation.menuIndex(),
-                dateMenu.editingDate() ? copy::dateTitle(spanish) : copy::timeTitle(spanish)
+                dateMenu.editingDate() ? copy::dateTitle(spanish) : copy::timeTitle(spanish),
+                calling
             );
             drawDateTime(dateMenu);
             break;

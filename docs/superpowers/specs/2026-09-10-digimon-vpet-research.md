@@ -175,11 +175,10 @@ Egg —8 s—► Sparkmon → Firemon → Flamemon → Dragfiremon
 - Sparkmon: idle, caminar, comer, dormir. **Sin** entreno ni batalla.
 - Firemon en adelante: idle, movimiento, comida, entreno, descanso,
   ataque, evo.
-- Criterios Sparkmon→Firemon y Flamemon→Dragfiremon: **pendientes**.
-- Firemon→Flamemon: 60 s de edad + H/E/P ≥55 y HP ≥75 (reglas Python;
-  el firmware C++ evoluciona por comando, no por timer de cría).
-- La guía muestra 3 nodos, siluetas `???` hasta descubrir, detalle sin
-  inventar umbrales.
+- Sparkmon→Firemon: 12 h 10 min COLOR + CM<=1.
+- Firemon→Flamemon: 24 h + H/E/P ≥55 y HP ≥75.
+- Flamemon→Dragfiremon: 36 h + 15 batallas de forma. Win ratio 0/0 no bloquea.
+- Placa `CARE_TIME_SCALE=1`. Sim `600`. Pedia pinta esos umbrales.
 
 ### Menú actual (8 iconos)
 

@@ -38,21 +38,33 @@ void Navigation::select(SpeciesId species) {
     panelIndex_ = stageIndex(species);
 }
 
+bool Navigation::evolutionSelectedHidden() const {
+    const uint8_t stage = evolutionNodeStage(panelIndex_);
+    const bool dark = evolutionNodeDark(panelIndex_);
+    return (dark && stage >= 2) || (!dark && stage > currentStage_);
+}
+
 EvolutionNode Navigation::selectedEvolutionNode() const {
-    const bool hidden = stageIndex(selectedSpecies_) > currentStage_;
+    const uint8_t stage = evolutionNodeStage(panelIndex_);
+    const SpeciesId species = kEvolutionStages[stage];
+    const bool hidden = evolutionSelectedHidden();
     const char* label = "EGG";
-    if (!hidden && selectedSpecies_ == SpeciesId::Baby) label = "SPARKMON";
-    if (!hidden && selectedSpecies_ == SpeciesId::Rookie) label = "FIREMON";
-    if (!hidden && selectedSpecies_ == SpeciesId::Champion) label = "FLAMEMON";
-    if (!hidden && selectedSpecies_ == SpeciesId::Ultimate) label = "DRAGFIREMON";
+    if (!hidden && species == SpeciesId::Baby) label = "SPARKMON";
+    if (!hidden && species == SpeciesId::Rookie) label = "FIREMON";
+    if (!hidden && species == SpeciesId::Champion) label = "FLAMEMON";
+    if (!hidden && species == SpeciesId::Ultimate) label = "DRAGFIREMON";
     if (hidden) label = "???";
-    return {selectedSpecies_, label, hidden};
+    return {species, label, hidden};
 }
 
 void Navigation::openSelectedMenu() {
     switch (menuIndex_) {
         case 0:
             panel_ = PanelId::Status;
+            panelIndex_ = 0;
+            break;
+        case 4:
+            panel_ = PanelId::Rest;
             panelIndex_ = 0;
             break;
         case 5:
@@ -81,21 +93,29 @@ void Navigation::dispatch(InputEvent event) {
         return;
     }
     if (event == InputEvent::Next) {
-        if (panel_ == PanelId::EvolutionTree) {
-            panelIndex_ = (panelIndex_ + 1) % 5;
-            selectedSpecies_ = kEvolutionStages[panelIndex_];
+        if (panel_ == PanelId::EvolutionTree || panel_ == PanelId::EvolutionDetail) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kEvolutionNodeCount);
+            selectedSpecies_ = kEvolutionStages[evolutionNodeStage(panelIndex_)];
         } else if (panel_ == PanelId::Options) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kOptionCount);
         } else if (panel_ == PanelId::Inventory) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kInventoryCount);
         } else if (panel_ == PanelId::Status) {
-            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % 2);
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kStatusPages);
+        } else if (panel_ == PanelId::Rest) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kRestCount);
         } else {
             panelIndex_ = (panelIndex_ + 1) % 8;
         }
     } else if (event == InputEvent::Action) {
-        if (panel_ == PanelId::EvolutionTree) panel_ = PanelId::EvolutionDetail;
-        else if (panel_ == PanelId::Status) panel_ = PanelId::Home;
+        if (panel_ == PanelId::EvolutionTree && !evolutionSelectedHidden()) {
+            panel_ = PanelId::EvolutionDetail;
+        } else if (panel_ == PanelId::EvolutionDetail || panel_ == PanelId::Status) {
+            panel_ = panel_ == PanelId::EvolutionDetail ? PanelId::EvolutionTree : PanelId::Home;
+        }
+        else if (panel_ == PanelId::Rest && panelIndex_ == Navigation::kRestCount - 1) {
+            panel_ = PanelId::Home;
+        }
         else if (panel_ == PanelId::Inventory && panelIndex_ == Navigation::kInventoryCount - 1) {
             panel_ = PanelId::Home;
         }

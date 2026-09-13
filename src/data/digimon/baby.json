@@ -4,9 +4,10 @@
   "stage": "baby",
   "sprite": "/digimon1/Baby/sparkmon_idle_atlas.bmp",
   "evolves_to": "rookie",
-  "min_age_seconds": 0,
+  "automatic": true,
+  "requirements_pending": false,
+  "min_stage_age_seconds": 43800,
+  "max_care_mistakes": 1,
   "battles_required": 0,
-  "automatic": false,
-  "requirements_pending": true,
   "requirements": {}
 }

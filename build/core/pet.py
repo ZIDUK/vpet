@@ -65,12 +65,24 @@ class Pet:
         self.species = species      # current form: "sproutspore", "sprouto", "thornback", "hydravine"
         self.line = line            # evolution line: "sprout_line"
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
-        self.inventory = {"meat": 3, "tonic": 2, "medkit": 1}
+        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1}
+        self.effort = 0
         self.language = "EN"
         self.sound_enabled = True
         self.born_at = time.monotonic()
         self.last_decay = time.monotonic()
         self.battles_won = 0
+        self.battles_lost = 0
+        self.battles_this_form = 0
+        self.care_mistakes = 0
+        self.call_reason = None
+        self.call_started_ms = 0
+        self.stage_age_seconds = 0
+        self.meals = 0
+        self.training_sessions = 0
+        self.weight = 5
+        self.dp = 0
+        self.protein = 0
         # Lifecycle: starts as egg unless overridden (live = already hatched)
         self.state = state if state is not None else STATE_EGG
         self.hatch_started_at = time.monotonic() if self.state == STATE_EGG else None
@@ -128,6 +140,56 @@ class Pet:
         elapsed = time.monotonic() - self.hatch_started_at
         return min(1.0, elapsed / hatch_duration)
 
+    def reset_to_egg(self):
+        language = self.language
+        sound = self.sound_enabled
+        line = self.line
+        self.__init__(species=DEFAULT_SPECIES, line=line, state=STATE_EGG)
+        self.language = language
+        self.sound_enabled = sound
+
+    def reset_after_evolution(self):
+        self.care_mistakes = 0
+        self.call_reason = None
+        self.call_started_ms = 0
+        self.training_sessions = 0
+        self.battles_this_form = 0
+        self.meals = 0
+        self.stage_age_seconds = 0
+        self.protein = 0
+
+    def update_call(self, now_ms, scale):
+        """Return 'started', 'missed', or 'none'. Scale 1 = COLOR, 600 = sim."""
+        if self.state == STATE_EGG or scale <= 0:
+            return "none"
+        if self.call_reason == "hunger" and self.stats.get("h", 0) > 0:
+            self.call_reason = None
+            self.call_started_ms = 0
+        if self.call_reason == "strength" and self.stats.get("e", 0) > 0:
+            self.call_reason = None
+            self.call_started_ms = 0
+        margin = 600000 // scale
+        if self.call_reason and now_ms - self.call_started_ms >= margin:
+            self.care_mistakes = min(99, self.care_mistakes + 1)
+            start_strength = self.call_reason == "hunger" and self.stats.get("e", 0) == 0
+            self.call_reason = None
+            self.call_started_ms = 0
+            if start_strength:
+                self.call_reason = "strength"
+                self.call_started_ms = now_ms
+            return "missed"
+        if self.call_reason:
+            return "none"
+        if self.stats.get("h", 0) == 0:
+            self.call_reason = "hunger"
+            self.call_started_ms = now_ms
+            return "started"
+        if self.stats.get("e", 0) == 0:
+            self.call_reason = "strength"
+            self.call_started_ms = now_ms
+            return "started"
+        return "none"
+
     def complete_hatch(self, next_species):
         """Complete the hatch: transition to LIVE with the new species."""
         self.state = STATE_LIVE
@@ -136,6 +198,7 @@ class Pet:
         for stat in self.stats:
             self.stats[stat] = min(100, self.stats[stat] + 15)
         self.hatch_started_at = None
+        self.reset_after_evolution()
 
     def to_dict(self):
         """Serialise for save file."""
@@ -145,9 +208,20 @@ class Pet:
             "state": self.state,
             "stats": dict(self.stats),
             "inventory": dict(self.inventory),
+            "effort": self.effort,
             "language": self.language,
             "sound_enabled": self.sound_enabled,
             "battles_won": self.battles_won,
+            "battles_lost": self.battles_lost,
+            "battles_this_form": self.battles_this_form,
+            "care_mistakes": self.care_mistakes,
+            "call_reason": self.call_reason,
+            "stage_age_seconds": max(0, int(self.stage_age_seconds)),
+            "meals": self.meals,
+            "training_sessions": self.training_sessions,
+            "weight": self.weight,
+            "dp": self.dp,
+            "protein": self.protein,
             "age_seconds": max(0, int(self.age_seconds)),
         }
 
@@ -156,10 +230,25 @@ class Pet:
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live
         self.stats = dict(d.get("stats", self.stats))
-        self.inventory = dict(d.get("inventory", self.inventory))
+        loaded = dict(d.get("inventory", self.inventory))
+        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1}
+        for key in self.inventory:
+            if key in loaded:
+                self.inventory[key] = loaded[key]
+        self.effort = int(d.get("effort", self.effort))
         self.language = d.get("language", self.language)
         self.sound_enabled = d.get("sound_enabled", self.sound_enabled)
         self.battles_won = d.get("battles_won", 0)
+        self.battles_lost = d.get("battles_lost", 0)
+        self.battles_this_form = d.get("battles_this_form", 0)
+        self.care_mistakes = d.get("care_mistakes", 0)
+        self.call_reason = d.get("call_reason")
+        self.stage_age_seconds = max(0, int(d.get("stage_age_seconds", 0)))
+        self.meals = d.get("meals", 0)
+        self.training_sessions = d.get("training_sessions", 0)
+        self.weight = d.get("weight", 5)
+        self.dp = d.get("dp", 0)
+        self.protein = d.get("protein", 0)
         self.born_at = time.monotonic() - max(0, int(d.get("age_seconds", 0)))
         # If we loaded as an egg, restart the hatch timer
         if self.state == STATE_EGG:

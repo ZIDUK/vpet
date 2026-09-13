@@ -2,7 +2,11 @@
 
 from core.inventory import (
     INVENTORY_BACK_INDEX,
+    INVENTORY_WINDOW,
     clamp_visible_inventory_index,
+    inventory_blurb,
+    inventory_name,
+    inventory_window,
     next_visible_inventory_index,
     use_inventory_item,
     visible_inventory_indexes,
@@ -44,15 +48,31 @@ def test_empty_and_egg_do_not_change_stats():
     assert pet.stats == before
 
 
+def test_inventory_window_keeps_selection_visible():
+    visible = (0, 1, 2, 3, 4, 5, 6)
+    assert INVENTORY_WINDOW == 3
+    assert inventory_window(visible, 0) == (0, 1, 2)
+    assert inventory_window(visible, 3) == (2, 3, 4)
+    assert inventory_window(visible, 6) == (4, 5, 6)
+    assert inventory_window((0, 6), 6) == (0, 6)
+
+
+def test_inventory_preview_has_a_short_blurb():
+    assert inventory_name(0, spanish=False) == "MEAT"
+    assert inventory_name(0, spanish=True) == "CARNE"
+    assert "20" in inventory_blurb(0, spanish=False)
+    assert inventory_name(INVENTORY_BACK_INDEX, spanish=False) == "BACK"
+
+
 def test_empty_items_disappear_from_inventory_list():
     pet = Pet(species="rookie", state=STATE_LIVE)
     pet.inventory = {"meat": 3, "energy": 0, "exp": 1, "ring": 0}
-    assert visible_inventory_indexes(pet) == (0, 2, 4)
+    assert visible_inventory_indexes(pet) == (0, 2, 6)
     assert next_visible_inventory_index(pet, 0) == 2
-    assert next_visible_inventory_index(pet, 2) == 4
-    assert next_visible_inventory_index(pet, 4) == 0
+    assert next_visible_inventory_index(pet, 2) == 6
+    assert next_visible_inventory_index(pet, 6) == 0
     assert clamp_visible_inventory_index(pet, 1) == 2
 
     assert use_inventory_item(pet, 2) == "used"
-    assert visible_inventory_indexes(pet) == (0, 4)
-    assert clamp_visible_inventory_index(pet, 2) == 4
+    assert visible_inventory_indexes(pet) == (0, 6)
+    assert clamp_visible_inventory_index(pet, 2) == 6

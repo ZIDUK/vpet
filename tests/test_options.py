@@ -3,6 +3,7 @@
 from core.options import (
     OPTION_BACK,
     OPTION_DATE,
+    OPTION_ICONS,
     OPTION_LANGUAGE,
     OPTION_LOAD,
     OPTION_SAVE,
@@ -154,8 +155,8 @@ def test_evolve_option_forces_next_form():
     session.action(pet, FakeServices())
     assert pet.species == "ultimate"
     session.action(pet, FakeServices())
-    assert pet.species == "ultimate"
-    assert session.message == "NO EVO"
+    assert pet.species == "egg"
+    assert session.message == "EVOLVED"
 
 
 def test_back_closes_options_panel():
@@ -163,3 +164,17 @@ def test_back_closes_options_panel():
     session.index = OPTION_BACK
 
     assert session.action(_pet(), FakeServices()) is False
+
+
+def test_option_icons_match_each_setting():
+    assert OPTION_ICONS == (
+        "Bluetooth",
+        "Language",
+        "Sound",
+        "Save",
+        "Load",
+        "Date",
+        "Clock",
+        "Evolve",
+        "Back",
+    )

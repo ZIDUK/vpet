@@ -2,6 +2,7 @@
 """Run the vPet framebuffer in a scaled pygame window."""
 import argparse
 import sys
+import time
 from pathlib import Path
 
 
@@ -16,7 +17,11 @@ import pygame
 from config import (
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
+    EGG_HATCH_DURATION_SECONDS,
+    EGG_HATCH_FRAME_COUNT,
+    EGG_SPECIES,
     HATCH_DURATION_SECONDS,
+    CARE_TIME_SCALE,
     EVOLUTION_REGISTRY,
     MENU_ICON_PATHS,
     MENU_INVENTORY_INDEX,
@@ -27,18 +32,25 @@ from config import (
     SPARKMON_EVOLUTION_FRAME_COUNT,
 )
 from display_profiles import get_display_profile
-from core.evolution import Evolution
+from core.dna import STATUS_PAGE_COUNT
+from core.evolution import (
+    EVOLUTION_NODE_COUNT,
+    Evolution,
+    evolution_current_stage,
+    evolution_hidden,
+    evolution_tree_node,
+)
 from core.inventory import (
     clamp_visible_inventory_index,
     next_visible_inventory_index,
     use_inventory_item,
 )
 from core.menu import activate_menu_item
-from core.motion import MOTION_IDLE, PetMotion
+from core.motion import MOTION_IDLE, MOTION_SLEEP, PetMotion
 from core.pet import Pet
 from core.options import OptionsSession
 from scripts.sim_renderer import render_frame
-from scripts.sim_services import SimulatorServices
+from scripts.sim_services import SimulatorServices, clock_hour
 
 
 def parse_args():
@@ -62,6 +74,7 @@ def main():
     pygame.init()
     window_size = (profile.width * args.scale, profile.height * args.scale)
     screen = pygame.display.set_mode(window_size)
+    pygame.key.set_repeat(320, 180)
     pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, b=BACK, e=EVOLVE")
     clock = pygame.time.Clock()
 
@@ -94,9 +107,9 @@ def main():
                     if panel_mode == "inventory":
                         inventory_index = next_visible_inventory_index(pet, inventory_index)
                     elif panel_mode == "status":
-                        inventory_index = 1 - inventory_index
-                    elif panel_mode == "evolution":
-                        inventory_index = (inventory_index + 1) % 5
+                        inventory_index = (inventory_index + 1) % STATUS_PAGE_COUNT
+                    elif panel_mode in ("evolution", "evolution_detail"):
+                        inventory_index = (inventory_index + 1) % EVOLUTION_NODE_COUNT
                     elif panel_mode == "options":
                         options_session.next()
                     else:
@@ -110,6 +123,12 @@ def main():
                             inventory_index = clamp_visible_inventory_index(pet, inventory_index)
                         if result == "back":
                             panel_mode = None
+                    elif panel_mode == "evolution":
+                        stage, dark = evolution_tree_node(inventory_index)
+                        if not evolution_hidden(stage, dark, evolution_current_stage(pet)):
+                            panel_mode = "evolution_detail"
+                    elif panel_mode == "evolution_detail":
+                        panel_mode = "evolution"
                     elif panel_mode == "options":
                         staying = options_session.action(pet, services)
                         if options_session.message == "EVOLVED":
@@ -141,6 +160,7 @@ def main():
                             motion,
                             menu_index,
                             pygame.time.get_ticks() / 1000,
+                            hour=clock_hour(services.get_datetime()),
                         )
                 elif event.key == pygame.K_e and pet.is_live:
                     if evolution.force(pet):
@@ -151,7 +171,10 @@ def main():
                             else None,
                         )
                 elif event.key == pygame.K_b:
-                    panel_mode = None
+                    if panel_mode == "evolution_detail":
+                        panel_mode = "evolution"
+                    else:
+                        panel_mode = None
                 elif event.key == pygame.K_r:
                     pet = Pet()
                     pet.start_hatch()
@@ -161,6 +184,14 @@ def main():
 
         pet.decay_if_due()
         now = pygame.time.get_ticks() / 1000
+        if pet.is_live:
+            hour = clock_hour(services.get_datetime())
+            pet.update_call(
+                int(now * 1000),
+                CARE_TIME_SCALE,
+                hour,
+                motion.state == MOTION_SLEEP,
+            )
         if pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
             pet.complete_hatch("baby")
             motion = PetMotion(now, **motion_kwargs)
@@ -172,12 +203,23 @@ def main():
                 else None,
             )
         motion.update(now)
+        sprite_frame = motion.frame
+        egg_motion = motion.state
+        if pet.species == EGG_SPECIES and pet.hatch_started_at is not None:
+            elapsed = max(0.0, time.monotonic() - pet.hatch_started_at)
+            break_at = HATCH_DURATION_SECONDS - EGG_HATCH_DURATION_SECONDS
+            if elapsed >= break_at:
+                egg_motion = "hatch"
+                sprite_frame = min(
+                    EGG_HATCH_FRAME_COUNT - 1,
+                    int((elapsed - break_at) / EGG_HATCH_DURATION_SECONDS * EGG_HATCH_FRAME_COUNT),
+                )
         frame = render_frame(
             build_dir,
             pet,
             menu_index,
-            motion.frame,
-            motion.state,
+            sprite_frame,
+            egg_motion,
             motion.x,
             motion.direction,
             panel_mode == "status",
@@ -186,6 +228,7 @@ def main():
             options_session,
             services.get_datetime(),
             profile=profile,
+            now_ms=int(now * 1000),
         )
         surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
         scaled = pygame.transform.scale(surface, window_size)

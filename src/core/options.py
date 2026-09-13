@@ -10,6 +10,17 @@ OPTION_TIME = 6
 OPTION_EVOLVE = 7
 OPTION_BACK = 8
 OPTION_COUNT = 9
+OPTION_ICONS = (
+    "Bluetooth",
+    "Language",
+    "Sound",
+    "Save",
+    "Load",
+    "Date",
+    "Clock",
+    "Evolve",
+    "Back",
+)
 
 _NEXT_FORM = {
     "egg": "baby",
@@ -20,13 +31,17 @@ _NEXT_FORM = {
 
 
 def force_next_form(pet):
+    if pet.species == "ultimate":
+        pet.reset_to_egg()
+        return True
     nxt = _NEXT_FORM.get(pet.species)
     if not nxt:
         return False
     if pet.species == "egg":
         pet.complete_hatch(nxt)
     else:
-        pet.species = nxt
+        from core.evolution import Evolution
+        Evolution._apply(pet, nxt)
     return True
 
 

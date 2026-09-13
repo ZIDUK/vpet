@@ -19,6 +19,7 @@ def activate_menu_item(pet, motion, menu_index, now):
     if pet.species == BABY_SPECIES and menu_index in (MENU_TRAINING_INDEX, MENU_BATTLE_INDEX):
         return False
     if menu_index == MENU_BATTLE_INDEX:
+        pet.battles_this_form = getattr(pet, "battles_this_form", 0) + 1
         motion.start_cast(now)
         return True
     action = MENU_ACTIONS.get(menu_index)
@@ -26,8 +27,10 @@ def activate_menu_item(pet, motion, menu_index, now):
         return False
     pet.apply_action(action)
     if menu_index == MENU_FEED_INDEX:
+        pet.meals = getattr(pet, "meals", 0) + 1
         motion.start_eat(now)
     elif menu_index == MENU_TRAINING_INDEX:
+        pet.training_sessions = getattr(pet, "training_sessions", 0) + 1
         motion.start_punch(now)
     elif menu_index == MENU_REST_INDEX:
         motion.start_sleep(now)

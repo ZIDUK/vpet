@@ -10,6 +10,7 @@ namespace vpet {
 enum class PanelId : uint8_t {
     Home,
     Status,
+    Rest,
     Inventory,
     EvolutionTree,
     EvolutionDetail,
@@ -26,7 +27,15 @@ struct EvolutionNode {
 class Navigation {
 public:
     static constexpr uint8_t kOptionCount = 9;
-    static constexpr uint8_t kInventoryCount = 5;
+    static constexpr uint8_t kInventoryCount = 7;
+    static constexpr uint8_t kStatusPages = 4;
+    static constexpr uint8_t kRestCount = 4;
+    static constexpr uint8_t kEvolutionNodeCount = 8;
+
+    static bool evolutionNodeDark(uint8_t index) { return index >= 5; }
+    static uint8_t evolutionNodeStage(uint8_t index) {
+        return index < 5 ? index : static_cast<uint8_t>(index - 3);
+    }
 
     void dispatch(InputEvent event);
     void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }
@@ -37,11 +46,13 @@ public:
     void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; }
     void setPanelIndex(uint8_t index) { panelIndex_ = index; }
     EvolutionNode selectedEvolutionNode() const;
+    bool evolutionSelectedHidden() const;
 
     PanelId panel() const { return panel_; }
     uint8_t menuIndex() const { return menuIndex_; }
     uint8_t panelIndex() const { return panelIndex_; }
     SpeciesId selectedSpecies() const { return selectedSpecies_; }
+    uint8_t currentStage() const { return currentStage_; }
 
 private:
     void openSelectedMenu();

@@ -20,7 +20,8 @@ vpet::BoardInput buttons;
 vpet::Renderer renderer(display, framebuffer, staticScene, assets);
 vpet::Panels panels(display, framebuffer, assets);
 vpet::NvsKeyValueStore stateStore("vpet_state");
-vpet::SettingsStore settingsStore(stateStore);
+vpet::NvsKeyValueStore backupStore("vpet_bak");
+vpet::SettingsStore settingsStore(stateStore, &backupStore);
 vpet::BleService bluetooth;
 vpet::App app(renderer, panels, settingsStore, bluetooth);
 

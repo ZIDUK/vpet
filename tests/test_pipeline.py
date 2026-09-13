@@ -55,6 +55,8 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "hal.py",
         "config.py",
         "core/device_services.py",
+        "core/dna.py",
+        "core/status_card.py",
         "core/menu.py",
         "core/motion.py",
         "core/evolution.py",
@@ -67,12 +69,25 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "Background/background.bmp",
         "Background/background_night.bmp",
         "UIIcons/Status.bmp",
+        "UIIcons/Energy.bmp",
+        "UIIcons/Trophy.bmp",
+        "UIIcons/Versus.bmp",
+        "UIIcons/Weight.bmp",
+        "UIIcons/Bluetooth.bmp",
+        "UIIcons/Language.bmp",
+        "UIIcons/Sound.bmp",
+        "UIIcons/Save.bmp",
+        "UIIcons/Load.bmp",
+        "UIIcons/Date.bmp",
+        "UIIcons/Evolve.bmp",
+        "UIIcons/Back.bmp",
         "UIEvolution/Egg.bmp",
         "UIEvolution/Sparkmon.bmp",
         "UIEvolution/Firemon.bmp",
         "UIEvolution/Flamemon.bmp",
         "UIEvolution/Dragfiremon.bmp",
         "digimon1/Egg/egg_idle_atlas.bmp",
+        "digimon1/Egg/egg_hatch_atlas.bmp",
         "digimon1/Baby/sparkmon_idle_atlas.bmp",
         "digimon1/Baby/sparkmon_walk_atlas.bmp",
         "digimon1/Baby/sparkmon_eat_atlas.bmp",
@@ -84,7 +99,13 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "digimon1/Rookie/firemon_punch_atlas.bmp",
         "digimon1/Rookie/firemon_sleep_atlas.bmp",
         "digimon1/Rookie/firemon_cast_atlas.bmp",
+        "digimon1/Rookie/firemon_hit_atlas.bmp",
+        "digimon1/Rookie/firemon_hurt_atlas.bmp",
+        "digimon1/Rookie/firemon_dodge_atlas.bmp",
+        "digimon1/Rookie/firemon_block_atlas.bmp",
         "digimon1/Rookie/firemon_evolution_atlas.bmp",
+        "UIFx/bag_atlas.bmp",
+        "UIFx/grave.bmp",
         "digimon1/Champion/flamemon_idle_atlas.bmp",
         "digimon1/Champion/flamemon_walk_atlas.bmp",
         "digimon1/Champion/flamemon_eat_atlas.bmp",
@@ -161,15 +182,55 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         assert atlas.size == (15 * 64, 64)
         assert atlas.getpixel((0, 0)) == 0
 
+    for name in (
+        "firemon_hit_atlas.bmp",
+        "firemon_hurt_atlas.bmp",
+        "firemon_dodge_atlas.bmp",
+        "firemon_block_atlas.bmp",
+    ):
+        with Image.open(output / "digimon1" / "Rookie" / name) as atlas:
+            assert atlas.mode == "P"
+            assert atlas.size == (15 * 64, 64)
+            assert atlas.getpixel((0, 0)) == 0
+
+    with Image.open(output / "UIFx" / "bag_atlas.bmp") as atlas:
+        assert atlas.mode == "P"
+        assert atlas.size == (16 * 64, 64)
+        assert atlas.getpixel((0, 0)) == 0
+
+    with Image.open(output / "UIFx" / "grave.bmp") as grave:
+        assert grave.mode == "P"
+        assert grave.size == (88, 88)
+        assert grave.getpixel((0, 0)) == 0
+        assert grave.getbbox() is not None
+
     with Image.open(output / "digimon1" / "Rookie" / "firemon_evolution_atlas.bmp") as atlas:
         assert atlas.mode == "P"
         assert atlas.size == (15 * 112, 112)
+        assert atlas.getpixel((0, 0)) == 0
+        frame = atlas.crop((0, 0, 112, 112))
+        body = frame.point(lambda pixel: 0 if pixel == 0 else 255).getbbox()
+        assert body is not None
+        assert body[3] - body[1] >= 72
+
+    with Image.open(output / "digimon1" / "Egg" / "egg_idle_atlas.bmp") as atlas:
+        assert atlas.mode == "P"
+        assert atlas.size == (16 * 64, 64)
+        assert atlas.getpixel((0, 0)) == 0
+
+    with Image.open(output / "digimon1" / "Egg" / "egg_hatch_atlas.bmp") as atlas:
+        assert atlas.mode == "P"
+        assert atlas.size == (10 * 64, 64)
         assert atlas.getpixel((0, 0)) == 0
 
     with Image.open(output / "digimon1" / "Baby" / "sparkmon_evolution_atlas.bmp") as atlas:
         assert atlas.mode == "P"
         assert atlas.size == (16 * 112, 112)
         assert atlas.getpixel((0, 0)) == 0
+        frame = atlas.crop((0, 0, 112, 112))
+        body = frame.point(lambda pixel: 0 if pixel == 0 else 255).getbbox()
+        assert body is not None
+        assert body[3] - body[1] >= 72
 
     with Image.open(output / "digimon1" / "Champion" / "flamemon_idle_atlas.bmp") as atlas:
         assert atlas.mode == "P"
@@ -202,13 +263,17 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
     with Image.open(output / "digimon1" / "Champion" / "flamemon_evolution_atlas.bmp") as atlas:
         assert atlas.mode == "P"
         assert atlas.size == (15 * 112, 112)
+        frame = atlas.crop((0, 0, 112, 112))
+        body = frame.point(lambda pixel: 0 if pixel == 0 else 255).getbbox()
+        assert body is not None
+        assert body[3] - body[1] >= 72
 
     ultimate_atlases = {
-        "dragfiremon_idle_atlas.bmp": 15,
-        "dragfiremon_fly_atlas.bmp": 22,
+        "dragfiremon_idle_atlas.bmp": 25,
+        "dragfiremon_fly_atlas.bmp": 25,
         "dragfiremon_eat_atlas.bmp": 25,
         "dragfiremon_punch_atlas.bmp": 15,
-        "dragfiremon_sleep_atlas.bmp": 15,
+        "dragfiremon_sleep_atlas.bmp": 25,
         "dragfiremon_cast_atlas.bmp": 15,
     }
     for name, count in ultimate_atlases.items():

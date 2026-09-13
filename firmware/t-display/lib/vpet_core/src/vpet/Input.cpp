@@ -5,6 +5,8 @@ namespace {
 // Mechanical buttons can bounce for a few milliseconds.  Lock subsequent
 // press edges briefly, but emit the first edge immediately for responsive UI.
 constexpr uint32_t kPressLockoutMs = 70;
+constexpr uint32_t kRepeatDelayMs = 320;
+constexpr uint32_t kRepeatEveryMs = 180;
 }
 
 Input::Input(uint32_t debounceMs, uint32_t longPressMs)
@@ -26,6 +28,7 @@ InputEvent Input::updateButton(
         button.stable = true;
         button.pressedAt = nowMs;
         button.longEmitted = false;
+        button.lastRepeatAt = 0;
         if (nowMs - button.lastShortEventAt < kPressLockoutMs) {
             return InputEvent::None;
         }
@@ -39,15 +42,17 @@ InputEvent Input::updateButton(
         return InputEvent::None;
     }
 
-    if (
-        supportsLongPress &&
-        button.stable &&
-        button.raw &&
-        !button.longEmitted &&
-        nowMs - button.pressedAt >= longPressMs_
-    ) {
-        button.longEmitted = true;
-        return InputEvent::Back;
+    if (supportsLongPress && button.stable && button.raw && !button.longEmitted) {
+        if (nowMs - button.pressedAt >= longPressMs_) {
+            button.longEmitted = true;
+            return InputEvent::Back;
+        }
+        if (nowMs - button.pressedAt >= kRepeatDelayMs) {
+            if (button.lastRepeatAt == 0 || nowMs - button.lastRepeatAt >= kRepeatEveryMs) {
+                button.lastRepeatAt = nowMs;
+                return shortEvent;
+            }
+        }
     }
 
     return InputEvent::None;

@@ -2,6 +2,9 @@
 
 #include <cstring>
 
+#include "vpet/Layout.h"
+#include "vpet/Strings.h"
+
 namespace vpet {
 namespace {
 constexpr const char* kMenuIcons[] = {
@@ -51,7 +54,13 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
     const MotionState state = model.motion.state();
     const char* action = "idle";
     if (model.pet.species() == SpeciesId::Egg) {
-        snprintf(path, sizeof(path), "/animations/egg/egg_idle.vpa");
+        snprintf(
+            path,
+            sizeof(path),
+            model.motion.state() == MotionState::Hatch
+                ? "/animations/egg/egg_hatch.vpa"
+                : "/animations/egg/egg_idle.vpa"
+        );
         return path;
     }
     if (state == MotionState::Evolution) {
@@ -73,9 +82,19 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         case MotionState::Eat: action = "eat"; break;
         case MotionState::Punch: action = "punch"; break;
         case MotionState::Cast: action = "cast"; break;
+        case MotionState::Hit: action = "hit"; break;
+        case MotionState::Hurt: action = "hurt"; break;
+        case MotionState::Dodge: action = "dodge"; break;
+        case MotionState::Block: action = "block"; break;
         case MotionState::Sleep: action = "sleep"; break;
         case MotionState::Evolution: break;
+        case MotionState::Hatch: break;
         case MotionState::Idle: break;
+    }
+    if (model.pet.species() != SpeciesId::Rookie &&
+        (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0 ||
+         strcmp(action, "dodge") == 0 || strcmp(action, "block") == 0)) {
+        action = (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0) ? "punch" : "cast";
     }
     if (model.pet.species() == SpeciesId::Baby &&
         strcmp(action, "idle") != 0 && strcmp(action, "walk") != 0 &&
@@ -109,23 +128,73 @@ void Renderer::rebuildStaticScene(bool night) {
     staticSceneNight_ = night;
 }
 
-void Renderer::drawSelector(uint8_t selected) {
+void Renderer::drawSelector(uint8_t selected, bool calling) {
     const int16_t x = (selected % 8) * 30;
     canvas_.drawRect(x, 0, 30, 24, TFT_YELLOW);
     canvas_.drawRect(x + 1, 1, 28, 22, TFT_YELLOW);
+    if (calling) {
+        canvas_.setTextDatum(TR_DATUM);
+        canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);
+        canvas_.drawString("*", x + 28, 1, 2);
+        canvas_.setTextDatum(TL_DATUM);
+    }
 }
 
-void Renderer::draw(const AppViewModel& model) {
+void Renderer::drawCallCue(const AppViewModel& model) {
+    const CallReason reason = model.pet.callReason();
+    if (reason == CallReason::None) return;
+    const uint8_t cue = callMenuIndex(reason);
+    if (cue < 8 && callBlinkOn(model.nowMs)) {
+        const int16_t x = cue * 30;
+        canvas_.drawRect(x, 0, 30, 24, TFT_RED);
+        canvas_.drawRect(x + 1, 1, 28, 22, TFT_RED);
+    }
+    const char* label = copy::callHunger(model.spanish);
+    if (reason == CallReason::Strength) label = copy::callStrength(model.spanish);
+    if (reason == CallReason::Lights) label = copy::callLights(model.spanish);
+    canvas_.fillRect(0, 117, 240, 18, TFT_YELLOW);
+    canvas_.setTextDatum(MC_DATUM);
+    canvas_.setTextColor(TFT_BLACK, TFT_YELLOW);
+    canvas_.drawString(label, 120, 125, 2);
+    canvas_.setTextDatum(TL_DATUM);
+}
+
+void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {
     const bool night = model.motion.state() == MotionState::Sleep;
     if (!staticSceneReady_ || staticSceneNight_ != night) {
         rebuildStaticScene(night);
     }
     memcpy(canvas_.getPointer(), staticScene_.getPointer(), 240 * 135 * 2);
-    drawSelector(model.menuIndex);
+    drawSelector(model.menuIndex, model.pet.callReason() != CallReason::None);
+    if (statusSplitX <= 0) {
+        drawCallCue(model);
+    }
+    if (model.pet.dead()) {
+        assets_.drawFrame(canvas_, "/ui/fx/grave.vpa", 0, statusSplitX > 0 ? 6 : 76, 32);
+        if (present) {
+            display_.startWrite();
+            canvas_.pushSprite(0, 0);
+            display_.endWrite();
+        }
+        return;
+    }
     const bool evolution = model.motion.state() == MotionState::Evolution;
     const int16_t spriteSize = evolution ? 111 : 88;
-    const int16_t x = evolution ? (240 - spriteSize) / 2 : model.motion.x();
+    int16_t x = evolution ? (240 - spriteSize) / 2 : model.motion.x();
     const int16_t y = evolution ? 24 : model.motion.y();
+    if (!evolution && statusSplitX > 0) {
+        x = statusPetX(spriteSize, statusSplitX);
+    }
+    if (model.motion.state() == MotionState::Punch) {
+        const int16_t bagX = x + (model.motion.direction() < 0 ? -40 : 56);
+        assets_.drawFrame(
+            canvas_,
+            "/ui/fx/bag.vpa",
+            model.motion.frame(),
+            bagX,
+            bagDrawY(y, spriteSize, 135)
+        );
+    }
     assets_.drawFrame(
         canvas_,
         animationPath(model),
@@ -134,9 +203,15 @@ void Renderer::draw(const AppViewModel& model) {
         y,
         model.motion.direction() < 0 && !evolution
     );
-    display_.startWrite();
-    canvas_.pushSprite(0, 0);
-    display_.endWrite();
+    if (model.pet.injured()) {
+        canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);
+        canvas_.drawString("*", x + spriteSize - 10, y + 4, 2);
+    }
+    if (present) {
+        display_.startWrite();
+        canvas_.pushSprite(0, 0);
+        display_.endWrite();
+    }
 }
 
 }  // namespace vpet

@@ -1,4 +1,6 @@
 """Small pixel-art status panel shared by CircuitPython and Pillow."""
+from config import EVOLUTION_REGISTRY
+from core.evolution import format_requirements
 
 STATUS_WIDTH = 128
 STATUS_HEIGHT = 112
@@ -18,6 +20,8 @@ FONT = {
     " ": ("000",) * 5,
     "-": ("000", "000", "111", "000", "000"),
     "*": ("000", "101", "010", "101", "000"),
+    "=": ("000", "111", "000", "111", "000"),
+    "<": ("001", "010", "100", "010", "001"),
     ":": ("000", "010", "000", "010", "000"),
     "/": ("001", "001", "010", "100", "100"),
     ">": ("100", "010", "001", "010", "100"),
@@ -112,12 +116,23 @@ def draw_status(target, pet, age_seconds=None):
     _bar(target, 57, "ENR", pet.stats["e"], 5)
     _bar(target, 70, "MOO", pet.stats["p"], 6)
 
-    minutes = min(99, age_seconds // 60)
-    seconds = age_seconds % 60
+    stage_age = int(getattr(pet, "stage_age_seconds", age_seconds))
+    minutes = min(99, stage_age // 60)
+    seconds = stage_age % 60
     age_label = "EDAD" if spanish else "AGE"
     battles_label = "BATALLAS" if spanish else "BATTLES"
-    _text(target, 8, 88, "%s %02d:%02d" % (age_label, minutes, seconds), 7)
-    _text(target, 8, 99, "%s %02d" % (battles_label, min(99, pet.battles_won)), 7)
+    cm_label = "CM %02d" % min(99, getattr(pet, "care_mistakes", 0))
+    call = getattr(pet, "call_reason", None)
+    if call == "hunger":
+        call_label = "LLAM HAM" if spanish else "CALL HUN"
+    elif call == "strength":
+        call_label = "LLAM FUE" if spanish else "CALL STR"
+    else:
+        call_label = ""
+    _text(target, 8, 84, "%s %02d:%02d %s" % (age_label, minutes, seconds, cm_label), 7)
+    _text(target, 8, 93, "%s %02d" % (battles_label, min(99, getattr(pet, "battles_this_form", pet.battles_won))), 7)
+    if call_label:
+        _text(target, 8, 102, call_label, 7)
 
 
 def _panel(target, title):
@@ -129,25 +144,30 @@ def _panel(target, title):
 
 def draw_inventory(target, pet, selected_index=0):
     """Draw the selectable consumables list and its current quantities."""
-    from core.inventory import INVENTORY_ITEMS
+    from core.inventory import (
+        INVENTORY_ITEMS,
+        clamp_visible_inventory_index,
+        visible_inventory_indexes,
+    )
 
     spanish = pet.language == "ES"
     _panel(target, "INVENTARIO" if spanish else "INVENTORY")
-    names = ("CARNE", "TONICO", "BOTIQUIN") if spanish else ("MEAT", "TONIC", "MEDKIT")
-    rows = [
-        (names[index], key, stat, amount)
-        for index, (_, key, stat, amount) in enumerate(INVENTORY_ITEMS)
-    ]
-    rows.append(("VOLVER" if spanish else "BACK", None, None, 0))
-    for index, (name, key, _, _) in enumerate(rows):
-        y = 24 + index * 20
-        border = 8 if index == selected_index else 0
+    names = ("CARNE", "ENERGIA", "EXP", "ANILLO") if spanish else ("MEAT", "ENERGY", "EXP", "RING")
+    visible = visible_inventory_indexes(pet)
+    current = clamp_visible_inventory_index(pet, selected_index)
+    selected_slot = visible.index(current) if current in visible else 0
+    window_start = 0 if selected_slot < 4 else selected_slot - 3
+    for slot, index in enumerate(visible[window_start:window_start + 4]):
+        y = 24 + slot * 20
+        border = 8 if index == current else 0
         _fill(target, 8, y, 112, 16, border)
         _fill(target, 10, y + 2, 108, 12, 2)
-        _text(target, 15, y + 5, name, 7)
-        if key is not None:
-            count = min(99, pet.inventory.get(key, 0))
-            _text(target, 96, y + 5, "X%02d" % count, 7)
+        if index < len(INVENTORY_ITEMS):
+            _, key, _, _ = INVENTORY_ITEMS[index]
+            _text(target, 15, y + 5, names[index], 7)
+            _text(target, 96, y + 5, "X%02d" % min(99, pet.inventory.get(key, 0)), 7)
+        else:
+            _text(target, 15, y + 5, "VOLVER" if spanish else "BACK", 7)
 
 
 def draw_evolution_guide(target, pet):
@@ -171,49 +191,44 @@ def draw_evolution_guide(target, pet):
 
     prefix = "ACTUAL" if spanish else "CURRENT"
     current_name = {
+        "baby": "SPARKMON",
         "champion": "FLAMEMON",
         "ultimate": "DRAGFIREMON",
     }.get(pet.species, "FIREMON")
     current = "%s %s" % (prefix, current_name)
     _text(target, (STATUS_WIDTH - _text_width(current)) // 2, 77, current, 7)
-    if pet.species == "rookie":
-        requirements = "SIG REQUISITOS" if spanish else "NEXT REQUIREMENTS"
-        _text(target, (STATUS_WIDTH - _text_width(requirements)) // 2, 85, requirements, 7)
-        _text(target, 7, 94, "AGE60", 7)
-        _text(target, 49, 94, "HP75", 7)
-        _text(target, 84, 94, "HUN55", 7)
-        _text(target, 28, 103, "ENR55", 7)
-        _text(target, 77, 103, "MOO55", 7)
-    elif pet.species == "champion":
-        pending = "REQ PENDIENTES" if spanish else "REQ PENDING"
-        _text(target, (STATUS_WIDTH - _text_width(pending)) // 2, 94, pending, 7)
-    else:
-        final = "FINAL POR AHORA" if spanish else "FINAL FOR NOW"
-        _text(target, (STATUS_WIDTH - _text_width(final)) // 2, 94, final, 7)
+    form = EVOLUTION_REGISTRY.get(pet.species, {})
+    text = format_requirements(form, spanish)
+    if text:
+        words = text.split()
+        _text(target, 7, 94, " ".join(words[:3]), 7)
+        if len(words) > 3:
+            _text(target, 7, 103, " ".join(words[3:]), 7)
 
 
 def draw_options(target, pet, session, current_datetime):
     """Draw the main options list."""
     spanish = pet.language == "ES"
     labels = (
-        ("IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "WIFI", "FECHA", "HORA", "VOLVER")
+        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER")
         if spanish
-        else ("LANGUAGE", "SOUND", "SAVE", "LOAD", "WIFI", "DATE", "TIME", "BACK")
+        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK")
     )
     _panel(target, "OPTIONS")
     year, month, day, hour, minute = current_datetime
     values = (
+        session.bluetooth_status,
         pet.language,
         ("SI" if pet.sound_enabled else "NO") if spanish else ("ON" if pet.sound_enabled else "OFF"),
         "",
         "",
-        session.network_status,
         "%02d-%02d-%02d" % (year % 100, month, day),
         "%02d:%02d" % (hour, minute),
         "",
+        "",
     )
     for index, label in enumerate(labels):
-        y = 20 + index * 10
+        y = 16 + index * 9
         if index == session.index:
             _fill(target, 6, y, 116, 9, 8)
             _fill(target, 8, y + 1, 112, 7, 2)
@@ -224,48 +239,6 @@ def draw_options(target, pet, session, current_datetime):
     if session.message:
         message = session.message[:24]
         _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 102, message, 7)
-
-
-def draw_wifi(target, pet, session):
-    """Draw scanned networks plus a final Back entry."""
-    spanish = pet.language == "ES"
-    _panel(target, "WIFI")
-    rows = list(session.networks) + ["VOLVER" if spanish else "BACK"]
-    for index, name in enumerate(rows[:8]):
-        y = 20 + index * 10
-        if index == session.index:
-            _fill(target, 6, y, 116, 9, 8)
-            _fill(target, 8, y + 1, 112, 7, 2)
-        _text(target, 11, y + 2, name[:26], 7)
-    if session.message:
-        message = session.message[:24]
-        _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 102, message, 7)
-
-
-def draw_password_editor(target, pet, session):
-    """Draw the two-button WiFi password keyboard."""
-    spanish = pet.language == "ES"
-    _panel(target, "CLAVE WIFI" if spanish else "WIFI PASSWORD")
-    _text(target, 7, 23, "RED" if spanish else "NETWORK", 7)
-    _text(target, 7, 32, session.selected_ssid[:28], 7)
-
-    masked = "*" * min(24, len(session.password))
-    _fill(target, 6, 43, 116, 14, 0)
-    _fill(target, 8, 45, 112, 10, 2)
-    _text(target, 11, 48, masked or "-", 7)
-    count = "%02d/63" % len(session.password)
-    _text(target, 118 - _text_width(count), 60, count, 7)
-
-    key = session.password_key
-    if len(key) == 1 and session.password_group_label == "SYM":
-        key = "ASCII %02d" % ord(key)
-    _text(target, 8, 71, "MODO" if spanish else "MODE", 7)
-    _text(target, 98, 71, session.password_group_label, 7)
-    _fill(target, 20, 81, 88, 18, 8)
-    _fill(target, 22, 83, 84, 14, 2)
-    _text(target, (STATUS_WIDTH - _text_width(key, 2)) // 2, 85, key, 7, 2)
-    help_text = "N CAMBIA  A ELIGE" if spanish else "N NEXT  A SELECT"
-    _text(target, (STATUS_WIDTH - _text_width(help_text)) // 2, 103, help_text, 7)
 
 
 def draw_datetime_editor(target, pet, session):

@@ -4,7 +4,9 @@
   "stage": "rookie",
   "sprite": "/digimon1/Rookie/firemon_idle_atlas.bmp",
   "evolves_to": "champion",
-  "min_age_seconds": 60,
+  "automatic": true,
+  "requirements_pending": false,
+  "min_stage_age_seconds": 86400,
   "battles_required": 0,
   "requirements": {
     "h": 55,

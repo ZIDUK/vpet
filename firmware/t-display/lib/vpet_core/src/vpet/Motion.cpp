@@ -12,6 +12,18 @@ Motion::Motion(int displayWidth, int displayHeight, int menuHeight, int frameSiz
     }
 }
 
+void Motion::alignClock(uint32_t nowMs) {
+    lastTickMs_ = nowMs;
+    lastFrameMs_ = nowMs;
+    if (species_ == SpeciesId::Egg) {
+        frame_ = 0;
+        return;
+    }
+    if (state_ == MotionState::Hatch) {
+        enterIdle(nowMs);
+    }
+}
+
 void Motion::startWalking(uint32_t nowMs) {
     state_ = MotionState::Walk;
     frame_ = 0;
@@ -34,8 +46,27 @@ void Motion::startAction(Action action, uint32_t nowMs) {
     actionCompleted_ = false;
 }
 
+void Motion::startReaction(bool won, bool injured, uint32_t nowMs) {
+    if (won) {
+        state_ = injured ? MotionState::Block : MotionState::Dodge;
+    } else {
+        state_ = injured ? MotionState::Hurt : MotionState::Hit;
+    }
+    frame_ = 0;
+    lastTickMs_ = nowMs;
+    lastFrameMs_ = nowMs;
+    actionCompleted_ = false;
+}
+
 void Motion::startEvolution(uint32_t nowMs) {
     state_ = MotionState::Evolution;
+    frame_ = 0;
+    lastTickMs_ = nowMs;
+    lastFrameMs_ = nowMs;
+}
+
+void Motion::startHatch(uint32_t nowMs) {
+    state_ = MotionState::Hatch;
     frame_ = 0;
     lastTickMs_ = nowMs;
     lastFrameMs_ = nowMs;
@@ -60,15 +91,26 @@ uint16_t Motion::frameCount() const {
         case MotionState::Idle:
             if (species_ == SpeciesId::Egg) return 16;
             if (species_ == SpeciesId::Baby) return 25;
-            return species_ == SpeciesId::Rookie ? 19 : 15;
+            if (species_ == SpeciesId::Rookie) return 19;
+            if (species_ == SpeciesId::Champion) return 15;
+            return 25;
         case MotionState::Walk:
             if (species_ == SpeciesId::Baby) return 25;
-            return species_ == SpeciesId::Ultimate ? 22 : (species_ == SpeciesId::Rookie ? 22 : 15);
+            if (species_ == SpeciesId::Rookie) return 22;
+            if (species_ == SpeciesId::Champion) return 15;
+            return 25;
         case MotionState::Eat: return 25;
         case MotionState::Punch: return 15;
-        case MotionState::Cast: return 15;
-        case MotionState::Sleep: return species_ == SpeciesId::Baby ? 25 : 15;
+        case MotionState::Cast:
+        case MotionState::Hit:
+        case MotionState::Hurt:
+        case MotionState::Dodge:
+        case MotionState::Block: return 15;
+        case MotionState::Sleep:
+            if (species_ == SpeciesId::Baby || species_ == SpeciesId::Ultimate) return 25;
+            return 15;
         case MotionState::Evolution: return species_ == SpeciesId::Rookie ? 16 : 15;
+        case MotionState::Hatch: return 10;
     }
     return 1;
 }
@@ -79,17 +121,28 @@ uint16_t Motion::frameInterval() const {
         case MotionState::Walk: return 65;
         case MotionState::Eat: return 75;
         case MotionState::Punch: return 65;
-        case MotionState::Cast: return 70;
+        case MotionState::Cast:
+        case MotionState::Hit:
+        case MotionState::Hurt:
+        case MotionState::Dodge:
+        case MotionState::Block: return 70;
         case MotionState::Sleep: return 105;
         case MotionState::Evolution: return 85;
+        case MotionState::Hatch: return 80;
     }
     return 100;
 }
 
 uint16_t Motion::sleepLoopStart() const {
-    constexpr uint16_t kLieDownFrame = 12;
+    constexpr uint16_t kLieDownFrame = 11;
     const uint16_t count = frameCount();
     return kLieDownFrame < count ? kLieDownFrame : 0;
+}
+
+uint16_t Motion::sleepLoopEnd() const {
+    constexpr uint16_t kLastLyingFrame = 14;
+    const uint16_t count = frameCount();
+    return kLastLyingFrame < count ? kLastLyingFrame : static_cast<uint16_t>(count - 1);
 }
 
 void Motion::tick(uint32_t nowMs) {
@@ -116,16 +169,21 @@ void Motion::tick(uint32_t nowMs) {
         const uint32_t next = frame_ + steps;
         lastFrameMs_ += steps * interval;
         if (state_ == MotionState::Sleep) {
-            const uint16_t count = frameCount();
             const uint16_t loopStart = sleepLoopStart();
-            if (next < count) {
+            const uint16_t loopEnd = sleepLoopEnd();
+            if (next <= loopEnd) {
                 frame_ = static_cast<uint16_t>(next);
             } else {
-                const uint16_t loopLen = static_cast<uint16_t>(count - loopStart);
+                const uint16_t loopLen = static_cast<uint16_t>(loopEnd - loopStart + 1);
                 frame_ = loopLen == 0
-                    ? static_cast<uint16_t>(next % count)
-                    : static_cast<uint16_t>(loopStart + (next - count) % loopLen);
+                    ? loopStart
+                    : static_cast<uint16_t>(loopStart + (next - loopEnd - 1) % loopLen);
             }
+            return;
+        }
+        if (state_ == MotionState::Hatch) {
+            const uint16_t count = frameCount();
+            frame_ = next >= count ? static_cast<uint16_t>(count - 1) : static_cast<uint16_t>(next);
             return;
         }
         const bool action = state_ != MotionState::Idle && state_ != MotionState::Walk;
@@ -161,10 +219,15 @@ AnimationId Motion::animation() const {
             if (species_ == SpeciesId::Ultimate) return AnimationId::DragfiremonFly;
             return species_ == SpeciesId::Champion ? AnimationId::FlamemonWalk : AnimationId::FiremonWalk;
         case MotionState::Eat: return AnimationId::Eat;
-        case MotionState::Punch: return AnimationId::Punch;
-        case MotionState::Cast: return AnimationId::Cast;
+        case MotionState::Punch:
+        case MotionState::Hit:
+        case MotionState::Hurt: return AnimationId::Punch;
+        case MotionState::Cast:
+        case MotionState::Dodge:
+        case MotionState::Block: return AnimationId::Cast;
         case MotionState::Sleep: return AnimationId::Sleep;
         case MotionState::Evolution: return AnimationId::Evolution;
+        case MotionState::Hatch:
         case MotionState::Idle:
             if (species_ == SpeciesId::Ultimate) return AnimationId::DragfiremonIdle;
             return species_ == SpeciesId::Champion ? AnimationId::FlamemonIdle : AnimationId::FiremonIdle;

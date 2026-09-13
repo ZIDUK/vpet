@@ -24,6 +24,7 @@ private:
         uint32_t changedAt = 0;
         uint32_t pressedAt = 0;
         uint32_t lastShortEventAt = 0;
+        uint32_t lastRepeatAt = 0;
     };
 
     InputEvent updateButton(

@@ -11,6 +11,14 @@ void test_status_labels_switch_with_language() {
     TEST_ASSERT_EQUAL_STRING("HAM", vpet::copy::hunger(true));
     TEST_ASSERT_EQUAL_STRING("AGE", vpet::copy::age(false));
     TEST_ASSERT_EQUAL_STRING("EDAD", vpet::copy::age(true));
+    TEST_ASSERT_EQUAL_STRING("OF", vpet::copy::overfeeds(false));
+    TEST_ASSERT_EQUAL_STRING("OF", vpet::copy::overfeeds(true));
+    TEST_ASSERT_EQUAL_STRING("WT", vpet::copy::weight(false));
+    TEST_ASSERT_EQUAL_STRING("PES", vpet::copy::weight(true));
+    TEST_ASSERT_EQUAL_STRING("DP", vpet::copy::dp(false));
+    TEST_ASSERT_EQUAL_STRING("DP", vpet::copy::dp(true));
+    TEST_ASSERT_EQUAL_STRING("WR", vpet::copy::winRatio(false));
+    TEST_ASSERT_EQUAL_STRING("WR", vpet::copy::winRatio(true));
 }
 
 void test_options_labels_switch_with_language() {

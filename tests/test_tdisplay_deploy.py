@@ -101,16 +101,20 @@ def test_tdisplay_options_render_all_actions_and_bluetooth_status():
         / "firmware" / "t-display" / "src" / "App.cpp"
     ).read_text()
 
-    assert "copy::language(spanish)" in source
+    assert "/ui/icons/bluetooth.vpa" in source
+    assert "/ui/icons/language.vpa" in source
+    assert "/ui/icons/sound.vpa" in source
+    assert "/ui/icons/save.vpa" in source
+    assert "/ui/icons/load.vpa" in source
+    assert "/ui/icons/date.vpa" in source
+    assert "/ui/icons/evolve.vpa" in source
+    assert "/ui/icons/back.vpa" in source
     assert "copy::dateTitle(spanish)" in source
-    assert "copy::evolve(spanish)" in source
     assert "copy::back(spanish)" in source
     assert "selected % 9" in source
-    assert "copy::bluetoothAdvertising(spanish)" in source
-    assert "copy::bluetoothConnected(spanish)" in source
     assert "WIFI:" not in source
     assert "case 0:\n                settings_.bluetoothEnabled" in app
-    assert "forceNextForm" in app
+    assert "evolution_.force(pet_)" in app
 
 
 def test_ble_advertising_is_discoverable_to_phones():

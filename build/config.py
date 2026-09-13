@@ -32,22 +32,33 @@ MENU_PEDIA_INDEX = 6
 MENU_OPTIONS_INDEX = 7
 MENU_ACTIONS = {1: 0, 2: 2, 4: 3}
 
+CARE_TIME_SCALE = 600
+
 EVOLUTION_REGISTRY = {
     "baby": {
         "evolves_to": "rookie",
-        "automatic": False,
-        "requirements_pending": True,
+        "automatic": True,
+        "requirements_pending": False,
+        "min_stage_age_seconds": 43800,
+        "max_care_mistakes": 1,
+        "battles_required": 0,
+        "requirements": {},
     },
     "rookie": {
         "evolves_to": "champion",
-        "min_age_seconds": 60,
+        "automatic": True,
+        "requirements_pending": False,
+        "min_stage_age_seconds": 86400,
         "battles_required": 0,
         "requirements": {"h": 55, "e": 55, "p": 55, "hp": 75},
     },
     "champion": {
         "evolves_to": "ultimate",
-        "automatic": False,
-        "requirements_pending": True,
+        "automatic": True,
+        "requirements_pending": False,
+        "min_stage_age_seconds": 129600,
+        "battles_required": 15,
+        "requirements": {},
     },
 }
 EVOLVED_SPECIES = "champion"
@@ -57,15 +68,18 @@ BABY_SPECIES = "baby"
 ROOKIE_SPECIES = "rookie"
 
 EGG_IDLE_IMAGE_PATH = "/digimon1/Egg/egg_idle_atlas.bmp"
+EGG_HATCH_IMAGE_PATH = "/digimon1/Egg/egg_hatch_atlas.bmp"
 SPARKMON_IDLE_IMAGE_PATH = "/digimon1/Baby/sparkmon_idle_atlas.bmp"
 SPARKMON_WALK_IMAGE_PATH = "/digimon1/Baby/sparkmon_walk_atlas.bmp"
 SPARKMON_EAT_IMAGE_PATH = "/digimon1/Baby/sparkmon_eat_atlas.bmp"
 SPARKMON_SLEEP_IMAGE_PATH = "/digimon1/Baby/sparkmon_sleep_atlas.bmp"
 SPARKMON_EVOLUTION_IMAGE_PATH = "/digimon1/Baby/sparkmon_evolution_atlas.bmp"
 EGG_IDLE_FRAME_COUNT = 16
+EGG_HATCH_FRAME_COUNT = 10
 SPARKMON_FRAME_COUNT = 25
 SPARKMON_EVOLUTION_FRAME_COUNT = 16
 HATCH_DURATION_SECONDS = 8
+EGG_HATCH_DURATION_SECONDS = 2
 
 PET_IDLE_IMAGE_PATH = "/digimon1/Rookie/firemon_idle_atlas.bmp"
 PET_WALK_IMAGE_PATH = "/digimon1/Rookie/firemon_walk_atlas.bmp"
@@ -109,8 +123,9 @@ PET_CAST_FRAME_COUNT = 15
 PET_EVOLUTION_FRAME_COUNT = 15
 FLAMEMON_IDLE_FRAME_COUNT = 15
 FLAMEMON_WALK_FRAME_COUNT = 15
-DRAGFIREMON_IDLE_FRAME_COUNT = 15
-DRAGFIREMON_FLY_FRAME_COUNT = 22
+DRAGFIREMON_IDLE_FRAME_COUNT = 25
+DRAGFIREMON_FLY_FRAME_COUNT = 25
+DRAGFIREMON_SLEEP_FRAME_COUNT = 25
 PET_IDLE_FRAME_INTERVAL = 0.12
 PET_WALK_FRAME_INTERVAL = 0.09
 PET_EAT_FRAME_INTERVAL = 0.10

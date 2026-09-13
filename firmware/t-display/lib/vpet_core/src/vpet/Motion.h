@@ -6,7 +6,20 @@
 
 namespace vpet {
 
-enum class MotionState : uint8_t { Idle, Walk, Eat, Punch, Cast, Sleep, Evolution };
+enum class MotionState : uint8_t {
+    Idle,
+    Walk,
+    Eat,
+    Punch,
+    Cast,
+    Sleep,
+    Evolution,
+    Hatch,
+    Hit,
+    Hurt,
+    Dodge,
+    Block,
+};
 enum class AnimationId : uint8_t {
     FiremonIdle,
     FiremonWalk,
@@ -25,9 +38,12 @@ class Motion {
 public:
     Motion(int displayWidth, int displayHeight, int menuHeight, int frameSize);
     void setSpecies(SpeciesId species) { species_ = species; }
+    void alignClock(uint32_t nowMs);
     void startWalking(uint32_t nowMs);
     void startAction(Action action, uint32_t nowMs);
+    void startReaction(bool won, bool injured, uint32_t nowMs);
     void startEvolution(uint32_t nowMs);
+    void startHatch(uint32_t nowMs);
     void wake(uint32_t nowMs);
     void tick(uint32_t nowMs);
     bool consumeActionCompleted();
@@ -44,6 +60,7 @@ private:
     uint16_t frameCount() const;
     uint16_t frameInterval() const;
     uint16_t sleepLoopStart() const;
+    uint16_t sleepLoopEnd() const;
 
     int maxX_;
     int y_;

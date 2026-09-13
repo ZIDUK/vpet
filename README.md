@@ -16,22 +16,26 @@ secundaria mediante los comandos terminados en `-pico`.
   descanso, ataque y transiciones de evolucion. Sparkmon incluye idle, caminar,
   comer y dormir; entrenamiento y batalla se habilitan desde Firemon.
 - Menu superior de ocho iconos y navegacion completa con dos botones.
-- Estado en dos paginas: barras HP/HAM/ENE; NEXT muestra edad, esfuerzo,
-  batallas, animo y reloj.
+- Estado en dos paginas: barras HP/HAM/ENE; NEXT muestra edad de etapa,
+  esfuerzo, batallas de forma, CM, call y reloj. Un Call pinta `*` en el
+  selector.
+- Evolucion automatica COLOR: Sparkmon (12 h 10 min + CM<=1), Firemon
+  (24 h + barras), Flamemon (36 h + 15 batallas). La placa usa scale 1;
+  el sim usa 600 (~73 s hasta Firemon).
 - Mochila gastable: Carne, Energia, EXP y Anillo. ACTION consume y se queda
   en el menu; ATRAS cierra. El stock se guarda en NVS.
-- Guia visual de evolucion y opciones persistentes (BLE, idioma, sonido,
-  save/load, fecha/hora, EVOLVE).
+- Pedia con umbrales reales del catalogo. Opciones: BLE, idioma, sonido,
+  save/load, fecha/hora, EVOLVE.
 - El foco alterna descanso persistente: fondo nocturno y sprite acostado
   (loop 12-14) hasta volver a pulsar el mismo icono.
 - Bluetooth LE bajo demanda, visible como `vPet-XXXX` en Ajustes del iPhone
   (teclado HID) y en LightBlue o nRF Connect.
 - Estado Bluetooth visible en Opciones: `OFF`, `ADVERTISING`, `CONNECTED` o
   `ERROR`. La primera fila de Opciones es Bluetooth.
-- Guardado de especie, estadisticas, inventario, idioma, sonido y Bluetooth
-  en NVS. Los descubrimientos, comidas, entrenos y batallas no se persisten.
+- NVS schema 2: especie, barras, edad, stageAge, CM, call, comidas,
+  entrenos, batallas, wins/losses, peso, DP, proteina, inventario e idioma.
+  Schema 1 migra con ceros. El anillo de eventos de cria es solo RAM.
 - WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
-- Criterios de Sparkmon a Firemon y de Flamemon a Dragfiremon pendientes.
 
 ## Hardware principal
 

@@ -48,6 +48,7 @@ class Battle:
             self.over = True
             self.won = True
             self.pet.battles_won += 1
+            self.pet.battles_this_form = getattr(self.pet, "battles_this_form", 0) + 1
         elif self.pet_hp == 0:
             self.over = True
             self.won = False

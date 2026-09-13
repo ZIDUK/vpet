@@ -120,6 +120,25 @@ def test_sleep_action_loops_until_explicit_wake():
     assert subject.state == motion_module.MOTION_IDLE
 
 
+def test_battle_reaction_picks_combat_sheet():
+    motion_module = _motion_module()
+    subject = motion_module.PetMotion(now=0, random_source=MinimumRandom())
+
+    subject.start_reaction(0.5, won=True, injured=False)
+    assert subject.state == motion_module.MOTION_DODGE
+    subject.update(0.5 + motion_module.PET_COMBAT_FRAME_COUNT * 0.09)
+    assert subject.state == motion_module.MOTION_IDLE
+
+    subject.start_reaction(2.0, won=True, injured=True)
+    assert subject.state == motion_module.MOTION_BLOCK
+
+    subject.start_reaction(3.0, won=False, injured=False)
+    assert subject.state == motion_module.MOTION_HIT
+
+    subject.start_reaction(4.0, won=False, injured=True)
+    assert subject.state == motion_module.MOTION_HURT
+
+
 def test_cast_action_plays_once_then_returns_to_idle():
     motion_module = _motion_module()
     subject = motion_module.PetMotion(now=0, random_source=MinimumRandom())

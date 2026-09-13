@@ -52,13 +52,27 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
     assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
-    assert len(manifest["animations"]) == 26
+    assert len(manifest["animations"]) == 31
+    assert {item["action"] for item in manifest["animations"] if item["species"] == "rookie"} >= {
+        "hit",
+        "hurt",
+        "dodge",
+        "block",
+    }
+    bag = decode_vpa((data_dir / "ui" / "fx" / "bag.vpa").read_bytes())
+    grave = decode_vpa((data_dir / "ui" / "fx" / "grave.vpa").read_bytes())
+    assert bag.frame_count == 16
+    assert grave.frame_count == 1
     assert (data_dir / "manifest.json").is_file()
     catalog = (include_dir / "catalog.h").read_text()
     assert "rookie" in catalog
     assert "sparkmon_idle.vpa" in catalog
     assert "sparkmon_evolution.vpa" in catalog
-    assert '{"egg", "baby", false}' in catalog
+    assert "firemon_hit.vpa" in catalog
+    assert "egg_hatch.vpa" in catalog
+    assert '{"egg", "baby", false, false, 8, -1, 0, 0, 0, 0, 0}' in catalog
+    assert "43800" in catalog
+    assert "129600" in catalog
     assert "dragfiremon_fly.vpa" in catalog
 
 

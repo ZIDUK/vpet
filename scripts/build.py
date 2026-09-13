@@ -16,11 +16,12 @@ ASSETS = ROOT / "assets"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from core.options import OPTION_ICONS
 from display_profiles import get_display_profile
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
 MENU_ICONS = ("Status", "Feed", "Training", "Battle", "Rest", "Items", "Pedia", "Options")
-STATUS_ICONS = ("Heart", "Clock")
+STATUS_ICONS = ("Heart", "Clock", "Protein", "Medkit", "Energy", "Trophy", "Versus", "Weight")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 FIREMON_COLUMNS = 5
 FIREMON_ROWS = 4
@@ -48,12 +49,14 @@ def copy_runtime_sources():
             "__init__.py",
             "evolution.py",
             "device_services.py",
+            "dna.py",
             "inventory.py",
             "menu.py",
             "motion.py",
             "options.py",
             "pet.py",
             "save.py",
+            "status_card.py",
         ),
         "ui": ("__init__.py", "sprites.py", "status.py"),
     }
@@ -229,10 +232,17 @@ def _build_firemon_atlas(
             sheet = opened.convert("RGBA")
             sheet.putalpha(alpha)
         else:
-            raise ValueError(f"{source} must use alpha or a paletted background")
+            sheet = opened.convert("RGBA")
+            pixels = [
+                (0, 0, 0, 0) if red < 12 and green < 12 and blue < 12 else (red, green, blue, alpha)
+                for red, green, blue, alpha in sheet.getdata()
+            ]
+            sheet.putdata(pixels)
     expected = (columns * frame_size, rows * frame_size)
+    if sheet.size[0] < expected[0] or sheet.size[1] < expected[1]:
+        raise ValueError(f"{source} must be at least {expected[0]}x{expected[1]}, got {sheet.size}")
     if sheet.size != expected:
-        raise ValueError(f"{source} must be {expected[0]}x{expected[1]}, got {sheet.size}")
+        sheet = sheet.crop((0, 0, expected[0], expected[1]))
 
     frames = []
     for row in range(rows):
@@ -282,6 +292,10 @@ def collect_pet_images():
             (60, 30, 200, 208), (50, 64), None, 64,
         ),
         (
+            "Egg", "hatch", egg_dir / "egg_break.png", 4, 16,
+            (8, 8, 248, 232), (64, 60), tuple(range(6, 16)), 64,
+        ),
+        (
             "Baby", "idle", baby_dir / "sparkmon_idle.png", 5, 25,
             (46, 38, 207, 220), (57, 64), None, 64,
         ),
@@ -299,7 +313,7 @@ def collect_pet_images():
         ),
         (
             "Baby", "evolution", baby_dir / "sparkmon_evolution.png", 4, 16,
-            (0, 0, 256, 256), (112, 112), None, 112,
+            (48, 48, 208, 208), (112, 112), None, 112,
         ),
         ("Rookie", "idle", rookie_dir / "firemon_idle.png", FIREMON_ROWS, 19, (48, 52, 184, 216), (53, 64), None, 64),
         ("Rookie", "walk", rookie_dir / "firemon_walk.png", 5, 22, (40, 48, 180, 208), (56, 64), None, 64),
@@ -338,8 +352,56 @@ def collect_pet_images():
             64,
         ),
         (
+            "Rookie",
+            "hit",
+            rookie_dir / "firemon_hit.png",
+            5,
+            25,
+            (0, 20, 204, 190),
+            (64, 54),
+            (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24),
+            64,
+            204,
+        ),
+        (
+            "Rookie",
+            "hurt",
+            rookie_dir / "firemon_hurt.png",
+            5,
+            25,
+            (0, 20, 204, 190),
+            (64, 54),
+            (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24),
+            64,
+            204,
+        ),
+        (
+            "Rookie",
+            "dodge",
+            rookie_dir / "firemon_dodge.png",
+            5,
+            25,
+            (0, 20, 204, 190),
+            (64, 54),
+            (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24),
+            64,
+            204,
+        ),
+        (
+            "Rookie",
+            "block",
+            rookie_dir / "firemon_block.png",
+            5,
+            25,
+            (0, 20, 204, 190),
+            (64, 54),
+            (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24),
+            64,
+            204,
+        ),
+        (
             "Rookie", "evolution", rookie_dir / "firemon_evolution.png", 5, 25,
-            (0, 0, 256, 256), (112, 112),
+            (48, 40, 208, 216), (112, 112),
             (0, 4, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24), 112,
         ),
         (
@@ -370,16 +432,16 @@ def collect_pet_images():
         ),
         (
             "Champion", "evolution", champion_dir / "flamemon_evolution.png", 5, 25,
-            (0, 0, 256, 256), (112, 112),
+            (32, 24, 208, 232), (112, 112),
             (0, 4, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24), 112,
         ),
         (
             "Ultimate", "idle", ultimate_dir / "dragfiremon_idle.png", 5, 25,
-            (48, 30, 204, 224), (51, 64), tuple(range(0, 25, 2)) + (21, 23), 64,
+            (48, 30, 204, 224), (51, 64), None, 64,
         ),
         (
             "Ultimate", "fly", ultimate_dir / "dragfiremon_fly.png", 5, 25,
-            (20, 0, 234, 224), (61, 64), tuple(range(22)), 64,
+            (20, 0, 234, 224), (61, 64), None, 64,
         ),
         (
             "Ultimate", "eat", ultimate_dir / "dragfiremon_eat.png", 5, 25,
@@ -392,7 +454,7 @@ def collect_pet_images():
         ),
         (
             "Ultimate", "sleep", ultimate_dir / "dragfiremon_sleep.png", 5, 25,
-            (8, 36, 210, 208), (64, 55), tuple(range(13)) + (18, 24), 64,
+            (8, 36, 210, 208), (64, 55), None, 64,
         ),
         (
             "Ultimate", "cast", ultimate_dir / "dragfiremon_cast.png", 5, 25,
@@ -400,7 +462,9 @@ def collect_pet_images():
             (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24), 64,
         ),
     )
-    for stage, name, source, rows, source_frames, viewport, output_size, frame_indices, tile_size in animations:
+    for spec in animations:
+        stage, name, source, rows, source_frames, viewport, output_size, frame_indices, tile_size = spec[:9]
+        frame_size = spec[9] if len(spec) > 9 else FIREMON_FRAME_SIZE
         base_tile_size = tile_size
         tile_size = (
             ACTIVE_PROFILE.pet_size
@@ -422,6 +486,7 @@ def collect_pet_images():
                 if stage == "Egg" or (stage == "Baby" and name == "evolution")
                 else FIREMON_COLUMNS
             ),
+            frame_size=frame_size,
         )
         frame_count = atlas.width // tile_size
         prefix = {
@@ -449,14 +514,62 @@ def collect_ui():
         size = ACTIVE_PROFILE.icon_size
         return image.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
-    for name in (*MENU_ICONS, *STATUS_ICONS):
+    names = tuple(dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
+    for name in names:
         source = source_dir / f"{name}.png"
         if not source.is_file():
             raise FileNotFoundError(f"Missing menu icon: {source}")
         target = BUILD / "UIIcons" / f"{name}.bmp"
         size = ACTIVE_PROFILE.icon_size
         save_runtime_bmp(source, target, expected_size=(size, size), transform=resize_icon)
-    print(f"  menu icons: {len(MENU_ICONS) + len(STATUS_ICONS)}")
+    print(f"  menu icons: {len(names)}")
+
+
+def collect_fx():
+    source_dir = ASSETS / "ui" / "fx"
+    bag_sheet = source_dir / "bag_sheet.png"
+    if not bag_sheet.is_file():
+        raise FileNotFoundError(f"Missing fx sprite: {bag_sheet}")
+    tile_size = ACTIVE_PROFILE.pet_size
+    scale = tile_size / FIREMON_OUTPUT_SIZE
+    bag_atlas = _build_firemon_atlas(
+        bag_sheet,
+        4,
+        16,
+        (0, 16, 256, 220),
+        (max(1, round(48 * scale)), max(1, round(64 * scale))),
+        None,
+        tile_size,
+        columns=4,
+        frame_size=256,
+    )
+    bag_target = BUILD / "UIFx" / "bag_atlas.bmp"
+    save_runtime_bmp(
+        bag_sheet,
+        bag_target,
+        transparent=True,
+        expected_size=(16 * tile_size, tile_size),
+        transform=lambda _, generated=bag_atlas: generated,
+    )
+    print(f"  fx: {bag_target.name} (16 frames)")
+
+    grave_source = source_dir / "grave.png"
+    if not grave_source.is_file():
+        raise FileNotFoundError(f"Missing fx sprite: {grave_source}")
+    grave_size = (88, 88)
+
+    def resize_grave(image):
+        return image.convert("RGBA").resize(grave_size, Image.Resampling.LANCZOS)
+
+    grave_target = BUILD / "UIFx" / "grave.bmp"
+    save_runtime_bmp(
+        grave_source,
+        grave_target,
+        transparent=True,
+        expected_size=grave_size,
+        transform=resize_grave,
+    )
+    print(f"  fx: {grave_target.name}")
 
 
 def collect_evolution_thumbnails():
@@ -512,6 +625,7 @@ def validate_runtime_assets():
         "Background/background.bmp",
         "Background/background_night.bmp",
         "digimon1/Egg/egg_idle_atlas.bmp",
+        "digimon1/Egg/egg_hatch_atlas.bmp",
         "digimon1/Baby/sparkmon_idle_atlas.bmp",
         "digimon1/Baby/sparkmon_walk_atlas.bmp",
         "digimon1/Baby/sparkmon_eat_atlas.bmp",
@@ -523,6 +637,10 @@ def validate_runtime_assets():
         "digimon1/Rookie/firemon_punch_atlas.bmp",
         "digimon1/Rookie/firemon_sleep_atlas.bmp",
         "digimon1/Rookie/firemon_cast_atlas.bmp",
+        "digimon1/Rookie/firemon_hit_atlas.bmp",
+        "digimon1/Rookie/firemon_hurt_atlas.bmp",
+        "digimon1/Rookie/firemon_dodge_atlas.bmp",
+        "digimon1/Rookie/firemon_block_atlas.bmp",
         "digimon1/Rookie/firemon_evolution_atlas.bmp",
         "digimon1/Champion/flamemon_idle_atlas.bmp",
         "digimon1/Champion/flamemon_walk_atlas.bmp",
@@ -543,7 +661,8 @@ def validate_runtime_assets():
         "UIEvolution/Flamemon.bmp",
         "UIEvolution/Dragfiremon.bmp",
     ]
-    required.extend(f"UIIcons/{name}.bmp" for name in (*MENU_ICONS, *STATUS_ICONS))
+    required.extend(f"UIIcons/{name}.bmp" for name in dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
+    required.extend(("UIFx/bag_atlas.bmp", "UIFx/grave.bmp"))
     missing = [path for path in required if not (BUILD / path).is_file()]
     if missing:
         raise FileNotFoundError("Missing runtime asset(s): " + ", ".join(missing))
@@ -576,6 +695,7 @@ def main(profile_name="pico", output_dir=None):
         collect_pet_images()
         collect_evolution_thumbnails()
         collect_ui()
+        collect_fx()
         validate_runtime_assets()
         write_manifest()
         print("OK")

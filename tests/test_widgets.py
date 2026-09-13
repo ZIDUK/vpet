@@ -32,7 +32,7 @@ def test_evolution_chain_is_consistent():
 
 
 def test_full_evolution_chain():
-    """The custom line has 6 stages: egg → baby → rookie → champion → ultimate → mega."""
+    """Playable line ends at ultimate; mega remains a future stub."""
     digimon_dir = DATA / "digimon"
     forms = [json.loads(p.read_text()) for p in digimon_dir.glob("*.json")]
     STAGE_ORDER = ["egg", "baby", "rookie", "champion", "ultimate", "mega"]
@@ -42,10 +42,10 @@ def test_full_evolution_chain():
     )
     assert len(chain) == 6
     assert [d["stage"] for d in chain] == STAGE_ORDER
-    # Each stage evolves to the next
-    for i in range(len(chain) - 1):
-        assert chain[i]["evolves_to"] == chain[i + 1]["stage"]
-    # Final stage has no evolution
+    playable = [d for d in chain if d["stage"] != "mega"]
+    for i in range(len(playable) - 1):
+        assert playable[i]["evolves_to"] == playable[i + 1]["stage"]
+    assert playable[-1]["evolves_to"] is None
     assert chain[-1]["evolves_to"] is None
 
 
@@ -84,6 +84,8 @@ def test_requirements_increase_through_stages():
             if stage["evolves_to"] is None:
                 continue  # skip final forms
             if stage.get("requirements_pending"):
+                continue
+            if not stage.get("requirements") and stage.get("battles_required"):
                 continue
             cur_sum = sum(stage.get("requirements", {}).values())
             assert cur_sum >= prev_sum, (

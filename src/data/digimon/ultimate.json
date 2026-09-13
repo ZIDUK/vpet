@@ -3,8 +3,8 @@
   "line": "custom_line",
   "stage": "ultimate",
   "sprite": "/digimon1/Ultimate/dragfiremon_idle_atlas.bmp",
-  "evolves_to": "mega",
+  "evolves_to": null,
   "automatic": false,
-  "requirements_pending": true,
+  "requirements_pending": false,
   "requirements": {}
 }
