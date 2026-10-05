@@ -10,6 +10,7 @@ OPTION_TIME = 6
 OPTION_EVOLVE = 7
 OPTION_BACK = 8
 OPTION_COUNT = 9
+OPTION_WINDOW = 3
 OPTION_ICONS = (
     "Bluetooth",
     "Language",
@@ -21,6 +22,16 @@ OPTION_ICONS = (
     "Evolve",
     "Back",
 )
+
+def option_window_start(index, count=OPTION_COUNT, size=OPTION_WINDOW):
+    pos = int(index) % count
+    if count <= size:
+        return 0
+    start = 0 if pos == 0 else pos - 1
+    if start + size > count:
+        start = count - size
+    return start
+
 
 _NEXT_FORM = {
     "egg": "baby",

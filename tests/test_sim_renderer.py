@@ -31,6 +31,22 @@ def test_renderer_outputs_device_sized_frame_with_shared_background():
     assert frame.getpixel((0, 127)) == background.getpixel((0, 127))
 
 
+def test_tdisplay_call_uses_corner_icon_not_bottom_bar(tmp_path):
+    build_dir = tmp_path / "build-tdisplay"
+    profile = get_display_profile("tdisplay")
+    build_script.main(profile_name="tdisplay", output_dir=build_dir)
+    pet = _rookie()
+    pet.call_reason = "hunger"
+    background = Image.open(build_dir / "Background" / "background.bmp").convert("RGB")
+    frame = render_frame(build_dir, pet, profile=profile, now_ms=0)
+    quiet = render_frame(build_dir, _rookie(), profile=profile, now_ms=0)
+
+    assert frame.getpixel((120, 125)) == background.getpixel((120, 125))
+    assert frame.getpixel((120, 125)) != (255, 215, 0)
+    assert frame.getpixel((220, 115)) == (255, 215, 0)
+    assert quiet.getpixel((220, 115)) == background.getpixel((220, 115))
+
+
 def test_renderer_outputs_tdisplay_frame_with_30_pixel_menu_cells(tmp_path):
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
@@ -83,7 +99,7 @@ def test_tdisplay_inventory_keeps_back_on_screen(tmp_path):
         panel_index=INVENTORY_BACK_INDEX,
         profile=profile,
     )
-    yellow = (255, 210, 74)
+    yellow = (255, 215, 0)
     yellow_rows = [
         y
         for y in range(48, 135)
@@ -119,11 +135,15 @@ def test_tdisplay_inventory_splits_preview_and_list(tmp_path):
         profile=profile,
     )
     parchment = (214, 180, 112)
+    selector = (255, 215, 0)
     left = (0, 48, STATUS_SPLIT_X, 135)
     right = (STATUS_SPLIT_X, 48, 240, 135)
     assert meat.crop(left).tobytes() != energy.crop(left).tobytes()
     assert meat.getpixel((STATUS_SPLIT_X + 10, STATUS_CARD_Y + 4)) != parchment
     assert meat.getpixel((8, STATUS_CARD_Y + 4)) == parchment
+    assert meat.getpixel((STATUS_SPLIT_X + 80, STATUS_CARD_Y + 2)) == selector
+    assert energy.getpixel((STATUS_SPLIT_X + 80, STATUS_CARD_Y + 2)) != selector
+    assert energy.getpixel((STATUS_SPLIT_X + 80, STATUS_CARD_Y + 29)) == selector
 
 
 def test_tdisplay_evolution_tree_branches_after_spark(tmp_path):
@@ -141,6 +161,7 @@ def test_tdisplay_evolution_tree_branches_after_spark(tmp_path):
         profile=profile,
     )
     parchment = (214, 180, 112)
+    selector = (255, 215, 0)
     stride = EVO_CHIP + EVO_GAP
     trunk = frame.getpixel((EVO_X0 + 8, EVO_COLOR_Y + 8))
     leftover_egg = frame.getpixel((EVO_X0 + 8, EVO_DARK_Y + 8))
@@ -148,6 +169,17 @@ def test_tdisplay_evolution_tree_branches_after_spark(tmp_path):
     assert trunk != parchment
     assert leftover_egg == parchment
     assert dark_fork != parchment
+    assert frame.getpixel((EVO_X0 + 1, EVO_COLOR_Y + 1)) == selector
+    spark = render_frame(
+        build_dir,
+        _rookie(),
+        menu_index=6,
+        panel_mode="evolution",
+        panel_index=1,
+        profile=profile,
+    )
+    assert spark.getpixel((EVO_X0 + 1, EVO_COLOR_Y + 1)) != selector
+    assert spark.getpixel((EVO_X0 + stride + 1, EVO_COLOR_Y + 1)) == selector
 
 
 def test_tdisplay_evolution_detail_splits_card_and_list(tmp_path):
@@ -665,10 +697,16 @@ def test_tdisplay_options_next_moves_yellow_chip(tmp_path):
         profile=profile,
     )
 
+    from core.status_card import STATUS_CARD_ROW, STATUS_CARD_Y
+
     selector = (255, 215, 0)
-    assert bluetooth.getpixel((40, 58)) == selector
-    assert language.getpixel((40, 58)) != selector
-    assert language.getpixel((116, 58)) == selector
+    first = STATUS_CARD_Y + 4
+    second = STATUS_CARD_Y + STATUS_CARD_ROW + 4
+    assert bluetooth.getpixel((40, first)) == selector
+    assert bluetooth.getpixel((200, first)) == selector
+    assert language.getpixel((200, first)) != selector
+    assert language.getpixel((40, second)) == selector
+    assert language.getpixel((200, second)) == selector
 
 
 def test_options_renderer_draws_bluetooth_and_date_panels():

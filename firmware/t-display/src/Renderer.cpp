@@ -149,14 +149,10 @@ void Renderer::drawCallCue(const AppViewModel& model) {
         canvas_.drawRect(x, 0, 30, 24, TFT_RED);
         canvas_.drawRect(x + 1, 1, 28, 22, TFT_RED);
     }
-    const char* label = copy::callHunger(model.spanish);
-    if (reason == CallReason::Strength) label = copy::callStrength(model.spanish);
-    if (reason == CallReason::Lights) label = copy::callLights(model.spanish);
-    canvas_.fillRect(0, 117, 240, 18, TFT_YELLOW);
-    canvas_.setTextDatum(MC_DATUM);
-    canvas_.setTextColor(TFT_BLACK, TFT_YELLOW);
-    canvas_.drawString(label, 120, 125, 2);
-    canvas_.setTextDatum(TL_DATUM);
+    const char* icon = callIconPath(reason);
+    if (icon == nullptr || !callBlinkOn(model.nowMs)) return;
+    canvas_.fillRoundRect(kCallIconX - 2, kCallIconY - 2, 24, 24, 4, TFT_YELLOW);
+    assets_.drawFrame(canvas_, icon, 0, kCallIconX, kCallIconY);
 }
 
 void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {

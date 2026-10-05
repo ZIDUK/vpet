@@ -7,5 +7,6 @@ VENV="$ROOT/.venv-platformio"
 test -x "$VENV/bin/python" || python3 -m venv "$VENV"
 "$VENV/bin/python" -m pip install --disable-pip-version-check \
     "platformio==6.2.0" \
-    "intelhex==2.3.0"
+    "intelhex==2.3.0" \
+    -r "$ROOT/requirements-dev.txt"
 "$VENV/bin/pio" --version

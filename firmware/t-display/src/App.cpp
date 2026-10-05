@@ -293,7 +293,8 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
     uint32_t intervalMs = 33;
     if (panel == PanelId::Inventory || panel == PanelId::EvolutionTree ||
-        panel == PanelId::EvolutionDetail || panel == PanelId::Rest) {
+        panel == PanelId::EvolutionDetail || panel == PanelId::Rest ||
+        panel == PanelId::Options) {
         intervalMs = 1000;
     }
     if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {

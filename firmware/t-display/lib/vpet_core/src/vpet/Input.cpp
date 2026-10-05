@@ -1,12 +1,11 @@
 #include "vpet/Input.h"
+#include "vpet/Layout.h"
 
 namespace vpet {
 namespace {
 // Mechanical buttons can bounce for a few milliseconds.  Lock subsequent
 // press edges briefly, but emit the first edge immediately for responsive UI.
 constexpr uint32_t kPressLockoutMs = 70;
-constexpr uint32_t kRepeatDelayMs = 320;
-constexpr uint32_t kRepeatEveryMs = 180;
 }
 
 Input::Input(uint32_t debounceMs, uint32_t longPressMs)
@@ -47,8 +46,8 @@ InputEvent Input::updateButton(
             button.longEmitted = true;
             return InputEvent::Back;
         }
-        if (nowMs - button.pressedAt >= kRepeatDelayMs) {
-            if (button.lastRepeatAt == 0 || nowMs - button.lastRepeatAt >= kRepeatEveryMs) {
+        if (nowMs - button.pressedAt >= kNextRepeatDelayMs) {
+            if (button.lastRepeatAt == 0 || nowMs - button.lastRepeatAt >= kNextRepeatEveryMs) {
                 button.lastRepeatAt = nowMs;
                 return shortEvent;
             }

@@ -153,6 +153,17 @@ void test_call_cues_the_matching_care_icon() {
     TEST_ASSERT_EQUAL(1, vpet::callMenuIndex(vpet::CallReason::Hunger));
     TEST_ASSERT_EQUAL(2, vpet::callMenuIndex(vpet::CallReason::Strength));
     TEST_ASSERT_EQUAL(4, vpet::callMenuIndex(vpet::CallReason::Lights));
+    TEST_ASSERT_NULL(vpet::callIconPath(vpet::CallReason::None));
+    TEST_ASSERT_EQUAL_STRING("/ui/icons/feed.vpa", vpet::callIconPath(vpet::CallReason::Hunger));
+    TEST_ASSERT_EQUAL_STRING("/ui/icons/training.vpa", vpet::callIconPath(vpet::CallReason::Strength));
+    TEST_ASSERT_EQUAL_STRING("/ui/icons/rest.vpa", vpet::callIconPath(vpet::CallReason::Lights));
+    TEST_ASSERT_EQUAL(216, vpet::kCallIconX);
+    TEST_ASSERT_EQUAL(111, vpet::kCallIconY);
+}
+
+void test_next_repeat_is_the_shared_standard() {
+    TEST_ASSERT_EQUAL(400, vpet::kNextRepeatDelayMs);
+    TEST_ASSERT_EQUAL(90, vpet::kNextRepeatEveryMs);
 }
 
 void test_call_blink_toggles_every_400ms() {

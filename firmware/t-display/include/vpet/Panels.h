@@ -38,7 +38,23 @@ private:
     void drawVital(const char* icon, const char* label, int value, int16_t y);
     void drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail);
     void drawEvolutionTree(const Navigation& navigation);
-    void drawOptions(uint8_t selected, BleStatus bluetoothStatus, bool spanish, const char* language, bool soundEnabled);
+    void drawEvolutionNode(const Navigation& navigation, uint8_t index);
+    void drawOptions(
+        uint8_t selected,
+        BleStatus bluetoothStatus,
+        bool spanish,
+        const char* language,
+        bool soundEnabled,
+        uint8_t onlyIndex = 255
+    );
+    void drawOptionsChip(
+        uint8_t index,
+        uint8_t selected,
+        BleStatus bluetoothStatus,
+        bool spanish,
+        const char* language,
+        bool soundEnabled
+    );
     void drawRest(uint8_t selected, bool spanish, bool cold, bool hasBackup, SpeciesId backupSpecies);
     void drawDateTime(const DateTimeMenu& dateMenu);
     void drawStat(
@@ -59,6 +75,12 @@ private:
     PanelId lastPanel_ = PanelId::Home;
     bool lastSpanish_ = true;
     uint8_t lastStatusPage_ = 255;
+    uint8_t lastOptionsIndex_ = 255;
+    uint8_t lastInventoryIndex_ = 255;
+    uint8_t lastEvolutionIndex_ = 255;
+    BleStatus lastBluetoothStatus_ = BleStatus::Off;
+    bool lastSoundEnabled_ = true;
+    char lastLanguage_[4] = "";
 };
 
 }  // namespace vpet

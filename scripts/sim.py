@@ -74,7 +74,7 @@ def main():
     pygame.init()
     window_size = (profile.width * args.scale, profile.height * args.scale)
     screen = pygame.display.set_mode(window_size)
-    pygame.key.set_repeat(320, 180)
+    pygame.key.set_repeat(400, 90)
     pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, b=BACK, e=EVOLVE")
     clock = pygame.time.Clock()
 
@@ -94,6 +94,7 @@ def main():
     options_session = None
     frame_number = 0
     rendered_frames = 0
+    boot_started = time.monotonic()
 
     running = True
     while running:
@@ -181,6 +182,23 @@ def main():
                     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                     panel_mode = None
                     inventory_index = 0
+
+        boot_progress = min(1.0, (time.monotonic() - boot_started) / 2.2)
+        if boot_progress < 1.0:
+            from scripts.sim_renderer import render_boot_intro
+            frame = render_boot_intro(boot_progress)
+            surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+            scaled = pygame.transform.scale(surface, window_size)
+            screen.blit(scaled, (0, 0))
+            pygame.display.flip()
+            rendered_frames += 1
+            if args.record:
+                frame.save(record_dir / f"frame_{frame_number:05d}.png")
+                frame_number += 1
+            if args.max_frames and rendered_frames >= args.max_frames:
+                running = False
+            clock.tick(20)
+            continue
 
         pet.decay_if_due()
         now = pygame.time.get_ticks() / 1000

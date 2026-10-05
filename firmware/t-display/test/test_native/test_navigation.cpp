@@ -1,5 +1,6 @@
 #include <unity.h>
 
+#include "vpet/Layout.h"
 #include "vpet/Navigation.h"
 
 void test_rest_icon_opens_rest_panel() {
@@ -25,6 +26,38 @@ void test_menu_opens_expected_panels() {
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
     navigation.dispatch(vpet::InputEvent::Back);
     TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
+}
+
+void test_options_next_redraws_only_the_two_chips() {
+    TEST_ASSERT_TRUE(vpet::cursorRedrawOnly(0, 1, false, false));
+    TEST_ASSERT_FALSE(vpet::cursorRedrawOnly(1, 1, false, false));
+    TEST_ASSERT_FALSE(vpet::cursorRedrawOnly(0, 1, true, false));
+    TEST_ASSERT_FALSE(vpet::cursorRedrawOnly(0, 1, false, true));
+    TEST_ASSERT_FALSE(vpet::cursorRedrawOnly(255, 1, false, false));
+}
+
+void test_internal_pages_advance_one_step_per_next() {
+    vpet::Navigation status;
+    status.setMenuIndex(0);
+    status.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(0, status.panelIndex());
+    status.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(1, status.panelIndex());
+
+    vpet::Navigation inventory;
+    inventory.setMenuIndex(5);
+    inventory.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(0, inventory.panelIndex());
+    inventory.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(1, inventory.panelIndex());
+
+    vpet::Navigation pedia;
+    pedia.setMenuIndex(6);
+    pedia.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, pedia.panel());
+    TEST_ASSERT_EQUAL(0, pedia.panelIndex());
+    pedia.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(1, pedia.panelIndex());
 }
 
 void test_next_moves_options_cursor() {

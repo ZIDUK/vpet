@@ -28,13 +28,54 @@ vpet::App app(renderer, panels, settingsStore, bluetooth);
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);
     display.drawRect(3, 3, 234, 129, TFT_DARKGREY);
-    display.setTextColor(TFT_ORANGE, TFT_BLACK);
     display.setTextDatum(MC_DATUM);
+    display.setTextColor(TFT_ORANGE, TFT_BLACK);
     display.drawString("vPET", 120, 42, 2);
     display.setTextColor(status.manifestPresent ? TFT_GREEN : TFT_RED, TFT_BLACK);
     display.drawString(status.manifestPresent ? "ASSETS OK" : "ASSETS MISSING", 120, 76, 2);
     display.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     display.drawString("NEXT: GPIO0  ACTION: GPIO35", 120, 108, 1);
+}
+
+void drawBootIntro(const vpet::AssetStatus& status) {
+    constexpr uint16_t kIntroFrameMs = 110;
+    constexpr uint8_t kIntroFrames = 15;
+    for (uint8_t frame = 0; frame < kIntroFrames; ++frame) {
+        framebuffer.fillSprite(TFT_BLACK);
+        framebuffer.drawRect(3, 3, 234, 129, TFT_DARKGREY);
+        framebuffer.setTextDatum(MC_DATUM);
+        framebuffer.setTextColor(TFT_ORANGE, TFT_BLACK);
+        framebuffer.drawString("vPET", 120, frame < 7 ? 54 : 28, 4);
+
+        const int16_t flameX = 82 + frame * 9;
+        const int16_t flameY = frame < 7 ? 43 - frame * 2 : 25;
+        framebuffer.fillTriangle(flameX, flameY + 13, flameX + 7, flameY - 2,
+                                 flameX + 14, flameY + 13, TFT_ORANGE);
+        framebuffer.fillTriangle(flameX + 4, flameY + 12, flameX + 7, flameY + 3,
+                                 flameX + 11, flameY + 12, TFT_YELLOW);
+        if (frame >= 7) {
+            framebuffer.drawPixel(flameX - 5, flameY + 5, TFT_YELLOW);
+            framebuffer.drawPixel(flameX + 20, flameY + 1, TFT_ORANGE);
+        }
+        framebuffer.pushSprite(0, 0);
+        delay(kIntroFrameMs);
+    }
+
+    framebuffer.fillSprite(TFT_BLACK);
+    framebuffer.drawRect(3, 3, 234, 129, TFT_DARKGREY);
+    framebuffer.setTextDatum(MC_DATUM);
+    framebuffer.setTextColor(TFT_ORANGE, TFT_BLACK);
+    framebuffer.drawString("vPET", 120, 18, 2);
+    if (status.manifestPresent) {
+        assets.drawFrame(framebuffer, "/animations/rookie/firemon_idle.vpa", 0, 76, 35);
+        framebuffer.setTextColor(TFT_GREEN, TFT_BLACK);
+        framebuffer.drawString("READY", 120, 119, 2);
+    } else {
+        framebuffer.setTextColor(TFT_RED, TFT_BLACK);
+        framebuffer.drawString("ASSETS MISSING", 120, 76, 2);
+    }
+    framebuffer.pushSprite(0, 0);
+    delay(550);
 }
 }
 
@@ -66,7 +107,7 @@ void setup() {
     buttons.begin();
     bluetooth.begin();
     const vpet::AssetStatus status = assets.begin();
-    drawBoot(status);
+    drawBootIntro(status);
     Serial.printf(
         "VPET_READY heap_free=%u heap_min=%u flash=%u fs_used=%u fs_total=%u manifest=%s\n",
         ESP.getFreeHeap(),

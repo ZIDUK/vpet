@@ -93,7 +93,7 @@ from core.evolution import (
     evolution_window,
     split_requirement_lines,
 )
-from core.options import OPTION_ICONS
+from core.options import OPTION_COUNT, OPTION_ICONS, OPTION_WINDOW, option_window_start
 from core.inventory import (
     INVENTORY_ITEMS,
     clamp_visible_inventory_index,
@@ -130,6 +130,30 @@ from ui.status import (
     draw_options,
     draw_status,
 )
+
+
+def render_boot_intro(progress, assets_ok=True):
+    """Render the small 240x135 startup animation used by the T-Display."""
+    frame = Image.new("RGB", (240, 135), (4, 8, 18))
+    draw = ImageDraw.Draw(frame)
+    draw.rectangle((3, 3, 236, 131), outline=(90, 90, 100), width=1)
+    draw.text((120, 18 if progress >= 0.55 else 54), "vPET",
+              fill=(255, 174, 35), anchor="mm", font=_status_font(22))
+    flame_x = int(82 + min(1.0, progress * 1.35) * 76)
+    flame_y = 43 if progress < 0.55 else 25
+    draw.polygon(((flame_x, flame_y + 13), (flame_x + 7, flame_y - 2),
+                  (flame_x + 14, flame_y + 13)), fill=(255, 112, 18))
+    draw.polygon(((flame_x + 4, flame_y + 12), (flame_x + 7, flame_y + 3),
+                  (flame_x + 11, flame_y + 12)), fill=(255, 224, 55))
+    if progress >= 0.72 and assets_ok:
+        draw.text((120, 84), "FIREMON", fill=(255, 150, 30),
+                  anchor="mm", font=_status_font(12))
+        draw.text((120, 119), "READY", fill=(90, 230, 80),
+                  anchor="mm", font=_status_font(16))
+    elif progress >= 0.72:
+        draw.text((120, 76), "ASSETS MISSING", fill=(235, 60, 60),
+                  anchor="mm", font=_status_font(12))
+    return frame
 
 
 def device_path(build_dir, absolute_path):
@@ -169,6 +193,16 @@ def _icon_glyph_mask(icon):
                 if source[column, row] < 96:
                     pixels[column, row] = 0
     return mask
+
+
+def _draw_call_corner(frame, build_dir, pet, now_ms):
+    reason = getattr(pet, "call_reason", None)
+    icon = {"hunger": "Feed", "strength": "Training", "lights": "Rest"}.get(reason)
+    if icon is None or (now_ms // 400) % 2:
+        return
+    draw = ImageDraw.Draw(frame)
+    draw.rounded_rectangle((214, 109, 237, 132), radius=4, fill=(255, 215, 0))
+    _paste_ui_icon(frame, build_dir, icon, 216, 111, 20)
 
 
 def _paste_ui_icon(frame, build_dir, name, x, y, size=20):
@@ -375,8 +409,14 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         width = 232 - STATUS_SPLIT_X
         for slot, index in enumerate(inventory_window(visible, current)):
             y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
-            border = yellow if index == current else outline
-            draw.rounded_rectangle((x, y, x + width, y + STATUS_CARD_H), radius=5, fill=chip, outline=border)
+            selector = (255, 215, 0)
+            border = selector if index == current else outline
+            draw.rounded_rectangle(
+                (x, y, x + width, y + STATUS_CARD_H),
+                radius=5,
+                fill=selector if index == current else chip,
+                outline=border,
+            )
             _paste_ui_icon(frame, build_dir, inventory_icon(index), x + 2, y + 2, 20)
             if index < len(INVENTORY_ITEMS):
                 _, key, _, _ = INVENTORY_ITEMS[index]
@@ -402,7 +442,13 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             x, y = evolution_tree_xy(index)
             hidden = evolution_hidden(stage, dark, current_stage)
             active = index == selected
-            draw.rounded_rectangle((x, y, x + EVO_CHIP, y + EVO_CHIP), radius=4, fill=chip, outline=yellow if active else outline)
+            selector = (255, 215, 0)
+            draw.rounded_rectangle(
+                (x, y, x + EVO_CHIP, y + EVO_CHIP),
+                radius=4,
+                fill=selector if active else chip,
+                outline=selector if active else outline,
+            )
             portrait = _load_image(Path(build_dir) / "UIEvolution" / species[stage])
             thumb = portrait.resize((32, 32), Image.Resampling.NEAREST)
             mask = thumb.point([0] + [255] * 255, mode="L")
@@ -433,8 +479,14 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         for slot, index in enumerate(evolution_window(selected)):
             y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
             entry = evolution_card(index, pet, EVOLUTION_REGISTRY, spanish)
-            border = yellow if index == selected else outline
-            draw.rounded_rectangle((x, y, x + width, y + STATUS_CARD_H), radius=5, fill=chip, outline=border)
+            selector = (255, 215, 0)
+            border = selector if index == selected else outline
+            draw.rounded_rectangle(
+                (x, y, x + width, y + STATUS_CARD_H),
+                radius=5,
+                fill=selector if index == selected else chip,
+                outline=border,
+            )
             _paste_ui_icon(frame, build_dir, "Pedia", x + 2, y + 2, 20)
             draw.text((x + 24, y + 6), entry["label"], fill=ink, font=_status_font(12))
     elif panel_mode == "options" and options_session is not None:
@@ -447,7 +499,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             labels = (
                 ("BT", options_session.bluetooth_status[:3]),
                 ("LANG", "ES"),
-                ("SND", "ON"),
+                ("SOUND", "ON"),
                 ("SAVE", ""),
                 ("LOAD", ""),
                 ("DATE", ""),
@@ -455,25 +507,29 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 ("EVO", ""),
                 ("BACK", ""),
             )
-            current = options_session.index % 9
+            current = options_session.index % OPTION_COUNT
+            start = option_window_start(current)
             chip = _mix(ink, panel, 0.88)
             outline = _mix(ink, panel, 0.45)
-            for index, (label, extra) in enumerate(labels):
-                col = index % 3
-                row = index // 3
-                x = 8 + col * 76
-                y = 54 + row * 26
-                selector = (255, 215, 0)
+            selector = (255, 215, 0)
+            x = 8
+            width = 224
+            for slot in range(OPTION_WINDOW):
+                index = start + slot
+                if index >= OPTION_COUNT:
+                    break
+                label, extra = labels[index]
+                y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
                 border = selector if index == current else outline
                 draw.rounded_rectangle(
-                    (x, y, x + 72, y + 24),
+                    (x, y, x + width, y + STATUS_CARD_H),
                     radius=5,
                     fill=selector if index == current else chip,
                     outline=border,
                 )
                 _paste_ui_icon(frame, build_dir, OPTION_ICONS[index], x + 2, y + 2, 20)
-                text = label if not extra else "%s %s" % (label, extra)
-                draw.text((x + 46, y + 12), text, fill=ink, font=_status_font(10), anchor="mm")
+                text = label if not extra else "%s  %s" % (label, extra)
+                draw.text((x + 28, y + 6), text, fill=ink, font=_status_font(12))
 
 
 def render_frame(
@@ -684,4 +740,6 @@ def render_frame(
                 portrait = _load_image(device_path(build_dir, path))
                 mask = portrait.point([0] + [255] * 255, mode="L")
                 frame.paste(portrait.convert("RGB"), (x, EVOLUTION_THUMB_Y), mask)
+    if profile.name == "tdisplay" and panel_mode is None:
+        _draw_call_corner(frame, build_dir, pet, now_ms)
     return frame

@@ -41,6 +41,12 @@ void Panels::invalidate() {
     lastPanel_ = PanelId::Home;
     lastSpanish_ = true;
     lastStatusPage_ = 255;
+    lastOptionsIndex_ = 255;
+    lastInventoryIndex_ = 255;
+    lastEvolutionIndex_ = 255;
+    lastBluetoothStatus_ = BleStatus::Off;
+    lastSoundEnabled_ = true;
+    lastLanguage_[0] = '\0';
 }
 
 void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font) {
@@ -338,10 +344,11 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
         const uint8_t index = pet.inventoryIndexAt(start + slot);
         const int16_t y = kStatusCardY + slot * kStatusCardRow;
         const bool active = index == current;
-        display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+        const uint16_t fill = active ? TFT_YELLOW : kChip;
+        display_.fillRoundRect(x, y, width, kStatusCardH, 4, fill);
         display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
         assets_.drawFrame(display_, icons[index], 0, x + 2, y + 2, false, -1, 72);
-        display_.setTextColor(kInk, kChip);
+        display_.setTextColor(kInk, fill);
         if (index < 6) {
             char line[20];
             snprintf(line, sizeof(line), "%s x%u", copy::itemName(index, spanish), pet.itemCount(index));
@@ -352,24 +359,30 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
     }
 }
 
-void Panels::drawEvolutionTree(const Navigation& navigation) {
+void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index) {
     const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+    const uint8_t node = index % Navigation::kEvolutionNodeCount;
+    const uint8_t stage = Navigation::evolutionNodeStage(node);
+    const bool dark = Navigation::evolutionNodeDark(node);
+    const SpeciesId species = kEvolutionStages[stage];
+    const int16_t x = kEvoX0 + stage * (kEvoChip + kEvoGap);
+    const int16_t y = dark ? kEvoDarkY : kEvoColorY;
+    const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
+    const bool active = node == selected;
+    const uint16_t fill = active ? TFT_YELLOW : kChip;
+    display_.fillRoundRect(x, y, kEvoChip, kEvoChip, 4, fill);
+    display_.drawRoundRect(x, y, kEvoChip, kEvoChip, 4, active ? TFT_YELLOW : kInk);
+    assets_.drawFrame(display_, portraitPath(species, true), 0, x + 2, y + 2, false, hidden ? TFT_BLACK : -1);
+}
+
+void Panels::drawEvolutionTree(const Navigation& navigation) {
     const int16_t stride = kEvoChip + kEvoGap;
     const int16_t sparkX = kEvoX0 + stride;
     const int16_t fireX = kEvoX0 + stride * 2;
     display_.drawLine(sparkX + kEvoChip, kEvoColorY + kEvoChip / 2, fireX, kEvoColorY + kEvoChip / 2, kInk);
     display_.drawLine(fireX, kEvoColorY + kEvoChip / 2, fireX, kEvoDarkY + kEvoChip / 2, kInk);
     for (uint8_t index = 0; index < Navigation::kEvolutionNodeCount; ++index) {
-        const uint8_t stage = Navigation::evolutionNodeStage(index);
-        const bool dark = Navigation::evolutionNodeDark(index);
-        const SpeciesId species = kEvolutionStages[stage];
-        const int16_t x = kEvoX0 + stage * stride;
-        const int16_t y = dark ? kEvoDarkY : kEvoColorY;
-        const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
-        const bool active = index == selected;
-        display_.fillRoundRect(x, y, kEvoChip, kEvoChip, 4, kChip);
-        display_.drawRoundRect(x, y, kEvoChip, kEvoChip, 4, active ? TFT_YELLOW : kInk);
-        assets_.drawFrame(display_, portraitPath(species, true), 0, x + 2, y + 2, false, hidden ? TFT_BLACK : -1);
+        drawEvolutionNode(navigation, index);
     }
 }
 
@@ -429,15 +442,17 @@ void Panels::drawEvolution(const Navigation& navigation, bool spanish, const Pet
         const bool listHidden = (listDark && listStage >= 2) || (!listDark && listStage > navigation.currentStage());
         const int16_t y = kStatusCardY + slot * kStatusCardRow;
         const bool active = index == selected;
-        display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
+        const uint16_t fill = active ? TFT_YELLOW : kChip;
+        display_.fillRoundRect(x, y, width, kStatusCardH, 4, fill);
         display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
         assets_.drawFrame(display_, "/ui/icons/pedia.vpa", 0, x + 2, y + 2);
-        display_.setTextColor(kInk, kChip);
+        display_.setTextColor(kInk, fill);
         drawLabel(listHidden ? "???" : copy::evoShort(listStage, spanish), x + 24, y + 5, width - 28, 2);
     }
 }
 
-void Panels::drawOptions(
+void Panels::drawOptionsChip(
+    uint8_t index,
     uint8_t selected,
     BleStatus bluetoothStatus,
     bool spanish,
@@ -451,8 +466,7 @@ void Panels::drawOptions(
         case BleStatus::Error: bluetooth = "ERR"; break;
         case BleStatus::Off: break;
     }
-    const uint8_t current = selected % 9;
-    const char* shortLabels[] = {"BT", "LANG", "SND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK"};
+    const char* shortLabels[] = {"BT", "LANG", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK"};
     const char* extras[] = {
         bluetooth,
         language,
@@ -475,24 +489,52 @@ void Panels::drawOptions(
         "/ui/icons/evolve.vpa",
         "/ui/icons/back.vpa",
     };
-    for (uint8_t index = 0; index < 9; ++index) {
-        const uint8_t col = index % 3;
-        const uint8_t row = index / 3;
-        const int16_t x = 8 + col * 76;
-        const int16_t y = 54 + row * 26;
-        const bool active = index == current;
-        const uint16_t fill = active ? TFT_YELLOW : kChip;
-        display_.fillRoundRect(x, y, 72, 24, 4, fill);
-        display_.drawRoundRect(x, y, 72, 24, 4, active ? TFT_YELLOW : kInk);
-        assets_.drawFrame(display_, icons[index], 0, x + 2, y + 2, false, -1, 72);
-        display_.setTextColor(kInk, fill);
-        if (extras[index][0] != '\0') {
-            char line[16];
-            snprintf(line, sizeof(line), "%s %s", shortLabels[index], extras[index]);
-            drawLabel(line, x + 24, y + 5, 46, 1);
-        } else {
-            drawLabel(shortLabels[index], x + 24, y + 5, 46, 2);
-        }
+    const uint8_t chip = index % Navigation::kOptionCount;
+    const uint8_t current = selected % Navigation::kOptionCount;
+    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, current);
+    if (chip < start || chip >= start + kInventoryWindow) return;
+    const uint8_t slot = static_cast<uint8_t>(chip - start);
+    const int16_t x = 8;
+    const int16_t y = kStatusCardY + slot * kStatusCardRow;
+    const int16_t width = 224;
+    const bool active = chip == current;
+    const uint16_t fill = active ? TFT_YELLOW : kChip;
+    display_.fillRoundRect(x, y, width, kStatusCardH, 4, fill);
+    display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
+    assets_.drawFrame(display_, icons[chip], 0, x + 2, y + 2, false, -1, 72);
+    display_.setTextColor(kInk, fill);
+    if (extras[chip][0] != '\0') {
+        char line[16];
+        snprintf(line, sizeof(line), "%s  %s", shortLabels[chip], extras[chip]);
+        drawLabel(line, x + 28, y + 5, 188, 2);
+    } else {
+        drawLabel(shortLabels[chip], x + 28, y + 5, 188, 2);
+    }
+}
+
+void Panels::drawOptions(
+    uint8_t selected,
+    BleStatus bluetoothStatus,
+    bool spanish,
+    const char* language,
+    bool soundEnabled,
+    uint8_t onlyIndex
+) {
+    if (onlyIndex != 255) {
+        drawOptionsChip(onlyIndex, selected, bluetoothStatus, spanish, language, soundEnabled);
+        return;
+    }
+    const uint8_t current = selected % Navigation::kOptionCount;
+    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, current);
+    for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
+        drawOptionsChip(
+            static_cast<uint8_t>(start + slot),
+            selected,
+            bluetoothStatus,
+            spanish,
+            language,
+            soundEnabled
+        );
     }
 }
 
@@ -585,22 +627,65 @@ void Panels::draw(
             drawStatus(pet, spanish, page, nowMs);
             break;
         }
-        case PanelId::Inventory:
+        case PanelId::Inventory: {
+            const uint8_t selected = pet.clampVisibleInventoryIndex(navigation.panelIndex());
+            // Transparent previews and changing labels require a clean background.
             beginPanel(panelChanged, navigation.menuIndex(), copy::inventoryTitle(spanish), calling);
-            drawInventory(navigation.panelIndex(), spanish, pet);
+            drawInventory(selected, spanish, pet);
+            lastInventoryIndex_ = selected;
             break;
-        case PanelId::EvolutionTree:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionTitle(spanish), calling);
-            drawEvolution(navigation, spanish, pet, false);
+        }
+        case PanelId::EvolutionTree: {
+            const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+            if (cursorRedrawOnly(lastEvolutionIndex_, selected, false, panelChanged)) {
+                drawEvolutionNode(navigation, lastEvolutionIndex_);
+                drawEvolutionNode(navigation, selected);
+            } else {
+                beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionTitle(spanish), calling);
+                drawEvolution(navigation, spanish, pet, false);
+            }
+            lastEvolutionIndex_ = selected;
             break;
-        case PanelId::EvolutionDetail:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionDetailTitle(spanish), calling);
+        }
+        case PanelId::EvolutionDetail: {
+            const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+            if (!cursorRedrawOnly(lastEvolutionIndex_, selected, false, panelChanged)) {
+                beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionDetailTitle(spanish), calling);
+            } else {
+                display_.fillRect(0, 48, 240, 87, kPanel);
+            }
             drawEvolution(navigation, spanish, pet, true);
+            lastEvolutionIndex_ = selected;
             break;
-        case PanelId::Options:
-            beginPanel(panelChanged, navigation.menuIndex(), copy::optionsTitle(spanish), calling);
-            drawOptions(navigation.panelIndex(), bluetoothStatus, spanish, language, soundEnabled);
+        }
+        case PanelId::Options: {
+            const uint8_t selected = navigation.panelIndex();
+            const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, selected);
+            const uint8_t lastStart = inventoryWindowStart(Navigation::kOptionCount, lastOptionsIndex_);
+            const bool extrasChanged =
+                bluetoothStatus != lastBluetoothStatus_ ||
+                soundEnabled != lastSoundEnabled_ ||
+                language == nullptr ||
+                strcmp(language, lastLanguage_) != 0 ||
+                (lastOptionsIndex_ != 255 && start != lastStart);
+            if (cursorRedrawOnly(lastOptionsIndex_, selected, extrasChanged, panelChanged)) {
+                drawOptionsChip(
+                    lastOptionsIndex_, selected, bluetoothStatus, spanish, language, soundEnabled
+                );
+                drawOptionsChip(selected, selected, bluetoothStatus, spanish, language, soundEnabled);
+            } else {
+                beginPanel(panelChanged, navigation.menuIndex(), copy::optionsTitle(spanish), calling);
+                drawOptions(selected, bluetoothStatus, spanish, language, soundEnabled);
+            }
+            lastOptionsIndex_ = selected;
+            lastBluetoothStatus_ = bluetoothStatus;
+            lastSoundEnabled_ = soundEnabled;
+            if (language != nullptr) {
+                strncpy(lastLanguage_, language, sizeof(lastLanguage_) - 1);
+                lastLanguage_[sizeof(lastLanguage_) - 1] = '\0';
+            }
             break;
+        }
         case PanelId::Rest:
             beginPanel(panelChanged, navigation.menuIndex(), copy::restTitle(spanish), calling);
             drawRest(navigation.panelIndex(), spanish, pet.cold(), hasBackup, backupSpecies);

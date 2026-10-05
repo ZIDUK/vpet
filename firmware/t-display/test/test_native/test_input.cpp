@@ -22,12 +22,15 @@ void test_baby_animates_after_leaving_egg_hatch();
 void test_battle_reaction_picks_combat_sheet();
 void test_punching_bag_stays_inside_bottom_edge();
 void test_call_cues_the_matching_care_icon();
+void test_next_repeat_is_the_shared_standard();
 void test_call_blink_toggles_every_400ms();
+void test_internal_pages_advance_one_step_per_next();
 void test_menu_opens_expected_panels();
 void test_rest_icon_opens_rest_panel();
 void test_cold_mode_freezes_decay_and_blocks_calls();
 void test_backup_parks_current_pet_and_starts_egg();
 void test_backup_swap_restores_parked_pet();
+void test_options_next_redraws_only_the_two_chips();
 void test_next_moves_options_cursor();
 void test_options_next_wraps_like_header_menu();
 void test_back_in_options_is_ignored();
@@ -122,18 +125,26 @@ void test_short_next_press() {
 void test_deliberate_next_press_under_two_seconds_stays_next() {
     Input input(25, 2000);
     TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 100));
-    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 400));
-    input.poll({false, false}, 400);
-    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({false, false}, 430));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 380));
+    input.poll({false, false}, 380);
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({false, false}, 410));
+}
+
+void test_normal_tap_does_not_repeat() {
+    Input input(25, 2000);
+    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 100));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 350));
+    input.poll({false, false}, 350);
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({false, false}, 380));
 }
 
 void test_held_next_repeats_while_held() {
     Input input(25, 2000);
     TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 100));
-    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 419));
-    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 420));
-    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 599));
-    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 600));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 499));
+    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 500));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 589));
+    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 590));
 }
 
 void test_long_next_press_becomes_back() {
@@ -168,6 +179,7 @@ int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_short_next_press);
     RUN_TEST(test_deliberate_next_press_under_two_seconds_stays_next);
+    RUN_TEST(test_normal_tap_does_not_repeat);
     RUN_TEST(test_held_next_repeats_while_held);
     RUN_TEST(test_long_next_press_becomes_back);
     RUN_TEST(test_action_has_no_long_press_mapping);
@@ -188,12 +200,14 @@ int main(int, char**) {
     RUN_TEST(test_battle_reaction_picks_combat_sheet);
     RUN_TEST(test_punching_bag_stays_inside_bottom_edge);
     RUN_TEST(test_call_cues_the_matching_care_icon);
+    RUN_TEST(test_next_repeat_is_the_shared_standard);
     RUN_TEST(test_call_blink_toggles_every_400ms);
     RUN_TEST(test_menu_opens_expected_panels);
     RUN_TEST(test_rest_icon_opens_rest_panel);
     RUN_TEST(test_cold_mode_freezes_decay_and_blocks_calls);
     RUN_TEST(test_backup_parks_current_pet_and_starts_egg);
     RUN_TEST(test_backup_swap_restores_parked_pet);
+    RUN_TEST(test_options_next_redraws_only_the_two_chips);
     RUN_TEST(test_next_moves_options_cursor);
     RUN_TEST(test_options_next_wraps_like_header_menu);
     RUN_TEST(test_back_in_options_is_ignored);
@@ -201,6 +215,7 @@ int main(int, char**) {
     RUN_TEST(test_use_item_spends_stock_and_applies_stat);
     RUN_TEST(test_use_item_empty_and_egg_do_not_change_stats);
     RUN_TEST(test_empty_items_disappear_from_inventory_list);
+    RUN_TEST(test_internal_pages_advance_one_step_per_next);
     RUN_TEST(test_status_next_cycles_four_pages);
     RUN_TEST(test_roll_dna_differs_and_is_never_zero);
     RUN_TEST(test_ivs_read_dna_nibbles);

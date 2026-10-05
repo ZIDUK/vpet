@@ -17,6 +17,10 @@ constexpr int16_t kEvoX0 = 5;
 constexpr int16_t kEvoColorY = 50;
 constexpr int16_t kEvoDarkY = 94;
 constexpr uint8_t kInventoryWindow = 3;
+constexpr int16_t kCallIconX = 216;
+constexpr int16_t kCallIconY = 111;
+constexpr uint32_t kNextRepeatDelayMs = 400;
+constexpr uint32_t kNextRepeatEveryMs = 90;
 
 inline uint8_t inventoryWindowStart(uint8_t count, uint8_t pos, uint8_t size = kInventoryWindow) {
     if (count <= size) return 0;
@@ -53,6 +57,25 @@ inline uint8_t callMenuIndex(CallReason reason) {
 
 inline bool callBlinkOn(uint32_t nowMs) {
     return (nowMs / 400U) % 2U == 0U;
+}
+
+inline const char* callIconPath(CallReason reason) {
+    switch (reason) {
+        case CallReason::Hunger: return "/ui/icons/feed.vpa";
+        case CallReason::Strength: return "/ui/icons/training.vpa";
+        case CallReason::Lights: return "/ui/icons/rest.vpa";
+        case CallReason::None: return nullptr;
+    }
+    return nullptr;
+}
+
+inline bool cursorRedrawOnly(
+    uint8_t lastIndex,
+    uint8_t current,
+    bool extrasChanged,
+    bool panelChanged
+) {
+    return !panelChanged && !extrasChanged && lastIndex != 255 && lastIndex != current;
 }
 
 inline uint16_t helixColor(const uint8_t dna[4], uint8_t strand) {

@@ -13,6 +13,7 @@ from core.options import (
     OPTION_COUNT,
     OPTION_EVOLVE,
     OptionsSession,
+    option_window_start,
 )
 from core.pet import Pet, STATE_LIVE
 
@@ -75,6 +76,13 @@ def test_save_and_load_restore_current_pet_state():
 
     assert pet.stats["hp"] == 81
     assert session.message == "LOADED"
+
+
+def test_option_window_keeps_three_single_lines():
+    assert option_window_start(0) == 0
+    assert option_window_start(1) == 0
+    assert option_window_start(2) == 1
+    assert option_window_start(8) == 6
 
 
 def test_next_wraps_around_all_options():
