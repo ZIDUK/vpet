@@ -2,6 +2,10 @@
 
 ## Estado actual
 
+Confirmacion del usuario del 2026-10-05: el telefono descubre el vPet por BLE
+y WiFi no aparece en la board. Esto confirma descubrimiento; el ciclo completo
+de conexion y reconexion desde ese telefono queda por documentar.
+
 | Funcion | Estado | Confirmacion visible |
 |---|---|---|
 | Bluetooth LE | Implementado bajo demanda | `BLUETOOTH: ADVERTISING` o `CONNECTED` |
@@ -74,7 +78,7 @@ Orden en firmware y simulador T-Display:
 8. Evolve
 9. Back
 
-El panel muestra cuatro filas a la vez. Language y Sound se guardan en NVS
+El panel muestra tres filas a la vez. Language y Sound se incluyen al guardar NVS
 y el firmware pinta `IDIOMA`/`LANGUAGE` y `SONIDO`/`SOUND` segun el idioma.
 
 ## Estados
@@ -82,9 +86,9 @@ y el firmware pinta `IDIOMA`/`LANGUAGE` y `SONIDO`/`SOUND` segun el idioma.
 | Texto | Significado |
 |---|---|
 | `BLUETOOTH: OFF` | Stack BLE detenido y radio no anunciado por vPet |
-| `BLUETOOTH: ADVERTISING` | Visible y listo para una conexion o emparejamiento |
-| `BLUETOOTH: CONNECTED` | Un cliente BLE esta conectado |
-| `BLUETOOTH: ERROR` | No se pudo iniciar el stack; revisar serial |
+| `ADV` (Advertising) | Visible y listo para una conexion o emparejamiento |
+| `ON` (Connected) | Un cliente BLE esta conectado |
+| `ERR` (Error) | No se pudo iniciar el stack; revisar serial |
 
 Al desconectarse el telefono, vPet vuelve a `ADVERTISING`.
 

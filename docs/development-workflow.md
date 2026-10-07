@@ -19,6 +19,7 @@ git clone https://github.com/ZIDUK/vpet.git
 cd vpet
 python3 -m pip install -r requirements-dev.txt
 make bootstrap-pio
+source .venv-platformio/bin/activate
 ```
 
 Comprueba la placa:
@@ -40,10 +41,18 @@ El puerto detectado durante esta migracion fue
 5. Ejecuta `make deploy` con la placa conectada.
 6. Confirma `VPET_READY` y prueba los dos botones.
 
+Estado al 2026-10-05: despliegue aplazado por el usuario. Trabajar con el
+simulador, builds y documentacion hasta que solicite cargar la board.
+El bootstrap instala tambien Pillow, pygame y pytest. Para evitar usar otro
+Python puedes ejecutar `make sim PY=.venv-platformio/bin/python`.
+
 Comandos individuales:
 
 ```bash
 make build-tdisplay
+
+# Vista de combate en el simulador, sin desplegar hardware
+make sim-practice
 make firmware
 make preflight PORT=/dev/cu.usbserial-57040013171
 make deploy PORT=/dev/cu.usbserial-57040013171

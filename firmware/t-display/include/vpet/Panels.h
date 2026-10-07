@@ -7,6 +7,7 @@
 #include "vpet/DateTimeMenu.h"
 #include "vpet/Navigation.h"
 #include "vpet/PetState.h"
+#include "vpet/PracticeSession.h"
 
 namespace vpet {
 
@@ -25,6 +26,7 @@ public:
         uint32_t nowMs = 0
     );
     void invalidate();
+    void drawPractice(const PracticeSession& session, const PetState& pet, uint32_t nowMs);
 
 private:
     void drawChrome(uint8_t selected, const char* title, bool calling);

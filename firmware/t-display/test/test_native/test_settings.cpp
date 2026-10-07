@@ -51,6 +51,57 @@ void test_settings_persist_bluetooth_preference() {
     TEST_ASSERT_TRUE(after.bluetoothEnabled);
 }
 
+void test_practice_progress_defaults_and_roundtrip() {
+    FakeStore store;
+    vpet::SettingsStore settings(store);
+    vpet::PracticeProgress before;
+    before.training = 2;
+    before.bond = 88;
+    before.mastery[1] = 40;
+    before.equipped = 7;
+    TEST_ASSERT_TRUE(settings.savePractice(before));
+
+    vpet::PracticeProgress after;
+    TEST_ASSERT_TRUE(settings.loadPractice(after));
+    TEST_ASSERT_EQUAL(2, after.training);
+    TEST_ASSERT_EQUAL(88, after.bond);
+    TEST_ASSERT_EQUAL(40, after.mastery[1]);
+    TEST_ASSERT_EQUAL(3, after.equipped);
+}
+
+void test_practice_progress_follows_pet_save_and_backup() {
+    FakeStore live, backup;
+    vpet::SettingsStore store(live, &backup);
+    vpet::Settings settings;
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.practice.training = 2;
+    pet.practice.equipped = 2;
+    TEST_ASSERT_TRUE(store.save(pet, settings));
+    vpet::PetState loaded;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, store.load(loaded, settings));
+    TEST_ASSERT_EQUAL(2, loaded.practice.equipped);
+    TEST_ASSERT_TRUE(store.swapOrPark(pet, settings));
+    TEST_ASSERT_EQUAL(0, pet.practice.training);
+    TEST_ASSERT_TRUE(store.swapOrPark(pet, settings));
+    TEST_ASSERT_EQUAL(2, pet.practice.training);
+    live.ints["techVer"] = 257;
+    TEST_ASSERT_FALSE(store.loadPractice(pet.practice));
+    TEST_ASSERT_EQUAL(0, pet.practice.training);
+}
+
+void test_practice_progress_legacy_and_invalid_values_are_safe() {
+    FakeStore store;
+    store.ints["techTrain"] = -4;
+    store.ints["techBond"] = 999;
+    store.ints["techEquip"] = 0;
+    vpet::PracticeProgress progress;
+    TEST_ASSERT_TRUE(vpet::SettingsStore(store).loadPractice(progress));
+    TEST_ASSERT_EQUAL(0, progress.training);
+    TEST_ASSERT_EQUAL(100, progress.bond);
+    TEST_ASSERT_EQUAL(5, progress.equipped);
+}
+
 void test_settings_persist_inventory_counts() {
     FakeStore store;
     vpet::PetState saved;

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+    "sha256": "f6acfd025fde7b821343770bcaf3e4dbd6efec60fc2308e99f33000d715c7ada",
+    "bytes": 5257
+  },
+  "artifact": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/review-2/vpet-architecture.html",
+    "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+    "bytes": 764756
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/review-2/vpet-architecture.finalize.json",
+    "summaryReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/review-2/vpet-architecture.finalize-summary.json",
+    "browserCheckReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/review-2/vpet-architecture.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-05T17:43:15.971Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2089,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "routesOverSuggestedBends": 1,
+      "routesOverSuggestedStretch": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [],
+      "detours": [
+        {
+          "relationship": {
+            "from": "combat",
+            "to": "app",
+            "label": "Pendiente: adaptar firmware",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "bends": 4,
+          "stretch": 1.395,
+          "directCorridorBlockers": [
+            {
+              "id": "nvs",
+              "label": "NVS",
+              "box": [
+                330,
+                280,
+                200,
+                74
+              ]
+            }
+          ]
+        }
+      ],
+      "truncated": false
+    },
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

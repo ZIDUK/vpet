@@ -2,6 +2,10 @@
 
 ## Objetivo
 
+Revision 2026-10-05: propuesta por definir con el usuario. El contenido inicial,
+los nuevos pets, el contrato publico y sus limites no estan cerrados. Las
+secciones siguientes son una direccion tecnica, no un instalador disponible.
+
 Permitir que autores publiquen mascotas y themes en un catalogo web, que los
 usuarios puedan previsualizarlos e instalarlos sin recompilar el firmware.
 

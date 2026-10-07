@@ -57,6 +57,7 @@ def copy_runtime_sources():
             "pet.py",
             "save.py",
             "status_card.py",
+            "techniques.py",
         ),
         "ui": ("__init__.py", "sprites.py", "status.py"),
     }

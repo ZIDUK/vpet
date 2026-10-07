@@ -12,6 +12,7 @@
 #include "vpet/PetState.h"
 #include "vpet/Renderer.h"
 #include "vpet/SettingsStore.h"
+#include "vpet/PracticeSession.h"
 
 namespace vpet {
 
@@ -40,6 +41,8 @@ private:
     Evolution evolution_;
     Motion motion_;
     Navigation navigation_;
+    PracticeSession practice_;
+    bool practicing_ = false;
     uint32_t lastTickMs_ = 0;
     uint32_t lastRenderMs_ = 0;
     uint32_t eggStartedMs_ = 0;

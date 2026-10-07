@@ -1,7 +1,7 @@
 # vPet dev workflow
 # make help to see all targets
 
-PY ?= python3
+PY ?= $(if $(wildcard .venv-platformio/bin/python),.venv-platformio/bin/python,python3)
 PORT ?=
 UPLOAD_SPEED ?= 115200
 SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 /usr/bin/python3; do \
@@ -10,7 +10,7 @@ SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Py
 	fi; \
 done)
 
-.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-pico sim sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-pico sim sim-practice sim-training sim-pico sim-record test clean all
 
 help:
 	@echo "vPet dev workflow"
@@ -24,6 +24,8 @@ help:
 	@echo "  make deploy       Build + test + verified deploy + serial startup check"
 	@echo "  make deploy-pico  Deploy the preserved CircuitPython build"
 	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
+	@echo "  make sim-practice Run Firemon practice/Tech preview in pygame"
+	@echo "  make sim-training Run Firemon dumbbell training preview in pygame"
 	@echo "  make sim-pico     Run the 128x128 Pico-compatible simulator"
 	@echo "  make sim-record   Same as sim, but saves every frame as PNG to out/sim_frames/"
 	@echo "  make test         Run pytest in tests/"
@@ -60,6 +62,14 @@ deploy-pico: build-pico test
 sim: build-tdisplay
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
 	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay
+
+sim-practice: build-tdisplay
+	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
+	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay --practice
+
+sim-training: build-tdisplay
+	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
+	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay --training
 
 sim-pico: build-pico
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi

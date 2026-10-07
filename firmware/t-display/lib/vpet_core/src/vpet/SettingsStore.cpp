@@ -80,6 +80,7 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
         );
         migratedDna_ = true;
     }
+    loadPractice(pet.practice);
     settings.language = store_.getString("language", "ES");
     settings.soundEnabled = store_.getInt("sound", 1) != 0;
     settings.bluetoothEnabled = store_.getInt("bluetooth", 0) != 0;
@@ -140,6 +141,38 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putString("language", settings.language.c_str()) && ok;
     ok = store_.putInt("sound", settings.soundEnabled ? 1 : 0) && ok;
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
+    ok = savePractice(pet.practice) && ok;
+    return ok;
+}
+
+bool SettingsStore::loadPractice(PracticeProgress& progress) const {
+    progress = PracticeProgress();
+    if (store_.getInt("techVer", 1) != 1) return false;
+    const auto byte = [this](const char* key, int fallback, int maximum) {
+        const int value = store_.getInt(key, fallback);
+        return static_cast<uint8_t>(value < 0 ? 0 : (value > maximum ? maximum : value));
+    };
+    progress.version = static_cast<uint8_t>(store_.getInt("techVer", 1));
+    progress.training = byte("techTrain", 0, 255);
+    progress.bond = byte("techBond", 50, 100);
+    progress.mastery[0] = byte("techM0", 0, 100);
+    progress.mastery[1] = byte("techM1", 0, 100);
+    progress.mastery[2] = byte("techM2", 0, 100);
+    progress.equipped = byte("techEquip", 0b101, 7);
+    progress.sanitize();
+    return progress.version == 1;
+}
+
+bool SettingsStore::savePractice(const PracticeProgress& input) {
+    PracticeProgress progress = input;
+    progress.sanitize();
+    bool ok = store_.putInt("techVer", progress.version);
+    ok = store_.putInt("techTrain", progress.training) && ok;
+    ok = store_.putInt("techBond", progress.bond) && ok;
+    ok = store_.putInt("techM0", progress.mastery[0]) && ok;
+    ok = store_.putInt("techM1", progress.mastery[1]) && ok;
+    ok = store_.putInt("techM2", progress.mastery[2]) && ok;
+    ok = store_.putInt("techEquip", progress.equipped) && ok;
     return ok;
 }
 

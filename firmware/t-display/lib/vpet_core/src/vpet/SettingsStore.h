@@ -4,6 +4,7 @@
 #include <string>
 
 #include "vpet/PetState.h"
+#include "vpet/PracticeProgress.h"
 
 namespace vpet {
 
@@ -31,6 +32,8 @@ public:
         : store_(store), backup_(backup) {}
     LoadResult load(PetState& pet, Settings& settings);
     bool save(const PetState& pet, const Settings& settings);
+    bool loadPractice(PracticeProgress& progress) const;
+    bool savePractice(const PracticeProgress& progress);
     bool restartLifeIfNeeded(PetState& pet, Settings& settings);
     bool hasBackup() const;
     SpeciesId backupSpecies() const;

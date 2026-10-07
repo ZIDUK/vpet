@@ -98,6 +98,13 @@ void test_snapshot_is_twenty_bytes();
 void test_force_from_ultimate_restarts_as_egg();
 void test_missing_life_key_restarts_as_egg();
 void test_overfeed_once_when_full_is_not_a_care_mistake();
+void test_practice_cpp_respects_mp_and_cooldown();
+void test_practice_cpp_guard_caps_mp_and_halves_damage();
+void test_practice_cpp_stops_after_draw_limit();
+void test_practice_progress_defaults_and_roundtrip();
+void test_practice_session_training_battle_and_reset();
+void test_practice_progress_follows_pet_save_and_backup();
+void test_practice_progress_legacy_and_invalid_values_are_safe();
 void test_second_feed_while_full_is_rejected();
 void test_hunger_drop_allows_another_overfeed();
 void test_meat_item_blocked_after_overfeed();
@@ -289,5 +296,12 @@ int main(int, char**) {
     RUN_TEST(test_fifteen_injuries_kill_and_grave_restarts_egg);
     RUN_TEST(test_six_hours_injured_kills);
     RUN_TEST(test_rest_restores_one_dp);
+    RUN_TEST(test_practice_cpp_respects_mp_and_cooldown);
+    RUN_TEST(test_practice_cpp_guard_caps_mp_and_halves_damage);
+    RUN_TEST(test_practice_cpp_stops_after_draw_limit);
+    RUN_TEST(test_practice_progress_defaults_and_roundtrip);
+    RUN_TEST(test_practice_session_training_battle_and_reset);
+    RUN_TEST(test_practice_progress_follows_pet_save_and_backup);
+    RUN_TEST(test_practice_progress_legacy_and_invalid_values_are_safe);
     return UNITY_END();
 }

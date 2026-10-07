@@ -10,7 +10,7 @@ secundaria mediante los comandos terminados en `-pico`.
 
 ## Estado actual
 
-- Huevo animado que eclosiona en Sparkmon despues de 8 segundos en una partida nueva.
+- Huevo animado que eclosiona en Sparkmon despues de 2 segundos de juego.
 - Linea visual: Huevo -> Sparkmon -> Firemon -> Flamemon -> Dragfiremon.
 - Firemon, Flamemon y Dragfiremon con idle, movimiento, comida, entrenamiento,
   descanso, ataque y transiciones de evolucion. Sparkmon incluye idle, caminar,
@@ -32,10 +32,20 @@ secundaria mediante los comandos terminados en `-pico`.
   (teclado HID) y en LightBlue o nRF Connect.
 - Estado Bluetooth visible en Opciones: `OFF`, `ADVERTISING`, `CONNECTED` o
   `ERROR`. La primera fila de Opciones es Bluetooth.
-- NVS schema 2: especie, barras, edad, stageAge, CM, call, comidas,
+- NVS schema 3: ADN/EV, especie, barras, edad, stageAge, CM, call, comidas,
   entrenos, batallas, wins/losses, peso, DP, proteina, inventario e idioma.
   Schema 1 migra con ceros. El anillo de eventos de cria es solo RAM.
 - WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
+- Intro de arranque en la T-Display: logo `vPET`, llama, pet y estado `READY`,
+  con una duracion aproximada de 2.2 segundos. El simulador reproduce la misma
+  secuencia aproximada, con texto FIREMON en lugar del sprite final.
+
+## Estado validado en hardware
+
+La validacion manual actual confirma que el telefono detecta el vPet por BLE,
+que WiFi ya no aparece en la interfaz y que la navegacion y las animaciones se
+perciben mas fluidas. La intro aun no se ha vuelto a cargar en la placa despues
+del ultimo commit.
 
 ## Hardware principal
 
@@ -93,7 +103,7 @@ En la placa:
 - Pulsacion corta del boton derecho: seleccionar o ejecutar.
 
 En Opciones, cada `NEXT` corto baja una fila al instante y envuelve.
-La letra es grande (4 filas visibles). Hay una fila `EVOLVE` que fuerza
+La letra es grande (3 filas visibles). Hay una fila `EVOLVE` que fuerza
 la siguiente forma y muestra la animacion. Para salir, baja hasta `BACK`
 y pulsa `ACTION`. El hold de 2 s no cierra Opciones. Fuera de Opciones,
 ese `BACK` cierra el panel (en Home se ignora).
@@ -154,9 +164,50 @@ contenido en `scripts/build.py`, ejecuta las pruebas y despliega normalmente.
 
 ## Documentacion
 
+### Entrenamiento y combate: revision en simulador
+
+Firemon dispone de entrenamiento por atributo, dos tecnicas equipadas y practica
+con HP/MP, enfriamientos y decisiones explicables. Los iconos acompanian nombres,
+costes y atributos; Guardia usa la animacion `block` existente. La practica no
+modifica las victorias oficiales.
+
+- **Pesa:** ataque, defensa, velocidad, vida, MP, mente y aprendizaje de tecnicas.
+  Cada sesion de atributo cuesta 8 ENE y suma 6 EV (maximo 252 por atributo).
+  Conserva los IV; muestra el valor anterior y el resultado. Vida mejora el HP
+  maximo de combate, no cura la barra HP de crianza. MP tampoco es ENE de crianza.
+- **Espadas:** entrar directamente en batalla contra el rival de practica,
+  con HP/MP y las tecnicas equipadas. No hay menu de preparacion intermedio.
+  Aprender, consultar y equipar tecnicas se hace en Pesa > Tecnicas.
+
+El firmware tiene integrado el motor y el flujo anterior con NVS. Este nuevo
+menu de pesa, los iconos y el rediseno visual son por ahora del simulador;
+su traslado a C++ y la validacion fisica siguen pendientes. No se ha desplegado.
+Las seis fases y sus limites estan en el
+[plan de combate](docs/superpowers/plans/2026-10-05-practice-combat.md).
+
+```sh
+make sim-training
+make sim-practice
+```
+
+`N` selecciona, `A` confirma, `B` vuelve y `Q` sale. En combate se sale mediante
+RETIRARSE; retirarse o confirmar el resultado devuelve a Home con las espadas
+seleccionadas. Estos dos comandos comparten `out/sim_practice_save.json`, separado
+de la partida normal. En `make sim`, pesa y espadas abren los mismos menus
+cuando la mascota es Firemon y esta despierta, pero guardan en la partida normal.
+Las otras especies conservan el comportamiento anterior.
+
+Previews reproducibles con los assets reales:
+`.venv-platformio/bin/python scripts/preview_practice.py` genera
+`out/practice-preview/overview.png` y `training-overview.png`.
+
+### Referencias
+
 - [Arquitectura](docs/architecture.md)
 - [Flujo de desarrollo y despliegue](docs/development-workflow.md)
 - [Hardware](docs/hardware.md)
 - [Conectividad](docs/connectivity.md)
 - [Paquetes y catalogo comunitario](docs/content-packages.md)
 - [Seguridad y proteccion del firmware](docs/security.md)
+- [Estado, alcance y pendientes](docs/project-status.md)
+- [Arquitectura visual interactiva (Archify)](.archify/architecture-vpet-20261005/review-2/vpet-architecture.html)

@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-05T21:17:55.739Z",
+  "specification": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+    "sha256": "f6acfd025fde7b821343770bcaf3e4dbd6efec60fc2308e99f33000d715c7ada",
+    "bytes": 5257
+  },
+  "artifact": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+    "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+    "bytes": 764756
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/Users/jonathanpardofuentes/.hermes/node/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "f6acfd025fde7b821343770bcaf3e4dbd6efec60fc2308e99f33000d715c7ada",
+          "bytes": 5257
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 737,
+      "command": [
+        "/Users/jonathanpardofuentes/.hermes/node/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "017f7e73-1d6b-46b5-93f0-7a2838fe5b15",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+        "output": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "specification": {
+          "sha256": "f6acfd025fde7b821343770bcaf3e4dbd6efec60fc2308e99f33000d715c7ada",
+          "bytes": 5257
+        },
+        "artifact": {
+          "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+          "bytes": 764756
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "evidence": {
+          "verified": true,
+          "repository": "https://github.com/ZIDUK/vpet",
+          "revision": "3b98843c75804b77b4a1ff737968aed49db51c58",
+          "references": 10
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 110,
+      "command": [
+        "/Users/jonathanpardofuentes/.hermes/node/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "check",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "artifact": {
+          "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+          "bytes": 764756
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 32,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 8,
+            "maxBends": 4,
+            "routesOverSuggestedBends": 1,
+            "maxStretch": 1.395,
+            "routesOverSuggestedStretch": 1,
+            "minSegmentPx": 24,
+            "minInteriorSegmentPx": 106.6,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": [
+              {
+                "relationship": {
+                  "from": "combat",
+                  "to": "app",
+                  "label": "Pendiente: adaptar firmware",
+                  "collectionIndex": 9,
+                  "artifactIndex": 10
+                },
+                "bends": 4,
+                "stretch": 1.395,
+                "directCorridorBlockers": [
+                  {
+                    "id": "nvs",
+                    "label": "NVS",
+                    "box": [
+                      330,
+                      280,
+                      200,
+                      74
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 80,
+            "emptyTopRatio": 0.097,
+            "occupiedTop": 80,
+            "viewBoxTop": 0,
+            "canvasHeight": 822,
+            "typicalNodeHeight": 74,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "legacy-930",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 930,
+            "actualBudgetPx": 930,
+            "limit": "legacy",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": true,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": null,
+              "from": "input",
+              "to": "app"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 8,
+            "semanticTextCount": 30
+          },
+          "issues": []
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "017f7e73-1d6b-46b5-93f0-7a2838fe5b15"
+      }
+    },
+    "browser-check": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": 8,
+      "command": [
+        "/Users/jonathanpardofuentes/.hermes/node/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "browser-check",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "fail",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "017f7e73-1d6b-46b5-93f0-7a2838fe5b15",
+        "artifact": {
+          "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+          "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+          "bytes": 764756
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "not-checked",
+          "executable": null
+        },
+        "diagnostics": [
+          {
+            "code": "viewer/evidence-path-conflict",
+            "severity": "error",
+            "message": "browser-check will not replace the existing unowned evidence path \"/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json\".",
+            "subject": {
+              "artifact": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+              "evidencePath": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json"
+            },
+            "evidence": {
+              "reason": {
+                "code": "ownership-artifact-mismatch"
+              }
+            },
+            "supportedFixes": [
+              "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+            ]
+          }
+        ],
+        "containment": {
+          "status": "fail",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": []
+        },
+        "themeStates": {
+          "status": "fail",
+          "viewports": []
+        },
+        "readability": {
+          "status": "fail",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": []
+        },
+        "viewerChrome": {
+          "status": "fail",
+          "viewports": []
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "vpet-architecture.browser-check.json",
+          "files": []
+        },
+        "error": "browser-check will not replace the existing unowned evidence path \"/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json\"."
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "viewer/evidence-path-conflict",
+      "severity": "error",
+      "message": "browser-check will not replace the existing unowned evidence path \"/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json\".",
+      "subject": {
+        "artifact": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+        "evidencePath": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json"
+      },
+      "evidence": {
+        "reason": {
+          "code": "ownership-artifact-mismatch"
+        }
+      },
+      "supportedFixes": [
+        "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.finalize.json",
+    "summaryReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.finalize-summary.json",
+    "browserCheckReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "browser-check",
+  "finishedAt": "2026-10-05T21:17:56.816Z",
+  "durationMs": 1077,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-05T17:43:15.971Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

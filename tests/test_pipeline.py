@@ -57,6 +57,7 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "core/device_services.py",
         "core/dna.py",
         "core/status_card.py",
+        "core/techniques.py",
         "core/menu.py",
         "core/motion.py",
         "core/evolution.py",

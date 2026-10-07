@@ -2,6 +2,9 @@
 
 ## Principio
 
+Estado al 2026-10-05: protecciones de produccion y firmas de paquetes son
+trabajo futuro. Esta revision documental no programa eFuses ni carga firmware.
+
 No existe una tecnica que haga un dispositivo imposible de hackear. La meta es
 reducir riesgo, proteger claves y datos, impedir firmware no autorizado y hacer
 costosa la extraccion del producto.

@@ -63,6 +63,9 @@ rebotes. Mantener GPIO0 inicia con un `NEXT` y, al llegar a 2 segundos, emite
 `BACK`. En Home y en Opciones ese `BACK` se ignora. Cada `NEXT` corto
 avanza una fila al instante. En los demas paneles `BACK` cierra.
 
+El codigo actual repite NEXT despues de 400 ms, cada 90 ms mientras se mantiene
+pulsado. La mejora de fluidez fue confirmada por el usuario el 2026-10-05.
+
 ## Particiones
 
 La tabla esta en `firmware/t-display/partitions.csv`:

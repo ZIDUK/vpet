@@ -706,4 +706,79 @@ void Panels::draw(
     output_.endWrite();
 }
 
+void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_t nowMs) {
+    const uint16_t ink = TFT_BLACK, accent = TFT_YELLOW;
+    display_.fillSprite(ink);
+    display_.setTextDatum(TL_DATUM);
+    display_.setTextColor(TFT_WHITE, ink);
+    if (s.page == PracticeSession::Page::Arena) {
+        assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
+        const bool active = s.battle.round > 0 && nowMs - s.updatedAt < 1500;
+        for (int i = 0; i < 2; ++i) {
+            const auto& fighter = i == 0 ? s.battle.player : s.battle.rival;
+            const int action = active ? s.battle.actions[i] : -1;
+            const char* path = action == 0 ? "/animations/rookie/firemon_punch.vpa" :
+                action == 1 ? "/animations/rookie/firemon_cast.vpa" : "/animations/rookie/firemon_idle.vpa";
+            const uint32_t elapsed = active ? nowMs - s.updatedAt : nowMs;
+            assets_.drawFrame(display_, path, (elapsed / 100) % (action < 0 || action == 2 ? 19 : 15),
+                              i == 0 ? 12 : 140, 22, i == 1);
+            display_.fillRect(i * 120, 0, 120, 34, ink);
+            display_.setTextColor(TFT_WHITE, ink);
+            display_.drawString(i == 0 ? "FIREMON" : "PRACTICA", i * 120 + 4, 1, 1);
+            for (int stat = 0; stat < 2; ++stat) {
+                const int value = stat == 0 ? fighter.hp : fighter.mp;
+                const int maximum = stat == 0 ? fighter.maxHp : fighter.maxMp;
+                const int y = 13 + stat * 11, x = i * 120 + 4;
+                display_.drawString(stat == 0 ? "HP" : "MP", x, y, 1);
+                display_.fillRect(x + 16, y, 56, 7, TFT_DARKGREY);
+                display_.fillRect(x + 16, y, 56 * value / maximum, 7, stat == 0 ? TFT_RED : TFT_CYAN);
+                display_.drawNumber(value, x + 76, y, 1);
+            }
+        }
+        display_.fillRect(0, 108, 240, 27, ink);
+        display_.setTextColor(accent, ink);
+        const char* result = s.battle.result == 1 ? "VICTORIA" : s.battle.result == 2 ? "DERROTA" : "EMPATE";
+        display_.drawString(*s.message ? s.message : s.battle.result ? result : s.reason, 4, 109, 1);
+        display_.fillRect(4, 121, 232, 12, accent);
+        display_.setTextColor(ink, accent);
+        display_.drawString(s.label(pet, s.cursor), 8, 123, 1);
+    } else {
+        display_.drawString(s.page == PracticeSession::Page::Menu ? "FIREMON / BATALLA" : "FIREMON / TECNICAS", 6, 4, 2);
+        int y = 44;
+        if (s.page == PracticeSession::Page::Detail) {
+            char line[40];
+            display_.drawString(PracticeSession::name(s.technique), 6, 24, 1);
+            snprintf(line, sizeof(line), "POT %d MP %d DOM %u/100", s.technique == 0 ? 12 : s.technique == 1 ? 24 : 0,
+                     s.technique == 1 ? 8 : 0, pet.practice.mastery[s.technique]);
+            display_.drawString(line, 6, 37, 1);
+            snprintf(line, sizeof(line), "ENERGIA %d COSTE 4 TRAIN %u", pet.energy(), pet.practice.training);
+            display_.drawString(line, 6, 50, 1);
+            display_.drawString(s.message, 6, 63, 1);
+            y = 80;
+        } else {
+            char line[32];
+            snprintf(line, sizeof(line), "VINCULO %u", pet.practice.bond);
+            display_.drawString(line, 6, 26, 1);
+        }
+        for (int i = 0; i < s.count(pet); ++i) {
+            const bool selected = i == s.cursor;
+            if (s.page == PracticeSession::Page::Menu) {
+                static const char* icons[] = {"/ui/icons/pedia.vpa", "/ui/icons/battle.vpa", "/ui/icons/back.vpa"};
+                display_.fillRect(4, y, 232, 26, selected ? accent : TFT_DARKGREY);
+                assets_.drawFrame(display_, icons[i], 0, 8, y + 3);
+                display_.setTextColor(selected ? ink : TFT_WHITE, selected ? accent : TFT_DARKGREY);
+                display_.drawString(s.label(pet, i), 36, y + 9, 1);
+                y += 28;
+                continue;
+            }
+            display_.fillRect(4, y, 232, 14, selected ? accent : TFT_DARKGREY);
+            display_.setTextColor(selected ? ink : TFT_WHITE, selected ? accent : TFT_DARKGREY);
+            display_.drawString(s.label(pet, i), 8, y + 3, 1);
+            if (s.page == PracticeSession::Page::Tech && pet.practice.isEquipped(i)) display_.drawString("*", 222, y + 3, 1);
+            y += 17;
+        }
+    }
+    display_.pushSprite(0, 0);
+}
+
 }  // namespace vpet

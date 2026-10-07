@@ -28,6 +28,8 @@ from config import (
     MENU_OPTIONS_INDEX,
     MENU_PEDIA_INDEX,
     MENU_STATUS_INDEX,
+    MENU_TRAINING_INDEX,
+    MENU_BATTLE_INDEX,
     ROOKIE_SPECIES,
     SPARKMON_EVOLUTION_FRAME_COUNT,
 )
@@ -51,6 +53,10 @@ from core.pet import Pet
 from core.options import OptionsSession
 from scripts.sim_renderer import render_frame
 from scripts.sim_services import SimulatorServices, clock_hour
+from scripts.practice_session import PracticeSession
+from scripts.practice_renderer import render_practice
+from scripts.training_session import TrainingSession
+from scripts.training_renderer import render_training
 
 
 def parse_args():
@@ -60,6 +66,9 @@ def parse_args():
     parser.add_argument("--profile", choices=("tdisplay", "pico"), default="pico")
     parser.add_argument("--build-dir", type=str)
     parser.add_argument("--max-frames", type=int, help=argparse.SUPPRESS)
+    preview = parser.add_mutually_exclusive_group()
+    preview.add_argument("--practice", action="store_true", help="Start an isolated Firemon practice preview")
+    preview.add_argument("--training", action="store_true", help="Start the isolated Firemon dumbbell preview")
     return parser.parse_args()
 
 
@@ -91,19 +100,54 @@ def main():
     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = SimulatorServices(ROOT)
+    practice = None
+    training = None
+    if args.practice or args.training:
+        if profile.name != "tdisplay":
+            raise ValueError("Firemon previews require --profile tdisplay")
+        pet.complete_hatch("rookie", entropy=12345)
+        motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
+        # Preview saves are isolated from the ordinary simulator save.
+        services.save_path = ROOT / "out" / "sim_practice_save.json"
+        services.load(pet)
+        if pet.species != "rookie":
+            pet.complete_hatch("rookie", entropy=12345)
+        if args.training:
+            training = TrainingSession(pet, services.save)
+            menu_index = MENU_TRAINING_INDEX
+        else:
+            practice = PracticeSession(pet, services.save)
+            menu_index = MENU_BATTLE_INDEX
     options_session = None
     frame_number = 0
     rendered_frames = 0
-    boot_started = time.monotonic()
+    boot_started = time.monotonic() - (3 if args.practice or args.training else 0)
 
     running = True
+    practice_keys = set()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYUP:
+                practice_keys.discard(event.key)
             elif event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_q, pygame.K_ESCAPE):
                     running = False
+                elif event.key in practice_keys:
+                    # Require release even when an activity has just returned to Home.
+                    continue
+                elif practice is not None or training is not None:
+                    practice_keys.add(event.key)
+                    command = {pygame.K_n: "next", pygame.K_a: "action", pygame.K_b: "back"}.get(event.key)
+                    activity = training if training is not None else practice
+                    if command and not activity.input(command, pygame.time.get_ticks()):
+                        # Return to the same home icon that opened the activity.
+                        menu_index = MENU_TRAINING_INDEX if training is not None else MENU_BATTLE_INDEX
+                        training = None
+                        practice = None
+                        pet.last_decay = time.monotonic()
+                        motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                 elif event.key == pygame.K_n:
                     if panel_mode == "inventory":
                         inventory_index = next_visible_inventory_index(pet, inventory_index)
@@ -155,6 +199,12 @@ def main():
                     elif menu_index == MENU_OPTIONS_INDEX:
                         options_session = OptionsSession()
                         panel_mode = "options"
+                    elif menu_index == MENU_TRAINING_INDEX and profile.name == "tdisplay" and pet.species == "rookie" and motion.state != MOTION_SLEEP:
+                        training = TrainingSession(pet, services.save)
+                        practice_keys.add(event.key)
+                    elif menu_index == MENU_BATTLE_INDEX and profile.name == "tdisplay" and pet.species == "rookie" and motion.state != MOTION_SLEEP and not pet.dead and not pet.injured:
+                        practice = PracticeSession(pet, services.save)
+                        practice_keys.add(event.key)
                     else:
                         activate_menu_item(
                             pet,
@@ -195,6 +245,21 @@ def main():
             if args.record:
                 frame.save(record_dir / f"frame_{frame_number:05d}.png")
                 frame_number += 1
+            if args.max_frames and rendered_frames >= args.max_frames:
+                running = False
+            clock.tick(20)
+            continue
+
+        if practice is not None or training is not None:
+            frame = (render_training(build_dir, training, pygame.time.get_ticks()) if training is not None
+                     else render_practice(build_dir, practice, pygame.time.get_ticks()))
+            surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+            screen.blit(pygame.transform.scale(surface, window_size), (0, 0))
+            pygame.display.flip()
+            if record_dir:
+                frame.save(record_dir / f"frame_{frame_number:05d}.png")
+                frame_number += 1
+            rendered_frames += 1
             if args.max_frames and rendered_frames >= args.max_frames:
                 running = False
             clock.tick(20)

@@ -11,6 +11,13 @@ legada. No define la arquitectura principal ni el formato de despliegue actual.
 
 ## Flujo de datos
 
+Revision documental: 2026-10-06. El arbol contiene cambios locales posteriores
+al commit `3b98843`; el estado exacto se audita con `git status`.
+Consulta [estado y diferencias conocidas](project-status.md) y la
+[arquitectura Archify](../.archify/architecture-vpet-20261005/review-2/vpet-architecture.html).
+El usuario confirma descubrimiento BLE desde su telefono, ausencia de WiFi en
+el menu y mejora de fluidez. No se realizo un despliegue durante esta revision.
+
 ```text
 assets/*.png + src/data
           |
@@ -67,11 +74,17 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | `DateTimeMenu` | Filas +/- de fecha u hora; SAVE escribe el reloj ESP32 |
 | `Strings.h` | Copy EN/ES de paneles |
 | `SettingsStore` | Serializacion versionada de estado, inventario y preferencias |
+| `PracticeBattle` | Motor portable de combate de practica con HP/MP y tecnicas |
+| `PracticeSession` | Controlador portable C++ de Tech y batalla, integrado en App |
 | `BleAdvertiseSession` | Primera vez configura el ADV; reconnect solo `start()` |
 | `BleService` | NimBLE bajo demanda: HID teclado, DIS y bateria |
 | `NvsKeyValueStore` | Adaptador de Preferences/NVS |
 
 ## Renderizado
+
+La intro dura aproximadamente 2.2 segundos antes de cargar el estado. Las rutas
+de arranque de firmware y simulador siguen separadas; la paridad visual completa
+de la intro queda como tarea de firmware.
 
 La pantalla trabaja en RGB565. Se mantienen dos sprites TFT de 240x135:
 
@@ -91,10 +104,10 @@ opacos sobre el fondo.
 ## Ciclo de vida actual
 
 ```text
-Egg --8 s--> Sparkmon --> Firemon --> Flamemon --> Dragfiremon
+Egg --2 s--> Sparkmon --> Firemon --> Flamemon --> Dragfiremon
 ```
 
-Una partida nueva comienza en `SpeciesId::Egg`. La eclosion (8 s, sin scale)
+Una partida nueva comienza en `SpeciesId::Egg`. La eclosion (2 s, sin scale)
 cambia y guarda el estado como `Baby/Sparkmon`. Despues, `Evolution` aplica
 timers COLOR sobre `stageAge * CARE_TIME_SCALE` (placa 1, sim 600):
 
@@ -124,9 +137,9 @@ El debounce y la deteccion de pulsacion larga viven en `Input`, dentro del
 nucleo portable. Un flanco de GPIO0 emite `NEXT` al instante; a los 2 s emite
 `BACK`. En Home, `BACK` se ignora. En Opciones, `BACK` tambien se ignora. En el resto,
 `BACK` vuelve a Home (o al arbol desde el detalle de evolucion). `NEXT`
-emite en el flanco de pulsacion: una pulsacion, una fila, sin auto-avance.
+emite en el flanco de pulsacion; mantenerlo repite tras 400 ms cada 90 ms.
 
-Opciones muestra cuatro filas grandes. El orden real es Bluetooth, idioma,
+Opciones muestra tres filas grandes. El orden real es Bluetooth, idioma,
 sonido, guardar, cargar, fecha, hora, evolucionar y volver. `EVOLVE` fuerza
 la siguiente forma, guarda NVS y reproduce la animacion en Home. En
 Dragfiremon, `EVOLVE` reinicia la partida en huevo.
@@ -143,17 +156,51 @@ Inventario: Carne, Energia, EXP, Anillo y ATRAS. `ACTION` gasta un item
 (+20 HAM / +25 ENE / +8 ESF / +15 animo), baja el stock y se queda en el
 menu. Stock 0 no hace nada. El huevo no gasta. `ACTION` en ATRAS cierra.
 
+El simulador T-Display separa dos entradas para Firemon despierto:
+
+- Pesa: `TrainingSession` y `render_training` permiten elegir ataque, defensa,
+  velocidad, HP maximo, MP maximo o mente, ademas de abrir las lecciones de
+  tecnicas. `src/core/training.py` aplica 6 EV al atributo elegido (tope 252),
+  cuesta 8 ENE y conserva DNA/IV. Se reutilizan los campos EV persistidos.
+- Espadas: `PracticeSession` inicia directamente el encuentro con el rival y
+  `render_practice` muestra HP/MP y las ordenes equipadas. No hay preparacion ni
+  catalogo intermedio. Consultar/equipar tecnicas queda en Pesa > Tecnicas.
+  Retirarse o confirmar un resultado cierra la sesion y devuelve a Home con
+  las espadas seleccionadas. Abrir el icono no ejecuta la primera ronda.
+
+`scripts/practice_icons.py` define iconos pixel-art compartidos por ambas vistas.
+Guardia y el ejercicio de defensa usan el atlas `block`; no se cambia el motor
+de combate. Las sesiones pausan el tick de crianza. NEXT selecciona, ACTION
+confirma y BACK vuelve; una sesion de atributo muestra su resultado durante
+1.5 segundos sin repetir el premio por mantener pulsada una tecla.
+
+`make sim-training` y `make sim-practice` abren estos flujos con un guardado
+aislado compartido, `out/sim_practice_save.json`. Al entrar desde `make sim`,
+guardan la partida normal. La practica no modifica victorias oficiales.
+
+La nueva pesa y el rediseno visual estan pendientes de traslado a C++.
+El firmware conecta el flujo anterior mediante `PracticeSession`, `App`
+y `Panels::drawPractice`. `PetState` posee el progreso y SettingsStore lo
+guarda con la mascota, incluido su respaldo; una nueva vida lo reinicia.
+Las claves `techVer`, `techTrain`, `techBond`, `techM0..2`, `techEquip` son
+opcionales dentro del schema 3. Versiones de progreso desconocidas usan defaults.
+La validacion de pantalla fisica y heap con BLE sigue pendiente.
+
 ## Persistencia
+
+El esquema actual es 3 e incluye ADN/EV. Admite migracion de 1 y 2.
+`vpet_bak` guarda una mascota de respaldo para Descanso. El inventario tambien
+incluye proteina y medicina. Status tiene vistas adicionales de ADN.
 
 La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
 
-- `vpet_state` schema 2: especie, barras, edad total, `stageAge`, `cm`,
+- `vpet_state` schema 3: especie, barras, edad total, `stageAge`, `cm`,
   `call`, `meals`, `training`, `battles`, `wins`, `losses`, `weight` (5),
   `dp`, `protein`, idioma, sonido, `bluetooth` e inventario
   (`invMeat`, `invEner`, `invExp`, `invRing`; defaults 3/2/1/1).
 - `vpet_wifi`: namespace legado reservado; el firmware actual no lo consulta.
 
-Schema 1 migra con ceros y `stageAge=0` (no evo instantanea). Schema `>2`
+Schema 1 migra con ceros y `stageAge=0` (no evo instantanea). Schema `>3`
 es Unsupported y `App::begin` deja un huevo nuevo. El anillo de 32 eventos
 de cria vive solo en RAM. Autosave ocurre al eclosionar, evolucionar, sumar
 un care mistake, gastar un item o guardar a mano. Un despliegue normal no

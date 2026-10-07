@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "vpet/PracticeProgress.h"
 
 namespace vpet {
 
@@ -51,6 +52,8 @@ struct CareSnapshot {
 
 class PetState {
 public:
+    PracticeProgress practice;
+    bool trainTechnique(uint8_t technique);
     void tick(uint32_t elapsedMs);
     bool beginAction(Action action);
     bool completeAction();

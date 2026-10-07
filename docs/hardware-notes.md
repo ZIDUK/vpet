@@ -3,6 +3,10 @@
 Este archivo contiene diagnosticos rapidos. La referencia estable esta en
 [hardware.md](hardware.md).
 
+Confirmado por el usuario el 2026-10-05: BLE visible desde telefono, WiFi
+ausente del menu y mejor fluidez. La intro reciente no se ha desplegado.
+No ejecutar las instrucciones de carga siguientes hasta retomar el despliegue.
+
 ## Pantalla con ruido o colores corruptos
 
 1. Verifica que el target sea la T-Display clasica y no S3.

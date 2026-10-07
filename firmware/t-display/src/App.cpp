@@ -206,7 +206,13 @@ void App::activate(uint32_t nowMs) {
     switch (navigation_.menuIndex()) {
         case 1: action = Action::Feed; break;
         case 2: action = Action::Training; break;
-        case 3: action = Action::Battle; break;
+        case 3:
+            if (pet_.species() == SpeciesId::Rookie && !pet_.injured() && !pet_.cold()) {
+                practice_ = PracticeSession();
+                practicing_ = true;
+                return;
+            }
+            action = Action::Battle; break;
         case 4:
             navigation_.setPanel(PanelId::Rest);
             return;
@@ -220,6 +226,19 @@ void App::activate(uint32_t nowMs) {
 void App::tick(uint32_t nowMs, InputEvent event) {
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
+    if (practicing_) {
+        practicing_ = practice_.input(pet_, event, nowMs);
+        if (practice_.dirty) {
+            if (!settingsStore_.save(pet_, settings_)) practice_.message = "ERROR AL GUARDAR";
+            practice_.dirty = false;
+        }
+        if (!practicing_) { panels_.invalidate(); motion_.alignClock(nowMs); }
+        else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
+            lastRenderMs_ = nowMs;
+            panels_.drawPractice(practice_, pet_, nowMs);
+        }
+        return;
+    }
     pet_.tick(elapsed);
     const uint8_t hour = clockHour();
     const CallUpdate call = pet_.updateCall(

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "017f7e73-1d6b-46b5-93f0-7a2838fe5b15",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/candidate.json",
+  "output": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261005/vpet-architecture.html",
+  "specification": {
+    "sha256": "f6acfd025fde7b821343770bcaf3e4dbd6efec60fc2308e99f33000d715c7ada",
+    "bytes": 5257
+  },
+  "artifact": {
+    "sha256": "808538325b315aa0c0083ad19df67cae48dfc2ee4615b319934aefe57c39d2f7",
+    "bytes": 764756
+  }
+}

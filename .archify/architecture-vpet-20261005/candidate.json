@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "vPet: arquitectura actual",
+    "output": ".archify/architecture-vpet-20261005/vpet-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/ZIDUK/vpet.git",
+      "revision": "3b98843c75804b77b4a1ff737968aed49db51c58"
+    }
+  },
+  "components": [
+    {
+      "id": "input",
+      "type": "external",
+      "label": "Dos botones",
+      "sublabel": "GPIO0 / GPIO35",
+      "pos": [
+        40,
+        80
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/BoardInput.cpp"
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "App ESP32",
+      "sublabel": "Estado y navegacion",
+      "pos": [
+        330,
+        80
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/App.cpp"
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "frontend",
+      "label": "Pantalla TFT",
+      "sublabel": "Renderer / Panels",
+      "pos": [
+        620,
+        80
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/Renderer.cpp"
+        }
+      ]
+    },
+    {
+      "id": "nvs",
+      "type": "database",
+      "label": "NVS",
+      "sublabel": "Estado y preferencias",
+      "pos": [
+        330,
+        280
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/NvsKeyValueStore.cpp"
+        }
+      ]
+    },
+    {
+      "id": "assets",
+      "type": "database",
+      "label": "LittleFS",
+      "sublabel": "Assets VPA1",
+      "pos": [
+        620,
+        280
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/AssetStore.cpp"
+        }
+      ]
+    },
+    {
+      "id": "ble",
+      "type": "backend",
+      "label": "Bluetooth LE",
+      "sublabel": "NimBLE / HID / DIS",
+      "pos": [
+        40,
+        480
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/BleService.cpp"
+        }
+      ]
+    },
+    {
+      "id": "phone",
+      "type": "external",
+      "label": "Telefono",
+      "sublabel": "Cliente BLE externo",
+      "pos": [
+        40,
+        680
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "firmware/t-display/src/BleService.cpp"
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "type": "backend",
+      "label": "Pipeline de assets",
+      "sublabel": "PNG a BMP a VPA",
+      "pos": [
+        620,
+        480
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "scripts/build_tdisplay.py"
+        }
+      ]
+    },
+    {
+      "id": "sim",
+      "type": "frontend",
+      "label": "Simulador Python",
+      "sublabel": "Pygame / modelo Python",
+      "pos": [
+        620,
+        680
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "scripts/sim.py"
+        }
+      ]
+    },
+    {
+      "id": "combat",
+      "type": "backend",
+      "label": "Combate portable",
+      "sublabel": "Python / C++ contract",
+      "pos": [
+        330,
+        680
+      ],
+      "size": [
+        200,
+        74
+      ],
+      "sources": [
+        {
+          "path": "scripts/sim.py"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "input",
+      "to": "app",
+      "label": "Eventos"
+    },
+    {
+      "from": "app",
+      "to": "render",
+      "label": "Dibuja"
+    },
+    {
+      "from": "app",
+      "to": "nvs",
+      "label": "Guarda / carga"
+    },
+    {
+      "from": "render",
+      "to": "assets",
+      "label": "Lee frames"
+    },
+    {
+      "from": "app",
+      "to": "ble",
+      "label": "Activa / apaga"
+    },
+    {
+      "from": "phone",
+      "to": "ble",
+      "label": "Conexion BLE"
+    },
+    {
+      "from": "build",
+      "to": "assets",
+      "label": "Empaca VPA"
+    },
+    {
+      "from": "build",
+      "to": "sim",
+      "label": "BMP intermedio"
+    },
+    {
+      "from": "combat",
+      "to": "sim",
+      "label": "Tech / practica"
+    },
+    {
+      "from": "combat",
+      "to": "app",
+      "label": "Pendiente: adaptar firmware"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Confirmado por el usuario",
+      "items": [
+        "2026-10-05: BLE visible desde telefono",
+        "WiFi fuera del menu; mejor fluidez"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Pendiente",
+      "items": [
+        "Catalogo y paquetes por definir",
+        "Nuevos pets por decidir",
+        "Intro sin despliegue; paridad parcial",
+        "Combate firmware y progreso NVS pendientes"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Desarrollo",
+      "items": [
+        "Contrato de combate probado en Python y C++",
+        "La carga USB requiere ejecutar deploy",
+        "Visor Archify con controles en ingles"
+      ]
+    }
+  ]
+}
