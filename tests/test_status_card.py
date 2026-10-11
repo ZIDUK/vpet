@@ -58,16 +58,28 @@ def test_helix_is_thin_and_clears_the_title():
 
 
 def test_vital_page_is_three_care_bars():
-    labels = [row[1] for row in vital_rows(_pet(), spanish=False)]
-    assert labels == ["HP", "HUN", "ENE"]
-    assert [row[1] for row in vital_rows(_pet(language="ES"), spanish=True)] == ["PV", "HAM", "ENE"]
+    """Vital page: three rows, no acronyms. HP de crianza is the
+    current HP (stats["hp"]); the combat pool lives on the DNA page.
+    Labels are clear in both languages."""
+    en_rows = vital_rows(_pet(), spanish=False)
+    en_labels = [row[1] for row in en_rows]
+    assert en_labels == ["HP", "HUN", "ENE"], en_labels
+    es_rows = vital_rows(_pet(language="ES"), spanish=True)
+    es_labels = [row[1] for row in es_rows]
+    assert es_labels == ["HP", "HAM", "ENE"], es_labels
 
 
 def test_care_page_uses_one_clock_and_overfeed_label():
+    """Care page: five clear rows. The age is formatted as a short
+    string with the most readable unit. The 4th tuple element is the
+    extra context (clock or call reason)."""
     rows = care_rows(_pet(), spanish=False, clock_text="09/12 19:56", call_text="")
     labels = [row[1] for row in rows]
     icons = [row[0] for row in rows]
-    assert labels == ["AGE", "OF", "CM", "EFF", "BAT"]
+    assert labels == ["AGE", "OVERFEED", "CARE", "EFFORT", "BATTLES"], labels
+    # No acronyms leaked.
+    for label in labels:
+        assert label not in ("OF", "CM", "BAT", "ESF"), label
     assert icons.count("Clock") == 1
     assert rows[0][2] == "12s"
     assert rows[0][3] == "09/12 19:56"
@@ -77,21 +89,26 @@ def test_care_page_uses_one_clock_and_overfeed_label():
 
 
 def test_battle_page_does_not_reuse_the_sword_for_win_ratio():
+    """Battle page: five clear rows. DP keeps its name. Winrate and
+    W-L show '--' when the pet has no encounters."""
     rows = battle_rows(_pet(), spanish=False)
     labels = [row[1] for row in rows]
     icons = [row[0] for row in rows]
-    assert labels == ["WT", "DP", "WR", "PR", "W-L"]
+    assert labels == ["WEIGHT", "DP", "WIN RATE", "PROTEIN", "W-L"], labels
     assert icons == ["Weight", "Battle", "Trophy", "Protein", "Versus"]
     assert icons[1] != icons[2]
     assert rows[2][2] == "80%"
     assert rows[3][2] == "1/7"
     empty = battle_rows(_pet(battles_won=0, battles_lost=0), spanish=False)
     assert empty[2][2] == "--"
+    assert empty[4][2] == "--"
 
 
 def test_dna_rows_show_visible_stat_without_iv_ev_text():
+    """DNA page: six combat stats with the canonical stat names.
+    The renderer must never expose IV or EV text on this page."""
     rows = dna_stat_rows(_pet())
-    assert [row[0] for row in rows] == ["HP", "MP", "OFF", "DEF", "SPD", "BRN"]
+    assert [row[0] for row in rows] == ["hp", "mp", "off", "def", "spd", "brn"]
     assert rows[0][1] == _pet().combat_stat("hp")
     assert all("IV" not in str(row) and "EV" not in str(row) for row in rows)
     assert dna_stat_rows(_pet(dna=[0, 0, 0, 0])) == []

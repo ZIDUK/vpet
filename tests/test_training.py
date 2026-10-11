@@ -44,22 +44,50 @@ def test_training_rejections_do_not_spend_or_save(blocked):
         setattr(pet, blocked, True)
     before = pet.to_dict()
     session = TrainingSession(pet, lambda _: pytest.fail("Rejected training must not save"))
+    # Batched flow: ACTION in state A must surface the block reason
+    # and leave the pet unchanged. No state transition happens.
     session.input("action", 0)
     assert session.message and pet.to_dict() == before
+    assert session.state == "select"
 
 
 def test_training_cap_invalid_input_and_no_repeat_during_animation():
+    """Drive the batched flow A→B→C and verify the partial-last-rep
+    policy at cap, the animation debounce, and the EV AL MAXIMO
+    block on a follow-up rep. The pet is only mutated after CONFIRMAR
+    in the confirm sub-state, so the assertions check the draft
+    buffer during the session."""
     pet = firemon()
     pet.ev["off"] = 250
     saves = []
     s = TrainingSession(pet, lambda p: saves.append(p.to_dict()) or True)
+    # A → B: pick ATAQUE (index 0).
     s.input("action", 0)
-    assert pet.ev["off"] == 252 and len(saves) == 1
-    s.input("action", 100)
-    s.input("next", 100)
-    assert pet.training_sessions == 1 and s.index == 0
-    s.input("action", 1500)
-    assert s.message == "NIVEL MAXIMO" and len(saves) == 1
+    assert s.state == "prepare"
+    # B → C: INICIAR is the default focus.
+    s.input("action", 0)
+    assert s.state == "session"
+    # START reserves one partial rep immediately, without mutation.
+    assert s.reps == 1
+    assert s.pending_ev == 2  # partial: 250 + 2 = 252, not 6
+    assert s.energy_reserved == 8
+    assert pet.ev_at("off") == 250  # pet unchanged in state C
+    s.input(None, 100)
+    assert s.reps == 1
+    # After the animation window the next rep is blocked: the
+    # draft already holds pending_ev=2 (cumulative projected = 252).
+    # We do not allow zero-gain reps that would only cost energy.
+    s.input(None, 9999)
+    assert s.reps == 1
+    assert s.train_block_reason() == "EV AL MAXIMO"
+    s.input(None, 10000)
+    assert s.state == "result"
+    # The pet is mutated exactly once, on commit, with the partial EV.
+    assert pet.ev_at("off") == 252
+    assert pet.training_sessions == 1
+    assert len(saves) == 1
+    # Edge: training_block_reason and batch_block_reason agree on
+    # the invalid index / invalid stat code.
     assert training_block_reason(pet, -1) == "TIPO INVALIDO"
     assert not train_attribute(pet, 99)
 
@@ -88,9 +116,31 @@ def test_only_dumbbell_has_lessons_and_back_returns_to_dumbbell():
 
 
 def test_training_reports_save_failure_without_awarding_twice():
+    """The batched flow: a save failure during CONFIRMAR must roll
+    back the pet, surface NO SE GUARDO, and keep the draft intact so
+    the player can retry. The second ACTION on the same draft must
+    not double-apply."""
     pet = firemon()
-    s = TrainingSession(pet, lambda _: False)
+    saves = []
+    def save(p):
+        saves.append(p.to_dict())
+        return False
+    s = TrainingSession(pet, save)
+    # Drive to RESULT through the batched flow.
+    s.input("action", 0)  # A → B
+    s.input("action", 0)  # B → C
+    s.input(None, 10000)  # Automatic completion; save fails.
+    assert s.state == "error"
+    assert s.message == "NO SE GUARDO"
+    # Pet is rolled back: no EV, full energy.
+    assert pet.ev_at("off") == 0
+    assert pet.training_sessions == 0
+    assert len(saves) == 1
+    # REINTENTAR (default focus "retry" on entry to error) → second
+    # commit attempt. Save still fails, so the pet must remain at the
+    # rolled-back state.
     s.input("action", 0)
-    assert s.message == "ERROR AL GUARDAR"
-    s.input("action", 0)
-    assert pet.training_sessions == 1
+    assert s.state == "error"
+    assert pet.ev_at("off") == 0
+    assert pet.training_sessions == 0
+    assert len(saves) == 2

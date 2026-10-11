@@ -125,6 +125,7 @@ def main():
 
     running = True
     practice_keys = set()
+    last_interaction_ms = pygame.time.get_ticks()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -132,6 +133,7 @@ def main():
             elif event.type == pygame.KEYUP:
                 practice_keys.discard(event.key)
             elif event.type == pygame.KEYDOWN:
+                last_interaction_ms = pygame.time.get_ticks()
                 if event.key in (pygame.K_q, pygame.K_ESCAPE):
                     running = False
                 elif event.key in practice_keys:
@@ -250,7 +252,21 @@ def main():
             clock.tick(20)
             continue
 
+        now_ms = pygame.time.get_ticks()
+        busy = ((training is not None and training.state == "session")
+                or (practice is not None and practice.page == "battle" and not practice.battle.result))
+        if busy:
+            last_interaction_ms = now_ms
+        elif now_ms - last_interaction_ms >= 10000:
+            if practice is not None or training is not None or panel_mode is not None:
+                practice = training = options_session = None
+                panel_mode = None
+                pet.last_decay = time.monotonic()
+                motion = PetMotion(now_ms / 1000, **motion_kwargs)
+
         if practice is not None or training is not None:
+            if training is not None:
+                training.input(None, pygame.time.get_ticks())
             frame = (render_training(build_dir, training, pygame.time.get_ticks()) if training is not None
                      else render_practice(build_dir, practice, pygame.time.get_ticks()))
             surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)

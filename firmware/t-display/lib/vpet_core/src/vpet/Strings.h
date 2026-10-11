@@ -41,13 +41,74 @@ inline const char* effort(bool spanish) { return pick(spanish, "EFF", "ESF"); }
 inline const char* battles(bool spanish) { return pick(spanish, "BAT", "BAT"); }
 inline const char* mood(bool spanish) { return pick(spanish, "MOOD", "ANIMO"); }
 inline const char* careMistakes(bool spanish) { return pick(spanish, "CM", "CM"); }
-inline const char* overfeeds(bool spanish) { return pick(spanish, "OF", "OF"); }
+inline const char* overfeeds(bool spanish) { return pick(spanish, "OVERFEED", "EXCESO"); }
 inline const char* protein(bool spanish) { return pick(spanish, "PROTEIN", "PROTEINA"); }
 inline const char* medkit(bool spanish) { return pick(spanish, "MEDKIT", "BOTIQUIN"); }
 inline const char* proteinOverdose(bool spanish) { return pick(spanish, "PR", "PR"); }
 inline const char* weight(bool spanish) { return pick(spanish, "WT", "PES"); }
 inline const char* dp(bool spanish) { return pick(spanish, "DP", "DP"); }
 inline const char* winRatio(bool spanish) { return pick(spanish, "WR", "WR"); }
+
+// Training stat labels. The legacy copy::offense/spd/etc. stay in place
+// for the Status DNA row; the batched training session uses full words.
+inline const char* trainingName(int index, bool spanish) {
+    switch (index) {
+        case 0: return spanish ? "ATAQUE"    : "ATTACK";
+        case 1: return spanish ? "DEFENSA"   : "DEFENSE";
+        case 2: return spanish ? "VELOCIDAD" : "SPEED";
+        case 3: return spanish ? "VIDA"      : "HP";
+        case 4: return "MP";
+        case 5: return spanish ? "MENTE"     : "MIND";
+    }
+    return "?";
+}
+
+inline const char* trainingAction(bool spanish) {
+    return pick(spanish, "TRAIN", "ENTRENAR");
+}
+// Training state actions and labels. Every string the player-facing
+// renderer (Panels::drawTraining) prints must resolve through one of
+// these helpers; the previous firmware left several literals (REPS,
+// EV, ENE, ENTRENAR, FINALIZAR, CONFIRMAR, ENTRENO LISTO,
+// ACTION…CANCELAR, …) hard-coded, which made the screen render a
+// mixed-language line and ship visibly broken text on a Spanish
+// device. The new entries keep both variants the same length where
+// practical so the 240×135 layout does not shift when the language
+// toggle is flipped.
+inline const char* trainingTrain(bool spanish)      { return pick(spanish, "TRAIN",      "ENTRENAR"); }
+inline const char* trainingFinalize(bool spanish)   { return pick(spanish, "FINALIZE",   "FINALIZAR"); }
+inline const char* trainingConfirm(bool spanish)    { return pick(spanish, "CONFIRM",    "CONFIRMAR"); }
+inline const char* trainingDone(bool spanish)       { return pick(spanish, "DONE",       "ENTRENO LISTO"); }
+inline const char* trainingStart(bool spanish)      { return pick(spanish, "START",      "EMPEZAR"); }
+inline const char* trainingApply(bool spanish)      { return pick(spanish, "APPLY",      "APLICAR"); }
+inline const char* trainingCancel(bool spanish)     { return pick(spanish, "CANCEL",     "CANCELAR"); }
+inline const char* trainingReturn(bool spanish)     { return pick(spanish, "BACK",       "VOLVER"); }
+inline const char* trainingExit(bool spanish)       { return pick(spanish, "EXIT",       "SALIR"); }
+inline const char* trainingError(void)              { return "ERROR"; }
+inline const char* trainingNow(bool spanish)        { return pick(spanish, "NOW",        "AHORA"); }
+inline const char* trainingAvail(bool spanish)      { return pick(spanish, "AVAIL",      "DISP"); }
+inline const char* trainingReserve(bool)            { return "RES"; }
+inline const char* trainingReal(bool spanish)       { return pick(spanish, "REAL",       "REAL"); }
+inline const char* trainingProj(bool spanish)       { return pick(spanish, "PROJ",       "PROY"); }
+inline const char* trainingHappy(bool spanish)      { return pick(spanish, "HAPPY",      "FELIC"); }
+inline const char* trainingCost(bool spanish)       { return pick(spanish, "COST",       "COSTE"); }
+inline const char* trainingActionLabel(bool spanish){ return pick(spanish, "ACTION",     "ACTION"); }
+inline const char* trainingButtonRep(bool spanish)  { return pick(spanish, "REP",        "REP"); }
+inline const char* trainingReady(bool spanish)      { return pick(spanish, "READY",      "LISTO"); }
+
+// Footer button labels (used in Confirm, Result, Cancel, Error).
+// Continue closes the result screen; Retry re-attempts after a save
+// failure; Discard cancels without applying changes.
+inline const char* trainingContinue(bool spanish)   { return pick(spanish, "CONTINUE",   "CONTINUAR"); }
+inline const char* trainingRetry(bool spanish)      { return pick(spanish, "RETRY",      "REINTENTAR"); }
+inline const char* trainingDiscard(bool spanish)    { return pick(spanish, "DISCARD",    "DESCARTAR"); }
+
+// Confirm-screen copy used at the subtitle line. The hardware cannot
+// safely format inside a single `pick` literal, so the renderer calls
+// snprintf with the templated prefix/suffix and the chosen stat name.
+inline const char* confirmTitle(bool spanish)       { return pick(spanish, "CLOSE SESSION?", "CERRAR ENTRENAMIENTO?"); }
+inline const char* confirmRepPrefix(bool spanish)   { return pick(spanish, "x",  "x"); }
+inline const char* confirmRepSuffix(bool spanish)   { return pick(spanish, "REP", "REP"); }
 inline const char* injured(bool spanish) { return pick(spanish, "HURT", "HERIDO"); }
 inline const char* dead(bool spanish) { return pick(spanish, "DEAD", "MUERTO"); }
 inline const char* frozen(bool spanish) { return pick(spanish, "COLD", "FRIO"); }

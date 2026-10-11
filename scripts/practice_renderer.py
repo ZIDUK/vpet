@@ -1,10 +1,15 @@
 """240x135 practice UI prototype; combat rules remain in core.practice."""
+from collections import namedtuple
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 from config import (BACKGROUND_PATH, PET_IDLE_IMAGE_PATH, PET_PUNCH_IMAGE_PATH,
-                    PET_CAST_IMAGE_PATH, PET_BLOCK_IMAGE_PATH, PET_WALK_IMAGE_PATH)
+                    PET_CAST_IMAGE_PATH, PET_BLOCK_IMAGE_PATH, PET_WALK_IMAGE_PATH,
+                    PET_HIT_IMAGE_PATH, PET_HURT_IMAGE_PATH,
+                    PET_HIT_FRAME_COUNT, PET_HURT_FRAME_COUNT,
+                    PET_HIT_FRAME_INTERVAL, PET_HURT_FRAME_INTERVAL,
+                    PRACTICE_IMPACT_MS)
 from core.techniques import TECHNIQUES
 from scripts.practice_icons import technique_icon, muted_icon, info_icon
 from scripts.sim_renderer import _load_image, device_path
@@ -21,10 +26,64 @@ GREEN = (111, 208, 164)
 FONT = ImageFont.load_default(size=10)
 SMALL = ImageFont.load_default(size=9)
 
+# Band layout (240x135):
+#   y =  0..32  combat header (title + HP + MP per side, split at x=119)
+#   y = 33..91  combatant slots OR terminal result banner
+#   y = 92..114 feedback band: line 1 order/action + round, line 2 reason + damage
+#   y =115..134 action selector: 4 command icons + status label
+HEADER_BOTTOM = 32
+BAND_TOP = 92
+BAND_BOTTOM = 114
+SELECTOR_TOP = 115
+SELECTOR_BOTTOM = 134
+SPLIT_X = 119
+
+# Reason categories. The renderer paints line 2 with the color of the category
+# and only uses the label dictionary for the human-readable copy.
+REASON_LABELS = {
+    "SIGUE ORDEN": "SIGUIO TU ORDEN",
+    "A SU CRITERIO": "DECIDE EL PET",
+    "SIN MP": "SIN MP",
+    "EN RECARGA": "EN RECARGA",
+    "PREFIERE DEFENDER": "PREFIRIO DEFENDER",
+    "PREFIERE ATACAR": "PREFIRIO ATACAR",
+    "RECUPERA": "RECUPERA MP",
+    "ELIGE ORDEN": "ESPERANDO ORDEN",
+    "ESPERANDO": "ESPERANDO ORDEN",
+}
+REASON_CATEGORY = {
+    "SIGUE ORDEN": "ok",
+    "A SU CRITERIO": "neutral",
+    "SIN MP": "bad",
+    "EN RECARGA": "bad",
+    "PREFIERE DEFENDER": "warn",
+    "PREFIERE ATACAR": "warn",
+    "RECUPERA": "ok",
+    "ELIGE ORDEN": "muted",
+    "ESPERANDO": "muted",
+}
+REASON_COLORS = {
+    "ok": GREEN,
+    "bad": HP,
+    "warn": YELLOW,
+    "neutral": WHITE,
+    "muted": MUTED,
+}
+
+FeedbackInfo = namedtuple("FeedbackInfo", (
+    "awaiting", "order_label", "order_is_auto", "action_label",
+    "reason_key", "reason_label", "is_substitution",
+    "round", "damage",
+))
+
 
 def text(draw, xy, value, color=WHITE, small=False):
     draw.fontmode = "1"
     draw.text(xy, str(value), font=SMALL if small else FONT, fill=color)
+
+
+def text_width(draw, value, small=True):
+    return int(draw.textlength(str(value), font=SMALL if small else FONT))
 
 
 def bar(draw, x, y, width, value, maximum, color, height=4):
@@ -60,12 +119,22 @@ def icon_button(frame, draw, icon, x, y, selected, size=24, unavailable=False):
     paste_icon(frame, muted_icon(icon) if unavailable else icon, x + (size - 16) // 2, y + (size - 16) // 2)
 
 
-def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False):
-    path = {0: PET_PUNCH_IMAGE_PATH, 1: PET_CAST_IMAGE_PATH, 2: PET_BLOCK_IMAGE_PATH,
-            "walk": PET_WALK_IMAGE_PATH}.get(action, PET_IDLE_IMAGE_PATH)
+def _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip=False,
+                 frame_count=None, frame_interval_ms=100):
+    """Render the ``now_ms``-th slice of ``path``. Frame count defaults to the
+    number of cells actually packed in the atlas; ``frame_interval_ms`` is the
+    duration of one frame in milliseconds. Negative ``now_ms`` clamps to the
+    first cell, oversized ``now_ms`` wraps through the configured count.
+    """
     atlas = _load_image(device_path(build_dir, path))
     cell = atlas.height
-    index = (now_ms // 100) % (atlas.width // cell)
+    actual = atlas.width // cell
+    count = actual if frame_count is None else min(frame_count, actual)
+    if count <= 0:
+        return
+    safe_ms = max(0, int(now_ms))
+    interval = max(1, int(frame_interval_ms))
+    index = (safe_ms // interval) % count
     sprite = atlas.crop((index * cell, 0, (index + 1) * cell, cell))
     mask = sprite.point([0] + [255] * 255, mode="L")
     sprite = sprite.convert("RGBA")
@@ -76,138 +145,366 @@ def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False):
     frame.paste(sprite, (x, y), sprite)
 
 
-def render_tech(frame, draw, build_dir, session, now_ms):
-    header(draw, "TECNICAS", "ENTRENAMIENTO" if session.training else "FIREMON")
-    progress = session.pet.techniques
-    text(draw, (6, 26), "EQUIPADAS", MUTED, small=True)
-    for slot in range(2):
-        x = 83 + slot * 77
-        draw.rectangle((x, 21, x + 73, 40), fill=PANEL)
-        if slot < len(progress.equipped):
-            tech = TECHNIQUES[progress.equipped[slot]]
-            paste_icon(frame, technique_icon(tech["id"]), x + 2, 23)
-            text(draw, (x + 22, 26), tech["name"], small=True)
-        else:
-            text(draw, (x + 14, 26), "VACIO", MUTED, small=True)
-    draw.line((5, 45, 234, 45), fill=TEAL)
-    selected = session.index
-    learned = selected < 3 and progress.learned(selected)
-    pet_sprite(frame, build_dir, 18, 47, 60, selected if learned else None, now_ms)
-    for i in range(4):
-        icon = (technique_icon(TECHNIQUES[i]["id"], not progress.learned(i)) if i < 3
-                else asset_icon(build_dir, "Back"))
-        icon_button(frame, draw, icon, 4 + i * 28, 107, i == selected)
-    if selected == 3:
-        text(draw, (126, 52), "VOLVER", YELLOW)
-        return
-    tech = TECHNIQUES[selected]
-    text(draw, (126, 52), tech["name"] if learned else "???", YELLOW)
-    if not learned:
-        info_label(frame, draw, "lock", 126, 67, "BLOQUEADA", MUTED)
-        info_label(frame, draw, "training", 126, 86, "ENTRENAMIENTOS")
-        text(draw, (126, 101), "%d / 2" % progress.training, YELLOW)
-        bar(draw, 126, 120, 107, progress.training, 2, YELLOW)
+def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False):
+    path = {0: PET_PUNCH_IMAGE_PATH, 1: PET_CAST_IMAGE_PATH, 2: PET_BLOCK_IMAGE_PATH,
+            "walk": PET_WALK_IMAGE_PATH}.get(action, PET_IDLE_IMAGE_PATH)
+    _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip)
+
+
+def impact_sprite(frame, build_dir, x, y, size, kind, now_ms, flip=False):
+    """Render the hit (attacker) or hurt (defender) frame for PRACTICE_IMPACT_MS."""
+    if kind == "hit":
+        path = PET_HIT_IMAGE_PATH
+        count = PET_HIT_FRAME_COUNT
+        interval_ms = int(PET_HIT_FRAME_INTERVAL * 1000)
     else:
-        text(draw, (126, 67), "EQUIPADA" if selected in progress.equipped else "EN RESERVA", GREEN, small=True)
-        info_label(frame, draw, "defense" if selected == 2 else "power", 126, 81,
-                   "DANO / 2" if selected == 2 else "POTENCIA %d" % tech["power"])
-        info_label(frame, draw, "cost", 126, 94, "RECUPERA 4 MP" if selected == 2 else "COSTE %d MP" % tech["mp"], MP)
-        info_label(frame, draw, "mastery", 126, 109, "DOMINIO %d/100" % progress.mastery[selected], MUTED)
-        bar(draw, 126, 125, 107, progress.mastery[selected], 100, GREEN)
+        path = PET_HURT_IMAGE_PATH
+        count = PET_HURT_FRAME_COUNT
+        interval_ms = int(PET_HURT_FRAME_INTERVAL * 1000)
+    _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip,
+                frame_count=count, frame_interval_ms=interval_ms)
+
+
+def render_technique_panel(frame, draw, build_dir, session, now_ms):
+    from scripts.training_renderer import _metric
+    progress = session.pet.techniques
+    es = session.pet.language == "ES"
+    draw.rectangle((0, 0, 239, 134), fill=INK)
+    draw.rectangle((0, 0, 239, 19), fill=TEAL)
+    paste_icon(frame, asset_icon(build_dir, "Training"), 4, 2)
+    text(draw, (26, 4), "TECNICAS" if es else "TECHNIQUES")
+    names = ("GOLPE", "LLAMA", "GUARDIA") if es else ("PUNCH", "FLAME", "GUARD")
+    if session.page == "tech":
+        text(draw, (6, 27), "EQUIPADAS" if es else "EQUIPPED", MUTED, small=True)
+        equipped = sorted(progress.equipped)
+        for slot in range(2):
+            x = 83 + slot * 77
+            draw.rectangle((x, 21, x + 73, 40), fill=PANEL)
+            if slot < len(equipped):
+                i = equipped[slot]
+                paste_icon(frame, technique_icon(TECHNIQUES[i]["id"]), x + 2, 23)
+                text(draw, (x + 22, 27), names[i], small=True)
+            else:
+                text(draw, (x + 14, 27), "VACIO" if es else "EMPTY", MUTED, small=True)
+        draw.line((5, 45, 234, 45), fill=TEAL)
+        i = session.index
+        learned = i < 3 and progress.learned(i)
+        pet_sprite(frame, build_dir, 10, 40, 68, i if learned else None, now_ms)
+        for j in range(4):
+            x = 4 + j * 28
+            draw.rectangle((x, 107, x + 23, 130), fill=TEAL if i == j else PANEL,
+                           outline=YELLOW if i == j else PANEL)
+            icon = technique_icon(TECHNIQUES[j]["id"]) if j < 3 else asset_icon(build_dir, "Back")
+            paste_icon(frame, icon, x + 4, 111)
+        if i == 3:
+            text(draw, (126, 52), "VOLVER" if es else "BACK", YELLOW)
+            return
+        text(draw, (126, 52), names[i] if learned else "???", YELLOW)
+        text(draw, (126, 67), (("EQUIPADA" if es else "EQUIPPED") if i in equipped
+             else ("EN RESERVA" if es else "IN RESERVE")) if learned else ("BLOQUEADA" if es else "LOCKED"), GREEN if learned else MUTED, small=True)
+        rows = [("defense" if i == 2 else "power", "DANO /2" if es and i == 2 else "DAMAGE /2" if i == 2 else ("POTENCIA " if es else "POWER ") + str(TECHNIQUES[i]["power"]), WHITE),
+                ("cost", ("RECUPERA 4 MP" if es else "RESTORE 4 MP") if i == 2 else ("COSTE " if es else "COST ") + str(TECHNIQUES[i]["mp"]) + " MP", MP),
+                ("mastery", ("DOMINIO " if es else "MASTERY ") + "%d/100" % progress.mastery[i], MUTED)]
+        if not learned:
+            rows = [("training", "ENTRENAR" if es else "TRAIN", MUTED), ("lock", "%d / 2" % progress.training, YELLOW)]
+        for row, (symbol, label, color) in enumerate(rows):
+            y = 82 + row * 14
+            paste_icon(frame, info_icon(symbol, 10), 126, y)
+            text(draw, (140, y), label, color, small=True)
+        draw.rectangle((126, 125, 232, 128), fill=PANEL)
+        width = min(107, (progress.mastery[i] * 107 // 100) if learned else progress.training * 107 // 2)
+        if width:
+            draw.rectangle((126, 125, 125 + width, 128), fill=GREEN if learned else YELLOW)
+        return
+    i = session.tech
+    tech = TECHNIQUES[i]
+    paste_icon(frame, technique_icon(tech["id"]), 8, 25)
+    text(draw, (32, 25), names[i], YELLOW)
+    # Technique actions: punch, cast, block.
+    pet_sprite(frame, build_dir, 0, 42, 68, i, now_ms)
+    _metric(draw, 43, "POTENCIA" if es else "POWER", "DANO /2" if i == 2 else str(tech["power"]), YELLOW)
+    _metric(draw, 57, "USAR" if es else "USE", "+4 MP" if i == 2 else "%d MP" % tech["mp"], MP)
+    _metric(draw, 71, "DOMINIO" if es else "MASTERY", "%d/100" % progress.mastery[i], GREEN)
+    _metric(draw, 85, "ENTRENAR" if es else "TRAIN", "-4 ENE", HP)
+    if session.message:
+        text(draw, (6, 101), session.message, YELLOW, small=True)
+    commands = ["ENTRENAR" if es else "TRAIN",
+                ("QUITAR" if es else "REMOVE") if i in progress.equipped else ("EQUIPAR" if es else "EQUIP"),
+                "VOLVER" if es else "BACK"]
+    if not session.training:
+        commands = commands[1:]
+    for j, command in enumerate(commands):
+        draw.rectangle((4 + j * 78, 116, 79 + j * 78, 133), outline=YELLOW if session.index == j else PANEL)
+        text(draw, (8 + j * 78, 120), command, YELLOW if session.index == j else MUTED, small=True)
+
+
+def render_tech(frame, draw, build_dir, session, now_ms):
+    return render_technique_panel(frame, draw, build_dir, session, now_ms)
 
 
 def render_detail(frame, draw, build_dir, session, now_ms):
-    progress = session.pet.techniques
-    learned = progress.learned(session.tech)
-    tech = TECHNIQUES[session.tech]
-    header(draw, "TECNICAS", tech["name"] if learned else "POR DESCUBRIR")
-    pet_sprite(frame, build_dir, 2, 20, 64, session.tech if learned else None, now_ms)
-    paste_icon(frame, technique_icon(tech["id"], not learned), 59, 23)
-    if learned:
-        text(draw, (86, 23), "EQUIPADA" if session.tech in progress.equipped else "EN RESERVA", GREEN)
-        info_label(frame, draw, "defense" if session.tech == 2 else "power", 86, 39,
-                   "DANO / 2" if session.tech == 2 else "POTENCIA %d" % tech["power"])
-        info_label(frame, draw, "cost", 182, 39, "+4 MP" if session.tech == 2 else "%d MP" % tech["mp"], MP)
-        info_label(frame, draw, "range", 86, 53, "ALCANCE " + ("CORTO" if tech["range"] == 1 else "AMPLIO"), MUTED)
-        info_label(frame, draw, "mastery", 86, 66, "DOMINIO %d/100" % progress.mastery[session.tech])
-        bar(draw, 86, 80, 146, progress.mastery[session.tech], 100, GREEN)
-    else:
-        info_label(frame, draw, "lock", 86, 24, "BLOQUEADA", YELLOW)
-        info_label(frame, draw, "training", 86, 44, "ENTRENAMIENTOS %d/2" % progress.training)
-        bar(draw, 86, 65, 146, progress.training, 2, YELLOW)
-    if session.training:
-        info_label(frame, draw, "energy", 6, 89, "ENERGIA %d / COSTE 4" % session.pet.get("e"), MUTED)
-    else:
-        info_label(frame, draw, "training", 6, 89, "ENTRENAMIENTO: PESA", MUTED)
-    if session.message:
-        text(draw, (6, 101), session.message, YELLOW, small=True)
-    icons = ("Training", "Pedia", "Back") if session.training else ("Pedia", "Back")
-    for i, name in enumerate(icons):
-        icon_button(frame, draw, asset_icon(build_dir, name), 4 + i * 28, 114, i == session.index, size=20,
-                    unavailable=name == "Pedia" and not learned)
-    text(draw, (94, 118), session.choices()[session.index], YELLOW)
+    return render_technique_panel(frame, draw, build_dir, session, now_ms)
 
 
 def battle_feedback(session):
+    """Return a :class:`FeedbackInfo` describing the player's order, the pet's
+    executed action, the real reason returned by ``choose()`` and the round
+    damage. The renderer paints two explicit lines from this struct so the
+    player can see at a glance what they asked, what the pet did, and why."""
     battle = session.battle
     if battle.round == 0:
-        return "ESPERANDO ORDEN", "PRACTICA / RONDA 1"
-    order = "AUTO" if session.last_order == -1 else TECHNIQUES[session.last_order]["name"]
+        return FeedbackInfo(
+            awaiting=True, order_label="AUTO", order_is_auto=True,
+            action_label="-", reason_key="ELIGE ORDEN",
+            reason_label=REASON_LABELS["ELIGE ORDEN"], is_substitution=False,
+            round=0, damage=(0, 0),
+        )
+    order_is_auto = (session.last_order == -1)
+    order_label = "AUTO" if order_is_auto else TECHNIQUES[session.last_order]["name"]
     action = battle.actions[0]
-    used = TECHNIQUES[action]["name"] if action is not None else "NO ACTUO"
-    reasons = {"SIGUE ORDEN": "SIGUIO TU ORDEN", "A SU CRITERIO": "DECISION DEL PET",
-               "PREFIERE DEFENDER": "PREFIRIO DEFENDER", "PREFIERE ATACAR": "PREFIRIO ATACAR",
-               "RECUPERA": "RECUPERA MP"}
-    return "PEDIDO %s / USO %s" % (order, used), battle.result or reasons.get(battle.reason, battle.reason)
+    action_label = TECHNIQUES[action]["name"] if action is not None else "NO ACTUO"
+    reason_key = battle.reason or "ELIGE ORDEN"
+    reason_label = REASON_LABELS.get(reason_key, reason_key)
+    is_substitution = (not order_is_auto and action is not None
+                        and action != session.last_order and not battle.result)
+    return FeedbackInfo(
+        awaiting=False, order_label=order_label, order_is_auto=order_is_auto,
+        action_label=action_label, reason_key=reason_key, reason_label=reason_label,
+        is_substitution=is_substitution, round=battle.round, damage=battle.damage,
+    )
+
+
+def _impact_active(session, now_ms):
+    return 0 <= now_ms - session.updated_at < PRACTICE_IMPACT_MS and session.battle.round > 0
+
+
+def _first_actor(battle):
+    """Mirror PracticeBattle.step: whoever acts first this round by speed."""
+    speed_diff = battle.player.stats[4] - battle.rival.stats[4]
+    return 0 if speed_diff > 0 or (speed_diff == 0 and battle.round % 2 == 1) else 1
+
+
+def _draw_combatant(frame, build_dir, session, now_ms, side):
+    """Render the Firemon or rival at its slot, picking hit / hurt / guard /
+    idle based on the actual outcome of the round (damage taken, action
+    performed, who acted first). Rules:
+
+    - **hit** on the attacker that landed damage (``own_action != 2``).
+      In a simultaneous trade (both attack and both take damage), the first
+      actor (by speed) keeps the hit sprite while the second actor (who took
+      the first hit before retaliating) is shown the hurt sprite so the
+      player can read who struck first. In a one-sided attack, the lone
+      attacker always shows hit.
+    - **hurt** on the defender that absorbed damage, either by guarding with
+      reduced damage (``own_action == 2`` and ``damage_taken > 0``) or by
+      being KOed before acting (``own_action is None`` and
+      ``damage_taken > 0``).
+    - **guard** sprite when the combatant guarded without taking damage.
+    - **idle** when no action happened or the round is not in the impact
+      window (banner already shown on top of the sprite when the battle has
+      terminated).
+    """
+    battle = session.battle
+    is_player = (side == "player")
+    own_action = battle.actions[0] if is_player else battle.actions[1]
+    other_action = battle.actions[1] if is_player else battle.actions[0]
+    damage_taken = battle.damage[1] if is_player else battle.damage[0]
+    x = 24 if is_player else 154
+    flip = not is_player
+    impact = _impact_active(session, now_ms)
+    if not impact:
+        pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip)
+        return
+    first = _first_actor(battle)
+    is_first_actor = (is_player and first == 0) or (not is_player and first == 1)
+    both_attackers = (own_action is not None and own_action != 2
+                       and other_action is not None and other_action != 2)
+    if own_action is not None and own_action != 2:
+        # Attacker. In a trade, the first actor shows hit and the second
+        # shows hurt; otherwise the attacker simply shows hit.
+        if both_attackers and not is_first_actor:
+            kind = "hurt"
+        else:
+            kind = "hit"
+        impact_sprite(frame, build_dir, x, 33, 60, kind,
+                       now_ms - session.updated_at, flip)
+        return
+    if damage_taken > 0:
+        impact_sprite(frame, build_dir, x, 33, 60, "hurt",
+                       now_ms - session.updated_at, flip)
+        return
+    if own_action == 2:
+        pet_sprite(frame, build_dir, x, 33, 60, 2, now_ms, flip)
+        return
+    pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip)
+
+
+def _order_icon(session, size=10):
+    """Return the technique / auto icon for the player's requested order at
+    the requested render size. Falls back to the auto glyph when the order
+    is unknown so the band never shows a missing sprite."""
+    if session.last_order == -1:
+        base = technique_icon("auto")
+    elif session.last_order is not None and 0 <= session.last_order < len(TECHNIQUES):
+        base = technique_icon(TECHNIQUES[session.last_order]["id"])
+    else:
+        base = technique_icon("auto")
+    return base.resize((size, size), Image.Resampling.NEAREST) if size != 16 else base
+
+
+def _action_icon(action, size=10):
+    if action is None or not (0 <= action < len(TECHNIQUES)):
+        return technique_icon("auto").resize((size, size), Image.Resampling.NEAREST)
+    base = technique_icon(TECHNIQUES[action]["id"])
+    return base.resize((size, size), Image.Resampling.NEAREST) if size != 16 else base
+
+
+def _draw_combat_header(draw, frame, battle):
+    """Top band: title, wide HP/MP bars and right-aligned ``value/max``
+    numbers. Each side occupies half the screen, split at ``SPLIT_X``."""
+    draw.rectangle((0, 0, 239, HEADER_BOTTOM), fill=INK)
+    draw.line((SPLIT_X, 3, SPLIT_X, 30), fill=TEAL)
+    # Left column: FIREMON (x=4..118), right column: PRACTICA (x=120..238).
+    for x, name, fighter, color_hp, color_mp in (
+        (4, "FIREMON", battle.player, HP, MP),
+        (125, "PRACTICA", battle.rival, HP, MP),
+    ):
+        text(draw, (x, 0), name)
+        _draw_resource_row(frame, draw, x, 11, "hp", "HP",
+                            fighter.hp, fighter.max_hp, color_hp)
+        _draw_resource_row(frame, draw, x, 22, "mp", "MP",
+                            fighter.mp, fighter.max_mp, color_mp)
+
+
+def _draw_resource_row(frame, draw, x, y, icon_name, label, value, maximum, color):
+    """Render ``[icon] LABEL [bar....] value/max`` at row ``y``. The bar is
+    46 px wide and 6 px tall to be readable on a 240x135 panel without
+    colliding with neighbouring rows. The numbers are right-anchored at
+    ``x + 80`` so three-digit maxima like ``238/238`` still fit in either
+    column without crossing the vertical split at ``SPLIT_X = 119``."""
+    paste_icon(frame, info_icon(icon_name, 10), x, y - 2)
+    text(draw, (x + 12, y - 1), label, color, small=True)
+    bar(draw, x + 32, y + 2, 46, value, maximum, color, height=6)
+    text(draw, (x + 80, y - 1), "%d/%d" % (value, maximum), small=True)
+
+
+def _draw_result_banner(draw, session):
+    """Victory / defeat / draw banner over the combatant area. The big
+    result text is painted in its result color; the outline matches."""
+    draw.rectangle((0, 33, 239, 91), fill=INK)
+    banner_color = {"VICTORIA": GREEN, "DERROTA": HP, "EMPATE": YELLOW}.get(
+        session.battle.result, YELLOW)
+    draw.rectangle((10, 36, 229, 88), fill=PANEL, outline=banner_color, width=2)
+    text(draw, (16, 40), session.battle.result, banner_color)
+    summary = {
+        "VICTORIA": "RIVAL DERROTADO",
+        "DERROTA": "TE DERROTARON",
+        "EMPATE": "LIMITE 30 RONDAS",
+    }.get(session.battle.result, "")
+    text(draw, (16, 56), summary, WHITE, small=True)
+    if session.battle.round:
+        text(draw, (16, 70), "RONDAS %d" % session.battle.round, MUTED, small=True)
+    if session.message:
+        text(draw, (16, 80), session.message, YELLOW, small=True)
+
+
+def _draw_feedback_band(frame, draw, session, info):
+    """Two explicit lines that show the cycle the player asked for and the
+    reason the pet did (or did not) follow it. Line 1 paints ``HIZO`` in
+    red when the pet substituted the order and green when it obeyed. Line
+    2 paints the reason in a category color (green ok, red bad, yellow
+    warn, white neutral, muted while waiting). Round number and damage
+    are anchored to the right edge of the band."""
+    draw.rectangle((0, BAND_TOP, 239, BAND_BOTTOM), fill=INK)
+    # Line 1: [icon] PEDISTE <order>  ->  HIZO <action>          R#X
+    paste_icon(frame, _order_icon(session, 10), 4, BAND_TOP + 1)
+    pediste = "PEDISTE %s" % info.order_label
+    text(draw, (18, BAND_TOP + 1), pediste, WHITE, small=True)
+    arrow = "  >  "
+    arrow_x = 18 + text_width(draw, pediste, small=True)
+    text(draw, (arrow_x, BAND_TOP + 1), arrow, MUTED, small=True)
+    hizo = "HIZO %s" % info.action_label
+    hizo_x = arrow_x + text_width(draw, arrow, small=True)
+    action_color = HP if info.is_substitution else GREEN
+    text(draw, (hizo_x, BAND_TOP + 1), hizo, action_color, small=True)
+    if info.round:
+        round_label = "R%d" % info.round
+        text(draw, (238 - text_width(draw, round_label, small=True), BAND_TOP + 1),
+             round_label, MUTED, small=True)
+    # Line 2: MOTIVO: <reason>                      PRACT -X | FIRE -Y
+    reason_color = REASON_COLORS[REASON_CATEGORY.get(info.reason_key, "muted")]
+    reason_text = "MOTIVO: %s" % info.reason_label
+    text(draw, (4, BAND_TOP + 13), reason_text, reason_color, small=True)
+    if not info.awaiting and (info.damage[0] or info.damage[1]):
+        # damage[i] is the amount fighter i inflicts on the opponent:
+        # damage[0] = damage Firemon dealt to Practica (PRACT's HP loss).
+        # damage[1] = damage Practica dealt to Firemon (FIRE's HP loss).
+        damage_text = "PRACT -%d | FIRE -%d" % (info.damage[0], info.damage[1])
+        text(draw, (238 - text_width(draw, damage_text, small=True), BAND_TOP + 13),
+             damage_text, HP, small=True)
+
+
+def _draw_action_selector(frame, draw, build_dir, session):
+    """Bottom band: 4 command icons on the left and a status block on the
+    right with the command label and a coloured availability / cost hint.
+    In the terminal state only the ``VOLVER`` back button is shown."""
+    draw.rectangle((0, SELECTOR_TOP, 239, SELECTOR_BOTTOM), fill=INK)
+    if session.battle.result:
+        icon_button(frame, draw, asset_icon(build_dir, "Back"), 4,
+                    SELECTOR_TOP + 1, True, size=18)
+        text(draw, (28, SELECTOR_TOP + 3), "VOLVER", YELLOW)
+        return
+    commands = [-1] + list(session.pet.techniques.equipped) + [None]
+    for i, command in enumerate(commands):
+        icon = (asset_icon(build_dir, "Back") if command is None else
+                technique_icon("auto" if command == -1 else TECHNIQUES[command]["id"]))
+        unavailable = command not in (None, -1) and not session.battle.player.valid(command)
+        x = 4 + i * 26
+        icon_button(frame, draw, icon, x, SELECTOR_TOP, i == session.index,
+                    size=20, unavailable=unavailable)
+    command = commands[session.index]
+    label = ("RETIRARSE" if command is None else
+             "AUTO" if command == -1 else TECHNIQUES[command]["name"])
+    text(draw, (114, SELECTOR_TOP), label, YELLOW)
+    text(draw, (114, SELECTOR_TOP + 11), _selector_status(session, command), _selector_color(command, session), small=True)
+
+
+def _selector_color(command, session):
+    if command is None or command == -1:
+        return YELLOW
+    if not session.battle.player.valid(command):
+        return HP
+    return GREEN if command == 2 else MP
+
+
+def _selector_status(session, command):
+    if command is None:
+        return "FIN BATALLA"
+    if command == -1:
+        return "PET DECIDE"
+    tech = TECHNIQUES[command]
+    if session.battle.player.cooldowns[command]:
+        return "RECARGA %d" % session.battle.player.cooldowns[command]
+    if session.battle.player.mp < tech["mp"]:
+        return "SIN MP"
+    if command == 2:
+        return "RECUPERA 4 MP"
+    return "COSTE %d MP" % tech["mp"]
 
 
 def render_battle(frame, draw, build_dir, session, now_ms):
     battle = session.battle
     bg = _load_image(device_path(build_dir, BACKGROUND_PATH)).convert("RGB")
     frame.paste(bg.resize((240, 135), Image.Resampling.NEAREST))
-    active = 0 <= now_ms - session.updated_at < 1500 and battle.round > 0
-    animation_ms = now_ms - session.updated_at if active else now_ms
-    pet_sprite(frame, build_dir, 24, 33, 60, battle.actions[0] if active else None, animation_ms)
-    pet_sprite(frame, build_dir, 154, 33, 60, battle.actions[1] if active else None, animation_ms, True)
-    draw.rectangle((0, 0, 239, 33), fill=INK)
-    draw.line((119, 3, 119, 30), fill=TEAL)
-    for x, name, fighter in ((4, "FIREMON", battle.player), (125, "RIVAL", battle.rival)):
-        text(draw, (x, 0), name)
-        for y, label, value, maximum, color in ((16, "HP", fighter.hp, fighter.max_hp, HP),
-                                               (28, "MP", fighter.mp, fighter.max_mp, MP)):
-            paste_icon(frame, info_icon(label.lower(), 10), x, y - 5)
-            text(draw, (x + 12, y - 5), label, color, small=True)
-            bar(draw, x + 29, y, 32, value, maximum, color)
-            text(draw, (x + 65, y - 5), "%d/%d" % (value, maximum), small=True)
-    draw.rectangle((0, 92, 239, 134), fill=INK)
-    requested, reason = battle_feedback(session)
-    text(draw, (4, 92), requested, small=True)
-    text(draw, (4, 103), session.message or reason, YELLOW, small=True)
-    if battle.round:
-        text(draw, (212, 103), "R%d" % battle.round, MUTED, small=True)
+    info = battle_feedback(session)
+    if not battle.result:
+        _draw_combatant(frame, build_dir, session, now_ms, "player")
+        _draw_combatant(frame, build_dir, session, now_ms, "rival")
+    _draw_combat_header(draw, frame, battle)
     if battle.result:
-        icon_button(frame, draw, asset_icon(build_dir, "Back"), 4, 115, True, size=20)
-        text(draw, (34, 119), "VOLVER", YELLOW)
-        return
-    commands = [-1] + session.pet.techniques.equipped + [None]
-    for i, command in enumerate(commands):
-        icon = (asset_icon(build_dir, "Back") if command is None else
-                technique_icon("auto" if command == -1 else TECHNIQUES[command]["id"]))
-        unavailable = command not in (None, -1) and not battle.player.valid(command)
-        x = 4 + i * 26
-        icon_button(frame, draw, icon, x, 115, i == session.index, size=20, unavailable=unavailable)
-        if unavailable:
-            draw.rectangle((x + 14, 115, x + 19, 120), fill=HP)
-    command = commands[session.index]
-    label = "RETIRARSE" if command is None else "AUTO" if command == -1 else TECHNIQUES[command]["name"]
-    text(draw, (112, 114), label, YELLOW)
-    if command not in (None, -1):
-        tech = TECHNIQUES[command]
-        status = "RECARGA %d" % battle.player.cooldowns[command] if battle.player.cooldowns[command] else (
-            "SIN MP" if battle.player.mp < tech["mp"] else "+4 MP" if command == 2 else "%d MP" % tech["mp"])
-        text(draw, (112, 125), status, MUTED, small=True)
-    elif command == -1:
-        text(draw, (112, 125), "A SU CRITERIO", MUTED, small=True)
+        _draw_result_banner(draw, session)
+    _draw_feedback_band(frame, draw, session, info)
+    _draw_action_selector(frame, draw, build_dir, session)
 
 
 def render_practice(build_dir, session, now_ms=0):

@@ -13,6 +13,7 @@
 #include "vpet/Renderer.h"
 #include "vpet/SettingsStore.h"
 #include "vpet/PracticeSession.h"
+#include "vpet/TrainingSession.h"
 
 namespace vpet {
 
@@ -43,7 +44,10 @@ private:
     Navigation navigation_;
     PracticeSession practice_;
     bool practicing_ = false;
+    TrainingSession training_;
+    bool trainingActive_ = false;
     uint32_t lastTickMs_ = 0;
+    uint32_t lastInteractionMs_ = 0;
     uint32_t lastRenderMs_ = 0;
     uint32_t eggStartedMs_ = 0;
 };

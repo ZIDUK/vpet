@@ -84,6 +84,7 @@ class Pet:
         self.stage_age_seconds = 0
         self.meals = 0
         self.training_sessions = 0
+        self.menu_train_sessions = 0
         self.weight = 5
         self.dp = 1
         self.protein = 0
@@ -185,6 +186,9 @@ class Pet:
         self.dead = False
         self.last_battle_won = False
         self.dp = 1
+        # v1 balance: the per-care-cycle menu training cap resets on
+        # evolution. The field is absent on legacy saves; default to 0.
+        self.menu_train_sessions = 0
 
     def can_feed(self):
         if self.is_egg:
@@ -389,6 +393,7 @@ class Pet:
             "stage_age_seconds": max(0, int(self.stage_age_seconds)),
             "meals": self.meals,
             "training_sessions": self.training_sessions,
+            "menu_train_sessions": getattr(self, "menu_train_sessions", 0),
             "weight": self.weight,
             "dp": self.dp,
             "protein": self.protein,
@@ -422,6 +427,7 @@ class Pet:
         self.stage_age_seconds = max(0, int(d.get("stage_age_seconds", 0)))
         self.meals = d.get("meals", 0)
         self.training_sessions = d.get("training_sessions", 0)
+        self.menu_train_sessions = d.get("menu_train_sessions", 0)
         self.weight = d.get("weight", 5)
         self.dp = d.get("dp", 0)
         self.protein = d.get("protein", 0)

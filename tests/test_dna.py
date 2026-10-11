@@ -56,11 +56,17 @@ def test_care_and_items_gain_ev():
     motion = PetMotion(now=0)
     assert activate_menu_item(pet, motion, 1, 0.5)
     assert pet.ev_at("hp") == 2
+    # v1 balance: menu training costs 3 ENE, grants +1 EV to ONE chosen
+    # stat. The legacy contract (no energy cost, +2 off + 1 spd) is
+    # superseded; the simulator UI uses MENU_TRAIN_STATS for the
+    # player choice. Here the legacy test calls activate_menu_item with
+    # the default target, which is MENU_TRAIN_STATS[0] = "off".
     assert activate_menu_item(pet, motion, 2, 1.0)
-    assert pet.ev_at("off") == 2
-    assert pet.ev_at("spd") == 1
+    assert pet.ev_at("off") == 1
+    assert pet.ev_at("spd") == 0
+    # Battle still grants +1 off / +1 brn from finish_battle.
     assert activate_menu_item(pet, motion, 3, 1.5)
-    assert pet.ev_at("off") == 3
+    assert pet.ev_at("off") == 2
     assert pet.ev_at("brn") == 1
     assert activate_menu_item(pet, motion, 4, 2.0)
     assert pet.ev_at("mp") == 0
@@ -74,7 +80,10 @@ def test_care_and_items_gain_ev():
     assert use_inventory_item(pet, 2) == "used"
     assert pet.ev_at("brn") == 3
     assert use_inventory_item(pet, 4) == "used"
-    assert pet.ev_at("off") == 5
+    # v1 balance: training is +1 EV per session (not +2 legacy), so the
+    # PROTEIN-driven off EV lands at 2 (training) + 1 (battle) + 2
+    # (item) = 5 in the legacy contract and 1 + 1 + 2 = 4 in v1.
+    assert pet.ev_at("off") == 4
     before = pet.ev_at("hp")
     assert use_inventory_item(pet, 3) == "used"
     assert pet.ev_at("hp") == before

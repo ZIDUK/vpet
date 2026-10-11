@@ -8,9 +8,12 @@ from config import (
     MENU_TRAINING_INDEX,
 )
 from core.motion import MOTION_SLEEP
+from core.training import (MENU_TRAIN_ENERGY_COST, MENU_TRAIN_STATS, train_menu,
+                            menu_train_block_reason)
 
 
-def activate_menu_item(pet, motion, menu_index, now, hour=12):
+def activate_menu_item(pet, motion, menu_index, now, hour=12,
+                        menu_train_stat=None):
     if motion.state == MOTION_SLEEP:
         if menu_index != MENU_REST_INDEX:
             return False
@@ -37,9 +40,15 @@ def activate_menu_item(pet, motion, menu_index, now, hour=12):
         return False
     pet.apply_action(action)
     if menu_index == MENU_TRAINING_INDEX:
-        pet.training_sessions = getattr(pet, "training_sessions", 0) + 1
-        pet.gain_ev("off", 2)
-        pet.gain_ev("spd", 1)
+        # v1 balance: menu training costs MENU_TRAIN_ENERGY_COST and
+        # grants +1 EV in the chosen stat. The caller passes
+        # ``menu_train_stat`` (one of MENU_TRAIN_STATS); the default
+        # falls back to the first stat if the caller does not pick.
+        target = menu_train_stat if menu_train_stat in MENU_TRAIN_STATS else MENU_TRAIN_STATS[0]
+        if menu_train_block_reason(pet):
+            return False
+        if not train_menu(pet, target):
+            return False
         motion.start_punch(now)
     elif menu_index == MENU_REST_INDEX:
         pet.answer_lights()

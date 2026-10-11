@@ -104,10 +104,15 @@ void setup() {
         while (true) delay(1000);
     }
     staticScene.setSwapBytes(true);
-    buttons.begin();
     bluetooth.begin();
     const vpet::AssetStatus status = assets.begin();
     drawBootIntro(status);
+    if (!buttons.begin()) {
+        Serial.println("VPET_FATAL code=INPUT_TASK_ALLOCATION");
+        display.fillScreen(TFT_BLACK);
+        display.drawString("INPUT ERROR", 20, 60, 2);
+        while (true) delay(1000);
+    }
     Serial.printf(
         "VPET_READY heap_free=%u heap_min=%u flash=%u fs_used=%u fs_total=%u manifest=%s\n",
         ESP.getFreeHeap(),

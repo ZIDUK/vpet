@@ -1,4 +1,16 @@
-"""Right-hand Status fiche: labels, icons, and pet pin for the T-Display split."""
+"""Right-hand Status fiche: labels, icons, and pet pin for the T-Display split.
+
+The four Status pages (1/4 vital, 2/4 care, 3/4 battle, 4/4 DNA) share
+the same data shape: a list of rows with an icon name, a localised
+label, a value, and an optional extra string. The renderer reads the
+shape, the catalog of strings lives in :mod:`core.i18n`, and the
+domain values (HP, energy, age, weight, ...) come straight from the
+pet. No new field is introduced here; the fiche is the only consumer.
+
+The page count is pinned at 4; ``STATUS_PAGE_COUNT`` is referenced
+from the renderer to drive the cyclic NEXT behaviour and the header
+label.
+"""
 
 STATUS_PAGE_COUNT = 4
 STATUS_SPLIT_X = 100
@@ -9,50 +21,123 @@ HELIX_Y = 56
 HELIX_WIDTH = 36
 HELIX_HEIGHT = 74
 HELIX_RUNGS = 6
-DNA_STAT_NAMES = (("HP", "hp"), ("MP", "mp"), ("OFF", "off"), ("DEF", "def"), ("SPD", "spd"), ("BRN", "brn"))
+DNA_STAT_NAMES = (("hp", "hp"), ("mp", "mp"), ("off", "off"),
+                  ("def", "def"), ("spd", "spd"), ("brn", "brn"))
 
 
 def pin_pet_x(pet_size, split_x=STATUS_SPLIT_X):
     return max(0, (int(split_x) - int(pet_size)) // 2)
 
 
+# ---------------------------------------------------------------------------
+# Page 1/4: vital. HP de crianza (current HP, not the combat pool),
+# alimentacion (ham/hambre), energia. The HP value lives on ``stats["hp"]``
+# in the pet; the combat-stat HP (``combat_stat("hp") * 2 + 40``) is
+# shown on the DNA page next to the other five stats so the two never
+# share the same screen.
+# ---------------------------------------------------------------------------
+
+
 def vital_rows(pet, spanish):
+    """Return the three vital rows. The shape is 4-tuple
+    (icon, label, value_str, kind) where ``kind`` is a stable key the
+    renderer uses to pick the bar color (red/orange/cyan)."""
+    from core.i18n import tr
     return (
-        ("Heart", "PV" if spanish else "HP", pet.stats["hp"]),
-        ("Feed", "HAM" if spanish else "HUN", pet.stats["h"]),
-        ("Energy", "ENE", pet.stats["e"]),
+        ("Heart", tr(pet, "status.vital.hp_care.label"),
+            tr(pet, "status.vital.hp_care.value", int(pet.stats["hp"])),
+            "hp_care"),
+        ("Feed", tr(pet, "status.vital.feed.label"),
+            tr(pet, "status.vital.feed.value", int(pet.stats["h"])),
+            "feed"),
+        ("Energy", tr(pet, "status.vital.energy.label"),
+            tr(pet, "status.vital.energy.value", int(pet.stats["e"])),
+            "energy"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Page 2/4: care. Five rows that replace the old "OF / CM" acronyms.
+# The age is adapted to the most readable unit without changing the
+# underlying ``stage_age_seconds`` value.
+# ---------------------------------------------------------------------------
 
 
 def care_rows(pet, spanish, clock_text, call_text):
+    """Return the five care rows. The shape is 4-tuple
+    (icon, label, value, extra). ``extra`` is the clock or call-reason
+    string for the first row only; the rest are empty. The age is
+    formatted as a short string with the most readable unit."""
+    from core.i18n import format_age, tr
     extra = call_text or clock_text or ""
+    age_value = format_age(pet,
+                            getattr(pet, "stage_age_seconds",
+                                    pet.age_seconds))
     return (
-        (
-            "Clock",
-            "EDAD" if spanish else "AGE",
-            "%ds" % int(getattr(pet, "stage_age_seconds", pet.age_seconds)),
-            extra,
-        ),
-        ("Feed", "OF", int(getattr(pet, "overfeeds", 0)), ""),
-        ("Heart", "CM", int(getattr(pet, "care_mistakes", 0)), ""),
-        ("Training", "ESF" if spanish else "EFF", "%d/4" % min(4, pet.effort_hearts()), ""),
-        ("Battle", "BAT", int(getattr(pet, "battles_this_form", pet.battles_won)), ""),
+        ("Clock", tr(pet, "status.care.age.label"),
+            age_value, extra),
+        ("Feed", tr(pet, "status.care.overfeed.label"),
+            int(getattr(pet, "overfeeds", 0)), ""),
+        ("Heart", tr(pet, "status.care.care_err.label"),
+            int(getattr(pet, "care_mistakes", 0)), ""),
+        ("Training", tr(pet, "status.care.effort.label"),
+            tr(pet, "status.care.effort.value", min(4, pet.effort_hearts())),
+            ""),
+        ("Battle", tr(pet, "status.care.battles.label"),
+            tr(pet, "status.care.battles.value",
+               int(getattr(pet, "battles_this_form", pet.battles_won))),
+            ""),
     )
+
+
+# ---------------------------------------------------------------------------
+# Page 3/4: battle. Peso, DP, %victorias, proteina, W-L. DP keeps its
+# name (the user asked not to rename it). When the pet has no
+# encounters the win-rate and W-L show "--" instead of a misleading 0%.
+# ---------------------------------------------------------------------------
 
 
 def battle_rows(pet, spanish):
-    played = getattr(pet, "battles_won", 0) + getattr(pet, "battles_lost", 0)
-    wr = "--" if played == 0 else "%d%%" % ((pet.battles_won * 100) // played)
+    """Return the five battle rows. The shape is 3-tuple
+    (icon, label, value). DP keeps its name; weight and W-L use
+    clear labels. When the pet has no encounters, the win-rate and
+    W-L show '--' instead of a misleading 0%."""
+    from core.i18n import tr
+    played = (getattr(pet, "battles_won", 0)
+              + getattr(pet, "battles_lost", 0))
+    if played == 0:
+        wr = tr(pet, "status.battle.winrate.empty")
+        wl = tr(pet, "status.battle.wl.empty")
+    else:
+        wr = tr(pet, "status.battle.winrate.value",
+                 (pet.battles_won * 100) // played)
+        wl = tr(pet, "status.battle.wl.value",
+                 int(getattr(pet, "battles_won", 0)),
+                 int(getattr(pet, "battles_lost", 0)))
     return (
-        ("Weight", "PES" if spanish else "WT", int(getattr(pet, "weight", 5))),
-        ("Battle", "DP", "%d/3" % min(3, getattr(pet, "dp", 1))),
-        ("Trophy", "WR", wr),
-        ("Protein", "PR", "%d/7" % min(7, getattr(pet, "protein", 0))),
-        ("Versus", "W-L", "%d-%d" % (getattr(pet, "battles_won", 0), getattr(pet, "battles_lost", 0))),
+        ("Weight", tr(pet, "status.battle.weight.label"),
+            tr(pet, "status.battle.weight.value",
+               int(getattr(pet, "weight", 5)))),
+        ("Battle", tr(pet, "status.battle.dp.label"),
+            tr(pet, "status.battle.dp.value",
+               min(3, int(getattr(pet, "dp", 1))))),
+        ("Trophy", tr(pet, "status.battle.winrate.label"), wr),
+        ("Protein", tr(pet, "status.battle.protein.label"),
+            tr(pet, "status.battle.protein.value",
+               min(7, int(getattr(pet, "protein", 0))))),
+        ("Versus", tr(pet, "status.battle.wl.label"), wl),
     )
+
+
+# ---------------------------------------------------------------------------
+# Page 4/4: DNA. The full code XX-XX-XX-XX is rendered alongside the
+# rotating helix; six stat rows (combat-stat, not EV) are shown with
+# bars on a 0..99 scale. The renderer draws this page; the helper
+# here only returns the data.
+# ---------------------------------------------------------------------------
 
 
 def dna_stat_rows(pet):
     if not getattr(pet, "has_dna", lambda: False)():
         return []
-    return [(label, pet.combat_stat(key), pet.ev_at(key)) for label, key in DNA_STAT_NAMES]
+    return [(key, pet.combat_stat(key), pet.ev_at(key)) for _, key in DNA_STAT_NAMES]

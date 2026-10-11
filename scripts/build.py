@@ -21,7 +21,7 @@ from display_profiles import get_display_profile
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
 MENU_ICONS = ("Status", "Feed", "Training", "Battle", "Rest", "Items", "Pedia", "Options")
-STATUS_ICONS = ("Heart", "Clock", "Protein", "Medkit", "Energy", "Trophy", "Versus", "Weight")
+STATUS_ICONS = ("Heart", "Clock", "Protein", "Medkit", "Energy", "Trophy", "Versus", "Weight", "Brain")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 FIREMON_COLUMNS = 5
 FIREMON_ROWS = 4

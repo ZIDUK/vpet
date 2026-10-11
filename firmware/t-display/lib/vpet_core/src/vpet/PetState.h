@@ -106,6 +106,17 @@ public:
     uint8_t evAt(CombatStat stat) const;
     uint8_t combatStat(CombatStat stat) const;
 
+    // Public mutators used by TrainingSession (and other batched flows).
+    // The single-rep path uses the private gainEv; batched callers go
+    // through these wrappers so the snapshot/rollback can rewind them.
+    void addEv(CombatStat stat, uint8_t amount);
+    void setEvAt(CombatStat stat, uint8_t value);
+    void setEnergy(int value);
+    void setHappiness(int value);
+    void setEffort(int value);
+    void setWeight(uint8_t value);
+    void setTrainingSessions(int value);
+
     void setStageAgeSeconds(uint32_t seconds);
     void setCareMistakes(uint8_t value);
     void setBattles(int value);

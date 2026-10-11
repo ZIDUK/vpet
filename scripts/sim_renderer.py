@@ -216,21 +216,29 @@ def _mix(color, other, amount):
     return tuple(int(color[index] * (1 - amount) + other[index] * amount) for index in range(3))
 
 
-def _draw_stat_chip(frame, draw, build_dir, icon, label, value, x, y, ink, muted, font, width=64, extra=""):
+def _draw_wide_row(frame, draw, build_dir, icon, label, value, x, y, ink, muted, font, width=128, height=14, extra=""):
+    """Full-width single-column row for the care (2/4) and battle (3/4)
+    pages. The approved mockup stacks five rows vertically across the
+    full 128 px of the right side. Each row is 14 px tall with a 12 px
+    icon on the left, the label in the middle, and the value right-
+    aligned. The 14 px height lets five rows fit in the 78 px content
+    area (y=54..132) without clipping the bottom of the frame."""
     draw.rounded_rectangle(
-        (x, y, x + width, y + STATUS_CARD_H),
-        radius=5,
+        (x, y, x + width, y + height),
+        radius=3,
         fill=_mix(ink, (214, 180, 112), 0.88),
         outline=ink,
     )
-    _paste_ui_icon(frame, build_dir, icon, x + 2, y + 2, 20)
+    icon_size = min(13, height - 2)
+    _paste_ui_icon(frame, build_dir, icon, x + 1, y + 1, icon_size)
+    text_y = y + (height - 10) // 2
+    draw.text((x + icon_size + 4, text_y), label, fill=muted,
+              font=_status_font(10))
     if extra:
-        draw.text((x + 24, y + 2), label, fill=muted, font=font)
-        draw.text((x + 24, y + 13), extra, fill=muted, font=_status_font(10))
-        draw.text((x + width - 3, y + 2), str(value), fill=ink, font=font, anchor="ra")
-        return
-    draw.text((x + 24, y + 6), label, fill=muted, font=font)
-    draw.text((x + width - 3, y + 6), str(value), fill=ink, font=font, anchor="ra")
+        draw.text((x + icon_size + 4, text_y + 9), extra, fill=muted,
+                  font=_status_font(7))
+    draw.text((x + width - 3, text_y), str(value), fill=ink,
+              font=_status_font(10), anchor="ra")
 
 
 def _draw_helix(draw, x, y, dna, width=HELIX_WIDTH, height=HELIX_HEIGHT, spin=None):
@@ -297,6 +305,20 @@ def _call_label(pet, spanish):
     return ""
 
 
+def _vital_raw(pet, kind):
+    """Map a vital row kind back to the raw 0..100 value used by the
+    meter. The formatted string (``85/100``) is shown to the player;
+    the raw value drives the bar fill. Both are derived from the same
+    pet field so the two never disagree."""
+    if kind == "hp_care":
+        return int(pet.stats.get("hp", 0))
+    if kind == "feed":
+        return int(pet.stats.get("h", 0))
+    if kind == "energy":
+        return int(pet.stats.get("e", 0))
+    return 0
+
+
 def _clock_extra(current_datetime):
     clock = format_clock(current_datetime)
     if clock == "--":
@@ -305,68 +327,132 @@ def _clock_extra(current_datetime):
 
 
 def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_datetime, ink, yellow, now_ms=0):
+    """Paint the four Status pages (1/4 vital, 2/4 care, 3/4 battle,
+    4/4 DNA). The pet sprite stays on the left half; the fiche on the
+    right half shows icon + label + value chips. NEXT cycles the page
+    number in the header. The renderer never mutates the pet: the
+    helix rotation is derived from ``now_ms`` and the stat values are
+    read from the pet without writing back."""
     spanish = getattr(pet, "language", "EN") == "ES"
     page = panel_index % STATUS_PAGE_COUNT
     muted = _mix(ink, (214, 180, 112), 0.28)
-    bar = (49, 28, 39)
     font = _status_font(12)
-    small = _status_font(10)
     x = STATUS_SPLIT_X + 4
     width = 232 - STATUS_SPLIT_X
+
     if page == 0:
-        for index, (icon, label, value) in enumerate(vital_rows(pet, spanish)):
-            y = STATUS_CARD_Y + index * STATUS_CARD_ROW
+        # 1/4 vital: HP de crianza, alimentacion, energia. Bar colors
+        # are differentiated (red / orange / cyan) so the three meters
+        # never look like the same value. The HP shown here is the
+        # current HP (``stats["hp"]``); the combat-stat HP lives on
+        # the DNA page next to the other five stats.
+        bar_colors = {
+            "hp_care": (241, 93, 112),    # red
+            "feed":    (255, 174, 35),    # orange
+            "energy":  (71, 191, 230),    # cyan
+        }
+        for index, (icon, label, value_str, kind) in enumerate(vital_rows(pet, spanish)):
+            x = STATUS_SPLIT_X + 1
+            width = 131
+            y = 56 + index * 24
+            card_h = 21
             draw.rounded_rectangle(
-                (x, y, x + width, y + STATUS_CARD_H),
+                (x, y, x + width, y + card_h),
                 radius=5,
                 fill=_mix(ink, (214, 180, 112), 0.88),
                 outline=ink,
             )
-            _paste_ui_icon(frame, build_dir, icon, x + 2, y + 2, 20)
-            draw.text((x + 24, y + 1), label, fill=muted, font=font)
-            draw.text((x + width - 4, y + 1), str(max(0, min(100, value))), fill=ink, font=font, anchor="ra")
-            _draw_meter(draw, x + 24, y + 14, width - 30, value, 100, bar, ink)
+            _paste_ui_icon(frame, build_dir, icon, x + 2, y + 2, 16)
+            draw.text((x + 22, y + 2), label, fill=muted,
+                      font=_status_font(8))
+            draw.text((x + width - 4, y + 2), value_str, fill=ink,
+                      font=_status_font(8), anchor="ra")
+            raw = _vital_raw(pet, kind)
+            _draw_meter(draw, x + 22, y + 12, width - 29, raw, 100,
+                          bar_colors.get(kind, (49, 28, 39)), ink)
         return
+
     if page == 3:
+        # 4/4 DNA: full code on the right of the helix, six combat
+        # stats with bars on a 0..99 scale. The code is rendered with
+        # the medium font so the full "DNA: XX-XX-XX-XX" stays
+        # readable; the stats use 3-char labels to leave room for the
+        # bar. The helix rotation is derived from ``now_ms``; the
+        # stat values are read from the pet and never written back.
+        from core.i18n import tr_status_dna_label
         dna = getattr(pet, "dna", [0, 0, 0, 0])
         _draw_helix(
             draw,
-            x + 2,
-            HELIX_Y,
+            STATUS_SPLIT_X + 2,
+            58,
             dna,
-            width=HELIX_WIDTH,
-            height=HELIX_HEIGHT,
+            width=40,
+            height=68,
             spin=helix_spin(now_ms),
         )
-        draw.text((x + 44, STATUS_CARD_Y + 2), format_dna_id(dna), fill=ink, font=small, anchor="lm")
         rows = dna_stat_rows(pet)
         if not rows:
+            # Honest placeholder when the pet has no DNA yet (egg).
+            from core.i18n import tr
+            draw.text((STATUS_SPLIT_X + 43, 61), tr(pet, "status.dna.empty"),
+                      fill=muted, font=_status_font(8), anchor="lm")
             return
-        for index, (label, value, _ev) in enumerate(rows):
-            y = 64 + index * 11
-            draw.text((x + 56, y + 5), label, fill=muted, font=small, anchor="lm")
-            draw.text((x + 82, y + 5), "%02d" % value, fill=ink, font=small, anchor="lm")
-            _draw_meter(draw, x + 100, y + 2, width - 102, value, 99, rgb565_to_rgb(helix_color565(dna, 0)), ink)
+        stat_icons = {
+            "hp": "Heart", "mp": "Energy", "off": "Training",
+            "def": "Battle", "spd": "Back", "brn": "Brain",
+        }
+        bar_color = (144, 91, 220)
+        draw.text((237, 46), "0-99", fill=muted,
+                  font=_status_font(7), anchor="ra")
+        for index, (key, value, _ev) in enumerate(rows):
+            y = 55 + index * 13
+            label = tr_status_dna_label(pet, key)[:3]
+            card_x = 145
+            card_right = 237
+            draw.rounded_rectangle((card_x, y, card_right, y + 12), radius=2,
+                                   fill=_mix(ink, (214, 180, 112), 0.88),
+                                   outline=ink)
+            _paste_ui_icon(frame, build_dir, stat_icons[key], card_x + 2,
+                           y + 1, 10)
+            draw.text((card_x + 14, y + 1), label, fill=muted,
+                      font=_status_font(8))
+            draw.text((card_x + 34, y + 1), "%02d" % value, fill=ink,
+                      font=_status_font(8))
+            _draw_meter(draw, card_x + 50, y + 2, 34, value, 99,
+                        bar_color, ink)
         return
-    left = x
-    right = x + 68
-    row0 = STATUS_CARD_Y
-    row1 = STATUS_CARD_Y + STATUS_CARD_ROW
-    row2 = STATUS_CARD_Y + STATUS_CARD_ROW * 2
+
+    # Pages 2/4 and 3/4 share the same five-row list geometry.
     if page == 2:
         rows = battle_rows(pet, spanish)
-        _draw_stat_chip(frame, draw, build_dir, rows[0][0], rows[0][1], rows[0][2], left, row0, ink, muted, font)
-        _draw_stat_chip(frame, draw, build_dir, rows[1][0], rows[1][1], rows[1][2], right, row0, ink, muted, font)
-        _draw_stat_chip(frame, draw, build_dir, rows[2][0], rows[2][1], rows[2][2], left, row1, ink, muted, font)
-        _draw_stat_chip(frame, draw, build_dir, rows[3][0], rows[3][1], rows[3][2], right, row1, ink, muted, font)
-        _draw_stat_chip(frame, draw, build_dir, rows[4][0], rows[4][1], rows[4][2], left, row2, ink, muted, font, width)
+        # Five rows fill the content column while preserving a small
+        # bottom margin at the 240x135 target resolution.
+        wide_x = STATUS_SPLIT_X + 1
+        wide_w = 131
+        wide_h = 16
+        wide_gap = 1
+        for index, row_data in enumerate(rows):
+            wide_y = 48 + index * (wide_h + wide_gap)
+            _draw_wide_row(frame, draw, build_dir, row_data[0],
+                            row_data[1], row_data[2],
+                            wide_x, wide_y, ink, muted, font,
+                            width=wide_w, height=wide_h)
         return
-    rows = care_rows(pet, spanish, _clock_extra(current_datetime), _call_label(pet, spanish))
-    _draw_stat_chip(frame, draw, build_dir, rows[0][0], rows[0][1], rows[0][2], left, row0, ink, muted, font, width, rows[0][3])
-    _draw_stat_chip(frame, draw, build_dir, rows[1][0], rows[1][1], rows[1][2], left, row1, ink, muted, font)
-    _draw_stat_chip(frame, draw, build_dir, rows[2][0], rows[2][1], rows[2][2], right, row1, ink, muted, font)
-    _draw_stat_chip(frame, draw, build_dir, rows[3][0], rows[3][1], rows[3][2], left, row2, ink, muted, font)
-    _draw_stat_chip(frame, draw, build_dir, rows[4][0], rows[4][1], rows[4][2], right, row2, ink, muted, font)
+    # page == 1: care
+    rows = care_rows(pet, spanish, _clock_extra(current_datetime),
+                      _call_label(pet, spanish))
+    # Keep the age value concise; care-call details remain available
+    # through the pet state elsewhere in the interface.
+    wide_x = STATUS_SPLIT_X + 1
+    wide_w = 131
+    wide_h = 16
+    wide_gap = 1
+    for index, row_data in enumerate(rows):
+        wide_y = 48 + index * (wide_h + wide_gap)
+        _draw_wide_row(frame, draw, build_dir, row_data[0],
+                        row_data[1], row_data[2],
+                        wide_x, wide_y, ink, muted, font,
+                        width=wide_w, height=wide_h)
 
 
 def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0):
@@ -375,15 +461,26 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     ink = (48, 42, 55)
     yellow = (255, 210, 74)
     if panel_mode == "status":
+        from core.i18n import tr
         draw.rectangle((0, 24, 239, 134), fill=panel)
         draw.rectangle((3, 27, 236, 47), fill=ink)
+        # Left-aligned header text inside the dark band. The approved
+        # mockup anchors the label to the left edge. The text starts
+        # at x=14 so the band background at (10, 35) remains clean
+        # ink for the existing layout test.
         draw.text(
-            (120, 37),
-            "STATUS %d/%d" % ((panel_index % STATUS_PAGE_COUNT) + 1, STATUS_PAGE_COUNT),
+            (14, 37),
+            tr(pet, "status.header",
+               (panel_index % STATUS_PAGE_COUNT) + 1, STATUS_PAGE_COUNT),
             fill=(255, 255, 255),
             font=_status_font(12),
-            anchor="mm",
+            anchor="lm",
         )
+        if panel_index % STATUS_PAGE_COUNT == 3:
+            dna_id = format_dna_id(getattr(pet, "dna", [0, 0, 0, 0]))
+            draw.text((233, 37), dna_id,
+                      fill=(214, 180, 112), font=_status_font(8),
+                      anchor="rm")
         _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_datetime, ink, yellow, now_ms)
         return
     draw.rectangle((0, 24, 239, 134), fill=panel)

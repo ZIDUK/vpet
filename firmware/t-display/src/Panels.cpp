@@ -2,6 +2,7 @@
 #include "vpet/Evolution.h"
 #include "vpet/Layout.h"
 #include "vpet/Strings.h"
+#include "vpet/TrainingUi.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -77,9 +78,12 @@ void Panels::drawChrome(uint8_t selected, const char* title, bool calling) {
     drawCallBadge(selected, calling);
     display_.fillRect(0, 24, 240, 111, kPanel);
     display_.fillRect(3, 27, 234, 20, kInk);
-    display_.setTextDatum(MC_DATUM);
+    const bool statusTitle = strncmp(title, "STATUS", 6) == 0 ||
+                             strncmp(title, "ESTADO", 6) == 0;
+    display_.setTextDatum(statusTitle ? TL_DATUM : MC_DATUM);
     display_.setTextColor(TFT_WHITE, kInk);
-    drawLabel(title, 120, 37, 220, 2);
+    drawLabel(title, statusTitle ? 14 : 120, statusTitle ? 30 : 37,
+              statusTitle ? 120 : 220, 2);
     display_.setTextDatum(TL_DATUM);
     display_.setTextColor(kInk, kPanel);
 }
@@ -132,24 +136,24 @@ void Panels::drawStat(
     display_.setTextColor(kInk, kPanel);
 }
 
-void Panels::drawVital(const char* icon, const char* label, int value, int16_t y) {
+void Panels::drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor) {
     constexpr uint16_t kChip = 0xC52D;
-    const int16_t x = kStatusSplitX + 4;
-    const int16_t width = 232 - kStatusSplitX;
+    const int16_t x = kStatusVitalX;
+    const int16_t width = kStatusVitalW;
     const int clamped = value < 0 ? 0 : (value > 100 ? 100 : value);
-    display_.fillRoundRect(x, y, width, kStatusCardH, 4, kChip);
-    display_.drawRoundRect(x, y, width, kStatusCardH, 4, kInk);
-    assets_.drawFrame(display_, icon, 0, x + 2, y + 2, false, -1, 72);
+    display_.fillRoundRect(x, y, width, kStatusVitalH, 4, kChip);
+    display_.drawRoundRect(x, y, width, kStatusVitalH, 4, kInk);
+    assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 2, 16, 16, false, -1, 60);
     display_.setTextColor(kInk, kChip);
-    drawLabel(label, x + 24, y + 1, 36, 2);
+    drawLabel(label, x + 22, y + 2, 44, 1);
     char num[8];
     snprintf(num, sizeof(num), "%d", clamped);
     display_.setTextDatum(TR_DATUM);
-    drawLabel(num, x + width - 3, y + 1, 28, 2);
+    drawLabel(num, x + width - 3, y + 2, 28, 1);
     display_.setTextDatum(TL_DATUM);
-    display_.drawRect(x + 24, y + 14, width - 30, 7, kInk);
-    const int16_t filled = static_cast<int16_t>((clamped * (width - 32)) / 100);
-    if (filled > 0) display_.fillRect(x + 25, y + 15, filled, 5, kInk);
+    display_.drawRect(x + 22, y + 12, width - 29, 7, kInk);
+    const int16_t filled = static_cast<int16_t>((clamped * (width - 31)) / 100);
+    if (filled > 0) display_.fillRect(x + 23, y + 13, filled, 5, barColor);
     display_.setTextColor(kInk, kPanel);
 }
 
@@ -161,12 +165,10 @@ void Panels::drawBar(const char* label, int value, int16_t y) {
     if (filled > 0) display_.fillRect(62, y + 4, filled, 8, kInk);
 }
 
-void Panels::drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin) {
+void Panels::drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin, int16_t width, int16_t height) {
     const uint16_t colorA = helixColor(dna, 0);
     const uint16_t colorB = helixColor(dna, 1);
     const bool empty = dna == nullptr || (dna[0] | dna[1] | dna[2] | dna[3]) == 0;
-    const int width = kHelixWidth;
-    const int height = kHelixHeight;
     const uint8_t steps = 48;
     display_.fillRoundRect(x - 2, y - 2, width + 4, height + 4, 4, 0x2104);
     int16_t xs[2][49];
@@ -207,45 +209,91 @@ void Panels::drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin) {
 }
 
 void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
-    const int16_t x = kStatusSplitX + 4;
-    const int16_t width = 232 - kStatusSplitX;
-    drawHelix(x + 2, kHelixY, pet.dna(), helixSpin(nowMs));
+    const int16_t x = kStatusSplitX + 2;
+    // Helix occupies the right strip (x..x+kHelixWidth). The agreed
+    // visual contract for 4/4 is kHelixWidth=40; the height stays at
+    // 68 so the code strip and the first stat row are not overlapped.
+    drawHelix(x, 58, pet.dna(), helixSpin(nowMs), kHelixWidth, 68);
     char code[20];
     if (pet.hasDna()) {
+        // Format: "DNA:XX-XX-XX-XX" (15 chars, no space after colon).
+        // At font 1 (6 px/char default) the string is 90 px and fits
+        // in the 94 px strip without truncation. All 8 hex digits and
+        // their separating dashes are preserved verbatim.
         snprintf(
             code,
             sizeof(code),
-            "DNA: %02X-%02X-%02X-%02X",
+            "DNA:%02X-%02X-%02X-%02X",
             pet.dna()[0],
             pet.dna()[1],
             pet.dna()[2],
             pet.dna()[3]
         );
     } else {
-        snprintf(code, sizeof(code), "DNA: -- -- -- --");
+        snprintf(code, sizeof(code), "DNA:-- -- -- --");
     }
+    display_.fillRect(142, 29, 94, 17, kInk);
+    display_.setTextColor(TFT_WHITE, kInk);
+    // Use the full strip width (94 px) as the budget. At font 1
+    // (6 px/char default), the 15-char code is 90 px — well within
+    // the budget so drawLabel does not truncate the last hex byte.
+    constexpr int16_t kDnaCodeStripX = 142;
+    constexpr int16_t kDnaCodeStripW = 94;
+    drawLabel(code, kDnaCodeStripX, 33, kDnaCodeStripW, 1);
     display_.setTextColor(kInk, kPanel);
-    drawLabel(code, x + 44, kStatusCardY, 90, 1);
     if (!pet.hasDna()) return;
     const char* names[] = {
-        copy::hp(spanish), copy::mp(spanish), copy::offense(spanish),
-        copy::def(spanish), copy::spd(spanish), copy::brn(spanish),
+        "HP", copy::mp(spanish), "OFF",
+        copy::def(spanish), copy::spd(spanish), "BRN",
+    };
+    // BRN gets a real brain icon (the legacy pedia.vpa was a placeholder).
+    const char* icons[] = {
+        "/ui/icons/heart.vpa", "/ui/icons/energy.vpa",
+        "/ui/icons/training.vpa", "/ui/icons/battle.vpa",
+        "/ui/icons/rest.vpa", "/ui/icons/brain.vpa",
     };
     const CombatStat stats[] = {
         CombatStat::Hp, CombatStat::Mp, CombatStat::Off,
         CombatStat::Def, CombatStat::Spd, CombatStat::Brn,
     };
+    // Compact row stride (13 px) so all six stats fit under the helix
+    // without overlapping the code strip (y=29..46) or the panel border.
+    // The column-safe layout matches sim_renderer.py (Codex):
+    //   helix        x=102..142  (kStatusSplitX+2 + kHelixWidth=40)
+    //   card         x=145..237  (rowX=145, rowW=92, 3 px gap from helix)
+    //   icon         rowX+2..rowX+11  (10 px slot, asset scaled from 20x20)
+    //   label        rowX+14 (=159), 18 px wide, font 1
+    //   value        rowX+34 (=179), 16 px wide, ends at 195 (bar start)
+    //   bar          rowX+50 (=195), barW=34, ends at 229 (8 px margin)
+    //   bar fill     0..99 → 0..32 px (scale = barW-2)
     for (uint8_t i = 0; i < 6; ++i) {
-        const int16_t y = 62 + i * 11;
+        const int16_t y = 55 + i * 13;
         char num[4];
         snprintf(num, sizeof(num), "%02u", pet.combatStat(stats[i]));
-        drawLabel(names[i], x + 56, y, 26, 1);
-        drawLabel(num, x + 82, y, 16, 1);
-        const int16_t barW = width - 102;
-        display_.drawRect(x + 100, y + 2, barW, 7, kInk);
+        constexpr int16_t rowX = kStatusDnaRowX;
+        constexpr int16_t rowW = kStatusDnaRowW;
+        constexpr int16_t barW = kStatusDnaBarW;
+        display_.fillRoundRect(rowX, y, rowW, 13, 2, kChip);
+        display_.drawRoundRect(rowX, y, rowW, 13, 2, kInk);
+        // Scaled 10x10 icon (parity with sim_renderer.py). The scratch
+        // sprite is filled with the destination pixel at (x, y) so the
+        // transparent areas of the icon blend with the card chip color.
+        assets_.drawFrameScaled(
+            display_, icons[i], 0,
+            rowX + 2, y + 1,
+            10, 10,
+            false, -1, 50
+        );
+        display_.setTextColor(kInk, kChip);
+        drawLabel(names[i], rowX + 14, y + 1, 18, 1);
+        drawLabel(num, rowX + 34, y + 1, 16, 1);
+        // Bar border: 7 px tall so the 5 px fill leaves 1 px padding
+        // top and bottom.
+        display_.drawRect(rowX + 50, y + 2, barW, 7, kInk);
         const int16_t filled = static_cast<int16_t>((pet.combatStat(stats[i]) * (barW - 2)) / 99);
-        if (filled > 0) display_.fillRect(x + 101, y + 3, filled, 5, helixColor(pet.dna(), 0));
+        if (filled > 0) display_.fillRect(rowX + 51, y + 3, filled, 5, 0x94BF);
     }
+    display_.setTextColor(kInk, kPanel);
 }
 
 void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_t nowMs) {
@@ -254,64 +302,60 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
         return;
     }
     if ((page % Navigation::kStatusPages) == 0) {
-        drawVital("/ui/icons/heart.vpa", copy::hp(spanish), pet.health(), kStatusCardY);
-        drawVital("/ui/icons/feed.vpa", copy::hunger(spanish), pet.hunger(), kStatusCardY + kStatusCardRow);
-        drawVital("/ui/icons/energy.vpa", copy::energy(spanish), pet.energy(), kStatusCardY + kStatusCardRow * 2);
+        drawVital("/ui/icons/heart.vpa", copy::hp(spanish), pet.health(), kStatusVitalY, 0xF800);
+        drawVital("/ui/icons/feed.vpa", copy::hunger(spanish), pet.hunger(), kStatusVitalY + kStatusVitalRow, 0xFD20);
+        drawVital("/ui/icons/energy.vpa", copy::energy(spanish), pet.energy(), kStatusVitalY + kStatusVitalRow * 2, 0x07FF);
         return;
     }
-    const int16_t left = kStatusSplitX + 4;
-    const int16_t right = kStatusSplitX + 70;
-    const int16_t wide = 232 - kStatusSplitX;
+    const int16_t x = kStatusListX;
+    auto drawStatusRow = [&](const char* icon, const char* label, const char* value, uint8_t row) {
+        const int16_t y = kStatusListY + row * kStatusListRow;
+        display_.fillRoundRect(x, y, kStatusListW, kStatusListH, 3, kChip);
+        display_.drawRoundRect(x, y, kStatusListW, kStatusListH, 3, kInk);
+        assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 2, 12, 12, false, -1, 65);
+        display_.setTextColor(kInk, kChip);
+        drawLabel(label, x + 15, y + 4, 82, 1);
+        display_.setTextDatum(TR_DATUM);
+        drawLabel(value, x + kStatusListW - 3, y + 4, 27, 1);
+        display_.setTextDatum(TL_DATUM);
+    };
     char value[16];
     if ((page % Navigation::kStatusPages) == 2) {
         snprintf(value, sizeof(value), "%u", pet.weight());
-        drawStat("/ui/icons/weight.vpa", copy::weight(spanish), value, left, kStatusCardY);
+        drawStatusRow("/ui/icons/weight.vpa", spanish ? "PESO" : "WEIGHT", value, 0);
         snprintf(value, sizeof(value), "%u/3", pet.dp());
-        drawStat("/ui/icons/battle.vpa", copy::dp(spanish), value, right, kStatusCardY);
+        drawStatusRow("/ui/icons/battle.vpa", "DP", value, 1);
         if (pet.hasWinRatio()) {
             snprintf(value, sizeof(value), "%u%%", pet.winRatioPercent());
         } else {
             snprintf(value, sizeof(value), "--");
         }
-        drawStat("/ui/icons/trophy.vpa", copy::winRatio(spanish), value, left, kStatusCardY + kStatusCardRow);
+        drawStatusRow("/ui/icons/trophy.vpa", spanish ? "VICTORIAS" : "WIN RATE", value, 2);
         snprintf(value, sizeof(value), "%u/7", pet.protein());
-        drawStat("/ui/icons/protein.vpa", copy::proteinOverdose(spanish), value, right, kStatusCardY + kStatusCardRow);
+        drawStatusRow("/ui/icons/protein.vpa", spanish ? "PROTEINA" : "PROTEIN", value, 3);
         snprintf(value, sizeof(value), "%u-%u", pet.wins(), pet.losses());
-        drawStat("/ui/icons/versus.vpa", "W-L", value, left, kStatusCardY + kStatusCardRow * 2, wide);
+        drawStatusRow("/ui/icons/versus.vpa", "W-L", value, 4);
         return;
     }
-    snprintf(value, sizeof(value), "%lus", static_cast<unsigned long>(pet.stageAgeSeconds()));
-    const char* extra = nullptr;
-    char clockExtra[16] = {};
-    if (pet.callReason() == CallReason::Hunger) extra = copy::callHunger(spanish);
-    else if (pet.callReason() == CallReason::Strength) extra = copy::callStrength(spanish);
-    else if (pet.callReason() == CallReason::Lights) extra = copy::callLights(spanish);
-    else if (pet.cold()) extra = copy::frozen(spanish);
-    else if (pet.dead()) extra = copy::dead(spanish);
-    else if (pet.injured()) extra = copy::injured(spanish);
-    else {
-        int clock[5] = {2026, 1, 1, 0, 0};
-        const time_t now = time(nullptr);
-        struct tm parts {};
-        localtime_r(&now, &parts);
-        if (parts.tm_year + 1900 >= 2024) {
-            clock[1] = parts.tm_mon + 1;
-            clock[2] = parts.tm_mday;
-            clock[3] = parts.tm_hour;
-            clock[4] = parts.tm_min;
-        }
-        snprintf(clockExtra, sizeof(clockExtra), "%02d/%02d %02d:%02d", clock[1], clock[2], clock[3], clock[4]);
-        extra = clockExtra;
+    const uint32_t ageSeconds = pet.stageAgeSeconds();
+    if (ageSeconds >= 86400) {
+        snprintf(value, sizeof(value), "%lud %02luh",
+                 static_cast<unsigned long>(ageSeconds / 86400),
+                 static_cast<unsigned long>((ageSeconds / 3600) % 24));
+    } else if (ageSeconds >= 3600) {
+        snprintf(value, sizeof(value), "%luh", static_cast<unsigned long>(ageSeconds / 3600));
+    } else {
+        snprintf(value, sizeof(value), "%lum", static_cast<unsigned long>(ageSeconds / 60));
     }
-    drawStat("/ui/icons/clock.vpa", copy::age(spanish), value, left, kStatusCardY, wide, extra);
+    drawStatusRow("/ui/icons/clock.vpa", spanish ? "EDAD" : "AGE", value, 0);
     snprintf(value, sizeof(value), "%u", pet.overfeeds());
-    drawStat("/ui/icons/feed.vpa", copy::overfeeds(spanish), value, left, kStatusCardY + kStatusCardRow);
+    drawStatusRow("/ui/icons/feed.vpa", spanish ? "EXCESO" : "OVERFEED", value, 1);
     snprintf(value, sizeof(value), "%d", pet.careMistakes());
-    drawStat("/ui/icons/heart.vpa", copy::careMistakes(spanish), value, right, kStatusCardY + kStatusCardRow);
+    drawStatusRow("/ui/icons/heart.vpa", spanish ? "CUIDADO" : "CARE", value, 2);
     snprintf(value, sizeof(value), "%u/4", pet.effortHearts());
-    drawStat("/ui/icons/training.vpa", copy::effort(spanish), value, left, kStatusCardY + kStatusCardRow * 2);
+    drawStatusRow("/ui/icons/training.vpa", spanish ? "ESFUERZO" : "EFFORT", value, 3);
     snprintf(value, sizeof(value), "%d", pet.battles());
-    drawStat("/ui/icons/battle.vpa", copy::battles(spanish), value, right, kStatusCardY + kStatusCardRow * 2);
+    drawStatusRow("/ui/icons/battle.vpa", spanish ? "BATALLAS" : "BATTLES", value, 4);
 }
 
 void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) {
@@ -612,6 +656,20 @@ void Panels::draw(
     switch (panel) {
         case PanelId::Status: {
             const uint8_t page = navigation.panelIndex();
+            const bool statusPageChanged = panelChanged || lastStatusPage_ != page;
+            if (!statusPageChanged && nowMs - lastStatusDataMs_ < 1000) {
+                display_.fillRect(0, 48, kStatusSplitX, 87, kPanel);
+                drawStatusPet(pet, nowMs);
+                constexpr uint32_t kHelixFrameIntervalMs = 100;
+                if (page % Navigation::kStatusPages == 3 && nowMs - lastDnaHelixMs_ >= kHelixFrameIntervalMs) {
+                    drawHelix(
+                        kStatusSplitX + 2, 58, pet.dna(), helixSpin(nowMs),
+                        kHelixWidth, 68
+                    );
+                    lastDnaHelixMs_ = nowMs;
+                }
+                break;
+            }
             char title[20];
             snprintf(
                 title,
@@ -621,10 +679,12 @@ void Panels::draw(
                 (page % Navigation::kStatusPages) + 1,
                 Navigation::kStatusPages
             );
-            beginPanel(panelChanged || lastStatusPage_ != page, navigation.menuIndex(), title, calling);
+            beginPanel(statusPageChanged, navigation.menuIndex(), title, calling);
             lastStatusPage_ = page;
+            lastStatusDataMs_ = nowMs;
             drawStatusPet(pet, nowMs);
             drawStatus(pet, spanish, page, nowMs);
+            if ((page % Navigation::kStatusPages) == 3) lastDnaHelixMs_ = nowMs;
             break;
         }
         case PanelId::Inventory: {
@@ -706,7 +766,20 @@ void Panels::draw(
     output_.endWrite();
 }
 
-void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_t nowMs) {
+void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_t nowMs, const char* language) {
+    if (s.page == PracticeSession::Page::Tech || s.page == PracticeSession::Page::Detail) {
+        struct Canvas {
+            TFT_eSprite& pixels;
+            AssetStore& assets;
+            void fillRect(int x,int y,int w,int h,uint16_t color) { if(w>0 && h>0) pixels.fillRect(x,y,w,h,color); }
+            void drawPixel(int x,int y,uint16_t color) { pixels.drawPixel(x,y,color); }
+            void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
+        } canvas{display_,assets_};
+        const TrainingSession unused;
+        training_ui::View<Canvas>(canvas,unused,pet,nowMs,languageIsSpanish(language)).techniques(s);
+        display_.pushSprite(0,0);
+        return;
+    }
     const uint16_t ink = TFT_BLACK, accent = TFT_YELLOW;
     display_.fillSprite(ink);
     display_.setTextDatum(TL_DATUM);
@@ -778,6 +851,25 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             y += 17;
         }
     }
+    display_.pushSprite(0, 0);
+}
+
+void Panels::drawTraining(
+    const TrainingSession& s, const PetState& pet,
+    uint32_t nowMs, const char* language
+) {
+    struct Canvas {
+        TFT_eSprite& pixels;
+        AssetStore& assets;
+        void fillRect(int x, int y, int w, int h, uint16_t color) {
+            if (w > 0 && h > 0) pixels.fillRect(x,y,w,h,color);
+        }
+        void drawPixel(int x, int y, uint16_t color) { pixels.drawPixel(x,y,color); }
+        void asset(const char* path, uint32_t frame, int x, int y) {
+            assets.drawFrame(pixels,path,static_cast<uint16_t>(frame),x,y);
+        }
+    } canvas{display_, assets_};
+    training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language)).draw();
     display_.pushSprite(0, 0);
 }
 

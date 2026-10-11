@@ -15,6 +15,7 @@ App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleSe
       motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
+    lastInteractionMs_ = nowMs;
     lastTickMs_ = nowMs;
     lastRenderMs_ = nowMs - 50;
     if (settingsStore_.load(pet_, settings_) == LoadResult::Unsupported) {
@@ -205,7 +206,11 @@ void App::activate(uint32_t nowMs) {
     Action action = Action::None;
     switch (navigation_.menuIndex()) {
         case 1: action = Action::Feed; break;
-        case 2: action = Action::Training; break;
+        case 2:
+            // Timed training owns its clock and saves once at completion.
+            training_.reset();
+            trainingActive_ = true;
+            return;
         case 3:
             if (pet_.species() == SpeciesId::Rookie && !pet_.injured() && !pet_.cold()) {
                 practice_ = PracticeSession();
@@ -226,6 +231,18 @@ void App::activate(uint32_t nowMs) {
 void App::tick(uint32_t nowMs, InputEvent event) {
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
+    const bool busy = (trainingActive_ && training_.state == TrainingSession::State::Session)
+        || (practicing_ && practice_.page == PracticeSession::Page::Arena && !practice_.battle.result);
+    if (event != InputEvent::None || busy) lastInteractionMs_ = nowMs;
+    if (!busy && nowMs - lastInteractionMs_ >= 10000
+        && (trainingActive_ || practicing_ || navigation_.panel() != PanelId::Home)) {
+        trainingActive_ = false;
+        practicing_ = false;
+        training_ = TrainingSession();
+        navigation_.setPanel(PanelId::Home);
+        panels_.invalidate();
+        motion_.alignClock(nowMs);
+    }
     if (practicing_) {
         practicing_ = practice_.input(pet_, event, nowMs);
         if (practice_.dirty) {
@@ -235,7 +252,33 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (!practicing_) { panels_.invalidate(); motion_.alignClock(nowMs); }
         else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
             lastRenderMs_ = nowMs;
-            panels_.drawPractice(practice_, pet_, nowMs);
+            panels_.drawPractice(practice_, pet_, nowMs,settings_.language.c_str());
+        }
+        return;
+    }
+    if (trainingActive_) {
+        const bool stillActive = training_.input(pet_, event, nowMs);
+        if (training_.techniquesRequested) {
+            training_.techniquesRequested = false;
+            practice_ = PracticeSession();
+            practice_.page = PracticeSession::Page::Tech;
+            practicing_ = true;
+            return;
+        }
+        if (training_.dirty && training_.needsRollback) {
+            if (!settingsStore_.save(pet_, settings_)) {
+                training_.rollbackFromSnapshot(pet_);
+            }
+            training_.dirty = false;
+            training_.needsRollback = false;
+        }
+        if (!stillActive) {
+            trainingActive_ = false;
+            panels_.invalidate();
+            motion_.alignClock(nowMs);
+        } else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
+            lastRenderMs_ = nowMs;
+            panels_.drawTraining(training_, pet_, nowMs, settings_.language.c_str());
         }
         return;
     }
@@ -311,10 +354,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     const PanelId panel = navigation_.panel();
     uint32_t intervalMs = 33;
-    if (panel == PanelId::Inventory || panel == PanelId::EvolutionTree ||
+    if (panel == PanelId::Status || panel == PanelId::Inventory || panel == PanelId::EvolutionTree ||
         panel == PanelId::EvolutionDetail || panel == PanelId::Rest ||
         panel == PanelId::Options) {
-        intervalMs = 1000;
+        intervalMs = panel == PanelId::Status ? 100 : 1000;
     }
     if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {
         lastRenderMs_ = nowMs;

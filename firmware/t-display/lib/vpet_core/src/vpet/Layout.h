@@ -11,6 +11,16 @@ constexpr int16_t kStatusSplitX = 100;
 constexpr int16_t kStatusCardY = 54;
 constexpr int16_t kStatusCardRow = 27;
 constexpr int16_t kStatusCardH = 24;
+constexpr int16_t kStatusVitalX = 101;
+constexpr int16_t kStatusVitalY = 56;
+constexpr int16_t kStatusVitalRow = 24;
+constexpr int16_t kStatusVitalW = 131;
+constexpr int16_t kStatusVitalH = 21;
+constexpr int16_t kStatusListX = 101;
+constexpr int16_t kStatusListY = 48;
+constexpr int16_t kStatusListRow = 17;
+constexpr int16_t kStatusListW = 131;
+constexpr int16_t kStatusListH = 16;
 constexpr int16_t kEvoChip = 40;
 constexpr int16_t kEvoGap = 6;
 constexpr int16_t kEvoX0 = 5;
@@ -21,6 +31,17 @@ constexpr int16_t kCallIconX = 216;
 constexpr int16_t kCallIconY = 111;
 constexpr uint32_t kNextRepeatDelayMs = 400;
 constexpr uint32_t kNextRepeatEveryMs = 90;
+// DNA stat row layout (Status 4/4). Column-safe contract with the sim:
+//   helix        x=102..142  (kStatusSplitX+2 + kHelixWidth=40)
+//   card         x=145..237  (kStatusDnaRowX=145, kStatusDnaRowW=92)
+//   icon         rowX+1  (12 px slot; the asset is drawn at native 20x20)
+//   label        rowX+13 (16 px wide, font 1)
+//   value        rowX+30 (18 px wide)
+//   bar          rowX+50, barW=34 (ends at rowX+50+34=229; 8 px margin)
+constexpr int16_t kStatusDnaRowX = 145;
+constexpr int16_t kStatusDnaRowW = 92;
+constexpr int16_t kStatusDnaBarOffset = 50;
+constexpr int16_t kStatusDnaBarW = 34;
 
 inline uint8_t inventoryWindowStart(uint8_t count, uint8_t pos, uint8_t size = kInventoryWindow) {
     if (count <= size) return 0;
@@ -29,7 +50,7 @@ inline uint8_t inventoryWindowStart(uint8_t count, uint8_t pos, uint8_t size = k
     return start;
 }
 constexpr int16_t kHelixY = 56;
-constexpr int16_t kHelixWidth = 36;
+constexpr int16_t kHelixWidth = 40;
 constexpr int16_t kHelixHeight = 74;
 constexpr uint8_t kHelixRungs = 6;
 constexpr float kHelixTurns = 1.f;

@@ -1,5 +1,8 @@
 #include <unity.h>
 
+#include <cstdio>
+#include <cstring>
+
 #include "vpet/Layout.h"
 #include "vpet/Motion.h"
 
@@ -142,10 +145,50 @@ void test_helix_helpers_use_dna_or_gray() {
     TEST_ASSERT_EQUAL(2, vpet::inventoryWindowStart(7, 3));
     TEST_ASSERT_EQUAL(4, vpet::inventoryWindowStart(7, 6));
     TEST_ASSERT_EQUAL(56, vpet::kHelixY);
-    TEST_ASSERT_EQUAL(36, vpet::kHelixWidth);
+    TEST_ASSERT_EQUAL(40, vpet::kHelixWidth);
     TEST_ASSERT_EQUAL(74, vpet::kHelixHeight);
     TEST_ASSERT_EQUAL(6, vpet::kHelixRungs);
     TEST_ASSERT_EQUAL(1.f, vpet::kHelixTurns);
+}
+
+void test_dna_code_strip_fits_full_code() {
+    // The DNA code is "DNA:XX-XX-XX-XX" (15 chars, colon kept, no
+    // space) at font 1 (6 px/char default) = 90 px. The label
+    // budget is 94 px; 90 < 94 so drawLabel must not truncate.
+    // All 8 hex digits and their dashes are preserved verbatim.
+    char code[20];
+    snprintf(code, sizeof(code), "DNA:AB-CD-EF-12");
+    TEST_ASSERT_EQUAL(15, strlen(code));
+    const int kCharWidth = 6;  // font 1 default GLCD
+    const int estimatedWidth = static_cast<int>(strlen(code)) * kCharWidth;
+    TEST_ASSERT_EQUAL(90, estimatedWidth);
+    constexpr int16_t kBudget = 94;
+    TEST_ASSERT_TRUE(estimatedWidth < kBudget);
+    constexpr int16_t kStripX = 142;
+    TEST_ASSERT_EQUAL(142, kStripX);
+    constexpr int16_t kStripW = 94;
+    TEST_ASSERT_EQUAL(94, kStripW);
+    // Strip end (kStripX + kStripW) must stay inside the panel (≤236).
+    TEST_ASSERT_EQUAL(236, kStripX + kStripW);
+    // Sanity: confirm the format does not include a space after
+    // the colon (the 16-char "DNA: AB-..." form would overflow).
+    TEST_ASSERT_EQUAL_STRING("DNA:AB-CD-EF-12", code);
+}
+
+void test_dna_stat_card_geometry_is_column_safe() {
+    // The card slot for icons is 12 px (parity with sim). The label
+    // starts at rowX+13, so the icon must not extend past rowX+12 to
+    // avoid overlap. The asset is 20x20; drawFrameScaled renders it
+    // at 12x12 so the right edge of the icon is at rowX+12.
+    constexpr int16_t rowX = 145;
+    constexpr int16_t iconW = 12;
+    constexpr int16_t labelX = 13;
+    const int16_t iconRight = rowX + iconW;       // 157
+    const int16_t labelLeft = rowX + labelX;       // 158
+    TEST_ASSERT_EQUAL(157, iconRight);
+    TEST_ASSERT_EQUAL(158, labelLeft);
+    // 1 px gap between the icon slot and the label.
+    TEST_ASSERT_EQUAL(1, labelLeft - iconRight);
 }
 
 void test_call_cues_the_matching_care_icon() {

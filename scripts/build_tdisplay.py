@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.tdisplay_assets import write_asset, write_catalog_header, write_manifest
+from scripts.training_assets import package_training
 
 
 SPECIES = {
@@ -102,6 +103,7 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
             relative = Path("ui/fx") / f"{source.stem.lower()}.vpa"
             records.append(write_asset(data_dir / relative, [image], image.size))
 
+    records.extend(package_training(sim_build, data_dir, include_dir))
     catalog = {
         "format": 1,
         "display": {"width": 240, "height": 135, "menu_height": 24},

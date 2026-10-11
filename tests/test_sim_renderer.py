@@ -318,19 +318,21 @@ def test_tdisplay_status_keeps_pet_left_and_pages_the_card(tmp_path):
         (page0, STATUS_SPLIT_X + 6, 57),
         (page0, STATUS_SPLIT_X + 6, 84),
         (page0, STATUS_SPLIT_X + 6, 111),
-        (page2, STATUS_SPLIT_X + 74, 56),
+        (page2, STATUS_SPLIT_X + 3, 50),
     ):
         pixel = page.getpixel((icon_x, icon_y))
         assert pixel != ink
         assert sum(pixel) > 220
     assert page0.getpixel((STATUS_SPLIT_X + 20, 48)) == parchment
-    assert page2.getpixel((STATUS_SPLIT_X + 20, 48)) == parchment
+    assert page2.getpixel((STATUS_SPLIT_X - 1, 48)) == parchment
+    assert page2.getpixel((STATUS_SPLIT_X + 5, 52)) != parchment
     gap_y = STATUS_CARD_Y + STATUS_CARD_H + 1
     assert page0.getpixel((STATUS_SPLIT_X + 20, gap_y)) == parchment
     assert page0.crop(left).tobytes() == page1.crop(left).tobytes()
     assert page0.crop(right).tobytes() != page1.crop(right).tobytes()
     assert any(pixel != parchment and pixel != ink for pixel in page0.crop((8, 50, 90, 130)).getdata())
-    well = set(page3.crop((STATUS_SPLIT_X + 6, 56, STATUS_SPLIT_X + 44, 132)).getdata())
+    well_box = (STATUS_SPLIT_X, 56, STATUS_SPLIT_X + 28, 128)
+    well = set(page3.crop(well_box).getdata())
     assert rgb565_to_rgb(helix_color565(pet.dna, 0)) in well
     assert rgb565_to_rgb(helix_color565(pet.dna, 1)) in well
     later = render_frame(
@@ -343,20 +345,18 @@ def test_tdisplay_status_keeps_pet_left_and_pages_the_card(tmp_path):
         pet_x=140,
         now_ms=800,
     )
-    assert page3.crop((STATUS_SPLIT_X + 6, 56, STATUS_SPLIT_X + 44, 132)).tobytes() != later.crop(
-        (STATUS_SPLIT_X + 6, 56, STATUS_SPLIT_X + 44, 132)
-    ).tobytes()
-    later_well = set(later.crop((STATUS_SPLIT_X + 6, 56, STATUS_SPLIT_X + 44, 132)).getdata())
+    assert page3.crop(well_box).tobytes() != later.crop(well_box).tobytes()
+    later_well = set(later.crop(well_box).getdata())
     assert rgb565_to_rgb(helix_color565(pet.dna, 0)) in later_well
     assert rgb565_to_rgb(helix_color565(pet.dna, 1)) in later_well
     assert page3.getpixel((STATUS_SPLIT_X + 20, 48)) == parchment
     assert page3.getpixel((STATUS_SPLIT_X + 20, 50)) == parchment
-    assert page3.getpixel((STATUS_SPLIT_X + 56, 80)) == parchment
+    assert page3.getpixel((STATUS_SPLIT_X + 56, 80)) != parchment
     assert page3.getpixel((STATUS_SPLIT_X + 20, 133)) == parchment
 
 
 def test_tdisplay_dna_id_stays_inside_the_screen(tmp_path):
-    from core.status_card import STATUS_CARD_Y, STATUS_SPLIT_X
+    from core.status_card import STATUS_SPLIT_X
 
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
@@ -373,12 +373,13 @@ def test_tdisplay_dna_id_stays_inside_the_screen(tmp_path):
         pet_x=140,
     )
     parchment = (214, 180, 112)
-    row = STATUS_CARD_Y + 4
-    assert page.getpixel((238, row)) == parchment
-    tail = [page.getpixel((x, row)) for x in range(200, 228)]
-    head = [page.getpixel((x, row)) for x in range(STATUS_SPLIT_X + 44, 180)]
-    assert any(sum(pixel) < sum(parchment) - 30 for pixel in tail)
-    assert any(sum(pixel) < sum(parchment) - 30 for pixel in head)
+    assert page.getpixel((238, 37)) == parchment
+    tail = [page.getpixel((x, y)) for x in range(200, 234)
+            for y in range(29, 46)]
+    head = [page.getpixel((x, y)) for x in range(150, 180)
+            for y in range(29, 46)]
+    assert any(sum(pixel) > 350 for pixel in tail)
+    assert any(sum(pixel) > 350 for pixel in head)
 
 
 def test_status_page_three_differs_from_bars_on_pico():

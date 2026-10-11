@@ -105,6 +105,36 @@ void PetState::gainEv(CombatStat stat, uint8_t amount) {
     ev_[index] = next > 252 ? 252 : static_cast<uint8_t>(next);
 }
 
+void PetState::addEv(CombatStat stat, uint8_t amount) {
+    gainEv(stat, amount);
+}
+
+void PetState::setEvAt(CombatStat stat, uint8_t value) {
+    const uint8_t index = static_cast<uint8_t>(stat);
+    if (index > 5) return;
+    ev_[index] = value > 252 ? 252 : value;
+}
+
+void PetState::setEnergy(int value) {
+    energy_ = value < 0 ? 0 : (value > 100 ? 100 : value);
+}
+
+void PetState::setHappiness(int value) {
+    happiness_ = value < 0 ? 0 : (value > 100 ? 100 : value);
+}
+
+void PetState::setEffort(int value) {
+    effort_ = value < 0 ? 0 : (value > 100 ? 100 : value);
+}
+
+void PetState::setWeight(uint8_t value) {
+    weight_ = value;
+}
+
+void PetState::setTrainingSessions(int value) {
+    trainingSessions_ = value < 0 ? 0 : value;
+}
+
 void PetState::resetAfterEvolution() {
     careMistakes_ = 0;
     callReason_ = CallReason::None;

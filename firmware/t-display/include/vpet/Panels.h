@@ -8,6 +8,7 @@
 #include "vpet/Navigation.h"
 #include "vpet/PetState.h"
 #include "vpet/PracticeSession.h"
+#include "vpet/TrainingSession.h"
 
 namespace vpet {
 
@@ -26,18 +27,22 @@ public:
         uint32_t nowMs = 0
     );
     void invalidate();
-    void drawPractice(const PracticeSession& session, const PetState& pet, uint32_t nowMs);
+    void drawPractice(const PracticeSession& session, const PetState& pet, uint32_t nowMs, const char* language = "ES");
+    void drawTraining(const TrainingSession& session, const PetState& pet, uint32_t nowMs, const char* language);
 
 private:
     void drawChrome(uint8_t selected, const char* title, bool calling);
     void beginPanel(bool panelChanged, uint8_t selected, const char* title, bool calling);
     void drawCallBadge(uint8_t selected, bool calling);
     void drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_t nowMs);
-    void drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin);
+    void drawHelix(
+        int16_t x, int16_t y, const uint8_t dna[4], float spin,
+        int16_t width = 36, int16_t height = 74
+    );
     void drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs);
     void drawInventory(uint8_t selected, bool spanish, const PetState& pet);
     void drawBar(const char* label, int value, int16_t y);
-    void drawVital(const char* icon, const char* label, int value, int16_t y);
+    void drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor);
     void drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail);
     void drawEvolutionTree(const Navigation& navigation);
     void drawEvolutionNode(const Navigation& navigation, uint8_t index);
@@ -77,6 +82,8 @@ private:
     PanelId lastPanel_ = PanelId::Home;
     bool lastSpanish_ = true;
     uint8_t lastStatusPage_ = 255;
+    uint32_t lastDnaHelixMs_ = 0;
+    uint32_t lastStatusDataMs_ = 0;
     uint8_t lastOptionsIndex_ = 255;
     uint8_t lastInventoryIndex_ = 255;
     uint8_t lastEvolutionIndex_ = 255;

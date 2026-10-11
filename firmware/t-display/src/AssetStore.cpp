@@ -69,8 +69,12 @@ bool AssetStore::drawFrame(
         return false;
     }
     uint16_t palette[256];
-    for (uint16_t index = 0; index < paletteCount; ++index) {
-        palette[index] = read16(file);
+    // ESP32 is little endian, matching the VPA palette. Avoid hundreds of
+    // individual filesystem reads for each icon and animation frame.
+    const size_t paletteBytes = paletteCount * sizeof(uint16_t);
+    if (file.read(reinterpret_cast<uint8_t*>(palette), paletteBytes) != paletteBytes) {
+        file.close();
+        return false;
     }
     frame %= frameCount;
     file.seek(13 + paletteCount * 2 + frame * 4);
@@ -119,6 +123,62 @@ bool AssetStore::drawFrame(
         }
     }
     file.close();
+    return true;
+}
+
+bool AssetStore::drawFrameScaled(
+    TFT_eSprite& canvas,
+    const char* path,
+    uint16_t frame,
+    int16_t x, int16_t y,
+    int16_t w, int16_t h,
+    bool flipHorizontal,
+    int32_t tint,
+    uint8_t minLuma
+) {
+    if (w <= 0 || h <= 0 || w > 240 || h > 240 ||
+        static_cast<int32_t>(w) * h > 240 * 240) {
+        return false;
+    }
+    // 20 px is the native icon size; if the caller asks for the same
+    // size we can skip the scratch sprite and scaling.
+    if (w == 20 && h == 20) {
+        return drawFrame(canvas, path, frame, x, y, flipHorizontal, tint, minLuma);
+    }
+    // Sample the destination pixel at (x, y) to use as the sprite
+    // background. This makes the scaled icon blend with whatever is
+    // already on the canvas (typically the card chip color).
+    const uint16_t bg = canvas.readPixel(x, y);
+    TFT_eSprite tmp(&canvas);
+    tmp.setColorDepth(16);
+    if (!tmp.createSprite(20, 20)) {
+        return false;
+    }
+    tmp.fillSprite(bg);
+    if (!drawFrame(tmp, path, frame, 0, 0, flipHorizontal, tint, minLuma)) {
+        tmp.deleteSprite();
+        return false;
+    }
+    // Read the rendered icon into a 20x20 RGB565 buffer, then scale
+    // it with nearest-neighbor sampling into the destination size.
+    // This TFT_eSPI build does not expose a scaled pushSprite, so we
+    // do the scaling ourselves before pushImage.
+    uint16_t src[20 * 20];
+    for (uint16_t row = 0; row < 20; ++row) {
+        for (uint16_t col = 0; col < 20; ++col) {
+            src[row * 20 + col] = tmp.readPixel(col, row);
+        }
+    }
+    tmp.deleteSprite();
+    uint16_t rowBuffer[240];
+    for (int16_t dy = 0; dy < h; ++dy) {
+        const int16_t sy = static_cast<int16_t>(static_cast<int32_t>(dy) * 20 / h);
+        for (int16_t dx = 0; dx < w; ++dx) {
+            const int16_t sx = static_cast<int16_t>(static_cast<int32_t>(dx) * 20 / w);
+            rowBuffer[dx] = src[sy * 20 + sx];
+        }
+        canvas.pushImage(x, y + dy, w, 1, rowBuffer);
+    }
     return true;
 }
 

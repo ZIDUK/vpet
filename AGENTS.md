@@ -14,6 +14,13 @@ with a Python/Pillow/pygame simulator and a preserved Pico/CircuitPython path.
 - Regenerate `build-tdisplay/` and LittleFS data; do not hand-edit generated files.
 - Preserve NVS schema compatibility and existing numeric enum values.
 - Do not enable WiFi or deploy to hardware without an explicit user request.
+- **T-Display deploy authorization (2026-10-08):** the user has explicitly granted
+  Mavis permission to flash the connected ESP32 T-Display board for vPet work.
+  Preconditions before flashing: (1) the user has confirmed the final build
+  incorporates the current Status adjustments in `scripts/sim_renderer.py` and
+  `firmware/t-display/src/Panels.cpp`; (2) `pio run -d firmware/t-display -e tdisplay`
+  completes with the new build artifacts; (3) physical validation of the four
+  240×135 Status pages is captured and reported. Do not flash an older binary.
 - Never delete `out/board-backups/` during cleanup.
 - Keep historical Pico material under its existing legacy labels.
 
@@ -30,3 +37,19 @@ with a Python/Pillow/pygame simulator and a preserved Pico/CircuitPython path.
 - `scripts/`: build, simulation, validation and deployment orchestration.
 - `firmware/t-display/src/`: platform adapters and rendering.
 - `docs/`: update when architecture, persistence, connectivity or workflow changes.
+
+## Coordination (effective 2026-10-08)
+
+- **Codex** owns the Status menu layout/drawing (`scripts/sim_renderer.py`,
+  `scripts/preview_status.py`) and the pixel-level comparison against the approved
+  mockup, including the layout/UI tests that pin pixel positions.
+- **Mavis (M3)** owns the Status domain surface: model, values, rules,
+  i18n/data catalog, and contracts (`src/core/pet.py`, `src/core/status_card.py`,
+  `src/core/i18n.py`, helpers `format_age`, `tr_status_dna_label`,
+  `combat_stat`, `format_dna_id`, `helix_spin`, `helix_color565`,
+  `src/core/menu.py` rules and enums).
+- **Do not edit** the renderers or layout/UI tests while Codex is adjusting the
+  Status UI. Domain contracts must stay backward-compatible so the renderer can
+  swap to the new mockup without breaking pet persistence (NVS schema, numeric
+  enums, balance, save rules preserved).
+- Document only domain facts in `docs/`; visual/layout decisions live with Codex.
