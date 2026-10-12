@@ -73,8 +73,13 @@ archivos SKILL.md presentes. No se ha autorizado una delegacion nueva.
 
 ## P2: exploracion y recompensas
 
-Estado: solicitud pendiente de diseno; no hay funcionalidad implementada.
-Preparar una propuesta independiente antes de cambiar economia/persistencia.
+Estado: en diseño (2026-10-11). No hay funcionalidad implementada.
+Los requerimientos vivos están en
+[exploración](../specs/2026-10-11-exploration-design.md).
+Ya quedó el icono nuevo, la salida larga y el jugador de semana corta
+con combate el sábado. Siguen abiertos el piso del sábado, los números,
+el catálogo y la persistencia. No cambiar economía ni guardado hasta
+aprobar el alcance.
 
 - [ ] Definir entrada del menu superior, destinos, duracion, coste, requisitos,
   retorno anticipado, actividad offline y comportamiento ante reinicio.
