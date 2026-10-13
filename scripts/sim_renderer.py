@@ -85,6 +85,9 @@ from core.dna import HELIX_TURNS, format_dna_id, helix_color565, helix_depth, he
 from core.evolution import (
     EVOLUTION_NODE_COUNT,
     EVO_CHIP,
+    EVO_COLOR_Y,
+    EVO_GAP,
+    EVO_X0,
     evolution_card,
     evolution_hidden,
     evolution_current_stage,
@@ -460,6 +463,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     panel = (214, 180, 112)
     ink = (48, 42, 55)
     yellow = (255, 210, 74)
+    green = (66, 190, 140)
     if panel_mode == "status":
         from core.i18n import tr
         draw.rectangle((0, 24, 239, 134), fill=panel)
@@ -485,6 +489,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         return
     draw.rectangle((0, 24, 239, 134), fill=panel)
     draw.rectangle((3, 27, 236, 47), fill=ink)
+    spanish = getattr(pet, "language", "EN") == "ES"
     title = {
         "inventory": "INVENTORY",
         "evolution": "EVOLUTION",
@@ -494,7 +499,6 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     draw.text((120, 37), title, fill=(255, 255, 255), anchor="mm")
 
     if panel_mode == "inventory":
-        spanish = getattr(pet, "language", "EN") == "ES"
         visible = visible_inventory_indexes(pet)
         current = clamp_visible_inventory_index(pet, panel_index)
         chip = _mix(ink, panel, 0.88)
@@ -524,20 +528,25 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     elif panel_mode == "evolution":
         species = ("Egg.bmp", "Sparkmon.bmp", "Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp")
         current_stage = evolution_current_stage(pet)
-        selected = panel_index % EVOLUTION_NODE_COUNT
+        selected = current_stage if panel_index is None else panel_index % EVOLUTION_NODE_COUNT
         chip = _mix(ink, panel, 0.88)
         outline = _mix(ink, panel, 0.45)
-        spark_x, spark_y = evolution_tree_xy(1)
-        fire_x, fire_y = evolution_tree_xy(2)
-        _dark_x, dark_y = evolution_tree_xy(5)
-        mid_x = spark_x + EVO_CHIP
-        fork_x = fire_x
-        draw.line((mid_x, spark_y + EVO_CHIP // 2, fork_x, fire_y + EVO_CHIP // 2), fill=ink, width=2)
-        draw.line((fork_x, fire_y + EVO_CHIP // 2, fork_x, dark_y + EVO_CHIP // 2), fill=ink, width=2)
-        for index in range(EVOLUTION_NODE_COUNT):
-            stage, dark = evolution_tree_node(index)
-            x, y = evolution_tree_xy(index)
-            hidden = evolution_hidden(stage, dark, current_stage)
+        stride = EVO_CHIP + EVO_GAP
+        center_y = EVO_COLOR_Y + EVO_CHIP // 2
+        reached = (255, 220, 70)
+        window = evolution_window(selected)
+        for slot in range(len(window) - 1):
+            stage = window[slot]
+            x1 = EVO_X0 + slot * stride + EVO_CHIP
+            x2 = x1 + EVO_GAP
+            color = reached if stage < current_stage else outline
+            draw.line((x1, center_y, x2 - 4, center_y), fill=color, width=2)
+            draw.polygon(((x2 - 7, center_y - 3), (x2 - 4, center_y),
+                          (x2 - 7, center_y + 3)), fill=color)
+        for slot, index in enumerate(window):
+            stage, _ = evolution_tree_node(index)
+            x, y = evolution_tree_xy(index, window[0])
+            hidden = evolution_hidden(stage, False, current_stage)
             active = index == selected
             selector = (255, 215, 0)
             draw.rounded_rectangle(
@@ -550,7 +559,19 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             thumb = portrait.resize((32, 32), Image.Resampling.NEAREST)
             mask = thumb.point([0] + [255] * 255, mode="L")
             art = Image.new("RGB", thumb.size, (20, 20, 24)) if hidden else thumb.convert("RGB")
-            frame.paste(art, (x + 4, y + 4), mask)
+            frame.paste(art, (x, y), mask)
+            card = evolution_card(index, pet, EVOLUTION_REGISTRY, spanish)
+            name_color = (145, 165, 165) if hidden else green if stage == current_stage else ink
+            draw.text((x + EVO_CHIP // 2, 98), card["label"],
+                      fill=name_color, font=_status_font(8), anchor="mm")
+        selected_card = evolution_card(selected, pet, EVOLUTION_REGISTRY, spanish)
+        stage_status = selected_card["status"]
+        progress_label = "%s  %d/5" % (stage_status, selected + 1)
+        draw.text((120, 111), progress_label,
+                  fill=green if selected == current_stage else ink, font=_status_font(9), anchor="mm")
+        draw.rounded_rectangle((10, 122, 230, 129), radius=3, outline=outline)
+        filled = 218 * (current_stage + 1) // EVOLUTION_NODE_COUNT
+        draw.rounded_rectangle((11, 123, 11 + filled, 128), radius=2, fill=green)
     elif panel_mode == "evolution_detail":
         spanish = getattr(pet, "language", "EN") == "ES"
         selected = panel_index % EVOLUTION_NODE_COUNT
@@ -639,7 +660,7 @@ def render_frame(
     facing=1,
     status_visible=False,
     panel_mode=None,
-    panel_index=0,
+    panel_index=None,
     options_session=None,
     current_datetime=None,
     profile=None,
@@ -648,6 +669,8 @@ def render_frame(
     """Render the composition shared with the CircuitPython display group."""
     profile = profile or get_display_profile("pico")
     build_dir = Path(build_dir)
+    if panel_index is None and panel_mode != "evolution":
+        panel_index = 0
     background_path = BACKGROUND_NIGHT_PATH if motion_state == "sleep" else BACKGROUND_PATH
     frame = _load_image(device_path(build_dir, background_path)).convert("RGB")
     if frame.size != (profile.width, profile.height):

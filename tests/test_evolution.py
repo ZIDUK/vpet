@@ -276,33 +276,27 @@ def test_force_evolution_reaches_dragfiremon_one_stage_at_a_time():
     assert p.species == "egg"
 
 
-def test_evolution_tree_shares_trunk_and_forks_after_spark():
+def test_evolution_tree_is_a_single_five_stage_line():
     from core.evolution import (
         EVOLUTION_NODE_COUNT,
         EVO_CHIP,
         EVO_COLOR_Y,
-        EVO_DARK_Y,
+        EVO_GAP,
+        EVO_X0,
         evolution_tree_node,
         evolution_tree_xy,
     )
 
-    assert EVOLUTION_NODE_COUNT == 8
-    assert [evolution_tree_node(index) for index in range(8)] == [
-        (0, False),
-        (1, False),
-        (2, False),
-        (3, False),
-        (4, False),
-        (2, True),
-        (3, True),
-        (4, True),
+    assert EVOLUTION_NODE_COUNT == 5
+    assert [evolution_tree_node(index) for index in range(5)] == [
+        (index, False) for index in range(5)
     ]
-    egg_x, egg_y = evolution_tree_xy(0)
-    dark_x, dark_y = evolution_tree_xy(5)
-    assert egg_y == EVO_COLOR_Y
-    assert dark_y == EVO_DARK_Y
-    assert dark_x > egg_x + EVO_CHIP
-    assert evolution_tree_xy(2)[0] == dark_x
+    window = [evolution_tree_xy(index, 2) for index in (2, 3, 4)]
+    assert all(y == EVO_COLOR_Y for _, y in window)
+    assert [x for x, _ in window] == [
+        EVO_X0 + slot * (EVO_CHIP + EVO_GAP) for slot in range(3)
+    ]
+    assert window[-1][0] + EVO_CHIP <= 236
 
 
 def test_evolution_card_shows_reach_rules_or_hides_unknown():
@@ -321,7 +315,7 @@ def test_evolution_card_shows_reach_rules_or_hides_unknown():
     spark = evolution_card(1, pet, EVOLUTION_REGISTRY, spanish=False)
     assert spark["status"] == "REACHED"
     assert "8S" in spark["requirements"]
-    dark = evolution_card(5, pet, EVOLUTION_REGISTRY, spanish=False)
+    dark = evolution_card(4, pet, EVOLUTION_REGISTRY, spanish=False)
     assert dark["hidden"] is True
     assert dark["label"] == "???"
     assert dark["requirements"] == ""
@@ -341,5 +335,5 @@ def test_evolution_window_follows_selected_node():
 
     assert evolution_window(0) == (0, 1, 2)
     assert evolution_window(1) == (0, 1, 2)
-    assert evolution_window(4) == (3, 4, 5)
-    assert evolution_window(7) == (5, 6, 7)
+    assert evolution_window(3) == (2, 3, 4)
+    assert evolution_window(4) == (2, 3, 4)

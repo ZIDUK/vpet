@@ -431,42 +431,71 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
     }
 }
 
-void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index) {
+void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index, bool spanish) {
     const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
     const uint8_t node = index % Navigation::kEvolutionNodeCount;
     const uint8_t stage = Navigation::evolutionNodeStage(node);
-    const bool dark = Navigation::evolutionNodeDark(node);
     const SpeciesId species = kEvolutionStages[stage];
-    const int16_t x = kEvoX0 + stage * (kEvoChip + kEvoGap);
-    const int16_t y = dark ? kEvoDarkY : kEvoColorY;
-    const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
+    const uint8_t start = inventoryWindowStart(Navigation::kEvolutionNodeCount, selected);
+    const int16_t slot = node - start;
+    const int16_t x = kEvoX0 + slot * (kEvoChip + kEvoGap);
+    const int16_t y = kEvoColorY;
+    const bool hidden = stage > navigation.currentStage();
     const bool active = node == selected;
     const uint16_t fill = active ? TFT_YELLOW : kChip;
     display_.fillRoundRect(x, y, kEvoChip, kEvoChip, 4, fill);
     display_.drawRoundRect(x, y, kEvoChip, kEvoChip, 4, active ? TFT_YELLOW : kInk);
-    assets_.drawFrame(display_, portraitPath(species, true), 0, x + 2, y + 2, false, hidden ? TFT_BLACK : -1);
+    assets_.drawFrame(display_, portraitPath(species, true), 0, x, y, false, hidden ? TFT_BLACK : -1);
+    display_.setTextDatum(MC_DATUM);
+    display_.setTextColor(hidden ? TFT_DARKGREY : stage == navigation.currentStage() ? TFT_GREEN : kInk, kPanel);
+    display_.drawString(hidden ? "???" : copy::evoShort(stage, spanish), x + kEvoChip / 2, y + kEvoChip + 7, 1);
+    display_.setTextDatum(TL_DATUM);
 }
 
-void Panels::drawEvolutionTree(const Navigation& navigation) {
+void Panels::drawEvolutionTree(const Navigation& navigation, bool spanish) {
     const int16_t stride = kEvoChip + kEvoGap;
-    const int16_t sparkX = kEvoX0 + stride;
-    const int16_t fireX = kEvoX0 + stride * 2;
-    display_.drawLine(sparkX + kEvoChip, kEvoColorY + kEvoChip / 2, fireX, kEvoColorY + kEvoChip / 2, kInk);
-    display_.drawLine(fireX, kEvoColorY + kEvoChip / 2, fireX, kEvoDarkY + kEvoChip / 2, kInk);
-    for (uint8_t index = 0; index < Navigation::kEvolutionNodeCount; ++index) {
-        drawEvolutionNode(navigation, index);
+    const int16_t centerY = kEvoColorY + kEvoChip / 2;
+    const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+    const uint8_t start = inventoryWindowStart(Navigation::kEvolutionNodeCount, selected);
+    for (uint8_t slot = 0; slot + 1 < kInventoryWindow; ++slot) {
+        const uint8_t stage = static_cast<uint8_t>(start + slot);
+        const int16_t x1 = kEvoX0 + slot * stride + kEvoChip;
+        const int16_t x2 = x1 + kEvoGap;
+        const uint16_t color = stage < navigation.currentStage() ? TFT_YELLOW : kInk;
+        display_.drawLine(x1, centerY, x2 - 3, centerY, color);
+        display_.drawLine(x2 - 6, centerY - 3, x2 - 3, centerY, color);
+        display_.drawLine(x2 - 6, centerY + 3, x2 - 3, centerY, color);
     }
+    for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
+        drawEvolutionNode(navigation, static_cast<uint8_t>(start + slot), spanish);
+    }
+    drawEvolutionProgress(navigation, spanish);
+}
+
+void Panels::drawEvolutionProgress(const Navigation& navigation, bool spanish) {
+    const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
+    const bool hidden = selected > navigation.currentStage();
+    display_.setTextDatum(MC_DATUM);
+    display_.setTextColor(hidden ? TFT_DARKGREY : selected == navigation.currentStage() ? TFT_GREEN : kInk, kPanel);
+    char stageLabel[28];
+    snprintf(stageLabel, sizeof(stageLabel), "%s  %u/5",
+             hidden ? (spanish ? "POR DESCUBRIR" : "UNDISCOVERED") :
+                 selected == navigation.currentStage() ? copy::evoNow(spanish) : copy::evoReached(spanish),
+             selected + 1);
+    display_.drawString(stageLabel, 120, 110, 1);
+    display_.drawRoundRect(10, 122, 220, 7, 3, kInk);
+    display_.fillRoundRect(11, 123, 218 * (navigation.currentStage() + 1) / Navigation::kEvolutionNodeCount, 5, 2, TFT_GREEN);
+    display_.setTextDatum(TL_DATUM);
 }
 
 void Panels::drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail) {
     if (!detail) {
-        drawEvolutionTree(navigation);
+        drawEvolutionTree(navigation, spanish);
         return;
     }
     const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
     const uint8_t stage = Navigation::evolutionNodeStage(selected);
-    const bool dark = Navigation::evolutionNodeDark(selected);
-    const bool hidden = (dark && stage >= 2) || (!dark && stage > navigation.currentStage());
+    const bool hidden = stage > navigation.currentStage();
     const SpeciesId species = kEvolutionStages[stage];
     assets_.drawFrame(display_, portraitPath(species, true), 0, 32, 56, false, hidden ? TFT_BLACK : -1);
     display_.setTextColor(kInk, kPanel);
@@ -510,8 +539,7 @@ void Panels::drawEvolution(const Navigation& navigation, bool spanish, const Pet
     for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
         const uint8_t index = static_cast<uint8_t>(start + slot);
         const uint8_t listStage = Navigation::evolutionNodeStage(index);
-        const bool listDark = Navigation::evolutionNodeDark(index);
-        const bool listHidden = (listDark && listStage >= 2) || (!listDark && listStage > navigation.currentStage());
+        const bool listHidden = listStage > navigation.currentStage();
         const int16_t y = kStatusCardY + slot * kStatusCardRow;
         const bool active = index == selected;
         const uint16_t fill = active ? TFT_YELLOW : kChip;
@@ -725,9 +753,12 @@ void Panels::draw(
         }
         case PanelId::EvolutionTree: {
             const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
-            if (cursorRedrawOnly(lastEvolutionIndex_, selected, false, panelChanged)) {
-                drawEvolutionNode(navigation, lastEvolutionIndex_);
-                drawEvolutionNode(navigation, selected);
+            const uint8_t previousStart = inventoryWindowStart(Navigation::kEvolutionNodeCount, lastEvolutionIndex_);
+            const uint8_t currentStart = inventoryWindowStart(Navigation::kEvolutionNodeCount, selected);
+            if (cursorRedrawOnly(lastEvolutionIndex_, selected, false, panelChanged) && previousStart == currentStart) {
+                drawEvolutionNode(navigation, lastEvolutionIndex_, spanish);
+                drawEvolutionNode(navigation, selected, spanish);
+                drawEvolutionProgress(navigation, spanish);
             } else {
                 beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionTitle(spanish), calling);
                 drawEvolution(navigation, spanish, pet, false);

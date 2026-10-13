@@ -87,7 +87,7 @@ void test_hunger_and_energy_map_to_four_hearts();
 void test_win_ratio_is_zero_until_a_battle_is_played();
 void test_settings_persist_inventory_counts();
 void test_missing_inventory_keys_use_defaults();
-void test_next_walks_color_line_then_dark_branch();
+void test_next_walks_the_five_stage_evolution_line();
 void test_hidden_branch_does_not_reveal_identity();
 void test_held_next_does_not_repeat_before_long_press();
 void test_action_on_known_evolution_opens_detail();
@@ -278,7 +278,7 @@ int main(int, char**) {
     RUN_TEST(test_win_ratio_is_zero_until_a_battle_is_played);
     RUN_TEST(test_settings_persist_inventory_counts);
     RUN_TEST(test_missing_inventory_keys_use_defaults);
-    RUN_TEST(test_next_walks_color_line_then_dark_branch);
+    RUN_TEST(test_next_walks_the_five_stage_evolution_line);
     RUN_TEST(test_hidden_branch_does_not_reveal_identity);
     RUN_TEST(test_action_on_known_evolution_opens_detail);
     RUN_TEST(test_action_on_hidden_evolution_stays_on_tree);

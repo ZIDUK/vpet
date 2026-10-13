@@ -44,8 +44,9 @@ private:
     void drawBar(const char* label, int value, int16_t y);
     void drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor);
     void drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail);
-    void drawEvolutionTree(const Navigation& navigation);
-    void drawEvolutionNode(const Navigation& navigation, uint8_t index);
+    void drawEvolutionTree(const Navigation& navigation, bool spanish);
+    void drawEvolutionNode(const Navigation& navigation, uint8_t index, bool spanish);
+    void drawEvolutionProgress(const Navigation& navigation, bool spanish);
     void drawOptions(
         uint8_t selected,
         BleStatus bluetoothStatus,

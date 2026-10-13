@@ -5,25 +5,23 @@ Synthetic tests can still use `min_age_seconds` and `pet.age_seconds`.
 """
 
 STABILITY_SECONDS = 30
-EVOLUTION_NODE_COUNT = 8
+EVOLUTION_NODE_COUNT = 5
 EVOLUTION_WINDOW = 3
-EVO_CHIP = 40
-EVO_GAP = 6
-EVO_X0 = 5
-EVO_COLOR_Y = 50
-EVO_DARK_Y = 94
+EVO_CHIP = 36
+EVO_GAP = 32
+EVO_X0 = 34
+EVO_COLOR_Y = 56
+EVO_DARK_Y = EVO_COLOR_Y
 
 
 def evolution_tree_node(index):
     index = int(index) % EVOLUTION_NODE_COUNT
-    dark = index >= 5
-    stage = index if index < 5 else index - 3
-    return stage, dark
+    return index, False
 
 
-def evolution_tree_xy(index):
+def evolution_tree_xy(index, window_start=0):
     stage, dark = evolution_tree_node(index)
-    x = EVO_X0 + stage * (EVO_CHIP + EVO_GAP)
+    x = EVO_X0 + (stage - int(window_start)) * (EVO_CHIP + EVO_GAP)
     y = EVO_DARK_Y if dark else EVO_COLOR_Y
     return x, y
 
@@ -38,7 +36,7 @@ def evolution_current_stage(pet):
 
 
 def evolution_hidden(stage, dark, current_stage):
-    return (dark and stage >= 2) or (not dark and stage > current_stage)
+    return stage > current_stage
 
 
 def requirements_to_reach(stage, registry, spanish=False):

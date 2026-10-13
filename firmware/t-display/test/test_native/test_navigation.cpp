@@ -109,7 +109,7 @@ void test_back_in_options_is_ignored() {
     TEST_ASSERT_EQUAL(2, navigation.panelIndex());
 }
 
-void test_next_walks_color_line_then_dark_branch() {
+void test_next_walks_the_five_stage_evolution_line() {
     vpet::Navigation navigation;
     navigation.openEvolutionTree();
     TEST_ASSERT_EQUAL(0, navigation.panelIndex());
@@ -124,14 +124,6 @@ void test_next_walks_color_line_then_dark_branch() {
     TEST_ASSERT_FALSE(vpet::Navigation::evolutionNodeDark(4));
 
     navigation.dispatch(vpet::InputEvent::Next);
-    TEST_ASSERT_EQUAL(5, navigation.panelIndex());
-    TEST_ASSERT_EQUAL(vpet::SpeciesId::Rookie, navigation.selectedSpecies());
-    TEST_ASSERT_TRUE(vpet::Navigation::evolutionNodeDark(5));
-    TEST_ASSERT_EQUAL(2, vpet::Navigation::evolutionNodeStage(5));
-
-    for (uint8_t step = 0; step < 3; ++step) {
-        navigation.dispatch(vpet::InputEvent::Next);
-    }
     TEST_ASSERT_EQUAL(0, navigation.panelIndex());
     TEST_ASSERT_EQUAL(vpet::SpeciesId::Egg, navigation.selectedSpecies());
 }
@@ -171,8 +163,8 @@ void test_action_on_hidden_evolution_stays_on_tree() {
     vpet::Navigation navigation;
     navigation.setCurrentSpecies(vpet::SpeciesId::Rookie);
     navigation.openEvolutionTree();
-    navigation.setPanelIndex(5);
-    TEST_ASSERT_TRUE(vpet::Navigation::evolutionNodeDark(5));
+    navigation.setPanelIndex(4);
+    TEST_ASSERT_FALSE(vpet::Navigation::evolutionNodeDark(4));
     navigation.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
 }

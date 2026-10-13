@@ -45,8 +45,7 @@ void Navigation::select(SpeciesId species) {
 
 bool Navigation::evolutionSelectedHidden() const {
     const uint8_t stage = evolutionNodeStage(panelIndex_);
-    const bool dark = evolutionNodeDark(panelIndex_);
-    return (dark && stage >= 2) || (!dark && stage > currentStage_);
+    return stage > currentStage_;
 }
 
 EvolutionNode Navigation::selectedEvolutionNode() const {

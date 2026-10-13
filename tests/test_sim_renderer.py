@@ -146,8 +146,8 @@ def test_tdisplay_inventory_splits_preview_and_list(tmp_path):
     assert energy.getpixel((STATUS_SPLIT_X + 80, STATUS_CARD_Y + 29)) == selector
 
 
-def test_tdisplay_evolution_tree_branches_after_spark(tmp_path):
-    from core.evolution import EVO_CHIP, EVO_COLOR_Y, EVO_DARK_Y, EVO_GAP, EVO_X0
+def test_tdisplay_evolution_tree_renders_three_stage_window(tmp_path):
+    from core.evolution import EVO_CHIP, EVO_COLOR_Y, EVO_GAP, EVO_X0
 
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
@@ -163,12 +163,11 @@ def test_tdisplay_evolution_tree_branches_after_spark(tmp_path):
     parchment = (214, 180, 112)
     selector = (255, 215, 0)
     stride = EVO_CHIP + EVO_GAP
-    trunk = frame.getpixel((EVO_X0 + 8, EVO_COLOR_Y + 8))
-    leftover_egg = frame.getpixel((EVO_X0 + 8, EVO_DARK_Y + 8))
-    dark_fork = frame.getpixel((EVO_X0 + 2 * stride + 8, EVO_DARK_Y + 8))
-    assert trunk != parchment
-    assert leftover_egg == parchment
-    assert dark_fork != parchment
+    assert frame.getpixel((EVO_X0 + 8, EVO_COLOR_Y + 8)) != parchment
+    for stage in range(3):
+        x = EVO_X0 + stage * stride
+        assert frame.getpixel((x + 1, EVO_COLOR_Y + 1)) != parchment
+    assert EVO_X0 + 2 * stride + EVO_CHIP <= frame.width - 4
     assert frame.getpixel((EVO_X0 + 1, EVO_COLOR_Y + 1)) == selector
     spark = render_frame(
         build_dir,
@@ -623,36 +622,40 @@ def test_backpack_panel_draws_items_and_selected_row():
     assert inventory.getpixel((8, 40)) != (255, 210, 74)
 
 
-def test_book_panel_highlights_current_evolution_form():
+def test_book_panel_highlights_current_evolution_form(tmp_path):
+    profile = get_display_profile("tdisplay")
+    build_dir = tmp_path / "build-tdisplay"
+    build_script.main(profile_name="tdisplay", output_dir=build_dir)
     firemon = render_frame(
-        ROOT / "build",
+        build_dir,
         _rookie(),
         menu_index=6,
         panel_mode="evolution",
+        profile=profile,
     )
     flamemon = render_frame(
-        ROOT / "build",
+        build_dir,
         Pet(species="champion", state=STATE_LIVE),
         menu_index=6,
         panel_mode="evolution",
+        profile=profile,
     )
     dragfiremon = render_frame(
-        ROOT / "build",
+        build_dir,
         Pet(species="ultimate", state=STATE_LIVE),
         menu_index=6,
         panel_mode="evolution",
+        profile=profile,
     )
 
-    assert firemon.getpixel((96, 0)) == (255, 215, 0)
-    assert firemon.getpixel((2, 47)) == (255, 210, 74)
-    assert firemon.getpixel((45, 47)) != (255, 210, 74)
-    assert flamemon.getpixel((2, 47)) != (255, 210, 74)
-    assert flamemon.getpixel((45, 47)) == (255, 210, 74)
-    assert dragfiremon.getpixel((88, 47)) == (255, 210, 74)
+    assert firemon.getpixel((106, 56)) == (255, 215, 0)
+    assert firemon.getpixel((38, 56)) != (255, 215, 0)
+    assert flamemon.getpixel((106, 56)) == (255, 215, 0)
+    assert dragfiremon.getpixel((174, 56)) == (255, 215, 0)
 
-    firemon_card = firemon.crop((5, 49, 37, 81))
-    flamemon_card = firemon.crop((48, 49, 80, 81))
-    dragfiremon_card = firemon.crop((91, 49, 123, 81))
+    firemon_card = firemon.crop((102, 56, 138, 92))
+    flamemon_card = flamemon.crop((102, 56, 138, 92))
+    dragfiremon_card = firemon.crop((170, 56, 206, 92))
     assert any(r > 120 and g < 150 for r, g, _ in firemon_card.getdata())
     assert any(r > 120 and g < 150 for r, g, _ in flamemon_card.getdata())
     assert any(r > 120 and g < 150 for r, g, _ in dragfiremon_card.getdata())

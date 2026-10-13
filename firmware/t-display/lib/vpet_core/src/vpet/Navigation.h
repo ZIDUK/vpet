@@ -30,11 +30,11 @@ public:
     static constexpr uint8_t kInventoryCount = 7;
     static constexpr uint8_t kStatusPages = 4;
     static constexpr uint8_t kRestCount = 4;
-    static constexpr uint8_t kEvolutionNodeCount = 8;
+    static constexpr uint8_t kEvolutionNodeCount = 5;
 
-    static bool evolutionNodeDark(uint8_t index) { return index >= 5; }
+    static bool evolutionNodeDark(uint8_t) { return false; }
     static uint8_t evolutionNodeStage(uint8_t index) {
-        return index < 5 ? index : static_cast<uint8_t>(index - 3);
+        return index % kEvolutionNodeCount;
     }
 
     void dispatch(InputEvent event);
