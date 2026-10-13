@@ -4,7 +4,7 @@ namespace vpet {
 namespace {
 // Mechanical buttons can bounce for a few milliseconds.  Lock subsequent
 // press edges briefly, but emit the first edge immediately for responsive UI.
-constexpr uint32_t kPressLockoutMs = 70;
+constexpr uint32_t kPressLockoutMs = 35;
 }
 
 Input::Input(uint32_t debounceMs, uint32_t longPressMs)

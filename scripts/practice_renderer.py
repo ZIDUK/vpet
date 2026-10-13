@@ -207,7 +207,7 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
         i = session.index
         learned = i < 3 and progress.learned(i)
         pet_sprite(frame, build_dir, 10, 40, 68, i if learned else None, now_ms,
-                   species=session.pet.species)
+                   species=session.pet.species, frame_interval_ms=50)
         for j in range(4):
             x = 4 + j * 28
             draw.rectangle((x, 107, x + 23, 130), fill=TEAL if i == j else PANEL,
@@ -240,7 +240,7 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
     text(draw, (32, 25), names[i], YELLOW)
     # Technique actions: punch, cast, block.
     pet_sprite(frame, build_dir, 0, 42, 68, i, now_ms,
-               species=session.pet.species)
+               species=session.pet.species, frame_interval_ms=50)
     _metric(draw, 43, "POTENCIA" if es else "POWER", "DANO /2" if i == 2 else str(tech["power"]), YELLOW)
     _metric(draw, 57, "USAR" if es else "USE", "+4 MP" if i == 2 else "%d MP" % tech["mp"], MP)
     _metric(draw, 71, "DOMINIO" if es else "MASTERY", "%d/100" % progress.mastery[i], GREEN)
@@ -303,6 +303,16 @@ def _first_actor(battle):
     return 0 if speed_diff > 0 or (speed_diff == 0 and battle.round % 2 == 1) else 1
 
 
+def _combat_lunge(elapsed):
+    if elapsed < 150 or elapsed >= 950:
+        return 0
+    if elapsed < 400:
+        return (elapsed - 150) * 18 // 250
+    if elapsed < 650:
+        return 18
+    return 18 - (elapsed - 650) * 18 // 300
+
+
 def _draw_combatant(frame, build_dir, session, now_ms, side):
     """Render the Firemon or rival at its slot, picking hit / hurt / guard /
     idle based on the actual outcome of the round (damage taken, action
@@ -328,7 +338,10 @@ def _draw_combatant(frame, build_dir, session, now_ms, side):
     own_action = battle.actions[0] if is_player else battle.actions[1]
     other_action = battle.actions[1] if is_player else battle.actions[0]
     damage_taken = battle.damage[1] if is_player else battle.damage[0]
-    x = 24 if is_player else 154
+    home_x = 24 if is_player else 154
+    elapsed = now_ms - session.updated_at
+    lunge = _combat_lunge(elapsed) if session.battle.round > 0 else 0
+    x = home_x + (lunge if is_player else -lunge)
     flip = not is_player
     impact = _impact_active(session, now_ms)
     if not impact:

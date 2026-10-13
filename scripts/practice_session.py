@@ -15,6 +15,34 @@ class PracticeSession:
         self.updated_at = 0
         self.awarded = False
         self.last_order = None
+        self.next_round_at = None
+
+    def _round(self, order, now_ms):
+        if not self.battle.step(order):
+            return
+        self.last_order = order
+        self.updated_at = now_ms
+        self.next_round_at = now_ms + 1450
+        self.index = 0
+        if self.battle.result and not self.awarded:
+            progress = self.pet.techniques
+            for i, count in enumerate(self.battle.uses):
+                progress.mastery[i] = min(100, progress.mastery[i] + count)
+            progress.bond = min(100, progress.bond + 1)
+            self.awarded = True
+            self.message = "" if self.save(self.pet) else "ERROR AL GUARDAR"
+
+    def tick(self, now_ms):
+        if self.training or self.page != "battle" or self.battle.result is not None:
+            return
+        if self.next_round_at is None:
+            self.next_round_at = now_ms + 500
+            return
+        if now_ms < self.next_round_at:
+            return
+        retreat = len(self.choices()) - 1
+        order = -1 if self.index in (0, retreat) else self.pet.techniques.equipped[self.index - 1]
+        self._round(order, now_ms)
 
     def choices(self):
         if self.page == "tech":
@@ -77,15 +105,5 @@ class PracticeSession:
         if self.battle.result or self.index == len(self.choices()) - 1:
             return False
         order = -1 if self.index == 0 else self.pet.techniques.equipped[self.index - 1]
-        if self.battle.step(order):
-            self.last_order = order
-            self.updated_at = now_ms
-            if self.battle.result and not self.awarded:
-                progress = self.pet.techniques
-                for i, count in enumerate(self.battle.uses):
-                    progress.mastery[i] = min(100, progress.mastery[i] + count)
-                progress.bond = min(100, progress.bond + 1)
-                self.awarded = True
-                self.message = "" if self.save(self.pet) else "ERROR AL GUARDAR"
-            self.index = 0
+        self._round(order, now_ms)
         return True

@@ -31,6 +31,31 @@ def test_battle_entry_starts_at_round_zero_without_spending_or_saving():
     assert pet.to_dict() == before
 
 
+def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause():
+    pet = firemon()
+    s = PracticeSession(pet, lambda _: True)
+    s.tick(100)
+    assert s.battle.round == 0
+    s.tick(599)
+    assert s.battle.round == 0
+    s.index = len(s.choices()) - 1
+    s.tick(600)
+    assert s.battle.round == 1
+    s.tick(2049)
+    assert s.battle.round == 1
+    s.tick(2050)
+    assert s.battle.round == 2
+
+
+def test_battle_lunge_moves_toward_center_then_returns():
+    from scripts.practice_renderer import _combat_lunge
+    assert _combat_lunge(50) == 0
+    assert 0 < _combat_lunge(275) < 18
+    assert _combat_lunge(500) == 18
+    assert _combat_lunge(800) < 18
+    assert _combat_lunge(1000) == 0
+
+
 @pytest.mark.parametrize("result", [None, "VICTORIA", "DERROTA", "EMPATE"])
 def test_battle_exit_returns_home_without_preparation_menu(result):
     s = PracticeSession(firemon(), lambda _: True)

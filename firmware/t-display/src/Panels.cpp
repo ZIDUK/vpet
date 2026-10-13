@@ -814,15 +814,21 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
     display_.setTextColor(TFT_WHITE, ink);
     if (s.page == PracticeSession::Page::Arena) {
         assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
-        const bool active = s.battle.round > 0 && nowMs - s.updatedAt < 1500;
+        const uint32_t roundElapsed = nowMs - s.updatedAt;
+        const bool active = s.battle.round > 0 && roundElapsed < 1100;
+        int lunge = 0;
+        if (active && roundElapsed >= 150 && roundElapsed < 400) lunge = (roundElapsed - 150) * 18 / 250;
+        else if (active && roundElapsed >= 400 && roundElapsed < 650) lunge = 18;
+        else if (active && roundElapsed >= 650 && roundElapsed < 950) lunge = 18 - (roundElapsed - 650) * 18 / 300;
         for (int i = 0; i < 2; ++i) {
             const auto& fighter = i == 0 ? s.battle.player : s.battle.rival;
             const int action = active ? s.battle.actions[i] : -1;
             const SpeciesId species = i == 0 ? pet.species() : SpeciesId::Rookie;
             const char* path = battleSpritePath(species, action);
             const uint32_t elapsed = active ? nowMs - s.updatedAt : nowMs;
-            assets_.drawFrame(display_, path, (elapsed / 100) % (action < 0 || action == 2 ? 19 : 15),
-                              i == 0 ? 12 : 140, 22, i == 1);
+            const int homeX = i == 0 ? 12 : 140;
+            assets_.drawFrame(display_, path, (elapsed / 80) % (action < 0 || action == 2 ? 19 : 15),
+                              homeX + (i == 0 ? lunge : -lunge), 22, i == 1);
             display_.fillRect(i * 120, 0, 120, 34, ink);
             display_.setTextColor(TFT_WHITE, ink);
             display_.drawString(i == 0 ? battleSpeciesLabel(species) : "PRACTICA", i * 120 + 4, 1, 1);

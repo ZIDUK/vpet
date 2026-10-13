@@ -253,6 +253,8 @@ def main():
             continue
 
         now_ms = pygame.time.get_ticks()
+        if practice is not None:
+            practice.tick(now_ms)
         busy = ((training is not None and training.state == "session")
                 or (practice is not None and practice.page == "battle" and not practice.battle.result))
         if busy:

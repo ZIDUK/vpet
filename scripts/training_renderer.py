@@ -43,7 +43,7 @@ from scripts.training_session import (TRAINING_ANIMATION_MS,
                                         STATE_CONFIRM, STATE_RESULT, STATE_CANCEL,
                                         STATE_ERROR)
 
-TRAINING_FRAME_INTERVALS = {0: 65, 1: 70, 2: 65, 3: 65, 4: 70, 5: 100}
+TRAINING_FRAME_INTERVALS = {0: 50, 1: 50, 2: 50, 3: 50, 4: 50, 5: 50}
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ def _render_select(build_dir, session, now_ms):
     animation = item["animation"] if item else None
     pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms,
                species=session.pet.species,
-               frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session.index, 100))
+               frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session.index, 75))
     if session.index < len(TRAINING_TYPES):
         info_label(frame, draw, item["icon"], 70, 24,
                    tr_stat(session.pet, item["stat"]), YELLOW)
@@ -247,7 +247,7 @@ def _render_prepare(build_dir, session, now_ms):
     text(draw, (210, 4), "B", MUTED, small=True)
     # Sprite idle on the left.
     pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
-               species=session.pet.species, frame_interval_ms=100)
+               species=session.pet.species, frame_interval_ms=75)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
     real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN)
     es = session.pet.language == "ES"
@@ -291,10 +291,10 @@ def _render_session(build_dir, session, now_ms):
         animation = TRAINING_TYPES[session._animation_index]["animation"]
         pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms,
                    species=session.pet.species,
-                   frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session._animation_index, 100))
+                   frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session._animation_index, 75))
     else:
         pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
-                   species=session.pet.species)
+                   species=session.pet.species, frame_interval_ms=75)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
     real, projected = session.current_view(now_ms)
     es = session.pet.language == "ES"
@@ -326,7 +326,7 @@ def _render_confirm(build_dir, session, now_ms):
     stat = session._chosen_stat
     name = tr_stat(session.pet, stat)
     pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
-               species=session.pet.species)
+               species=session.pet.species, frame_interval_ms=75)
     info_label(frame, draw, _icon_name_for(stat), 70, 24,
                tr(session.pet, "training.confirm.x_rep", name, session.reps),
                YELLOW)
@@ -397,7 +397,7 @@ def _render_result_summary(build_dir, session, now_ms):
     text(draw, (210, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
     # Pet on the left, idle animation.
     pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
-               species=session.pet.species)
+               species=session.pet.species, frame_interval_ms=75)
     summary = session._result_snapshot or {}
     stat = session._chosen_stat
     if stat is None:
@@ -462,7 +462,7 @@ def _render_result_stats(build_dir, session, now_ms):
     paste_icon(frame, asset_icon(build_dir, "Training"), 4, 2)
     text(draw, (26, 4), tr(session.pet, "training.result.title"))
     text(draw, (210, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
-    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms)
+    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms, frame_interval_ms=75)
     summary = session._result_snapshot or {}
     stat = session._chosen_stat
     # Column header for the stats page (a 6-row grid that lives in the

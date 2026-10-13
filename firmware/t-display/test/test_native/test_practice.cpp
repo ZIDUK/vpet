@@ -77,3 +77,23 @@ void test_practice_cpp_stops_after_draw_limit() {
     TEST_ASSERT_EQUAL(3, battle.result);
     TEST_ASSERT_FALSE(battle.step(2));
 }
+
+void test_practice_session_runs_rounds_without_action_input() {
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.rollDna(42);
+    vpet::PracticeSession session;
+    session.input(pet, vpet::InputEvent::Action, 100);
+    session.input(pet, vpet::InputEvent::Next, 100);
+    session.input(pet, vpet::InputEvent::Action, 100);
+    TEST_ASSERT_EQUAL(vpet::PracticeSession::Page::Arena, session.page);
+    TEST_ASSERT_EQUAL(0, session.battle.round);
+    session.tick(pet, 599);
+    TEST_ASSERT_EQUAL(0, session.battle.round);
+    session.tick(pet, 600);
+    TEST_ASSERT_EQUAL(1, session.battle.round);
+    session.tick(pet, 2049);
+    TEST_ASSERT_EQUAL(1, session.battle.round);
+    session.tick(pet, 2050);
+    TEST_ASSERT_EQUAL(2, session.battle.round);
+}

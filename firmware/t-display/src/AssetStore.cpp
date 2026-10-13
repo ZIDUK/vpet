@@ -84,42 +84,54 @@ bool AssetStore::drawFrame(
         return false;
     }
 
-    uint8_t indices[240];
     uint16_t colors[240];
-    for (uint16_t row = 0; row < height; ++row) {
-        if (file.read(indices, width) != width) {
+    constexpr uint16_t rowsPerRead = sizeof(indexRows_) / 240;
+    for (uint16_t firstRow = 0; firstRow < height; firstRow += rowsPerRead) {
+        const uint16_t rowCount = (height - firstRow < rowsPerRead)
+            ? height - firstRow : rowsPerRead;
+        const size_t bytesToRead = static_cast<size_t>(rowCount) * width;
+        if (file.read(indexRows_, bytesToRead) != bytesToRead) {
             file.close();
             return false;
         }
-        uint16_t column = 0;
-        while (column < width) {
-            const uint16_t source = flipHorizontal ? width - column - 1 : column;
-            const uint16_t peek = tint >= 0 ? static_cast<uint16_t>(tint) : palette[indices[source]];
-            const uint8_t red = (peek >> 11) & 0x1F;
-            const uint8_t green = (peek >> 5) & 0x3F;
-            const uint8_t blue = peek & 0x1F;
-            const uint8_t luma = static_cast<uint8_t>((red * 2 + green + blue) * 255 / 156);
-            if (indices[source] == transparent || (minLuma > 0 && luma < minLuma)) {
-                ++column;
-                continue;
-            }
-            const uint16_t runStart = column;
-            uint16_t runLength = 0;
+        for (uint16_t row = 0; row < rowCount; ++row) {
+            const uint8_t* indices = indexRows_ + static_cast<size_t>(row) * width;
+            uint16_t column = 0;
             while (column < width) {
-                const uint16_t runSource = flipHorizontal ? width - column - 1 : column;
-                const uint8_t paletteIndex = indices[runSource];
-                const uint16_t color = tint >= 0 ? static_cast<uint16_t>(tint) : palette[paletteIndex];
-                const uint8_t runRed = (color >> 11) & 0x1F;
-                const uint8_t runGreen = (color >> 5) & 0x3F;
-                const uint8_t runBlue = color & 0x1F;
-                const uint8_t runLuma = static_cast<uint8_t>((runRed * 2 + runGreen + runBlue) * 255 / 156);
-                if (paletteIndex == transparent || (minLuma > 0 && runLuma < minLuma)) {
-                    break;
+                const uint16_t source = flipHorizontal ? width - column - 1 : column;
+                const uint8_t paletteIndex = indices[source];
+                if (paletteIndex == transparent) {
+                    ++column;
+                    continue;
                 }
-                colors[runLength++] = color;
-                ++column;
+                if (minLuma > 0) {
+                    const uint16_t color = tint >= 0 ? static_cast<uint16_t>(tint) : palette[paletteIndex];
+                    const uint8_t red = (color >> 11) & 0x1F;
+                    const uint8_t green = (color >> 5) & 0x3F;
+                    const uint8_t blue = color & 0x1F;
+                    if ((red * 2 + green + blue) * 255 / 156 < minLuma) {
+                        ++column;
+                        continue;
+                    }
+                }
+                const uint16_t runStart = column;
+                uint16_t runLength = 0;
+                while (column < width) {
+                    const uint16_t runSource = flipHorizontal ? width - column - 1 : column;
+                    const uint8_t runIndex = indices[runSource];
+                    if (runIndex == transparent) break;
+                    const uint16_t color = tint >= 0 ? static_cast<uint16_t>(tint) : palette[runIndex];
+                    if (minLuma > 0) {
+                        const uint8_t red = (color >> 11) & 0x1F;
+                        const uint8_t green = (color >> 5) & 0x3F;
+                        const uint8_t blue = color & 0x1F;
+                        if ((red * 2 + green + blue) * 255 / 156 < minLuma) break;
+                    }
+                    colors[runLength++] = color;
+                    ++column;
+                }
+                canvas.pushImage(x + runStart, y + firstRow + row, runLength, 1, colors);
             }
-            canvas.pushImage(x + runStart, y + row, runLength, 1, colors);
         }
     }
     file.close();

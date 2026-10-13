@@ -245,6 +245,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         motion_.alignClock(nowMs);
     }
     if (practicing_) {
+        practice_.tick(pet_, nowMs);
         practicing_ = practice_.input(pet_, event, nowMs);
         if (practice_.dirty) {
             if (!settingsStore_.save(pet_, settings_)) practice_.message = "ERROR AL GUARDAR";

@@ -11,9 +11,36 @@ public:
     uint8_t cursor = 0, technique = 0;
     practice::Battle battle;
     uint32_t updatedAt = 0;
+    uint32_t nextRoundAt = 0;
     const char* message = "";
     const char* reason = "ELIGE ORDEN";
     bool dirty = false;
+    void award(PetState& pet) {
+        for (int i = 0; i < 3; ++i) {
+            int value = pet.practice.mastery[i] + battle.uses[i];
+            pet.practice.mastery[i] = value > 100 ? 100 : value;
+        }
+        if (pet.practice.bond < 100) ++pet.practice.bond;
+        dirty = true;
+    }
+    void round(PetState& pet, int order, uint32_t now) {
+        const int chosen = practice::choose(battle.player, order);
+        reason = order < 0 ? "A SU CRITERIO" : chosen == order ? "SIGUE ORDEN" :
+            order == 1 && battle.player.mp < 8 ? "SIN MP" :
+            battle.player.cooldown[order] ? "EN RECARGA" : chosen == 2 ? "PREFIERE DEFENDER" : "PREFIERE ATACAR";
+        if (battle.step(order)) {
+            updatedAt = now;
+            nextRoundAt = now + 1450;
+            cursor = 0;
+            if (battle.result) award(pet);
+        }
+    }
+    void tick(PetState& pet, uint32_t now) {
+        if (page != Page::Arena || battle.result || static_cast<int32_t>(now - nextRoundAt) < 0) return;
+        const int retreat = count(pet) - 1;
+        const int order = cursor == 0 || cursor == retreat ? -1 : equippedAt(pet, cursor - 1);
+        round(pet, order, now);
+    }
     static const char* name(int i) {
         return i == 0 ? "GOLPE" : i == 1 ? "LLAMA" : "GUARDIA";
     }
@@ -56,7 +83,7 @@ public:
                 battle.player.personality = pet.dna()[3] % 3;
                 battle.player.bond = pet.practice.bond;
                 for (int i = 0; i < 3; ++i) battle.player.mastery[i] = pet.practice.mastery[i];
-                page = Page::Arena; reason = "ELIGE ORDEN";
+                page = Page::Arena; reason = "COMBATE AUTOMATICO"; nextRoundAt = now + 500;
             }
             cursor = 0; message = ""; return true;
         }
@@ -72,21 +99,7 @@ public:
         }
         if (battle.result || cursor == count(pet)-1) { page = Page::Menu; cursor = 1; return true; }
         const int order = cursor == 0 ? -1 : equippedAt(pet, cursor-1);
-        const int chosen = practice::choose(battle.player, order);
-        reason = order < 0 ? "A SU CRITERIO" : chosen == order ? "SIGUE ORDEN" :
-            order == 1 && battle.player.mp < 8 ? "SIN MP" :
-            battle.player.cooldown[order] ? "EN RECARGA" : chosen == 2 ? "PREFIERE DEFENDER" : "PREFIERE ATACAR";
-        if (battle.step(order)) {
-            updatedAt = now; cursor = 0;
-            if (battle.result) {
-                for (int i = 0; i < 3; ++i) {
-                    int value = pet.practice.mastery[i] + battle.uses[i];
-                    pet.practice.mastery[i] = value > 100 ? 100 : value;
-                }
-                if (pet.practice.bond < 100) ++pet.practice.bond;
-                dirty = true;
-            }
-        }
+        round(pet, order, now);
         return true;
     }
 };

@@ -122,7 +122,7 @@ template<class Canvas> class View {
     }
     void portrait(bool active=false) {
         const int i = s.state == State::Select ? (s.cursor < 6 ? s.cursor : 5) : index();
-        const uint32_t interval = !active ? 100 : (i == 1 || i == 4 ? 70 : i == 5 ? 100 : 65);
+        const uint32_t interval = active ? 50 : 75;
         petAsset(active ? actions[i] : "idle",0,30,now/interval);
     }
     void info(int i, const char* value) {
@@ -363,7 +363,7 @@ public:
             rect(5,45,230,1,teal);
             const int i=p.cursor;
             const bool learned=i<3 && pet.practice.learned(i);
-            petAsset(learned ? (i==0 ? "punch" : i==1 ? "cast" : "block") : "idle",10,40,now/100);
+            petAsset(learned ? (i==0 ? "punch" : i==1 ? "cast" : "block") : "idle",10,40,now/50);
             for(int j=0;j<4;++j) {
                 const int x=4+j*28;
                 rect(x,107,24,24,i==j ? teal : panel);
@@ -397,7 +397,7 @@ public:
         const int i=p.technique;
         asset(symbols[i],8,25);
         text(32,25,names[i],yellow);
-        petAsset(i==0 ? "punch" : i==1 ? "cast" : "block",0,42,now/100);
+        petAsset(i==0 ? "punch" : i==1 ? "cast" : "block",0,42,now/50);
         snprintf(line,sizeof(line),"%d",i==0 ? 12 : i==1 ? 24 : 0);
         metric(43,es ? "POTENCIA" : "POWER",i==2 ? "DANO /2" : line,yellow);
         snprintf(line,sizeof(line),"%d MP",i==1 ? 8 : 0);

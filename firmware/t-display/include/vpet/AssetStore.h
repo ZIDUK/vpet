@@ -40,6 +40,10 @@ public:
         int32_t tint = -1,
         uint8_t minLuma = 0
     );
+
+private:
+    // Reused scratch space keeps multi-row LittleFS reads off the loop stack.
+    uint8_t indexRows_[240 * 8]{};
 };
 
 }  // namespace vpet
