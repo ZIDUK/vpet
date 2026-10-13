@@ -61,7 +61,7 @@ public:
         if (page == Page::Detail) return i == 0 ? "ENTRENAR" : i == 1 ? "EQUIPAR" : "VOLVER";
         if (page == Page::Tech) return i == 3 ? "VOLVER" : pet.practice.learned(i) ? name(i) : "???";
         if (battle.result) return "VOLVER";
-        return i == 0 ? "A TU CRITERIO" : i == count(pet)-1 ? "RETIRARSE" : name(equippedAt(pet, i-1));
+        return i == 0 ? "AUTO" : i == count(pet)-1 ? "RETIRARSE" : name(equippedAt(pet, i-1));
     }
     bool input(PetState& pet, InputEvent event, uint32_t now) {
         if (event == InputEvent::Next) { cursor = (cursor + 1) % count(pet); return true; }

@@ -13,7 +13,7 @@ from config import (BACKGROUND_PATH, PET_IDLE_IMAGE_PATH, PET_PUNCH_IMAGE_PATH,
 from core.pet import Pet
 from scripts.practice_icons import INFO_ICONS, PATTERNS, PALETTE, info_icon, technique_icon
 from scripts.practice_renderer import (GREEN, HP, INK, MP, MUTED, PRACTICE_IMPACT_MS, WHITE,
-                                        YELLOW, _draw_atlas, _draw_combatant, bar,
+                                        YELLOW, _draw_atlas, _draw_combatant, _species_atlas, bar,
                                         battle_feedback, impact_sprite, render_practice,
                                         BAND_TOP, BAND_BOTTOM)
 from scripts.practice_session import PracticeSession
@@ -41,6 +41,8 @@ def practice_assets(tmp_path):
         (PET_WALK_IMAGE_PATH, (160, 200, 90)),
         (PET_HIT_IMAGE_PATH, (220, 30, 30)),       # red hit
         (PET_HURT_IMAGE_PATH, (160, 60, 200)),     # magenta hurt
+        (_species_atlas("rookie", "happy"), (20, 220, 60)),
+        (_species_atlas("rookie", "sad"), (220, 30, 30)),
     )
     for path, colour in atlas_specs:
         atlas = Image.new("P", (64, 32))
@@ -1049,8 +1051,7 @@ def test_action_selector_shows_coste_in_mp_blue(practice_assets):
 
 
 def test_action_selector_shows_recupera_in_green(practice_assets):
-    """Guard must surface ``RECUPERA 4 MP`` in green to signal the
-    heal/regen side effect."""
+    """Guard must explain both reduced damage and MP recovery."""
     s = session(learned=True)
     s.pet.techniques.equipped = [0, 2]  # GOLPE + GUARDIA so index 2 is GUARDIA
     s.battle.player.equipped = (0, 2)  # mirror in the battle Fighter
@@ -1060,6 +1061,20 @@ def test_action_selector_shows_recupera_in_green(practice_assets):
     assert _has_text_color(frame, GREEN, 126, 134, 114, 240, tolerance=60), (
         "expected GREEN status text for GUARDIA"
     )
+
+
+@pytest.mark.parametrize(("result", "expected"), [
+    ("VICTORIA", (20, 220, 60)),
+    ("DERROTA", (220, 30, 30)),
+])
+def test_result_card_uses_matching_firemon_emotion(practice_assets, result, expected):
+    s = session()
+    s.battle.result = result
+    s.battle.round = 4
+    s.last_order = -1
+    s.battle.actions = (0, 0)
+    frame = render_practice(practice_assets, s, now_ms=1000)
+    assert frame.getpixel((186, 44)) == expected
 
 
 def test_action_selector_shows_fin_batalla_for_retirarse(practice_assets):

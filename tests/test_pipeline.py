@@ -110,6 +110,8 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "digimon1/Rookie/firemon_hit_atlas.bmp",
         "digimon1/Rookie/firemon_hurt_atlas.bmp",
         "digimon1/Rookie/firemon_dodge_atlas.bmp",
+        "digimon1/Rookie/firemon_happy_atlas.bmp",
+        "digimon1/Rookie/firemon_sad_atlas.bmp",
         "digimon1/Rookie/firemon_block_atlas.bmp",
         "digimon1/Rookie/firemon_evolution_atlas.bmp",
         "UIFx/bag_atlas.bmp",
@@ -195,6 +197,8 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "firemon_hurt_atlas.bmp",
         "firemon_dodge_atlas.bmp",
         "firemon_block_atlas.bmp",
+        "firemon_happy_atlas.bmp",
+        "firemon_sad_atlas.bmp",
     ):
         with Image.open(output / "digimon1" / "Rookie" / name) as atlas:
             assert atlas.mode == "P"

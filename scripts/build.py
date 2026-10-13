@@ -382,14 +382,22 @@ def collect_pet_images():
         (
             "Rookie",
             "dodge",
-            rookie_dir / "firemon_dodge.png",
+            rookie_dir / "firemon-dodge-v2.png",
             5,
             25,
             (0, 20, 204, 190),
             (64, 54),
             (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24),
             64,
-            204,
+            256,
+        ),
+        (
+            "Rookie", "happy", rookie_dir / "firemon-happy.png", 5, 25,
+            (0, 20, 204, 190), (64, 54), tuple(range(5, 20)), 64, 256,
+        ),
+        (
+            "Rookie", "sad", rookie_dir / "firemon-sad.png", 5, 25,
+            (0, 20, 204, 190), (64, 54), tuple(range(5, 20)), 64, 256,
         ),
         (
             "Rookie",

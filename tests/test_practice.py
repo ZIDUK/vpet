@@ -25,7 +25,7 @@ def test_battle_entry_starts_at_round_zero_without_spending_or_saving():
     s = PracticeSession(pet, lambda _: pytest.fail("Opening battle must not save"))
     assert s.page == "battle"
     assert s.battle.round == 0
-    assert s.choices() == ["A TU CRITERIO", "GOLPE", "GUARDIA", "RETIRARSE"]
+    assert s.choices() == ["AUTO", "GOLPE", "GUARDIA", "RETIRARSE"]
     assert s.battle.player.hp == s.battle.player.max_hp
     assert s.battle.player.mp == s.battle.player.max_mp
     assert pet.to_dict() == before

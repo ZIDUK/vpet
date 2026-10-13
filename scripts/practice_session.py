@@ -54,7 +54,7 @@ class PracticeSession:
         if self.battle.result:
             return ["VOLVER"]
         from core.techniques import TECHNIQUES
-        return ["A TU CRITERIO"] + [TECHNIQUES[i]["name"] for i in self.pet.techniques.equipped] + ["RETIRARSE"]
+        return ["AUTO"] + [TECHNIQUES[i]["name"] for i in self.pet.techniques.equipped] + ["RETIRARSE"]
 
     def input(self, event, now_ms):
         if event == "next":

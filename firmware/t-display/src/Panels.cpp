@@ -873,13 +873,44 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
                 display_.drawNumber(value, x + 76, y, 1);
             }
         }
+        if (s.battle.result) {
+            const uint16_t resultColor = s.battle.result == 1 ? TFT_GREEN :
+                s.battle.result == 2 ? TFT_RED : TFT_YELLOW;
+            display_.fillRect(14, 37, 212, 66, TFT_DARKGREY);
+            display_.drawRect(14, 37, 212, 66, resultColor);
+            const char* reaction = s.battle.result == 1 ?
+                "/animations/firemon/firemon_happy.vpa" :
+                "/animations/firemon/firemon_sad.vpa";
+            if (pet.species() == SpeciesId::Rookie && s.battle.result < 3) {
+                assets_.drawFrame(display_, reaction, (nowMs / 100) % 15, 22, 38);
+            } else {
+                assets_.drawFrame(display_, battleSpritePath(pet.species(), -1),
+                                  (nowMs / 100) % 15, 22, 38);
+            }
+            display_.setTextColor(resultColor, TFT_DARKGREY);
+            display_.drawString(s.battle.result == 1 ? "VICTORIA" :
+                                s.battle.result == 2 ? "DERROTA" : "EMPATE", 96, 48, 2);
+            display_.setTextColor(TFT_WHITE, TFT_DARKGREY);
+            display_.drawString(s.battle.result == 1 ? "RIVAL DERROTADO" :
+                                s.battle.result == 2 ? "TE DERROTARON" :
+                                "LIMITE 30 RONDAS", 96, 72, 1);
+            char rounds[20];
+            snprintf(rounds, sizeof(rounds), "RONDAS %d", s.battle.round);
+            display_.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
+            display_.drawString(rounds, 96, 87, 1);
+        }
         display_.fillRect(0, 108, 240, 27, ink);
         display_.setTextColor(accent, ink);
-        const char* result = s.battle.result == 1 ? "VICTORIA" : s.battle.result == 2 ? "DERROTA" : "EMPATE";
-        display_.drawString(*s.message ? s.message : s.battle.result ? result : s.reason, 4, 109, 1);
+        const char* reason = strcmp(s.reason, "A SU CRITERIO") == 0 ? "DECIDE EL PET" : s.reason;
+        display_.drawString(*s.message ? s.message : s.battle.result ? "RESULTADO" : reason, 4, 109, 1);
         display_.fillRect(4, 121, 232, 12, accent);
         display_.setTextColor(ink, accent);
-        display_.drawString(s.label(pet, s.cursor), 8, 123, 1);
+        if (!s.battle.result && s.cursor > 0 && s.cursor < s.count(pet) - 1 &&
+            s.equippedAt(pet, s.cursor - 1) == 2) {
+            display_.drawString("GUARDIA: -50% DANIO  +4 MP", 8, 123, 1);
+        } else {
+            display_.drawString(s.label(pet, s.cursor), 8, 123, 1);
+        }
     } else {
         char title[36];
         snprintf(title, sizeof(title), "%s / %s", battleSpeciesLabel(pet.species()),

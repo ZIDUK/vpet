@@ -35,6 +35,12 @@ def test_battle_sprites_resolve_to_each_combat_evolution():
         assert _species_atlas(species, "hurt").endswith(f"/{hurt}_atlas.bmp")
 
 
+def test_firemon_outcome_reactions_are_only_used_for_firemon():
+    assert _species_atlas("rookie", "happy").endswith("/firemon_happy_atlas.bmp")
+    assert _species_atlas("rookie", "sad").endswith("/firemon_sad_atlas.bmp")
+    assert _species_atlas("champion", "happy").endswith("/flamemon_idle_atlas.bmp")
+
+
 def test_tdisplay_has_idle_punch_and_cast_assets_for_every_combat_evolution():
     assets = {
         "rookie": ("rookie", "firemon"),

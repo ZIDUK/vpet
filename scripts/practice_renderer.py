@@ -147,7 +147,7 @@ def _species_atlas(species, action):
     sprites = {
         "egg": ("Egg", "egg", {"idle": "idle"}),
         "baby": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
-        "rookie": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hit": "hit", "hurt": "hurt"}),
+        "rookie": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hit": "hit", "hurt": "hurt", "happy": "happy", "sad": "sad"}),
         "champion": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "walk"}),
         "ultimate": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "fly"}),
     }
@@ -425,9 +425,8 @@ def _draw_resource_row(frame, draw, x, y, icon_name, label, value, maximum, colo
     text(draw, (x + 80, y - 1), "%d/%d" % (value, maximum), small=True)
 
 
-def _draw_result_banner(draw, session):
-    """Victory / defeat / draw banner over the combatant area. The big
-    result text is painted in its result color; the outline matches."""
+def _draw_result_banner(frame, draw, build_dir, session, now_ms):
+    """Show a compact result card with a Firemon-specific reaction."""
     draw.rectangle((0, 33, 239, 91), fill=INK)
     banner_color = {"VICTORIA": GREEN, "DERROTA": HP, "EMPATE": YELLOW}.get(
         session.battle.result, YELLOW)
@@ -443,6 +442,13 @@ def _draw_result_banner(draw, session):
         text(draw, (16, 70), "RONDAS %d" % session.battle.round, MUTED, small=True)
     if session.message:
         text(draw, (16, 80), session.message, YELLOW, small=True)
+    action = {"VICTORIA": "happy", "DERROTA": "sad"}.get(session.battle.result)
+    if action and session.pet.species == "rookie":
+        _draw_atlas(frame, build_dir, _species_atlas("rookie", action),
+                    174, 38, 48, now_ms, frame_interval_ms=100)
+    else:
+        pet_sprite(frame, build_dir, 174, 38, 48, None, now_ms,
+                   species=session.pet.species)
 
 
 def _draw_feedback_band(frame, draw, session, info):
@@ -525,7 +531,7 @@ def _selector_status(session, command):
     if session.battle.player.mp < tech["mp"]:
         return "SIN MP"
     if command == 2:
-        return "RECUPERA 4 MP"
+        return "MITIGA 50% +4MP"
     return "COSTE %d MP" % tech["mp"]
 
 
@@ -539,7 +545,7 @@ def render_battle(frame, draw, build_dir, session, now_ms):
         _draw_combatant(frame, build_dir, session, now_ms, "rival")
     _draw_combat_header(draw, frame, battle, session.pet)
     if battle.result:
-        _draw_result_banner(draw, session)
+        _draw_result_banner(frame, draw, build_dir, session, now_ms)
     _draw_feedback_band(frame, draw, session, info)
     _draw_action_selector(frame, draw, build_dir, session)
 
