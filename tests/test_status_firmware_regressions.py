@@ -35,10 +35,17 @@ def test_buttons_are_sampled_outside_render_loop():
     assert "xQueueReceive" in source
 
 
-def test_long_press_discards_pending_next_repeats():
+def test_long_press_discards_pending_navigation_events():
     source = (ROOT / "firmware/t-display/src/BoardInput.cpp").read_text()
-    assert "if (event == InputEvent::Back) xQueueReset(self.events_);" in source
+    assert "if (event == InputEvent::Back) {" in source
+    assert "self.nextQueued_.store(false);" in source
     assert source.index("xQueueReset") < source.index("xQueueSend")
+
+
+def test_pending_next_events_are_coalesced():
+    source = (ROOT / "firmware/t-display/src/BoardInput.cpp").read_text()
+    assert "!self.nextQueued_.exchange(true)" in source
+    assert "if (event == InputEvent::Next) nextQueued_.store(false);" in source
 
 
 def test_inactivity_timeout_preserves_live_activities():
@@ -48,3 +55,14 @@ def test_inactivity_timeout_preserves_live_activities():
     assert "if (event != InputEvent::None || busy) lastInteractionMs_ = nowMs;" in source
     assert "!busy && nowMs - lastInteractionMs_ >= 10000" in source
     assert "navigation_.setPanel(PanelId::Home);" in source
+
+
+def test_battle_menu_opens_practice_for_all_combat_evolutions():
+    source = (ROOT / "firmware/t-display/src/App.cpp").read_text()
+    activation = source.split("void App::activate", 1)[1]
+    branch = activation.split("case 3:", 1)[1].split("case 4:", 1)[0]
+    assert "pet_.species() != SpeciesId::Egg" in branch
+    assert "pet_.species() != SpeciesId::Baby" in branch
+    assert "practice_ = PracticeSession();" in branch
+    assert "practicing_ = true;" in branch
+    assert "SpeciesId::Rookie" not in branch

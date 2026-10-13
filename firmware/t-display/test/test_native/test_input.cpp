@@ -13,6 +13,10 @@ void test_training_timed_session();
 void test_training_stat_labels_switch_with_language();
 void test_training_block_reason_per_stat();
 void test_training_block_reason_pet_not_fit();
+void test_energy_item_at_full_energy_is_not_consumed();
+void test_combat_stats_scale_with_evolution_stage();
+void test_evolved_pet_is_eligible_for_training();
+void test_evolution_tree_opens_on_current_stage();
 void test_training_max_reps_energy_bounded();
 void test_training_max_reps_ev_bounded();
 void test_training_max_reps_partial_ev_included();
@@ -51,7 +55,6 @@ void test_baby_animates_after_leaving_egg_hatch();
 void test_battle_reaction_picks_combat_sheet();
 void test_punching_bag_stays_inside_bottom_edge();
 void test_call_cues_the_matching_care_icon();
-void test_next_repeat_is_the_shared_standard();
 void test_call_blink_toggles_every_400ms();
 void test_internal_pages_advance_one_step_per_next();
 void test_menu_opens_expected_panels();
@@ -86,7 +89,7 @@ void test_settings_persist_inventory_counts();
 void test_missing_inventory_keys_use_defaults();
 void test_next_walks_color_line_then_dark_branch();
 void test_hidden_branch_does_not_reveal_identity();
-void test_held_next_repeats_while_held();
+void test_held_next_does_not_repeat_before_long_press();
 void test_action_on_known_evolution_opens_detail();
 void test_action_on_hidden_evolution_stays_on_tree();
 void test_reach_requirements_use_incoming_rule();
@@ -180,13 +183,13 @@ void test_normal_tap_does_not_repeat() {
     TEST_ASSERT_EQUAL(InputEvent::None, input.poll({false, false}, 380));
 }
 
-void test_held_next_repeats_while_held() {
+void test_held_next_does_not_repeat_before_long_press() {
     Input input(25, 2000);
     TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 100));
     TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 499));
-    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 500));
-    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 589));
-    TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 590));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 500));
+    TEST_ASSERT_EQUAL(InputEvent::None, input.poll({true, false}, 1500));
+    TEST_ASSERT_EQUAL(InputEvent::Back, input.poll({true, false}, 2100));
 }
 
 void test_long_next_press_becomes_back() {
@@ -222,7 +225,7 @@ int main(int, char**) {
     RUN_TEST(test_short_next_press);
     RUN_TEST(test_deliberate_next_press_under_two_seconds_stays_next);
     RUN_TEST(test_normal_tap_does_not_repeat);
-    RUN_TEST(test_held_next_repeats_while_held);
+    RUN_TEST(test_held_next_does_not_repeat_before_long_press);
     RUN_TEST(test_long_next_press_becomes_back);
     RUN_TEST(test_action_has_no_long_press_mapping);
     RUN_TEST(test_noisy_next_press_is_emitted_once);
@@ -243,7 +246,6 @@ int main(int, char**) {
     RUN_TEST(test_battle_reaction_picks_combat_sheet);
     RUN_TEST(test_punching_bag_stays_inside_bottom_edge);
     RUN_TEST(test_call_cues_the_matching_care_icon);
-    RUN_TEST(test_next_repeat_is_the_shared_standard);
     RUN_TEST(test_call_blink_toggles_every_400ms);
     RUN_TEST(test_menu_opens_expected_panels);
     RUN_TEST(test_rest_icon_opens_rest_panel);
@@ -348,6 +350,10 @@ int main(int, char**) {
     RUN_TEST(test_training_stat_labels_switch_with_language);
     RUN_TEST(test_training_block_reason_per_stat);
     RUN_TEST(test_training_block_reason_pet_not_fit);
+    RUN_TEST(test_energy_item_at_full_energy_is_not_consumed);
+    RUN_TEST(test_combat_stats_scale_with_evolution_stage);
+    RUN_TEST(test_evolved_pet_is_eligible_for_training);
+    RUN_TEST(test_evolution_tree_opens_on_current_stage);
     RUN_TEST(test_training_max_reps_energy_bounded);
     RUN_TEST(test_training_max_reps_ev_bounded);
     RUN_TEST(test_training_max_reps_partial_ev_included);

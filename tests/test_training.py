@@ -51,6 +51,17 @@ def test_training_rejections_do_not_spend_or_save(blocked):
     assert session.state == "select"
 
 
+@pytest.mark.parametrize("species", ["rookie", "champion", "ultimate"])
+def test_evolved_forms_can_train_and_stats_scale_with_stage(species):
+    pet = firemon()
+    pet.species = species
+    before, projected = training_values(pet, 0)
+    assert training_block_reason(pet, 0) == ""
+    assert projected >= before
+    from core.dna import combat_stat
+    assert pet.combat_stat("off") >= combat_stat(pet.dna, pet.ev, "off", "rookie")
+
+
 def test_training_cap_invalid_input_and_no_repeat_during_animation():
     """Drive the batched flow A→B→C and verify the partial-last-rep
     policy at cap, the animation debounce, and the EV AL MAXIMO

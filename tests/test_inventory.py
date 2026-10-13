@@ -1,6 +1,7 @@
 """Inventory behavior shared by simulator and device."""
 
 from core.inventory import (
+    INVENTORY_ICONS,
     INVENTORY_BACK_INDEX,
     INVENTORY_WINDOW,
     clamp_visible_inventory_index,
@@ -35,6 +36,15 @@ def test_use_item_spends_stock_and_applies_plate_stats():
     assert pet.stats["p"] == 95
 
 
+def test_energy_item_matches_training_energy_and_does_not_waste_at_full():
+    pet = Pet(species="champion", state=STATE_LIVE)
+    pet.stats["e"] = 75
+    assert use_inventory_item(pet, 1) == "used"
+    assert pet.stats["e"] == 100
+    assert use_inventory_item(pet, 1) == "blocked"
+    assert pet.inventory["energy"] == 1
+
+
 def test_empty_and_egg_do_not_change_stats():
     pet = Pet(species="egg", state=STATE_EGG)
     assert use_inventory_item(pet, 0) == "blocked"
@@ -62,6 +72,13 @@ def test_inventory_preview_has_a_short_blurb():
     assert inventory_name(0, spanish=True) == "CARNE"
     assert "20" in inventory_blurb(0, spanish=False)
     assert inventory_name(INVENTORY_BACK_INDEX, spanish=False) == "BACK"
+
+
+def test_inventory_uses_back_arrow_for_return_entry():
+    assert INVENTORY_ICONS == (
+        "ItemMeat", "ItemEnergy", "ItemExp", "ItemRing",
+        "ItemProtein", "ItemMedkit", "Back",
+    )
 
 
 def test_empty_items_disappear_from_inventory_list():

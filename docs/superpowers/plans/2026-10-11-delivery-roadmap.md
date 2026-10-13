@@ -76,16 +76,22 @@ archivos SKILL.md presentes. No se ha autorizado una delegacion nueva.
 Estado: en diseño (2026-10-11). No hay funcionalidad implementada.
 Los requerimientos vivos están en
 [exploración](../specs/2026-10-11-exploration-design.md).
-Ya quedó el icono nuevo, la salida larga y el jugador de semana corta
-con combate el sábado. Siguen abiertos el piso del sábado, los números,
-el catálogo y la persistencia. No cambiar economía ni guardado hasta
-aprobar el alcance.
+El inventario actual, sus efectos y su adquisicion estan en
+[catalogo de objetos](../../items-and-rewards.md); el botin de exploracion
+sigue siendo propuesta.
+Ya quedó el icono nuevo, la salida larga, el jugador de semana corta
+con combate el sábado, el piso **C**, el coste **A**, el retorno
+**B**, la etapa mínima, los relojes, el puesto del icono y las
+cantidades: Jornada +2 EV (tope 8/semana), Noche +2 de dominio
+(tope 4/semana) o el aprendizaje de Llama. Siguen abiertos los
+objetos de cada ruta, el catálogo nuevo y la persistencia. No cambiar
+economía ni guardado hasta aprobar el alcance.
 
 - [ ] Definir entrada del menu superior, destinos, duracion, coste, requisitos,
   retorno anticipado, actividad offline y comportamiento ante reinicio.
 - [ ] Presentar rutas con propositos distintos (materiales, cuidado, aprendizaje)
   y riesgos/recompensas comprensibles; valores concretos requieren aprobacion.
-- [ ] Estandarizar catalogo: ID estable, categoria, rareza, icono, ES/EN,
+- [ ] Para el botin futuro, estandarizar catalogo: ID estable, categoria, rareza, icono, ES/EN,
   stack maximo, efecto tipado, objetivo, magnitud, duracion, limites y origen.
 - [ ] Proponer familias: alimento, recuperacion, material, manual de tecnica y
   cosmetico. Distinguir recuperacion temporal de EV permanente; no cambiar IV

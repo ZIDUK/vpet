@@ -29,8 +29,13 @@ void Navigation::setCurrentSpecies(SpeciesId species) {
 
 void Navigation::openEvolutionTree() {
     panel_ = PanelId::EvolutionTree;
-    panelIndex_ = 0;
-    selectedSpecies_ = kEvolutionStages[0];
+    panelIndex_ = currentStage_;
+    selectedSpecies_ = kEvolutionStages[currentStage_];
+}
+
+void Navigation::openEvolutionTree(SpeciesId currentSpecies) {
+    setCurrentSpecies(currentSpecies);
+    openEvolutionTree();
 }
 
 void Navigation::select(SpeciesId species) {

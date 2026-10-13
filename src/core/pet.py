@@ -217,7 +217,7 @@ class Pet:
         return int(self.ev.get(stat, 0))
 
     def combat_stat(self, stat):
-        return combat_stat(self.dna, self.ev, stat)
+        return combat_stat(self.dna, self.ev, stat, self.species)
 
     def gain_ev(self, stat, amount):
         if stat not in self.ev:

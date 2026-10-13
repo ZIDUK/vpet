@@ -68,6 +68,30 @@ template<class Canvas> class View {
         snprintf(path,sizeof(path),"/training/%s.vpa",name);
         c.asset(path,frame,x,y);
     }
+    void petAsset(const char* action, int x, int y, uint32_t frame=0) {
+        const char* name = "firemon";
+        const char* resolved = action;
+        switch (pet.species()) {
+            case SpeciesId::Egg: name="egg"; resolved="idle"; break;
+            case SpeciesId::Baby:
+                name="sparkmon";
+                if (strcmp(action,"walk")!=0 && strcmp(action,"eat")!=0) resolved="idle";
+                break;
+            case SpeciesId::Rookie: break;
+            case SpeciesId::Champion:
+                name="flamemon";
+                if (strcmp(action,"block")==0) resolved="cast";
+                break;
+            case SpeciesId::Ultimate:
+                name="dragfiremon";
+                if (strcmp(action,"block")==0) resolved="cast";
+                if (strcmp(action,"walk")==0) resolved="fly";
+                break;
+        }
+        char path[64];
+        snprintf(path,sizeof(path),"/training/%s_%s.vpa",name,resolved);
+        c.asset(path,frame,x,y);
+    }
     int index() const {
         const auto i = trainingIndexFor(s.chosenStat);
         return i < 6 ? i : 0;
@@ -98,7 +122,8 @@ template<class Canvas> class View {
     }
     void portrait(bool active=false) {
         const int i = s.state == State::Select ? (s.cursor < 6 ? s.cursor : 5) : index();
-        asset(active ? actions[i] : "idle",0,30,now/100);
+        const uint32_t interval = !active ? 100 : (i == 1 || i == 4 ? 70 : i == 5 ? 100 : 65);
+        petAsset(active ? actions[i] : "idle",0,30,now/interval);
     }
     void info(int i, const char* value) {
         char icon[24]; snprintf(icon,sizeof(icon),"%s10",icons[i]);
@@ -127,22 +152,39 @@ template<class Canvas> class View {
     void select() {
         char tag[12]; snprintf(tag,sizeof(tag),"%d/8",s.cursor+1);
         header(tr("training.title"),tag); portrait(s.cursor < 6);
+        const char* selectBlocked = "";
         if (s.cursor < 6) {
             const CombatStat stat = trainingTypeAt(s.cursor).stat;
             info(s.cursor,name(s.cursor));
             const int real = projectedStatValue(pet,stat,0);
             const int projected = projectedStatValue(pet,stat,6);
             char line[40]; snprintf(line,sizeof(line),"%d > %d (+%d)",real,projected,projected-real);
-            text(70,41,line,green);
-            label(70,57,muted,true,"training.session.ev_static",pet.evAt(stat));
+            rect(66,41,2,19,yellow);
+            text(72,41,line,green);
+            rect(70,61,165,2,panel);
+            rect(70,61,pet.evAt(stat)*165/252,2,green);
             const char* blocked;
             const int reps = trainingMaxReps(pet,stat,&blocked);
-            if (*blocked) text(70,72,reason(blocked),hp,true);
-            else label(70,72,muted,true,"training.timed.available",reps);
-            label(70,87,muted,true,"training.timed.cost",8);
+            selectBlocked = blocked;
+            const int xs[] = {70,126,182};
+            const uint16_t accents[] = {green,yellow,mp};
+            for (int i=0;i<3;++i) {
+                rect(xs[i],73,52,31,panel);
+                rect(xs[i],73,52,2,accents[i]);
+            }
+            text(73,77,"EV",muted,true);
+            snprintf(line,sizeof(line),"%d/252",pet.evAt(stat));
+            text(73,89,line,green,true);
+            text(129,77,es ? "SES" : "SETS",muted,true);
+            snprintf(line,sizeof(line),"%d",reps);
+            text(129,89,line,yellow,true);
+            text(185,77,es ? "COSTE" : "COST",muted,true);
+            snprintf(line,sizeof(line),"%d ENE",8);
+            text(185,89,line,mp,true);
+            if (*blocked) text(70,105,reason(blocked),hp,true);
         } else {
-            text(70,24,tr(s.cursor == 6 ? "training.techniques" : "training.back"),yellow);
-            if (s.cursor == 6) {
+            text(70,24,tr("training.techniques"),yellow);
+            {
                 int learned=0, equipped=0;
                 for(int i=0;i<3;++i) {
                     learned+=pet.practice.learned(i);
@@ -159,7 +201,7 @@ template<class Canvas> class View {
                 text(70,101,line,muted,true);
             }
         }
-        feedback();
+        if (!*selectBlocked) feedback();
         for (int i=0;i<8;++i) {
             const int x = 4+i*29;
             const bool selected = s.cursor == i;
@@ -321,7 +363,7 @@ public:
             rect(5,45,230,1,teal);
             const int i=p.cursor;
             const bool learned=i<3 && pet.practice.learned(i);
-            asset(learned ? (i==0 ? "punch" : i==1 ? "cast" : "block") : "idle",10,40,now/100);
+            petAsset(learned ? (i==0 ? "punch" : i==1 ? "cast" : "block") : "idle",10,40,now/100);
             for(int j=0;j<4;++j) {
                 const int x=4+j*28;
                 rect(x,107,24,24,i==j ? teal : panel);
@@ -355,7 +397,7 @@ public:
         const int i=p.technique;
         asset(symbols[i],8,25);
         text(32,25,names[i],yellow);
-        asset(i==0 ? "punch" : i==1 ? "cast" : "block",0,42,now/100);
+        petAsset(i==0 ? "punch" : i==1 ? "cast" : "block",0,42,now/100);
         snprintf(line,sizeof(line),"%d",i==0 ? 12 : i==1 ? 24 : 0);
         metric(43,es ? "POTENCIA" : "POWER",i==2 ? "DANO /2" : line,yellow);
         snprintf(line,sizeof(line),"%d MP",i==1 ? 8 : 0);

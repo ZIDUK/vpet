@@ -93,6 +93,12 @@ uint8_t PetState::evAt(CombatStat stat) const {
 
 uint8_t PetState::combatStat(CombatStat stat) const {
     int value = 10 + static_cast<int>(ivAt(stat)) * 3 + static_cast<int>(evAt(stat)) / 6;
+    int growth = 100;
+    if (species_ == SpeciesId::Egg) growth = 50;
+    else if (species_ == SpeciesId::Baby) growth = 75;
+    else if (species_ == SpeciesId::Champion) growth = 120;
+    else if (species_ == SpeciesId::Ultimate) growth = 140;
+    value = (value * growth + 50) / 100;
     if (value < 1) return 1;
     if (value > 99) return 99;
     return static_cast<uint8_t>(value);
@@ -574,6 +580,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
     if (dead_ || cold_ || species_ == SpeciesId::Egg) return ItemUseResult::Blocked;
     if (index == 0 && !canFeed()) return ItemUseResult::Blocked;
     if (index == 5 && !injured_) return ItemUseResult::Blocked;
+    if (index == 1 && energy_ >= 100) return ItemUseResult::Blocked;
     uint8_t* stock = nullptr;
     switch (index) {
         case 0: stock = &meat_; break;

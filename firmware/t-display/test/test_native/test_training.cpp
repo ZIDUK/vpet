@@ -120,6 +120,15 @@ void test_training_block_reason_per_stat() {
     );
 }
 
+void test_evolved_pet_is_eligible_for_training() {
+    auto pet = makeRookie(80);
+    pet.evolveTo(vpet::SpeciesId::Champion);
+    TEST_ASSERT_EQUAL_STRING(vpet::kTrainingOk,
+        vpet::trainingBlockReason(pet, vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(pet.combatStat(vpet::CombatStat::Off),
+        vpet::projectedStatValue(pet, vpet::CombatStat::Off, 0));
+}
+
 void test_training_block_reason_pet_not_fit() {
     // Egg / Baby / dead / injured / cold all yield PET NO APTO.
     {

@@ -87,6 +87,7 @@ from core.motion import (
     MOTION_WALK,
     PetMotion,
 )
+from core.dna import STATUS_PAGE_COUNT
 from core.pet import Pet, STATE_LIVE
 from core.options import OptionsSession
 from core.save import load_pet, save_pet
@@ -379,7 +380,7 @@ def run():
             if panel_mode == "inventory":
                 inventory_index = next_visible_inventory_index(pet, inventory_index)
             elif panel_mode == "status":
-                inventory_index = 1 - inventory_index
+                inventory_index = (inventory_index + 1) % STATUS_PAGE_COUNT
             elif panel_mode == "options":
                 options_session.next()
             else:
@@ -415,7 +416,12 @@ def run():
                 options_session = OptionsSession()
                 panel_mode = "options"
             else:
-                activate_menu_item(pet, motion, menu_index, time.monotonic())
+                hour = 12
+                try:
+                    hour = time.localtime().tm_hour
+                except (AttributeError, OverflowError, OSError):
+                    pass
+                activate_menu_item(pet, motion, menu_index, time.monotonic(), hour=hour)
 
         pet.decay_if_due()
         now = time.monotonic()
@@ -423,7 +429,17 @@ def run():
         last_now = now
         if pet.is_live:
             pet.stage_age_seconds += elapsed
-            pet.update_call(int(now * 1000), CARE_TIME_SCALE)
+            hour = 12
+            try:
+                hour = time.localtime().tm_hour
+            except (AttributeError, OverflowError, OSError):
+                pass
+            pet.update_call(
+                int(now * 1000),
+                CARE_TIME_SCALE,
+                hour,
+                motion.state == MOTION_SLEEP,
+            )
         if motion.state == MOTION_IDLE and evolution.evolve(pet, CARE_TIME_SCALE):
             motion.start_evolution(now)
         motion.update(now)
@@ -531,6 +547,7 @@ def run():
         if panel_mode == "status":
             next_snapshot = (
                 "status",
+                inventory_index,
                 int(now),
                 pet.species,
                 pet.battles_won,
@@ -542,9 +559,11 @@ def run():
                 pet.stats["h"],
                 pet.stats["e"],
                 pet.stats["p"],
+                tuple(getattr(pet, "dna", (0, 0, 0, 0))),
+                tuple(sorted(getattr(pet, "ev", {}).items())),
             )
             if next_snapshot != panel_snapshot:
-                draw_status(panel_bitmap, pet)
+                draw_status(panel_bitmap, pet, page=inventory_index)
                 panel_snapshot = next_snapshot
         elif panel_mode == "inventory":
             next_snapshot = (

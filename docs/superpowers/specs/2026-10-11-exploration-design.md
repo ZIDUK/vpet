@@ -34,6 +34,14 @@ un poco más fuerte. Dejar el aparato en un cajón no maxea al pet.
 | Stats permanentes | Con tope. La exploración no regala crecimiento ilimitado. |
 | Recuperación temporal y EV permanente | Efectos distintos. No se mezclan en un mismo premio. |
 | Expediciones atrasadas | Si el jugador no abre el aparato, se resuelve un solo viaje. No se simulan varias salidas perdidas. |
+| Piso del sábado | **C**, cerrado el 2026-10-12. Una semana deja un piso de las dos cosas: EV con tope semanal y progreso de técnica, más el objeto de la ruta. Quien además usó la pesa o el entrenamiento del menú llega más fuerte. |
+| Ritmo frente al entrenamiento | La pesa sigue siendo el camino fuerte para subir una stat. Una semana completa de mandarlo solo queda por debajo de unas pocas pesas. La exploración no paga igual ni mejor que la sesión activa. |
+| Coste de energía | **A**, cerrado el 2026-10-12. La salida no gasta energía. El coste es el tiempo y que, hasta que vuelva, el pet no está para entrenar ni pelear. La energía sigue disponible para cuidar, usar la pesa y combatir cuando está en casa. |
+| Retorno anticipado | **B**, cerrado el 2026-10-12. Vuelve en el acto y cobra solo la parte proporcional al tiempo ya transcurrido, dentro de la misma ruta. Esa cobranza es la única. No queda un segundo premio al cumplirse el reloj original. |
+| Quién puede salir | Cerrado el 2026-10-12. El huevo y el bebé se quedan en casa. Explorar empieza en rookie, la misma etapa en la que ya puede entrenar y pelear. Desde ahí, la única traba es que no esté ya entrenando, peleando o de viaje. No hay candado de hambre ni de energía. Si salió mal cuidado, el botín cae en la parte peor de la misma ruta. |
+| Relojes | Cerrados el 2026-10-12. Patio: 30 minutos. Jornada: 8 horas. Noche: 8 horas. |
+| Puesto del icono | Cerrado el 2026-10-12. Después de entrenamiento y antes de batalla: Status, comida, entrenamiento, exploración, batalla, descanso, objetos, pedia, opciones. |
+| Cantidades | Cerradas el 2026-10-12. Jornada completa: +2 EV en la stat elegida al salir, tope 8 EV por semana entre todas las stats. Noche completa con técnica aprendida: +2 de dominio, tope 4 por semana. Noche completa sin Llama aprendida: +1 al contador de aprendizaje; dos noches completas la aprenden. Patio: sin EV ni técnica. Por debajo de 4 horas el premio permanente de Jornada o Noche es 0; a las 4 horas, la mitad (+1 EV o +1 de dominio). El contador de Llama solo sube con la noche completa. El tope se reinicia el lunes a las 00:00. El resultado bueno o pobre dentro de la misma ruta lo decide el cuidado, sin azar. |
 | Implementación | No empieza hasta aprobar alcance y balance. |
 
 ## Ritmo de la semana
@@ -44,18 +52,18 @@ un poco más fuerte. Dejar el aparato en un cajón no maxea al pet.
 - El sábado pelea.
 - La exploración pone el piso de la semana. El entrenamiento corto y la práctica ponen la ventaja de quien sí tuvo esos minutos.
 
-## Caminos propuestos
+## Caminos
 
-Tres relojes, una familia de botín por camino. La calidad cae dentro de esa
-familia. Un viaje no cambia de familia ni entrega objeto raro, EV y técnica
-a la vez. Las duraciones y las cantidades de la tabla son la forma del
-reloj, no números aprobados.
+Tres relojes cerrados, una familia de botín por camino. La calidad cae dentro
+de esa familia. Un viaje no cambia de familia ni entrega objeto raro, EV y
+técnica a la vez. Los números de EV y de técnica están cerrados. Los objetos
+concretos de cada ruta siguen sin definirse.
 
-| Camino | Cuándo se manda | Botín | Qué deja para el sábado |
+| Camino | Reloj | Premio permanente | Tope |
 |---|---|---|---|
-| Patio | Un hueco corto, menos de una hora | Comida o energía | El pet sigue usable. Casi no falla. |
-| Jornada | La mañana, hasta la noche | Material o cuidado | Un paso de EV con tope semanal, en la stat de esa ruta. |
-| Noche | Al dormir | Más raro: chispa de técnica, o vuelve hambriento si salió mal cuidado | Progreso de una técnica. |
+| Patio | 30 minutos | Ninguno. Solo comida o energía. | Sin EV ni técnica. |
+| Jornada | 8 horas | +2 EV en la stat elegida al salir. A las 4 horas, +1 EV. Antes, 0. | 8 EV por semana, entre todas las stats. |
+| Noche | 8 horas | Si Llama no está aprendida, +1 al contador y solo con la noche completa. Si ya hay técnica aprendida, +2 de dominio; a las 4 horas, +1. | Dos noches completas aprenden Llama. Dominio: 4 por semana. |
 
 El cuidado previo inclina el resultado hacia la parte buena de la misma
 familia. Un pet hambriento o agotado no descubre otra categoría de premio:
@@ -76,17 +84,11 @@ otros juegos de criar monstruos:
 
 ## Sigue abierto
 
-1. Qué garantiza una semana de expediciones para el sábado.
-   - **A.** Un pet que ya puede pelear: EV con tope y una técnica avanzada. Los objetos son extra.
-   - **B.** La bolsa llena. Los stats siguen saliendo de los minutos de entrenamiento activo.
-   - **C.** Un piso de las dos cosas, bajo un tope semanal. Quien además entrenó llega más fuerte.
-   - Recomendación de este brainstorm: **C.** Sin elegir todavía.
-2. Duraciones reales, coste de energía, requisitos para salir y qué pasa si se cancela a mitad.
-3. Orden del icono nuevo entre las ocho entradas actuales.
-4. Catálogo: ID estable, categoría, rareza, icono, ES/EN, stack máximo, efecto tipado, objetivo, magnitud, duración, límites y origen.
-5. Familias a confirmar: alimento, recuperación, material, manual de técnica. El cosmético queda con el álbum, fuera de este corte.
-6. Inventario lleno más allá de «espera en la puerta», recompensa duplicada, topes, probabilidades y tablas por destino.
-7. Guardado atómico de salida, regreso y reclamación única, compatible con el esquema NVS actual. No se diseña la serialización hasta cerrar el alcance.
+1. Objetos concretos de cada ruta. El catálogo actual no se repone: ver `docs/items-and-rewards.md`. Falta decidir qué objeto entrega Patio, Jornada y Noche.
+2. Catálogo: ID estable, categoría, rareza, icono, ES/EN, stack máximo, efecto tipado, objetivo, magnitud, duración, límites y origen.
+3. Familias a confirmar: alimento, recuperación, material, manual de técnica. El cosmético queda con el álbum, fuera de este corte.
+4. Inventario lleno más allá de «espera en la puerta», recompensa duplicada y tablas por destino.
+5. Guardado atómico de salida, regreso y reclamación única, compatible con el esquema NVS actual. No se diseña la serialización hasta cerrar el alcance.
 
 ## Fuera de este corte
 
@@ -95,3 +97,8 @@ otros juegos de criar monstruos:
 - Cambiar IV o permitir EV sin tope.
 - Álbum, sellos y cosméticos de colección.
 - Habilitar WiFi o depender de un servidor para que el tiempo siga corriendo.
+
+El inventario que si existe, sus efectos y sus cantidades iniciales estan en
+[Catalogo de objetos](../../items-and-rewards.md). Ese catalogo confirma que
+todavia no hay una fuente repetible de botin; las familias de esta propuesta no
+deben presentarse como mecanicas disponibles.

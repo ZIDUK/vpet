@@ -4,9 +4,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from config import (BACKGROUND_PATH, PET_IDLE_IMAGE_PATH, PET_PUNCH_IMAGE_PATH,
-                    PET_CAST_IMAGE_PATH, PET_BLOCK_IMAGE_PATH, PET_WALK_IMAGE_PATH,
-                    PET_HIT_IMAGE_PATH, PET_HURT_IMAGE_PATH,
+from config import (BACKGROUND_PATH,
                     PET_HIT_FRAME_COUNT, PET_HURT_FRAME_COUNT,
                     PET_HIT_FRAME_INTERVAL, PET_HURT_FRAME_INTERVAL,
                     PRACTICE_IMPACT_MS)
@@ -145,20 +143,39 @@ def _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip=False,
     frame.paste(sprite, (x, y), sprite)
 
 
-def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False):
-    path = {0: PET_PUNCH_IMAGE_PATH, 1: PET_CAST_IMAGE_PATH, 2: PET_BLOCK_IMAGE_PATH,
-            "walk": PET_WALK_IMAGE_PATH}.get(action, PET_IDLE_IMAGE_PATH)
-    _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip)
+def _species_atlas(species, action):
+    sprites = {
+        "egg": ("Egg", "egg", {"idle": "idle"}),
+        "baby": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
+        "rookie": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hit": "hit", "hurt": "hurt"}),
+        "champion": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "walk"}),
+        "ultimate": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "fly"}),
+    }
+    stage, name, available = sprites.get(species, sprites["rookie"])
+    requested = action if action in available else ("punch" if action in ("hit", "hurt") and "punch" in available else "idle")
+    return f"/digimon1/{stage}/{name}_{available[requested]}_atlas.bmp"
 
 
-def impact_sprite(frame, build_dir, x, y, size, kind, now_ms, flip=False):
+def _practice_species_label(species):
+    return {"egg": "EGG", "baby": "SPARKMON", "rookie": "FIREMON",
+            "champion": "FLAMEMON", "ultimate": "DRAGFIRE"}.get(species, "VPET")
+
+
+def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False, species="rookie", frame_interval_ms=100):
+    requested = {0: "punch", 1: "cast", 2: "block", "walk": "walk", "eat": "eat"}.get(action, "idle")
+    path = _species_atlas(species, requested)
+    _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip,
+                frame_interval_ms=frame_interval_ms)
+
+
+def impact_sprite(frame, build_dir, x, y, size, kind, now_ms, flip=False, species="rookie"):
     """Render the hit (attacker) or hurt (defender) frame for PRACTICE_IMPACT_MS."""
     if kind == "hit":
-        path = PET_HIT_IMAGE_PATH
+        path = _species_atlas(species, "hit")
         count = PET_HIT_FRAME_COUNT
         interval_ms = int(PET_HIT_FRAME_INTERVAL * 1000)
     else:
-        path = PET_HURT_IMAGE_PATH
+        path = _species_atlas(species, "hurt")
         count = PET_HURT_FRAME_COUNT
         interval_ms = int(PET_HURT_FRAME_INTERVAL * 1000)
     _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip,
@@ -189,7 +206,8 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
         draw.line((5, 45, 234, 45), fill=TEAL)
         i = session.index
         learned = i < 3 and progress.learned(i)
-        pet_sprite(frame, build_dir, 10, 40, 68, i if learned else None, now_ms)
+        pet_sprite(frame, build_dir, 10, 40, 68, i if learned else None, now_ms,
+                   species=session.pet.species)
         for j in range(4):
             x = 4 + j * 28
             draw.rectangle((x, 107, x + 23, 130), fill=TEAL if i == j else PANEL,
@@ -221,7 +239,8 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
     paste_icon(frame, technique_icon(tech["id"]), 8, 25)
     text(draw, (32, 25), names[i], YELLOW)
     # Technique actions: punch, cast, block.
-    pet_sprite(frame, build_dir, 0, 42, 68, i, now_ms)
+    pet_sprite(frame, build_dir, 0, 42, 68, i, now_ms,
+               species=session.pet.species)
     _metric(draw, 43, "POTENCIA" if es else "POWER", "DANO /2" if i == 2 else str(tech["power"]), YELLOW)
     _metric(draw, 57, "USAR" if es else "USE", "+4 MP" if i == 2 else "%d MP" % tech["mp"], MP)
     _metric(draw, 71, "DOMINIO" if es else "MASTERY", "%d/100" % progress.mastery[i], GREEN)
@@ -313,7 +332,8 @@ def _draw_combatant(frame, build_dir, session, now_ms, side):
     flip = not is_player
     impact = _impact_active(session, now_ms)
     if not impact:
-        pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip)
+        pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip,
+                   session.pet.species if is_player else "rookie")
         return
     first = _first_actor(battle)
     is_first_actor = (is_player and first == 0) or (not is_player and first == 1)
@@ -327,16 +347,20 @@ def _draw_combatant(frame, build_dir, session, now_ms, side):
         else:
             kind = "hit"
         impact_sprite(frame, build_dir, x, 33, 60, kind,
-                       now_ms - session.updated_at, flip)
+                      now_ms - session.updated_at, flip,
+                      session.pet.species if is_player else "rookie")
         return
     if damage_taken > 0:
         impact_sprite(frame, build_dir, x, 33, 60, "hurt",
-                       now_ms - session.updated_at, flip)
+                      now_ms - session.updated_at, flip,
+                      session.pet.species if is_player else "rookie")
         return
     if own_action == 2:
-        pet_sprite(frame, build_dir, x, 33, 60, 2, now_ms, flip)
+        pet_sprite(frame, build_dir, x, 33, 60, 2, now_ms, flip,
+                   session.pet.species if is_player else "rookie")
         return
-    pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip)
+    pet_sprite(frame, build_dir, x, 33, 60, None, now_ms, flip,
+               session.pet.species if is_player else "rookie")
 
 
 def _order_icon(session, size=10):
@@ -359,14 +383,14 @@ def _action_icon(action, size=10):
     return base.resize((size, size), Image.Resampling.NEAREST) if size != 16 else base
 
 
-def _draw_combat_header(draw, frame, battle):
+def _draw_combat_header(draw, frame, battle, pet):
     """Top band: title, wide HP/MP bars and right-aligned ``value/max``
     numbers. Each side occupies half the screen, split at ``SPLIT_X``."""
     draw.rectangle((0, 0, 239, HEADER_BOTTOM), fill=INK)
     draw.line((SPLIT_X, 3, SPLIT_X, 30), fill=TEAL)
-    # Left column: FIREMON (x=4..118), right column: PRACTICA (x=120..238).
+    # Left column: current pet form (x=4..118), right column: PRACTICA.
     for x, name, fighter, color_hp, color_mp in (
-        (4, "FIREMON", battle.player, HP, MP),
+        (4, _practice_species_label(pet.species), battle.player, HP, MP),
         (125, "PRACTICA", battle.rival, HP, MP),
     ):
         text(draw, (x, 0), name)
@@ -500,7 +524,7 @@ def render_battle(frame, draw, build_dir, session, now_ms):
     if not battle.result:
         _draw_combatant(frame, build_dir, session, now_ms, "player")
         _draw_combatant(frame, build_dir, session, now_ms, "rival")
-    _draw_combat_header(draw, frame, battle)
+    _draw_combat_header(draw, frame, battle, session.pet)
     if battle.result:
         _draw_result_banner(draw, session)
     _draw_feedback_band(frame, draw, session, info)

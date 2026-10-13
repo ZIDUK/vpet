@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
+#include <atomic>
 #include "vpet/Input.h"
 
 namespace vpet {
@@ -17,6 +18,7 @@ private:
     static void sampleTask(void* context);
     QueueHandle_t events_ = nullptr;
     Input input_;
+    std::atomic<bool> nextQueued_{false};
 };
 
 }  // namespace vpet

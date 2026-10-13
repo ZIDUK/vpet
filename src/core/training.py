@@ -26,7 +26,7 @@ def training_values(pet, index):
     stat = TRAINING_TYPES[index]["stat"]
     projected_ev = dict(pet.ev)
     projected_ev[stat] = min(252, pet.ev_at(stat) + TRAINING_EV_GAIN)
-    before, after = pet.combat_stat(stat), combat_stat(pet.dna, projected_ev, stat)
+    before, after = pet.combat_stat(stat), combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         return 40 + before * 2, 40 + after * 2
     if stat == "mp":
@@ -37,7 +37,7 @@ def training_values(pet, index):
 def training_block_reason(pet, index):
     if index not in range(len(TRAINING_TYPES)):
         return "TIPO INVALIDO"
-    if not pet.is_live or pet.species != "rookie" or pet.dead or pet.injured or getattr(pet, "cold", False):
+    if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured or getattr(pet, "cold", False):
         return "PET NO APTO"
     if pet.ev_at(TRAINING_TYPES[index]["stat"]) >= 252:
         return "NIVEL MAXIMO"
@@ -130,7 +130,7 @@ def batch_block_reason(pet, stat):
     single source of truth for state A and state B of the batched UI."""
     if stat not in (t["stat"] for t in TRAINING_TYPES):
         return "TIPO INVALIDO"
-    if not pet.is_live or pet.species != "rookie" or pet.dead or pet.injured \
+    if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured \
             or getattr(pet, "cold", False):
         return "PET NO APTO"
     if pet.ev_at(stat) >= 252:
@@ -205,7 +205,7 @@ def batch_projected_stat(pet, stat, ev_delta):
     the project's pool conversions (40 + hp*2, 10 + mp)."""
     projected_ev = dict(pet.ev)
     projected_ev[stat] = min(252, pet.ev_at(stat) + ev_delta)
-    value = combat_stat(pet.dna, projected_ev, stat)
+    value = combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         return 40 + value * 2
     if stat == "mp":
@@ -216,14 +216,14 @@ def batch_projected_stat(pet, stat, ev_delta):
 def batch_projected_value(pet, stat, ev_delta):
     """Convenience wrapper returning (current, projected) for the
     stat-pool view used by the renderer."""
-    current = combat_stat(pet.dna, pet.ev, stat)
+    current = combat_stat(pet.dna, pet.ev, stat, pet.species)
     if stat == "hp":
         current = 40 + current * 2
     elif stat == "mp":
         current = 10 + current
     projected_ev = dict(pet.ev)
     projected_ev[stat] = min(252, pet.ev_at(stat) + ev_delta)
-    value = combat_stat(pet.dna, projected_ev, stat)
+    value = combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         value = 40 + value * 2
     elif stat == "mp":

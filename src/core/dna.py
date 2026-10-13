@@ -11,6 +11,8 @@ SPECIES_ID = {
 }
 STATUS_PAGE_COUNT = 4
 
+COMBAT_GROWTH_PERCENT = {"egg": 50, "baby": 75, "rookie": 100, "champion": 120, "ultimate": 140}
+
 
 def mix_entropy(entropy):
     mix = (int(entropy) * 1664525 + 1013904223) & 0xFFFFFFFF
@@ -26,8 +28,9 @@ def iv_at(dna, stat):
     return packed & 0x0F if index % 2 == 0 else packed >> 4
 
 
-def combat_stat(dna, ev, stat):
+def combat_stat(dna, ev, stat, species="rookie"):
     value = 10 + iv_at(dna, stat) * 3 + int(ev.get(stat, 0)) // 6
+    value = (value * COMBAT_GROWTH_PERCENT.get(species, 100) + 50) // 100
     return max(1, min(99, value))
 
 

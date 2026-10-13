@@ -12,7 +12,7 @@ INVENTORY_BACK_INDEX = len(INVENTORY_ITEMS)
 INVENTORY_ENTRY_COUNT = INVENTORY_BACK_INDEX + 1
 DEFAULT_INVENTORY = {"meat": 3, "energy": 2, "exp": 1, "ring": 1, "protein": 2, "medkit": 1}
 INVENTORY_WINDOW = 3
-INVENTORY_ICONS = ("Feed", "Energy", "Training", "Items", "Protein", "Medkit", "Options")
+INVENTORY_ICONS = ("ItemMeat", "ItemEnergy", "ItemExp", "ItemRing", "ItemProtein", "ItemMedkit", "Back")
 INVENTORY_NAMES = (
     ("MEAT", "CARNE"),
     ("ENERGY", "ENERGIA"),
@@ -102,6 +102,8 @@ def use_inventory_item(pet, index):
     if index == 0 and not pet.can_feed():
         return "blocked"
     if index == 5 and not getattr(pet, "injured", False):
+        return "blocked"
+    if index == 1 and pet.get("e") >= 100:
         return "blocked"
 
     _, key, stat, amount = INVENTORY_ITEMS[index]

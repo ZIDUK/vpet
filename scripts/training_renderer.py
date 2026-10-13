@@ -43,6 +43,8 @@ from scripts.training_session import (TRAINING_ANIMATION_MS,
                                         STATE_CONFIRM, STATE_RESULT, STATE_CANCEL,
                                         STATE_ERROR)
 
+TRAINING_FRAME_INTERVALS = {0: 65, 1: 70, 2: 65, 3: 65, 4: 70, 5: 100}
+
 
 # ---------------------------------------------------------------------------
 # Band layout (240x135). Keep in sync with the other simulators.
@@ -160,28 +162,38 @@ def _render_select(build_dir, session, now_ms):
     # Sprite on the left, animation depending on the focused attribute.
     item = TRAINING_TYPES[session.index] if session.index < len(TRAINING_TYPES) else None
     animation = item["animation"] if item else None
-    pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms)
+    pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms,
+               species=session.pet.species,
+               frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session.index, 100))
     if session.index < len(TRAINING_TYPES):
         info_label(frame, draw, item["icon"], 70, 24,
                    tr_stat(session.pet, item["stat"]), YELLOW)
         real, projected = batch_projected_value(session.pet, item["stat"], TRAINING_EV_GAIN)
-        text(draw, (70, 41), "%d > %d (+%d)" % (real, projected,
+        draw.rectangle((66, 41, 67, 59), fill=YELLOW)
+        text(draw, (72, 41), "%d > %d (+%d)" % (real, projected,
                                                  max(0, projected - real)),
              GREEN)
-        text(draw, (70, 57),
-             tr(session.pet, "training.session.ev_static",
-                session.pet.ev_at(item["stat"])),
-             MUTED, small=True)
+        ev = session.pet.ev_at(item["stat"])
+        draw.rectangle((70, 61, 234, 62), fill=PANEL)
+        fill_width = ev * 165 // 252
+        if fill_width:
+            draw.rectangle((70, 61, 69 + fill_width, 62), fill=GREEN)
         max_reps, reason = _max_reps_with_reason(session.pet, item["stat"])
-        if reason:
-            text(draw, (70, 72), _block_label(session.pet, reason), HP, small=True)
-        else:
-            text(draw, (70, 72),
-                 tr(session.pet, "training.timed.available", max_reps), MUTED, small=True)
-        text(draw, (70, 87),
-             tr(session.pet, "training.timed.cost", TRAINING_ENERGY_COST),
+        tiles = ((70, GREEN), (126, YELLOW), (182, MP))
+        for x, accent in tiles:
+            draw.rectangle((x, 73, x + 51, 103), fill=PANEL)
+            draw.rectangle((x, 73, x + 51, 74), fill=accent)
+        text(draw, (73, 77), "EV", MUTED, small=True)
+        text(draw, (73, 89), "%d/252" % ev, GREEN, small=True)
+        text(draw, (129, 77), "SES" if session.pet.language == "ES" else "SETS",
              MUTED, small=True)
-    elif session.index == len(TRAINING_TYPES):
+        text(draw, (129, 89), str(max_reps), YELLOW, small=True)
+        text(draw, (185, 77), "COSTE" if session.pet.language == "ES" else "COST",
+             MUTED, small=True)
+        text(draw, (185, 89), "%d ENE" % TRAINING_ENERGY_COST, MP, small=True)
+        if reason:
+            text(draw, (70, 105), _block_label(session.pet, reason), HP, small=True)
+    elif session.index >= len(TRAINING_TYPES):
         text(draw, (70, 24), tr(session.pet, "training.techniques"), YELLOW)
         es = session.pet.language == "ES"
         progress = session.pet.techniques
@@ -193,9 +205,9 @@ def _render_select(build_dir, session, now_ms):
             paste_icon(frame, technique_icon(key), 82 + i * 54, 64)
             text(draw, (74 + i * 54, 86), names[i], (YELLOW, HP, MP)[i], small=True)
         text(draw, (70, 101), ("EQUIPADAS " if es else "EQUIPPED ") + "%d/2" % len(progress.equipped), MUTED, small=True)
-    else:
-        text(draw, (70, 24), tr(session.pet, "training.back"), YELLOW)
-    if session.message:
+    # The inline eligibility reason is authoritative on this screen. Do not
+    # paint the action feedback band over the same pixels.
+    if session.message and not (session.index < len(TRAINING_TYPES) and reason):
         _feedback_band(draw, session.pet, session.message, color=HP)
     # Action icons for the six attributes + techniques + back.
     icons = [info_icon(t["icon"]) for t in TRAINING_TYPES]
@@ -234,7 +246,8 @@ def _render_prepare(build_dir, session, now_ms):
     text(draw, (26, 4), tr(session.pet, "training.prepare.title", name))
     text(draw, (210, 4), "B", MUTED, small=True)
     # Sprite idle on the left.
-    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms)
+    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
+               species=session.pet.species, frame_interval_ms=100)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
     real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN)
     es = session.pet.language == "ES"
@@ -276,9 +289,12 @@ def _render_session(build_dir, session, now_ms):
     progress = session.animation_progress(now_ms)
     if progress is not None and session._animation_index is not None:
         animation = TRAINING_TYPES[session._animation_index]["animation"]
-        pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms)
+        pet_sprite(frame, build_dir, 0, 30, 68, animation, now_ms,
+                   species=session.pet.species,
+                   frame_interval_ms=TRAINING_FRAME_INTERVALS.get(session._animation_index, 100))
     else:
-        pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms)
+        pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
+                   species=session.pet.species)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
     real, projected = session.current_view(now_ms)
     es = session.pet.language == "ES"
@@ -309,7 +325,8 @@ def _render_confirm(build_dir, session, now_ms):
     text(draw, (200, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
     stat = session._chosen_stat
     name = tr_stat(session.pet, stat)
-    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms)
+    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
+               species=session.pet.species)
     info_label(frame, draw, _icon_name_for(stat), 70, 24,
                tr(session.pet, "training.confirm.x_rep", name, session.reps),
                YELLOW)
@@ -379,7 +396,8 @@ def _render_result_summary(build_dir, session, now_ms):
     text(draw, (26, 4), tr(session.pet, "training.result.title"))
     text(draw, (210, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
     # Pet on the left, idle animation.
-    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms)
+    pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
+               species=session.pet.species)
     summary = session._result_snapshot or {}
     stat = session._chosen_stat
     if stat is None:

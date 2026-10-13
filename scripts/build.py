@@ -10,6 +10,8 @@ from PIL import Image, ImageEnhance, ImageOps
 
 
 ROOT = Path(__file__).parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 SRC = ROOT / "src"
 BUILD = ROOT / "build"
 ASSETS = ROOT / "assets"
@@ -18,9 +20,10 @@ if str(SRC) not in sys.path:
 
 from core.options import OPTION_ICONS
 from display_profiles import get_display_profile
+from scripts.item_icons import ICON_NAMES as ITEM_ICONS, render_item_icon
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
-MENU_ICONS = ("Status", "Feed", "Training", "Battle", "Rest", "Items", "Pedia", "Options")
+MENU_ICONS = ("Status", "Feed", "Training", "Battle", "Rest", "Backpack", "Pedia", "Options")
 STATUS_ICONS = ("Heart", "Clock", "Protein", "Medkit", "Energy", "Trophy", "Versus", "Weight", "Brain")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 FIREMON_COLUMNS = 5
@@ -516,11 +519,22 @@ def collect_ui():
         return image.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
     names = tuple(dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
+    names = tuple(dict.fromkeys((*names, *ITEM_ICONS)))
     for name in names:
+        target = BUILD / "UIIcons" / f"{name}.bmp"
+        if name in ITEM_ICONS:
+            size = ACTIVE_PROFILE.icon_size
+            image = render_item_icon(name, size).convert("RGB").quantize(
+                colors=256,
+                method=Image.Quantize.MEDIANCUT,
+                dither=Image.Dither.NONE,
+            )
+            target.parent.mkdir(parents=True, exist_ok=True)
+            image.save(target, format="BMP")
+            continue
         source = source_dir / f"{name}.png"
         if not source.is_file():
             raise FileNotFoundError(f"Missing menu icon: {source}")
-        target = BUILD / "UIIcons" / f"{name}.bmp"
         size = ACTIVE_PROFILE.icon_size
         save_runtime_bmp(source, target, expected_size=(size, size), transform=resize_icon)
     print(f"  menu icons: {len(names)}")

@@ -83,7 +83,6 @@ def main():
     pygame.init()
     window_size = (profile.width * args.scale, profile.height * args.scale)
     screen = pygame.display.set_mode(window_size)
-    pygame.key.set_repeat(400, 90)
     pygame.display.set_caption("vPet simulator - n=NEXT, a=ACTION, b=BACK, e=EVOLVE")
     clock = pygame.time.Clock()
 
@@ -198,13 +197,14 @@ def main():
                         inventory_index = clamp_visible_inventory_index(pet, 0)
                     elif menu_index == MENU_PEDIA_INDEX:
                         panel_mode = "evolution"
+                        inventory_index = evolution_current_stage(pet)
                     elif menu_index == MENU_OPTIONS_INDEX:
                         options_session = OptionsSession()
                         panel_mode = "options"
-                    elif menu_index == MENU_TRAINING_INDEX and profile.name == "tdisplay" and pet.species == "rookie" and motion.state != MOTION_SLEEP:
+                    elif menu_index == MENU_TRAINING_INDEX and profile.name == "tdisplay" and pet.species not in ("egg", "baby") and motion.state != MOTION_SLEEP:
                         training = TrainingSession(pet, services.save)
                         practice_keys.add(event.key)
-                    elif menu_index == MENU_BATTLE_INDEX and profile.name == "tdisplay" and pet.species == "rookie" and motion.state != MOTION_SLEEP and not pet.dead and not pet.injured:
+                    elif menu_index == MENU_BATTLE_INDEX and profile.name == "tdisplay" and pet.species in ("rookie", "champion", "ultimate") and motion.state != MOTION_SLEEP and not pet.dead and not getattr(pet, "cold", False):
                         practice = PracticeSession(pet, services.save)
                         practice_keys.add(event.key)
                     else:

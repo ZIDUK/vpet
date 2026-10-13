@@ -212,7 +212,8 @@ void App::activate(uint32_t nowMs) {
             trainingActive_ = true;
             return;
         case 3:
-            if (pet_.species() == SpeciesId::Rookie && !pet_.injured() && !pet_.cold()) {
+            if (pet_.species() != SpeciesId::Egg && pet_.species() != SpeciesId::Baby &&
+                !pet_.dead() && !pet_.cold()) {
                 practice_ = PracticeSession();
                 practicing_ = true;
                 return;
@@ -343,6 +344,11 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
             (pet_.dead() || (navigation_.menuIndex() >= 1 && navigation_.menuIndex() <= 4))) {
             activate(nowMs);
+        } else if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
+                   navigation_.menuIndex() == 6) {
+            navigation_.dispatch(event);
+            navigation_.setCurrentSpecies(pet_.species());
+            navigation_.openEvolutionTree(pet_.species());
         } else if (navigation_.panel() == PanelId::Home) {
             navigation_.dispatch(event);
         } else {

@@ -15,6 +15,26 @@ def package_training(sim_build, data_dir, include_dir):
         records.append(write_asset(data_dir / "training" / (name + ".vpa"),
                                    frames, frames[0].size))
 
+    sprite_sets = {
+        "egg": ("Egg", "egg", {"idle": "idle"}),
+        "sparkmon": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
+        "firemon": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "walk", "cast": "cast"}),
+        "flamemon": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "block": "cast", "walk": "walk", "cast": "cast"}),
+        "dragfiremon": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "block": "cast", "walk": "fly", "cast": "cast"}),
+    }
+    for pet_name, (stage, filename, actions) in sprite_sets.items():
+        for action, source_action in actions.items():
+            source = sim_build / "digimon1" / stage / f"{filename}_{source_action}_atlas.bmp"
+            with Image.open(source) as atlas:
+                frames = []
+                for x in range(0, atlas.width, atlas.height):
+                    cell = atlas.crop((x, 0, x + atlas.height, atlas.height))
+                    alpha = cell.point([0] + [255] * 255, mode="L")
+                    cell = cell.convert("RGBA")
+                    cell.putalpha(alpha)
+                    frames.append(cell.resize((68, 68), Image.Resampling.NEAREST))
+                asset(f"{pet_name}_{action}", frames)
+
     for action in ("idle", "punch", "block", "walk", "cast"):
         with Image.open(sim_build / "digimon1/Rookie" / f"firemon_{action}_atlas.bmp") as atlas:
             frames = []

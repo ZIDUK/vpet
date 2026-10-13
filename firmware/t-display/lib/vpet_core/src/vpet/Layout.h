@@ -29,8 +29,6 @@ constexpr int16_t kEvoDarkY = 94;
 constexpr uint8_t kInventoryWindow = 3;
 constexpr int16_t kCallIconX = 216;
 constexpr int16_t kCallIconY = 111;
-constexpr uint32_t kNextRepeatDelayMs = 400;
-constexpr uint32_t kNextRepeatEveryMs = 90;
 // DNA stat row layout (Status 4/4). Column-safe contract with the sim:
 //   helix        x=102..142  (kStatusSplitX+2 + kHelixWidth=40)
 //   card         x=145..237  (kStatusDnaRowX=145, kStatusDnaRowW=92)

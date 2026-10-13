@@ -56,7 +56,7 @@ inline const char* trainingBlockReason(const PetState& pet, CombatStat stat) {
         if (kTrainingTypes[i].stat == stat) { found = true; break; }
     }
     if (!found) return kTrainingTypeInvalid;
-    if (pet.species() != SpeciesId::Rookie) return kTrainingNotFit;
+    if (pet.species() == SpeciesId::Egg || pet.species() == SpeciesId::Baby) return kTrainingNotFit;
     if (pet.dead() || pet.injured() || pet.cold()) return kTrainingNotFit;
     if (pet.evAt(stat) >= kTrainingEvMax) return kTrainingEvMaxReason;
     if (pet.energy() < kTrainingEnergyCost) return kTrainingNoEnergy;
@@ -152,6 +152,11 @@ inline int projectedStatValue(
     if (projectedEv < 0) projectedEv = 0;
     const int iv = static_cast<int>(pet.ivAt(stat));
     int value = 10 + iv * 3 + projectedEv / 6;
+    const int growth = pet.species() == SpeciesId::Egg ? 50 :
+                       pet.species() == SpeciesId::Baby ? 75 :
+                       pet.species() == SpeciesId::Champion ? 120 :
+                       pet.species() == SpeciesId::Ultimate ? 140 : 100;
+    value = (value * growth + 50) / 100;
     if (value < 1) value = 1;
     if (value > 99) value = 99;
     if (stat == CombatStat::Hp) {
@@ -446,6 +451,7 @@ private:
         }
         if (event == InputEvent::Next) {
             cursor = static_cast<uint8_t>((cursor + 1) % (kTrainingStatCount + 2));
+            message = "";
             return true;
         }
         if (event == InputEvent::Action) {

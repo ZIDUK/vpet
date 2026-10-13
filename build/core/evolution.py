@@ -5,6 +5,98 @@ Synthetic tests can still use `min_age_seconds` and `pet.age_seconds`.
 """
 
 STABILITY_SECONDS = 30
+EVOLUTION_NODE_COUNT = 8
+EVOLUTION_WINDOW = 3
+EVO_CHIP = 40
+EVO_GAP = 6
+EVO_X0 = 5
+EVO_COLOR_Y = 50
+EVO_DARK_Y = 94
+
+
+def evolution_tree_node(index):
+    index = int(index) % EVOLUTION_NODE_COUNT
+    dark = index >= 5
+    stage = index if index < 5 else index - 3
+    return stage, dark
+
+
+def evolution_tree_xy(index):
+    stage, dark = evolution_tree_node(index)
+    x = EVO_X0 + stage * (EVO_CHIP + EVO_GAP)
+    y = EVO_DARK_Y if dark else EVO_COLOR_Y
+    return x, y
+
+
+EVOLUTION_PORTRAITS = ("Egg.bmp", "Sparkmon.bmp", "Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp")
+EVOLUTION_SHORT_NAMES = (("EGG", "HUEVO"), ("SPARK", "SPARK"), ("FIRE", "FIRE"), ("FLAME", "FLAME"), ("DRAG", "DRAG"))
+EVOLUTION_REACH_FROM = (None, None, "baby", "rookie", "champion")
+
+
+def evolution_current_stage(pet):
+    return {"egg": 0, "baby": 1, "rookie": 2, "champion": 3, "ultimate": 4}.get(getattr(pet, "species", "egg"), 0)
+
+
+def evolution_hidden(stage, dark, current_stage):
+    return (dark and stage >= 2) or (not dark and stage > current_stage)
+
+
+def requirements_to_reach(stage, registry, spanish=False):
+    if stage <= 1:
+        return "8S"
+    form = (registry or {}).get(EVOLUTION_REACH_FROM[stage], {})
+    return format_requirements(form, spanish)
+
+
+def split_requirement_lines(text):
+    parts = (text or "").split(" ", 1)
+    first = parts[0]
+    second = parts[1] if len(parts) > 1 else ""
+    return first, second
+
+
+def evolution_window(selected, size=EVOLUTION_WINDOW):
+    selected = int(selected) % EVOLUTION_NODE_COUNT
+    start = selected - 1
+    if start < 0:
+        start = 0
+    if start + size > EVOLUTION_NODE_COUNT:
+        start = EVOLUTION_NODE_COUNT - size
+    return tuple(range(start, start + size))
+
+
+def evolution_card(index, pet, registry, spanish=False):
+    stage, dark = evolution_tree_node(index)
+    current_stage = evolution_current_stage(pet)
+    hidden = evolution_hidden(stage, dark, current_stage)
+    if hidden:
+        return {
+            "stage": stage,
+            "dark": dark,
+            "hidden": True,
+            "label": "???",
+            "status": "???",
+            "requirements": "",
+            "snapshot": "",
+            "portrait": EVOLUTION_PORTRAITS[stage],
+        }
+    status = "NOW" if stage == current_stage else "REACHED"
+    if spanish:
+        status = "AHORA" if status == "NOW" else "LOGRADO"
+    snapshot = ""
+    if stage == current_stage:
+        snapshot = "%ds CM%d" % (int(getattr(pet, "stage_age_seconds", 0)), int(getattr(pet, "care_mistakes", 0)))
+    names = EVOLUTION_SHORT_NAMES[stage]
+    return {
+        "stage": stage,
+        "dark": dark,
+        "hidden": False,
+        "label": names[1] if spanish else names[0],
+        "status": status,
+        "requirements": requirements_to_reach(stage, registry, spanish),
+        "snapshot": snapshot,
+        "portrait": EVOLUTION_PORTRAITS[stage],
+    }
 
 
 class Evolution:
@@ -94,7 +186,7 @@ def format_requirements(form_data, spanish=False):
     if form_data.get("max_care_mistakes") is not None:
         parts.append("CM<=%d" % form_data["max_care_mistakes"])
     if form_data.get("battles_required"):
-        parts.append("BAT%d" % form_data["battles_required"])
+        parts.append("BAT%d WR60" % form_data["battles_required"])
     req = form_data.get("requirements") or {}
     if req:
         chunks = []

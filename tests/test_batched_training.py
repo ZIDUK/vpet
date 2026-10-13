@@ -47,6 +47,15 @@ def test_batch_block_reason_empty_for_eligible_pet(stat):
     assert batch_block_reason(pet, stat) == ""
 
 
+@pytest.mark.parametrize("species", ["champion", "ultimate"])
+def test_evolved_pet_can_use_batched_training(species):
+    pet = _firemon()
+    pet.species = species
+    assert batch_block_reason(pet, "off") == ""
+    current, projected = batch_projected_value(pet, "off", 6)
+    assert projected >= current
+
+
 def test_batch_block_reason_invalid_stat():
     pet = _firemon()
     assert batch_block_reason(pet, "luck") == "TIPO INVALIDO"

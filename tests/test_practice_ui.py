@@ -222,10 +222,22 @@ def test_training_carousel_text_fits_and_render_is_read_only(practice_assets, mo
             s.pet.ev = {stat: 252 for stat in s.pet.ev}
         if state in ("result", "save-error") and i < 6:
             s.input("action", 1000)
+        if state == "no-energy" and i == 0:
+            s.input("action", 1000)
         records.clear()
         before = s.pet.to_dict()
-        assert render_training(practice_assets, s, 1500).size == (240, 135)
+        frame = render_training(practice_assets, s, 1500)
+        assert frame.size == (240, 135)
         assert s.pet.to_dict() == before
+        if i == 7 and state not in ("result", "save-error"):
+            assert not any(value in ("BACK", "VOLVER") for value, _ in records)
+            assert any("TECHNIQUES" in value or "TECNICAS" in value
+                       for value, _ in records)
+        if state == "no-energy" and i == 0:
+            labels = [value for value, _ in records
+                      if value in ("FALTA ENERGIA", "NO ENERGY", "PET NO APTO", "PET NOT FIT")]
+            assert len(labels) == 1
+            assert labels[0] in ("FALTA ENERGIA", "NO ENERGY")
         for (a, ra), (b, rb) in combinations(records, 2):
             overlap = min(ra[2], rb[2]) > max(ra[0], rb[0]) and min(ra[3], rb[3]) > max(ra[1], rb[1])
             assert not overlap, (a, b, ra, rb)

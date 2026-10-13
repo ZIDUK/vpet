@@ -28,7 +28,7 @@ def test_roll_dna_differs_and_is_never_zero():
 
 
 def test_ivs_read_dna_nibbles():
-    pet = Pet()
+    pet = Pet(species="rookie")
     pet.restore_dna((0x21, 0x43, 0x65, 0x87))
     assert pet.iv_at("hp") == 1
     assert pet.iv_at("mp") == 2
@@ -40,7 +40,7 @@ def test_ivs_read_dna_nibbles():
 
 
 def test_combat_stat_uses_iv_ev_formula():
-    pet = Pet()
+    pet = Pet(species="rookie")
     pet.restore_dna((0x0F, 0x00, 0x00, 0x01))
     pet.restore_ev({"hp": 252})
     assert pet.combat_stat("mp") == 10

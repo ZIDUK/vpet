@@ -204,11 +204,6 @@ void test_call_cues_the_matching_care_icon() {
     TEST_ASSERT_EQUAL(111, vpet::kCallIconY);
 }
 
-void test_next_repeat_is_the_shared_standard() {
-    TEST_ASSERT_EQUAL(400, vpet::kNextRepeatDelayMs);
-    TEST_ASSERT_EQUAL(90, vpet::kNextRepeatEveryMs);
-}
-
 void test_call_blink_toggles_every_400ms() {
     TEST_ASSERT_TRUE(vpet::callBlinkOn(0));
     TEST_ASSERT_TRUE(vpet::callBlinkOn(399));

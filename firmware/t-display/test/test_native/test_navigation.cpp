@@ -28,6 +28,16 @@ void test_menu_opens_expected_panels() {
     TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
 }
 
+void test_evolution_tree_opens_on_current_species() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(6);
+    navigation.dispatch(vpet::InputEvent::Action);
+    navigation.openEvolutionTree(vpet::SpeciesId::Champion);
+    TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
+    TEST_ASSERT_EQUAL(3, navigation.panelIndex());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Champion, navigation.selectedSpecies());
+}
+
 void test_options_next_redraws_only_the_two_chips() {
     TEST_ASSERT_TRUE(vpet::cursorRedrawOnly(0, 1, false, false));
     TEST_ASSERT_FALSE(vpet::cursorRedrawOnly(1, 1, false, false));
@@ -147,6 +157,14 @@ void test_action_on_known_evolution_opens_detail() {
     navigation.dispatch(vpet::InputEvent::Back);
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
     TEST_ASSERT_EQUAL(vpet::SpeciesId::Baby, navigation.selectedSpecies());
+}
+
+void test_evolution_tree_opens_on_current_stage() {
+    vpet::Navigation navigation;
+    navigation.setCurrentSpecies(vpet::SpeciesId::Champion);
+    navigation.openEvolutionTree();
+    TEST_ASSERT_EQUAL(3, navigation.panelIndex());
+    TEST_ASSERT_EQUAL(vpet::SpeciesId::Champion, navigation.selectedSpecies());
 }
 
 void test_action_on_hidden_evolution_stays_on_tree() {

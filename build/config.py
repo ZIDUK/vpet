@@ -17,7 +17,7 @@ MENU_ICON_PATHS = [
     "/UIIcons/Training.bmp",
     "/UIIcons/Battle.bmp",
     "/UIIcons/Rest.bmp",
-    "/UIIcons/Items.bmp",
+    "/UIIcons/Backpack.bmp",
     "/UIIcons/Pedia.bmp",
     "/UIIcons/Options.bmp",
 ]
@@ -78,8 +78,8 @@ EGG_IDLE_FRAME_COUNT = 16
 EGG_HATCH_FRAME_COUNT = 10
 SPARKMON_FRAME_COUNT = 25
 SPARKMON_EVOLUTION_FRAME_COUNT = 16
-HATCH_DURATION_SECONDS = 8
-EGG_HATCH_DURATION_SECONDS = 2
+HATCH_DURATION_SECONDS = 2
+EGG_HATCH_DURATION_SECONDS = 0.8
 
 PET_IDLE_IMAGE_PATH = "/digimon1/Rookie/firemon_idle_atlas.bmp"
 PET_WALK_IMAGE_PATH = "/digimon1/Rookie/firemon_walk_atlas.bmp"
@@ -87,7 +87,15 @@ PET_EAT_IMAGE_PATH = "/digimon1/Rookie/firemon_eat_atlas.bmp"
 PET_PUNCH_IMAGE_PATH = "/digimon1/Rookie/firemon_punch_atlas.bmp"
 PET_SLEEP_IMAGE_PATH = "/digimon1/Rookie/firemon_sleep_atlas.bmp"
 PET_CAST_IMAGE_PATH = "/digimon1/Rookie/firemon_cast_atlas.bmp"
+PET_BLOCK_IMAGE_PATH = "/digimon1/Rookie/firemon_block_atlas.bmp"
 PET_EVOLUTION_IMAGE_PATH = "/digimon1/Rookie/firemon_evolution_atlas.bmp"
+PET_HIT_IMAGE_PATH = "/digimon1/Rookie/firemon_hit_atlas.bmp"
+PET_HURT_IMAGE_PATH = "/digimon1/Rookie/firemon_hurt_atlas.bmp"
+PET_HIT_FRAME_COUNT = 15
+PET_HURT_FRAME_COUNT = 15
+PET_HIT_FRAME_INTERVAL = 0.08
+PET_HURT_FRAME_INTERVAL = 0.08
+PRACTICE_IMPACT_MS = 1200
 FLAMEMON_IDLE_IMAGE_PATH = "/digimon1/Champion/flamemon_idle_atlas.bmp"
 FLAMEMON_WALK_IMAGE_PATH = "/digimon1/Champion/flamemon_walk_atlas.bmp"
 FLAMEMON_EAT_IMAGE_PATH = "/digimon1/Champion/flamemon_eat_atlas.bmp"
@@ -120,6 +128,7 @@ PET_EAT_FRAME_COUNT = 25
 PET_PUNCH_FRAME_COUNT = 15
 PET_SLEEP_FRAME_COUNT = 15
 PET_CAST_FRAME_COUNT = 15
+PET_COMBAT_FRAME_COUNT = 15
 PET_EVOLUTION_FRAME_COUNT = 15
 FLAMEMON_IDLE_FRAME_COUNT = 15
 FLAMEMON_WALK_FRAME_COUNT = 15
@@ -132,6 +141,7 @@ PET_EAT_FRAME_INTERVAL = 0.10
 PET_PUNCH_FRAME_INTERVAL = 0.08
 PET_SLEEP_FRAME_INTERVAL = 0.14
 PET_CAST_FRAME_INTERVAL = 0.09
+PET_COMBAT_FRAME_INTERVAL = 0.09
 PET_EVOLUTION_FRAME_INTERVAL = 0.12
 FLAMEMON_IDLE_FRAME_INTERVAL = 0.12
 FLAMEMON_WALK_FRAME_INTERVAL = 0.09

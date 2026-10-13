@@ -13,7 +13,7 @@ constexpr const char* kMenuIcons[] = {
     "/ui/icons/training.vpa",
     "/ui/icons/battle.vpa",
     "/ui/icons/rest.vpa",
-    "/ui/icons/items.vpa",
+    "/ui/icons/backpack.vpa",
     "/ui/icons/pedia.vpa",
     "/ui/icons/options.vpa",
 };
@@ -66,13 +66,12 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
     if (state == MotionState::Evolution) {
         switch (model.pet.species()) {
             case SpeciesId::Rookie:
-                return "/animations/baby/sparkmon_evolution.vpa";
-            case SpeciesId::Champion:
                 return "/animations/rookie/firemon_evolution.vpa";
-            case SpeciesId::Ultimate:
+            case SpeciesId::Champion:
                 return "/animations/champion/flamemon_evolution.vpa";
-            default:
-                return "/animations/baby/sparkmon_evolution.vpa";
+            case SpeciesId::Ultimate:
+                return "/animations/ultimate/dragfiremon_evolution.vpa";
+            default: return "/animations/baby/sparkmon_evolution.vpa";
         }
     }
     switch (state) {

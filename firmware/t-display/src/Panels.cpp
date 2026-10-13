@@ -12,7 +12,7 @@ namespace vpet {
 namespace {
 constexpr const char* kMenuIcons[] = {
     "/ui/icons/status.vpa", "/ui/icons/feed.vpa", "/ui/icons/training.vpa",
-    "/ui/icons/battle.vpa", "/ui/icons/rest.vpa", "/ui/icons/items.vpa",
+    "/ui/icons/battle.vpa", "/ui/icons/rest.vpa", "/ui/icons/backpack.vpa",
     "/ui/icons/pedia.vpa", "/ui/icons/options.vpa",
 };
 constexpr uint16_t kPanel = 0xD6B4;
@@ -32,6 +32,34 @@ const char* portraitPath(SpeciesId species, bool thumbnail) {
         case SpeciesId::Ultimate: return thumbnail ? "/ui/evolution/dragfiremon.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
     }
     return "/ui/evolution/egg.vpa";
+}
+
+const char* battleSpritePath(SpeciesId species, int action) {
+    switch (species) {
+        case SpeciesId::Egg: return "/animations/egg/egg_idle.vpa";
+        case SpeciesId::Baby: return "/animations/baby/sparkmon_idle.vpa";
+        case SpeciesId::Rookie:
+            return action == 0 ? "/animations/rookie/firemon_punch.vpa" :
+                action == 1 ? "/animations/rookie/firemon_cast.vpa" : "/animations/rookie/firemon_idle.vpa";
+        case SpeciesId::Champion:
+            return action == 0 ? "/animations/champion/flamemon_punch.vpa" :
+                action == 1 ? "/animations/champion/flamemon_cast.vpa" : "/animations/champion/flamemon_idle.vpa";
+        case SpeciesId::Ultimate:
+            return action == 0 ? "/animations/ultimate/dragfiremon_punch.vpa" :
+                action == 1 ? "/animations/ultimate/dragfiremon_cast.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
+    }
+    return "/animations/rookie/firemon_idle.vpa";
+}
+
+const char* battleSpeciesLabel(SpeciesId species) {
+    switch (species) {
+        case SpeciesId::Egg: return "EGG";
+        case SpeciesId::Baby: return "SPARKMON";
+        case SpeciesId::Rookie: return "FIREMON";
+        case SpeciesId::Champion: return "FLAMEMON";
+        case SpeciesId::Ultimate: return "DRAGFIRE";
+    }
+    return "VPET";
 }
 }
 
@@ -360,13 +388,13 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
 
 void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) {
     const char* icons[] = {
-        "/ui/icons/feed.vpa",
-        "/ui/icons/energy.vpa",
-        "/ui/icons/training.vpa",
-        "/ui/icons/items.vpa",
-        "/ui/icons/protein.vpa",
-        "/ui/icons/medkit.vpa",
-        "/ui/icons/options.vpa",
+        "/ui/icons/itemmeat.vpa",
+        "/ui/icons/itemenergy.vpa",
+        "/ui/icons/itemexp.vpa",
+        "/ui/icons/itemring.vpa",
+        "/ui/icons/itemprotein.vpa",
+        "/ui/icons/itemmedkit.vpa",
+        "/ui/icons/back.vpa",
     };
     const uint8_t current = pet.clampVisibleInventoryIndex(selected);
     const uint8_t visible = pet.visibleInventoryCount();
@@ -790,14 +818,14 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         for (int i = 0; i < 2; ++i) {
             const auto& fighter = i == 0 ? s.battle.player : s.battle.rival;
             const int action = active ? s.battle.actions[i] : -1;
-            const char* path = action == 0 ? "/animations/rookie/firemon_punch.vpa" :
-                action == 1 ? "/animations/rookie/firemon_cast.vpa" : "/animations/rookie/firemon_idle.vpa";
+            const SpeciesId species = i == 0 ? pet.species() : SpeciesId::Rookie;
+            const char* path = battleSpritePath(species, action);
             const uint32_t elapsed = active ? nowMs - s.updatedAt : nowMs;
             assets_.drawFrame(display_, path, (elapsed / 100) % (action < 0 || action == 2 ? 19 : 15),
                               i == 0 ? 12 : 140, 22, i == 1);
             display_.fillRect(i * 120, 0, 120, 34, ink);
             display_.setTextColor(TFT_WHITE, ink);
-            display_.drawString(i == 0 ? "FIREMON" : "PRACTICA", i * 120 + 4, 1, 1);
+            display_.drawString(i == 0 ? battleSpeciesLabel(species) : "PRACTICA", i * 120 + 4, 1, 1);
             for (int stat = 0; stat < 2; ++stat) {
                 const int value = stat == 0 ? fighter.hp : fighter.mp;
                 const int maximum = stat == 0 ? fighter.maxHp : fighter.maxMp;
@@ -816,7 +844,10 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         display_.setTextColor(ink, accent);
         display_.drawString(s.label(pet, s.cursor), 8, 123, 1);
     } else {
-        display_.drawString(s.page == PracticeSession::Page::Menu ? "FIREMON / BATALLA" : "FIREMON / TECNICAS", 6, 4, 2);
+        char title[36];
+        snprintf(title, sizeof(title), "%s / %s", battleSpeciesLabel(pet.species()),
+                 s.page == PracticeSession::Page::Menu ? "BATALLA" : "TECNICAS");
+        display_.drawString(title, 6, 4, 2);
         int y = 44;
         if (s.page == PracticeSession::Page::Detail) {
             char line[40];

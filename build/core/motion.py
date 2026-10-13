@@ -4,6 +4,8 @@ import random
 from config import (
     PET_CAST_FRAME_COUNT,
     PET_CAST_FRAME_INTERVAL,
+    PET_COMBAT_FRAME_COUNT,
+    PET_COMBAT_FRAME_INTERVAL,
     PET_EAT_FRAME_COUNT,
     PET_EAT_FRAME_INTERVAL,
     PET_EVOLUTION_FRAME_COUNT,
@@ -31,6 +33,10 @@ MOTION_EAT = "eat"
 MOTION_PUNCH = "punch"
 MOTION_SLEEP = "sleep"
 MOTION_CAST = "cast"
+MOTION_HIT = "hit"
+MOTION_HURT = "hurt"
+MOTION_DODGE = "dodge"
+MOTION_BLOCK = "block"
 MOTION_EVOLUTION = "evolution"
 
 ACTION_ANIMATIONS = {
@@ -38,6 +44,10 @@ ACTION_ANIMATIONS = {
     MOTION_PUNCH: (PET_PUNCH_FRAME_COUNT, PET_PUNCH_FRAME_INTERVAL),
     MOTION_SLEEP: (PET_SLEEP_FRAME_COUNT, PET_SLEEP_FRAME_INTERVAL),
     MOTION_CAST: (PET_CAST_FRAME_COUNT, PET_CAST_FRAME_INTERVAL),
+    MOTION_HIT: (PET_COMBAT_FRAME_COUNT, PET_COMBAT_FRAME_INTERVAL),
+    MOTION_HURT: (PET_COMBAT_FRAME_COUNT, PET_COMBAT_FRAME_INTERVAL),
+    MOTION_DODGE: (PET_COMBAT_FRAME_COUNT, PET_COMBAT_FRAME_INTERVAL),
+    MOTION_BLOCK: (PET_COMBAT_FRAME_COUNT, PET_COMBAT_FRAME_INTERVAL),
     MOTION_EVOLUTION: (PET_EVOLUTION_FRAME_COUNT, PET_EVOLUTION_FRAME_INTERVAL),
 }
 
@@ -92,6 +102,12 @@ class PetMotion:
 
     def start_cast(self, now):
         self._start_action(MOTION_CAST, now)
+
+    def start_reaction(self, now, won, injured):
+        if won:
+            self._start_action(MOTION_BLOCK if injured else MOTION_DODGE, now)
+        else:
+            self._start_action(MOTION_HURT if injured else MOTION_HIT, now)
 
     def start_evolution(self, now, frame_count=None):
         self._start_action(MOTION_EVOLUTION, now)

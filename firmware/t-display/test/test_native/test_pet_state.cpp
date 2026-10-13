@@ -1,6 +1,7 @@
 #include <unity.h>
 
 #include "vpet/PetState.h"
+#include "vpet/TrainingSession.h"
 
 void test_cold_mode_freezes_decay_and_blocks_calls() {
     vpet::PetState pet;
@@ -111,6 +112,16 @@ void test_use_item_spends_stock_and_applies_stat() {
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(3));
     TEST_ASSERT_EQUAL(0, pet.itemCount(3));
     TEST_ASSERT_EQUAL(95, pet.happiness());
+}
+
+void test_energy_item_at_full_energy_is_not_consumed() {
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.setEnergy(75);
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(1));
+    TEST_ASSERT_EQUAL(100, pet.energy());
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(1));
+    TEST_ASSERT_EQUAL(1, pet.itemCount(1));
 }
 
 void test_use_item_empty_and_egg_do_not_change_stats() {
@@ -353,8 +364,32 @@ void test_combat_stat_uses_iv_ev_formula() {
     const uint8_t ev[] = {252, 0, 0, 0, 0, 0};
     pet.restoreDna(dna);
     pet.restoreEv(ev);
-    TEST_ASSERT_EQUAL(10, pet.combatStat(vpet::CombatStat::Mp));
-    TEST_ASSERT_EQUAL(97, pet.combatStat(vpet::CombatStat::Hp));
+    TEST_ASSERT_EQUAL(5, pet.combatStat(vpet::CombatStat::Mp));
+    TEST_ASSERT_EQUAL(49, pet.combatStat(vpet::CombatStat::Hp));
+}
+
+void test_combat_stats_scale_with_evolution_stage() {
+    vpet::PetState pet;
+    const uint8_t dna[] = {0x0F, 0x00, 0x00, 0x01};
+    pet.restoreDna(dna);
+    const int rookie = pet.combatStat(vpet::CombatStat::Hp);
+    pet.evolveTo(vpet::SpeciesId::Champion);
+    const int champion = pet.combatStat(vpet::CombatStat::Hp);
+    pet.evolveTo(vpet::SpeciesId::Ultimate);
+    const int ultimate = pet.combatStat(vpet::CombatStat::Hp);
+    TEST_ASSERT_TRUE(champion > rookie);
+    TEST_ASSERT_TRUE(ultimate > champion);
+}
+
+void test_training_projection_scales_with_evolution_stage() {
+    vpet::PetState pet;
+    const uint8_t dna[] = {0x0F, 0x00, 0x00, 0x01};
+    pet.restoreDna(dna);
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    const int rookie = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 6);
+    pet.evolveTo(vpet::SpeciesId::Champion);
+    const int champion = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 6);
+    TEST_ASSERT_TRUE(champion > rookie);
 }
 
 void test_care_and_items_gain_ev_with_caps() {

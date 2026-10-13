@@ -41,6 +41,7 @@ public:
     void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }
     void setDiscovered(bool champion, bool ultimate);
     void setCurrentSpecies(SpeciesId species);
+    void openEvolutionTree(SpeciesId currentSpecies);
     void openEvolutionTree();
     void select(SpeciesId species);
     void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; }

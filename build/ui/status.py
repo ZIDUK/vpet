@@ -94,11 +94,14 @@ def _bar(target, y, label, value, color):
     _text(target, 121 - _text_width(number), y + 1, number)
 
 
-def draw_status(target, pet, age_seconds=None):
+def draw_status(target, pet, age_seconds=None, page=0):
     """Draw into an object supporting target[x, y] = palette_index."""
     if age_seconds is None:
         age_seconds = int(pet.age_seconds)
     age_seconds = max(0, int(age_seconds))
+    if page % 4 == 3:
+        _draw_dna_page(target, pet)
+        return
 
     _fill(target, 0, 0, STATUS_WIDTH, STATUS_HEIGHT, 0)
     _fill(target, 3, 3, STATUS_WIDTH - 6, STATUS_HEIGHT - 6, 1)
@@ -121,18 +124,62 @@ def draw_status(target, pet, age_seconds=None):
     seconds = stage_age % 60
     age_label = "EDAD" if spanish else "AGE"
     battles_label = "BATALLAS" if spanish else "BATTLES"
-    cm_label = "CM %02d" % min(99, getattr(pet, "care_mistakes", 0))
+    cm_label = "CM %02d OF %02d EFF %d/4" % (
+        min(99, getattr(pet, "care_mistakes", 0)),
+        min(99, getattr(pet, "overfeeds", 0)),
+        min(4, getattr(pet, "training_sessions", 0) // 4),
+    )
     call = getattr(pet, "call_reason", None)
-    if call == "hunger":
+    if getattr(pet, "dead", False):
+        call_label = "MUERTO" if spanish else "DEAD"
+    elif getattr(pet, "injured", False):
+        call_label = "HERIDO" if spanish else "HURT"
+    elif call == "hunger":
         call_label = "LLAM HAM" if spanish else "CALL HUN"
     elif call == "strength":
         call_label = "LLAM FUE" if spanish else "CALL STR"
+    elif call == "lights":
+        call_label = "LLAM LUZ" if spanish else "CALL LIT"
     else:
         call_label = ""
+    wins = min(99, getattr(pet, "battles_won", 0))
+    losses = min(99, getattr(pet, "battles_lost", 0))
+    played = wins + losses
+    wr = "--" if played == 0 else "%d%%" % ((wins * 100) // played)
     _text(target, 8, 84, "%s %02d:%02d %s" % (age_label, minutes, seconds, cm_label), 7)
-    _text(target, 8, 93, "%s %02d" % (battles_label, min(99, getattr(pet, "battles_this_form", pet.battles_won))), 7)
+    _text(target, 8, 93, "%s %02d DP %d WR %s" % (
+        battles_label,
+        min(99, getattr(pet, "battles_this_form", pet.battles_won)),
+        min(3, getattr(pet, "dp", 1)),
+        wr,
+    ), 7)
     if call_label:
         _text(target, 8, 102, call_label, 7)
+
+
+def _draw_dna_page(target, pet):
+    _fill(target, 0, 0, STATUS_WIDTH, STATUS_HEIGHT, 0)
+    _fill(target, 3, 3, STATUS_WIDTH - 6, STATUS_HEIGHT - 6, 1)
+    _fill(target, 5, 5, STATUS_WIDTH - 10, 13, 0)
+    _text(target, (STATUS_WIDTH - _text_width("ADN", 2)) // 2, 6, "ADN", 2, 2)
+    dna = getattr(pet, "dna", [0, 0, 0, 0])
+    if getattr(pet, "has_dna", lambda: False)():
+        code = "%02X%02X%02X%02X" % tuple(dna)
+    else:
+        code = "----"
+    _text(target, (STATUS_WIDTH - _text_width(code)) // 2, 22, code, 7)
+    if not getattr(pet, "has_dna", lambda: False)():
+        return
+    names = ("HP", "MP", "OFF", "DEF", "SPD", "BRN")
+    keys = ("hp", "mp", "off", "def", "spd", "brn")
+    for index, (name, key) in enumerate(zip(names, keys)):
+        line = "%s %02d IV%02d EV%03d" % (
+            name,
+            pet.combat_stat(key),
+            pet.iv_at(key),
+            pet.ev_at(key),
+        )
+        _text(target, 8, 34 + index * 12, line, 7)
 
 
 def _panel(target, title):
@@ -152,7 +199,11 @@ def draw_inventory(target, pet, selected_index=0):
 
     spanish = pet.language == "ES"
     _panel(target, "INVENTARIO" if spanish else "INVENTORY")
-    names = ("CARNE", "ENERGIA", "EXP", "ANILLO") if spanish else ("MEAT", "ENERGY", "EXP", "RING")
+    names = (
+        ("CARNE", "ENERGIA", "EXP", "ANILLO", "PROTEINA", "BOTIQUIN")
+        if spanish
+        else ("MEAT", "ENERGY", "EXP", "RING", "PROTEIN", "MEDKIT")
+    )
     visible = visible_inventory_indexes(pet)
     current = clamp_visible_inventory_index(pet, selected_index)
     selected_slot = visible.index(current) if current in visible else 0

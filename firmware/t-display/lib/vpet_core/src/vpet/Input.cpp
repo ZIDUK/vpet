@@ -1,5 +1,4 @@
 #include "vpet/Input.h"
-#include "vpet/Layout.h"
 
 namespace vpet {
 namespace {
@@ -27,7 +26,6 @@ InputEvent Input::updateButton(
         button.stable = true;
         button.pressedAt = nowMs;
         button.longEmitted = false;
-        button.lastRepeatAt = 0;
         if (nowMs - button.lastShortEventAt < kPressLockoutMs) {
             return InputEvent::None;
         }
@@ -45,12 +43,6 @@ InputEvent Input::updateButton(
         if (nowMs - button.pressedAt >= longPressMs_) {
             button.longEmitted = true;
             return InputEvent::Back;
-        }
-        if (nowMs - button.pressedAt >= kNextRepeatDelayMs) {
-            if (button.lastRepeatAt == 0 || nowMs - button.lastRepeatAt >= kNextRepeatEveryMs) {
-                button.lastRepeatAt = nowMs;
-                return shortEvent;
-            }
         }
     }
 

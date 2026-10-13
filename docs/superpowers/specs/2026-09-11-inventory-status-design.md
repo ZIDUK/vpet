@@ -1,5 +1,9 @@
 # Inventory Spend And Status Pages
 
+Historical 2026-09-11 design. The shipped catalog later grew to six usable
+items; use [the current item catalog](../../items-and-rewards.md) for actual
+IDs, effects, quantities and acquisition sources.
+
 Diseño del corte **Items (gasto) + Status (barras y 2 páginas)** en la
 T-Display. El árbol de evolución **no entra**. El simulador Python se alinea
 **después** de que la placa funcione; esta spec manda sobre el sim.

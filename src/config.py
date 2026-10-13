@@ -17,7 +17,7 @@ MENU_ICON_PATHS = [
     "/UIIcons/Training.bmp",
     "/UIIcons/Battle.bmp",
     "/UIIcons/Rest.bmp",
-    "/UIIcons/Items.bmp",
+    "/UIIcons/Backpack.bmp",
     "/UIIcons/Pedia.bmp",
     "/UIIcons/Options.bmp",
 ]
