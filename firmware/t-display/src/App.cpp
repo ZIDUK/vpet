@@ -1,4 +1,5 @@
 #include "vpet/App.h"
+#include "vpet/Nutrition.h"
 #include "vpet/Strings.h"
 
 #include <Arduino.h>
@@ -130,6 +131,32 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         if (result == ItemUseResult::Back) navigation_.setPanel(PanelId::Home);
         return;
     }
+    if (panel == PanelId::Feeding) {
+        if (event == InputEvent::Back) {
+            navigation_.setPanel(PanelId::Home);
+            return;
+        }
+        if (event == InputEvent::Next) {
+            navigation_.setPanelIndex((navigation_.panelIndex() + 1) % Navigation::kFeedingCount);
+            return;
+        }
+        if (event != InputEvent::Action) return;
+        if (navigation_.panelIndex() == 2) {
+            navigation_.setPanel(PanelId::Home);
+            return;
+        }
+        const PetState before = pet_;
+        const FoodId food = navigation_.panelIndex() == 0 ? FoodId::Meat : FoodId::Protein;
+        if (applyFood(pet_, food) == FoodResult::Applied) {
+            if (settingsStore_.commitFood(pet_)) {
+                motion_.startAction(Action::Feed, nowMs);
+                navigation_.setPanel(PanelId::Home);
+            } else {
+                pet_ = before;
+            }
+        }
+        return;
+    }
     if (panel == PanelId::Rest) {
         if (event == InputEvent::Next || event == InputEvent::Back) {
             navigation_.dispatch(event);
@@ -205,7 +232,9 @@ void App::activate(uint32_t nowMs) {
     }
     Action action = Action::None;
     switch (navigation_.menuIndex()) {
-        case 1: action = Action::Feed; break;
+        case 1:
+            navigation_.setPanel(PanelId::Feeding);
+            return;
         case 2:
             // Timed training owns its clock and saves once at completion.
             training_.reset();
@@ -278,7 +307,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             trainingActive_ = false;
             panels_.invalidate();
             motion_.alignClock(nowMs);
-        } else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
+        } else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 33) {
             lastRenderMs_ = nowMs;
             panels_.drawTraining(training_, pet_, nowMs, settings_.language.c_str());
         }
@@ -361,7 +390,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     const PanelId panel = navigation_.panel();
     uint32_t intervalMs = 33;
-    if (panel == PanelId::Status || panel == PanelId::Inventory || panel == PanelId::EvolutionTree ||
+    if (panel == PanelId::Status || panel == PanelId::Inventory || panel == PanelId::Feeding || panel == PanelId::EvolutionTree ||
         panel == PanelId::EvolutionDetail || panel == PanelId::Rest ||
         panel == PanelId::Options) {
         intervalMs = panel == PanelId::Status ? 100 : 1000;

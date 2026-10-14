@@ -272,7 +272,7 @@ void test_reach_requirements_use_incoming_rule() {
     evo.writeReachRequirements(vpet::SpeciesId::Rookie, false, buffer, sizeof(buffer));
     TEST_ASSERT_EQUAL_STRING("12H10M CM<=1", buffer);
     evo.writeReachRequirements(vpet::SpeciesId::Champion, false, buffer, sizeof(buffer));
-    TEST_ASSERT_EQUAL_STRING("24H H55 E55 P55 HP75", buffer);
+    TEST_ASSERT_EQUAL_STRING("24H W8-14 H55 E55 P55 HP75", buffer);
     evo.writeReachRequirements(vpet::SpeciesId::Ultimate, false, buffer, sizeof(buffer));
     TEST_ASSERT_EQUAL_STRING("36H BAT15 WR60", buffer);
 }

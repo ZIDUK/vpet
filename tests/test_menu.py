@@ -14,7 +14,7 @@ def test_feed_menu_applies_food_and_starts_eat_animation():
     motion = PetMotion(now=0)
 
     assert activate_menu_item(pet, motion, menu_index=1, now=0.5)
-    assert pet.stats["h"] == 75
+    assert pet.stats["h"] == 70
     assert motion.state == MOTION_EAT
 
 
@@ -71,7 +71,7 @@ def test_overfeed_once_when_full_is_not_a_care_mistake():
     assert pet.stats["h"] == 100
     assert pet.overfeeds == 1
     assert pet.care_mistakes == 0
-    assert pet.weight == 6
+    assert pet.weight == 11
     assert not activate_menu_item(pet, motion, menu_index=1, now=1.0)
     assert pet.overfeeds == 1
     assert motion.state == MOTION_EAT

@@ -1,5 +1,6 @@
 """Targeted Firemon training prototype; integer EV gains preserve hatch DNA."""
 from core.dna import combat_stat
+from core.nutrition import complete_training_weight
 
 TRAINING_ENERGY_COST = 8
 TRAINING_EV_GAIN = 6
@@ -54,7 +55,7 @@ def train_attribute(pet, index):
     pet.stats["p"] = min(100, pet.stats["p"] + 3)
     pet.effort = min(100, pet.effort + 8)
     pet.training_sessions += 1
-    pet.weight = max(0, pet.weight - 1)
+    complete_training_weight(pet, 1)
     return True
 
 
@@ -99,6 +100,7 @@ def train_menu(pet, stat):
     # double-count and push happiness past the legacy contract.
     pet.effort = min(100, getattr(pet, "effort", 0) + 2)
     pet.training_sessions = getattr(pet, "training_sessions", 0) + 1
+    complete_training_weight(pet, 1)
     pet.menu_train_sessions = getattr(pet, "menu_train_sessions", 0) + 1
     return True
 
@@ -193,7 +195,7 @@ def batch_plan_one_rep(pet, stat):
             "secondary": {
                 "happiness": 3,
                 "effort": 8,
-                "weight": -1,
+                "weight": -1 if (getattr(pet, "training_weight_remainder", 0) + 1) >= 4 and pet.weight > 1 else 0,
                 "training_sessions": 1,
             },
             "reason": ""}
@@ -263,10 +265,11 @@ def batch_apply(pet, stat, reps):
     pet.stats["e"] = max(0, pet.get("e") - energy_charged)
     happiness_added = int(reps) * plan["secondary"]["happiness"]
     effort_added = int(reps) * plan["secondary"]["effort"]
-    weight_delta = int(reps) * plan["secondary"]["weight"]
+    weight_before = int(pet.weight)
     pet.stats["p"] = min(100, pet.stats["p"] + happiness_added)
     pet.effort = min(100, getattr(pet, "effort", 0) + effort_added)
-    pet.weight = max(0, pet.weight + weight_delta)
+    complete_training_weight(pet, int(reps))
+    weight_delta = pet.weight - weight_before
     pet.training_sessions = getattr(pet, "training_sessions", 0) + int(reps)
     return {"reps": int(reps), "ev_added": ev_added,
             "energy_charged": energy_charged,

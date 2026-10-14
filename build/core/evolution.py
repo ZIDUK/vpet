@@ -5,25 +5,23 @@ Synthetic tests can still use `min_age_seconds` and `pet.age_seconds`.
 """
 
 STABILITY_SECONDS = 30
-EVOLUTION_NODE_COUNT = 8
+EVOLUTION_NODE_COUNT = 5
 EVOLUTION_WINDOW = 3
-EVO_CHIP = 40
-EVO_GAP = 6
-EVO_X0 = 5
-EVO_COLOR_Y = 50
-EVO_DARK_Y = 94
+EVO_CHIP = 36
+EVO_GAP = 32
+EVO_X0 = 34
+EVO_COLOR_Y = 56
+EVO_DARK_Y = EVO_COLOR_Y
 
 
 def evolution_tree_node(index):
     index = int(index) % EVOLUTION_NODE_COUNT
-    dark = index >= 5
-    stage = index if index < 5 else index - 3
-    return stage, dark
+    return index, False
 
 
-def evolution_tree_xy(index):
+def evolution_tree_xy(index, window_start=0):
     stage, dark = evolution_tree_node(index)
-    x = EVO_X0 + stage * (EVO_CHIP + EVO_GAP)
+    x = EVO_X0 + (stage - int(window_start)) * (EVO_CHIP + EVO_GAP)
     y = EVO_DARK_Y if dark else EVO_COLOR_Y
     return x, y
 
@@ -38,7 +36,7 @@ def evolution_current_stage(pet):
 
 
 def evolution_hidden(stage, dark, current_stage):
-    return (dark and stage >= 2) or (not dark and stage > current_stage)
+    return stage > current_stage
 
 
 def requirements_to_reach(stage, registry, spanish=False):
@@ -129,6 +127,13 @@ class Evolution:
         if max_cm is not None and getattr(pet, "care_mistakes", 0) > max_cm:
             return (None, None)
 
+        weight_min = form_data.get("min_weight")
+        weight_max = form_data.get("max_weight")
+        if weight_min is not None and pet.weight < weight_min:
+            return (None, None)
+        if weight_max is not None and pet.weight > weight_max:
+            return (None, None)
+
         for stat, min_val in form_data.get("requirements", {}).items():
             if pet.get(stat) < min_val:
                 return (None, None)
@@ -165,6 +170,9 @@ class Evolution:
 
     @staticmethod
     def _apply(pet, new_form):
+        from core.nutrition import evolved_weight
+        old_form = pet.species
+        pet.weight = evolved_weight(old_form, new_form, pet.weight)
         pet.species = new_form
         for stat in pet.stats:
             pet.stats[stat] = min(100, pet.stats[stat] + 10)

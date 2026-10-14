@@ -42,27 +42,33 @@ un poco más fuerte. Dejar el aparato en un cajón no maxea al pet.
 | Relojes | Cerrados el 2026-10-12. Patio: 30 minutos. Jornada: 8 horas. Noche: 8 horas. |
 | Puesto del icono | Cerrado el 2026-10-12. Después de entrenamiento y antes de batalla: Status, comida, entrenamiento, exploración, batalla, descanso, objetos, pedia, opciones. |
 | Cantidades | Cerradas el 2026-10-12. Jornada completa: +2 EV en la stat elegida al salir, tope 8 EV por semana entre todas las stats. Noche completa con técnica aprendida: +2 de dominio, tope 4 por semana. Noche completa sin Llama aprendida: +1 al contador de aprendizaje; dos noches completas la aprenden. Patio: sin EV ni técnica. Por debajo de 4 horas el premio permanente de Jornada o Noche es 0; a las 4 horas, la mitad (+1 EV o +1 de dominio). El contador de Llama solo sube con la noche completa. El tope se reinicia el lunes a las 00:00. El resultado bueno o pobre dentro de la misma ruta lo decide el cuidado, sin azar. |
-| Implementación | No empieza hasta aprobar alcance y balance. |
+| Botín del Patio | Cerrado el 2026-10-14. Al reclamar no entra nada a la bolsa. Buen cuidado: +25 ENE, tope 100, sin EV. Mal cuidado: +10 ENE, sin EV. |
+| Botín de la Jornada | Cerrado el 2026-10-14. Además del EV de ruta, el buen cuidado deja una Guía (`guide`). Se gasta en la próxima sesión de entrenamiento y esa sesión gana +1 EV en el stat entrenado. Cabe una. Si ya hay una sin usar, la jornada paga el EV de ruta y no deja otra. El mal cuidado no deja Guía. |
+| Bolsa | La Guía espera en la puerta si no cabe. Sigue siendo un solo cobro. Una segunda Guía no se acumula. |
+| Disco de pelea | Fuera de este corte. Entra cuando el combate de la placa y el del simulador sean la misma regla. |
+| Especie siguiente | Cerrado el 2026-10-14. Elemento planta, para que Llama sume la mitad. Tres técnicas: golpe neutral, guardia y una de planta con el mismo contador de dos. Sin firma. Al cambiar de etapa se conservan las que esa etapa liste; si no tiene lista, se quedan las aprendidas. |
+| Atributo | Vaccine, Data y Virus quedan fuera hasta que haya tres especies. |
+| Guardado lógico | Cerrado el 2026-10-14. La partida guarda la ruta, la hora de salida, si ya se cobró y si hay una Guía pendiente. El formato en bytes de NVS se escribe al implementar. |
+| Implementación | No empieza hasta cerrar la paridad del combate actual y el formato de guardado. |
 
 ## Ritmo de la semana
 
 - Antes de irse, elige un camino y manda al pet. Tarda lo que tarda mirar el menú.
-- Al volver, reclama una vez: un objeto de esa ruta y, si la ruta lo da, un paso permanente hacia el combate. Lo cuida si hace falta y puede mandarlo otra vez.
+- Al volver, reclama una vez. El Patio devuelve energía. La Jornada deja su EV y, con buen cuidado, una Guía. La Noche avanza la técnica. Lo cuida si hace falta y puede mandarlo otra vez.
 - El viernes revisa Status, equipa la técnica y deja al pet listo.
 - El sábado pelea.
 - La exploración pone el piso de la semana. El entrenamiento corto y la práctica ponen la ventaja de quien sí tuvo esos minutos.
 
 ## Caminos
 
-Tres relojes cerrados, una familia de botín por camino. La calidad cae dentro
-de esa familia. Un viaje no cambia de familia ni entrega objeto raro, EV y
-técnica a la vez. Los números de EV y de técnica están cerrados. Los objetos
-concretos de cada ruta siguen sin definirse.
+Tres relojes cerrados. Los premios del Patio y de la Jornada quedaron
+cerrados el 2026-10-14. Un viaje no cambia de familia ni entrega EV y
+técnica a la vez.
 
 | Camino | Reloj | Premio permanente | Tope |
 |---|---|---|---|
-| Patio | 30 minutos | Ninguno. Solo comida o energía. | Sin EV ni técnica. |
-| Jornada | 8 horas | +2 EV en la stat elegida al salir. A las 4 horas, +1 EV. Antes, 0. | 8 EV por semana, entre todas las stats. |
+| Patio | 30 minutos | Ninguno. Al reclamar, +25 ENE con buen cuidado o +10 con mal cuidado. Nada en la bolsa. | Sin EV ni técnica. |
+| Jornada | 8 horas | +2 EV en la stat elegida al salir. A las 4 horas, +1 EV. Antes, 0. Con buen cuidado, una Guía: +1 EV en la próxima sesión. | 8 EV por semana, entre todas las stats. La Guía cabe una y no entra en ese tope. |
 | Noche | 8 horas | Si Llama no está aprendida, +1 al contador y solo con la noche completa. Si ya hay técnica aprendida, +2 de dominio; a las 4 horas, +1. | Dos noches completas aprenden Llama. Dominio: 4 por semana. |
 
 El cuidado previo inclina el resultado hacia la parte buena de la misma
@@ -84,11 +90,10 @@ otros juegos de criar monstruos:
 
 ## Sigue abierto
 
-1. Objetos concretos de cada ruta. El catálogo actual no se repone: ver `docs/items-and-rewards.md`. Falta decidir qué objeto entrega Patio, Jornada y Noche.
-2. Catálogo: ID estable, categoría, rareza, icono, ES/EN, stack máximo, efecto tipado, objetivo, magnitud, duración, límites y origen.
-3. Familias a confirmar: alimento, recuperación, material, manual de técnica. El cosmético queda con el álbum, fuera de este corte.
-4. Inventario lleno más allá de «espera en la puerta», recompensa duplicada y tablas por destino.
-5. Guardado atómico de salida, regreso y reclamación única, compatible con el esquema NVS actual. No se diseña la serialización hasta cerrar el alcance.
+1. El formato en bytes del guardado. Los campos ya están: ruta, hora de salida, cobrado y Guía pendiente.
+2. Nombre, poder y MP de la técnica de planta del pet siguiente. La estructura ya está cerrada.
+3. Filete y champiñón: misma familia que la Guía, +1 EV en la próxima sesión de un stat concreto. Sus números y su origen no son el Patio ni la Jornada.
+4. El disco de pelea, cuando el combate ya sea igual en la placa y en el simulador.
 
 ## Fuera de este corte
 

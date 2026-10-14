@@ -491,6 +491,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     draw.rectangle((3, 27, 236, 47), fill=ink)
     spanish = getattr(pet, "language", "EN") == "ES"
     title = {
+        "feeding": "ALIMENTAR" if spanish else "FEED",
         "inventory": "INVENTORY",
         "evolution": "EVOLUTION",
         "evolution_detail": "EVOLUTION",
@@ -525,6 +526,35 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             else:
                 label = inventory_name(index, spanish)
             draw.text((x + 24, y + 6), label, fill=ink, font=_status_font(12))
+    elif panel_mode == "feeding":
+        selected = int(panel_index or 0) % 3
+        options = (
+            ("ItemMeat", "CARNE" if spanish else "MEAT", "+20 HAM  +1 PESO" if spanish else "+20 HUN  +1 WT"),
+            ("ItemProtein", "PROTEINA" if spanish else "PROTEIN", "+20 ENE  +2 PESO" if spanish else "+20 ENE  +2 WT"),
+        )
+        for index, (icon, name, effect) in enumerate(options):
+            x = 7 + index * 115
+            active = selected == index
+            fill = yellow if active else _mix(ink, panel, 0.88)
+            outline = yellow if active else _mix(ink, panel, 0.45)
+            draw.rounded_rectangle((x, 56, x + 108, 109), radius=4,
+                                   fill=fill, outline=outline)
+            _paste_ui_icon(frame, build_dir, icon, x + 5, 66, 26)
+            draw.text((x + 34, 64), name, fill=ink, font=_status_font(10))
+            draw.text((x + 34, 82), effect, fill=ink, font=_status_font(8))
+            note = "EN DESCANSO" if spanish else "RESTING"
+            unlimited = "ILIMITADO" if spanish else "UNLIMITED"
+            if index == 1 and (getattr(pet, "protein_fed_this_cycle", False)
+                               or pet.get("e") > 80):
+                draw.text((x + 34, 96), note, fill=(113, 122, 126), font=_status_font(7))
+            else:
+                draw.text((x + 34, 96), unlimited, fill=green, font=_status_font(7))
+        back_fill = yellow if selected == 2 else _mix(ink, panel, 0.88)
+        back_edge = yellow if selected == 2 else _mix(ink, panel, 0.45)
+        draw.rounded_rectangle((7, 116, 231, 131), radius=3,
+                               fill=back_fill, outline=back_edge)
+        draw.text((119, 123), "VOLVER" if spanish else "BACK",
+                  fill=ink, font=_status_font(8), anchor="mm")
     elif panel_mode == "evolution":
         species = ("Egg.bmp", "Sparkmon.bmp", "Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp")
         current_stage = evolution_current_stage(pet)

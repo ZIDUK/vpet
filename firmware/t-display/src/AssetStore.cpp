@@ -52,32 +52,66 @@ bool AssetStore::drawFrame(
     if (!file) {
         return false;
     }
-    char magic[4];
-    if (file.readBytes(magic, sizeof(magic)) != sizeof(magic) ||
-        magic[0] != 'V' || magic[1] != 'P' || magic[2] != 'A' || magic[3] != '1') {
-        file.close();
-        return false;
+    CachedPalette* cached = nullptr;
+    for (auto& entry : paletteCache_) {
+        if (entry.path[0] && strcmp(entry.path, path) == 0) {
+            cached = &entry;
+            break;
+        }
     }
-    const uint16_t width = read16(file);
-    const uint16_t height = read16(file);
-    const uint16_t frameCount = read16(file);
-    const uint16_t paletteCount = read16(file);
-    const uint8_t transparent = file.read();
-    if (width == 0 || width > 240 || height == 0 || height > 135 ||
-        frameCount == 0 || paletteCount == 0 || paletteCount > 256) {
-        file.close();
-        return false;
+    if (!cached) {
+        char magic[4];
+        if (file.readBytes(magic, sizeof(magic)) != sizeof(magic) ||
+            magic[0] != 'V' || magic[1] != 'P' || magic[2] != 'A' || magic[3] != '1') {
+            file.close();
+            return false;
+        }
+        uint16_t width = read16(file);
+        uint16_t height = read16(file);
+        uint16_t frameCount = read16(file);
+        uint16_t paletteCount = read16(file);
+        uint8_t transparent = file.read();
+        if (width == 0 || width > 240 || height == 0 || height > 135 ||
+            frameCount == 0 || paletteCount == 0 || paletteCount > 256) {
+            file.close();
+            return false;
+        }
+        CachedPalette* target = &paletteCache_[0];
+        for (auto& entry : paletteCache_) {
+            if (!entry.path[0]) {
+                target = &entry;
+                break;
+            }
+            if (target->path[0] && entry.age < target->age) target = &entry;
+        }
+        target->width = width;
+        target->height = height;
+        target->frameCount = frameCount;
+        target->paletteCount = paletteCount;
+        target->transparent = transparent;
+        // ESP32 is little endian, matching the VPA palette.
+        const size_t paletteBytes = paletteCount * sizeof(uint16_t);
+        if (file.read(reinterpret_cast<uint8_t*>(target->colors), paletteBytes) != paletteBytes) {
+            target->path[0] = '\0';
+            file.close();
+            return false;
+        }
+        strncpy(target->path, path, sizeof(target->path) - 1);
+        target->path[sizeof(target->path) - 1] = '\0';
+        cached = target;
     }
-    uint16_t palette[256];
-    // ESP32 is little endian, matching the VPA palette. Avoid hundreds of
-    // individual filesystem reads for each icon and animation frame.
-    const size_t paletteBytes = paletteCount * sizeof(uint16_t);
-    if (file.read(reinterpret_cast<uint8_t*>(palette), paletteBytes) != paletteBytes) {
-        file.close();
-        return false;
-    }
+    cached->age = ++cacheAge_;
+    const uint16_t width = cached->width;
+    const uint16_t height = cached->height;
+    const uint16_t frameCount = cached->frameCount;
+    const uint16_t paletteCount = cached->paletteCount;
+    const uint8_t transparent = cached->transparent;
+    const uint16_t* palette = cached->colors;
     frame %= frameCount;
-    file.seek(13 + paletteCount * 2 + frame * 4);
+    if (!file.seek(13 + paletteCount * 2 + frame * 4) || file.available() < 4) {
+        file.close();
+        return false;
+    }
     const uint32_t frameOffset = read32(file);
     if (!file.seek(frameOffset)) {
         file.close();

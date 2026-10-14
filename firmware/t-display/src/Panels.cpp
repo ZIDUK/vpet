@@ -1,6 +1,7 @@
 #include "vpet/Panels.h"
 #include "vpet/Evolution.h"
 #include "vpet/Layout.h"
+#include "vpet/Nutrition.h"
 #include "vpet/Strings.h"
 #include "vpet/TrainingUi.h"
 
@@ -350,7 +351,16 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
     char value[16];
     if ((page % Navigation::kStatusPages) == 2) {
         snprintf(value, sizeof(value), "%u", pet.weight());
-        drawStatusRow("/ui/icons/weight.vpa", spanish ? "PESO" : "WEIGHT", value, 0);
+        const uint8_t reference = referenceWeight(pet.species());
+        char weightLabel[24];
+        if (reference > 0) {
+            const uint8_t low = static_cast<uint8_t>((80U * reference + 99U) / 100U);
+            const uint8_t high = static_cast<uint8_t>((120U * reference) / 100U);
+            snprintf(weightLabel, sizeof(weightLabel), spanish ? "PESO %u-%u" : "WEIGHT %u-%u", low, high);
+        } else {
+            snprintf(weightLabel, sizeof(weightLabel), "%s", spanish ? "PESO" : "WEIGHT");
+        }
+        drawStatusRow("/ui/icons/weight.vpa", weightLabel, value, 0);
         snprintf(value, sizeof(value), "%u/3", pet.dp());
         drawStatusRow("/ui/icons/battle.vpa", "DP", value, 1);
         if (pet.hasWinRatio()) {
@@ -429,6 +439,41 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
             drawLabel(copy::itemName(index, spanish), x + 24, y + 5, width - 28, 2);
         }
     }
+}
+
+void Panels::drawFeeding(uint8_t selected, bool spanish, const PetState& pet) {
+    const char* meat = spanish ? "CARNE" : "MEAT";
+    const char* protein = spanish ? "PROTEINA" : "PROTEIN";
+    const char* back = spanish ? "VOLVER" : "BACK";
+    const char* foodIcons[] = {"/ui/icons/itemmeat.vpa", "/ui/icons/itemprotein.vpa"};
+    const char* names[] = {meat, protein};
+    const char* effects[] = {spanish ? "+20 HAM  +1 PESO" : "+20 HUN  +1 WT",
+                             spanish ? "+20 ENE  +2 PESO" : "+20 ENE  +2 WT"};
+    for (uint8_t index = 0; index < 2; ++index) {
+        const int16_t x = 7 + index * 115;
+        const bool active = selected == index;
+        const uint16_t fill = active ? TFT_YELLOW : kChip;
+        display_.fillRoundRect(x, 56, 109, 54, 4, fill);
+        display_.drawRoundRect(x, 56, 109, 54, 4, active ? TFT_YELLOW : kInk);
+        assets_.drawFrame(display_, foodIcons[index], 0, x + 5, 66, false, -1, 72);
+        display_.setTextColor(kInk, fill);
+        drawLabel(names[index], x + 31, 65, 73, 2);
+        drawLabel(effects[index], x + 31, 87, 73, 1);
+        const bool proteinResting = index == 1 &&
+                                    (pet.proteinFedThisCycle() || pet.energy() > 80);
+        display_.setTextColor(proteinResting ? TFT_DARKGREY : TFT_GREEN, fill);
+        drawLabel(proteinResting
+                      ? (spanish ? "EN DESCANSO" : "RESTING")
+                      : (spanish ? "ILIMITADO" : "UNLIMITED"),
+                  x + 31, 101, 73, 1);
+    }
+    const bool backSelected = selected == 2;
+    display_.fillRoundRect(7, 116, 224, 15, 3, backSelected ? TFT_YELLOW : kChip);
+    display_.drawRoundRect(7, 116, 224, 15, 3, backSelected ? TFT_YELLOW : kInk);
+    display_.setTextColor(kInk, backSelected ? TFT_YELLOW : kChip);
+    display_.setTextDatum(MC_DATUM);
+    drawLabel(back, 119, 119, 214, 1);
+    display_.setTextDatum(TL_DATUM);
 }
 
 void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index, bool spanish) {
@@ -751,6 +796,10 @@ void Panels::draw(
             lastInventoryIndex_ = selected;
             break;
         }
+        case PanelId::Feeding:
+            beginPanel(panelChanged, navigation.menuIndex(), spanish ? "ALIMENTAR" : "FEED", calling);
+            drawFeeding(navigation.panelIndex() % Navigation::kFeedingCount, spanish, pet);
+            break;
         case PanelId::EvolutionTree: {
             const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
             const uint8_t previousStart = inventoryWindowStart(Navigation::kEvolutionNodeCount, lastEvolutionIndex_);

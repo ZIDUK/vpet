@@ -51,9 +51,13 @@ def render_item_icon(name, size=16):
         draw.polygon([(x * scale, y * scale) for x, y in points], fill=_COLORS[color])
 
     def tile():
-        rect((0, 0, 15, 15), "tile_edge")
-        rect((1, 1, 14, 14), "tile")
-        rect((1, 1, 14, 1), "blue_dark")
+        if name == "Backpack":
+            rect((0, 0, 15, 15), "outline")
+            rect((1, 1, 14, 14), "tile")
+        else:
+            rect((0, 0, 15, 15), "tile_edge")
+            rect((1, 1, 14, 14), "tile")
+            rect((1, 1, 14, 1), "blue_dark")
 
     tile()
     if name == "Backpack":

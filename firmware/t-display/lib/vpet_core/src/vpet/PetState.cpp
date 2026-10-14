@@ -1,4 +1,5 @@
 #include "vpet/PetState.h"
+#include "vpet/Nutrition.h"
 
 namespace vpet {
 
@@ -104,6 +105,15 @@ uint8_t PetState::combatStat(CombatStat stat) const {
     return static_cast<uint8_t>(value);
 }
 
+uint8_t PetState::effectiveCombatStat(CombatStat stat) const {
+    const BodyCondition condition = bodyCondition(species_, weight_);
+    uint8_t penalty = 0;
+    if (stat == CombatStat::Off) penalty = condition.offPenalty;
+    else if (stat == CombatStat::Def) penalty = condition.defPenalty;
+    else if (stat == CombatStat::Spd) penalty = condition.spdPenalty;
+    return effectiveStat(combatStat(stat), penalty);
+}
+
 void PetState::gainEv(CombatStat stat, uint8_t amount) {
     const uint8_t index = static_cast<uint8_t>(stat);
     if (index > 5) return;
@@ -134,7 +144,41 @@ void PetState::setEffort(int value) {
 }
 
 void PetState::setWeight(uint8_t value) {
-    weight_ = value;
+    weight_ = value < 1 ? 1 : (value > 99 ? 99 : value);
+}
+
+void PetState::setHunger(int value) {
+    hunger_ = clampStat(value);
+}
+
+void PetState::noteMeal(bool overfeed) {
+    if (meals_ < 255) ++meals_;
+    if (overfeed) {
+        overfedThisCycle_ = true;
+        if (overfeeds_ < 99) ++overfeeds_;
+    }
+    refreshCallAfterCare();
+}
+
+void PetState::noteProteinMeal() {
+    proteinFedThisCycle_ = true;
+    refreshCallAfterCare();
+}
+
+void PetState::setNutritionState(uint8_t hungerRemainder, uint8_t trainingRemainder, bool proteinFed) {
+    hungerCycleRemainder_ = hungerRemainder > 19 ? 19 : hungerRemainder;
+    trainingWeightRemainder_ = trainingRemainder > 3 ? 3 : trainingRemainder;
+    proteinFedThisCycle_ = proteinFed;
+}
+
+int PetState::completeTrainingWeight(int repetitions) {
+    if (repetitions < 0) repetitions = 0;
+    const int total = trainingWeightRemainder_ + repetitions;
+    const int loss = total / 4;
+    trainingWeightRemainder_ = static_cast<uint8_t>(total % 4);
+    const uint8_t before = weight_;
+    weight_ = static_cast<uint8_t>(weight_ > loss + 1 ? weight_ - loss : 1);
+    return static_cast<int>(weight_) - before;
 }
 
 void PetState::setTrainingSessions(int value) {
@@ -249,16 +293,6 @@ bool PetState::canBattle() const {
     return true;
 }
 
-void PetState::applyProtein() {
-    energy_ = clampStat(energy_ + 20);
-    if (proteinUses_ < 99) ++proteinUses_;
-    if (proteinUses_ % 4 == 0) {
-        if (protein_ < 7) ++protein_;
-        if (dp_ < 3) ++dp_;
-    }
-    refreshCallAfterCare();
-}
-
 void PetState::injure() {
     if (!injured_) injuredMs_ = 0;
     injured_ = true;
@@ -279,13 +313,14 @@ void PetState::resolveBattle() {
     effort_ = clampStat(effort_ + 4);
     ++battles_;
     const int roll = battleRoll_ >= 0 ? battleRoll_ : static_cast<int>((ageMs_ / 1000U + static_cast<uint32_t>(battles_) * 17U) % 100U);
-    int chance = 50 + static_cast<int>(effortHearts()) * 8 + energy_ / 20 - static_cast<int>(protein_) * 4;
+    const BodyCondition condition = bodyCondition(species_, weight_);
+    const int conditionPenalty = (condition.offPenalty + condition.defPenalty + condition.spdPenalty + 2) / 3;
+    int chance = 50 + static_cast<int>(effortHearts()) * 8 + energy_ / 20 - conditionPenalty;
     if (chance < 15) chance = 15;
     if (chance > 90) chance = 90;
     lastBattleWon_ = roll < chance;
     if (lastBattleWon_) {
         if (wins_ < 255) ++wins_;
-        if (protein_ >= 4) injure();
     } else {
         if (losses_ < 255) ++losses_;
         injure();
@@ -357,23 +392,6 @@ bool PetState::canFeed() const {
     return !(hunger_ >= 100 && overfedThisCycle_);
 }
 
-void PetState::applyFeed(bool fromItem) {
-    if (hunger_ >= 100) {
-        overfedThisCycle_ = true;
-        if (overfeeds_ < 99) ++overfeeds_;
-        if (weight_ < 99) ++weight_;
-    } else {
-        hunger_ = clampStat(hunger_ + 20);
-        if (fromItem && weight_ < 99) ++weight_;
-    }
-    if (!fromItem) {
-        energy_ = clampStat(energy_ + 5);
-        ++meals_;
-        record(CareEventType::Feed, overfedThisCycle_ ? 1 : 0);
-    }
-    refreshCallAfterCare();
-}
-
 CareSnapshot PetState::snapshot() const {
     CareSnapshot snap{};
     snap.schema = 1;
@@ -412,12 +430,20 @@ void PetState::tick(uint32_t elapsedMs) {
         const int hungerBefore = hunger_;
         const int energyBefore = energy_;
         hunger_ = clampStat(hunger_ - 1);
+        if (hungerBefore > hunger_) {
+            ++hungerCycleRemainder_;
+            if (hungerCycleRemainder_ >= 20) {
+                hungerCycleRemainder_ = 0;
+                if (weight_ > 1) --weight_;
+                proteinFedThisCycle_ = false;
+                overfedThisCycle_ = false;
+            }
+        }
         energy_ = clampStat(energy_ - 1);
         happiness_ = clampStat(happiness_ - 1);
         if ((hungerBefore > 0 && hunger_ == 0) || (energyBefore > 0 && energy_ == 0)) {
             record(CareEventType::DecayZero, hunger_ == 0 ? 1 : 2);
         }
-        if (hunger_ < 100) overfedThisCycle_ = false;
     }
 }
 
@@ -441,17 +467,18 @@ bool PetState::completeAction() {
     pendingAction_ = Action::None;
     switch (action) {
         case Action::Feed: {
-            const bool trained = hunger_ < 100;
-            applyFeed(false);
-            if (trained) gainEv(CombatStat::Hp, 2);
-            return true;
+            return applyFood(*this, FoodId::Meat) == FoodResult::Applied;
         }
         case Action::Training:
             effort_ = clampStat(effort_ + 8);
             energy_ = clampStat(energy_ - 8);
             happiness_ = clampStat(happiness_ + 3);
             ++trainingSessions_;
-            if (weight_ > 0) --weight_;
+            ++trainingWeightRemainder_;
+            if (trainingWeightRemainder_ >= 4) {
+                trainingWeightRemainder_ = 0;
+                if (weight_ > 1) --weight_;
+            }
             record(CareEventType::Train, 0);
             gainEv(CombatStat::Off, 2);
             gainEv(CombatStat::Spd, 1);
@@ -492,6 +519,12 @@ bool PetState::forceNextForm() {
 }
 
 void PetState::evolveTo(SpeciesId species) {
+    if (species != species_) {
+        const uint8_t fromReference = referenceWeight(species_);
+        const uint8_t toReference = referenceWeight(species);
+        if (fromReference == 0 && toReference > 0) weight_ = toReference;
+        else weight_ = evolvedWeight(species_, species, weight_);
+    }
     species_ = species;
     if (species == SpeciesId::Rookie) rookieDiscovered_ = true;
     if (species == SpeciesId::Champion) championDiscovered_ = true;
@@ -557,7 +590,7 @@ void PetState::restoreCare(
     battles_ = battles < 0 ? 0 : battles;
     wins_ = wins;
     losses_ = losses;
-    weight_ = weight;
+    setWeight(weight);
     dp_ = dp;
     protein_ = protein > 7 ? 7 : protein;
 }
@@ -578,7 +611,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
     if (index == 6) return ItemUseResult::Back;
     if (index > 5) return ItemUseResult::Empty;
     if (dead_ || cold_ || species_ == SpeciesId::Egg) return ItemUseResult::Blocked;
-    if (index == 0 && !canFeed()) return ItemUseResult::Blocked;
+    if (index == 0 || index == 4) return ItemUseResult::Blocked;
     if (index == 5 && !injured_) return ItemUseResult::Blocked;
     if (index == 1 && energy_ >= 100) return ItemUseResult::Blocked;
     uint8_t* stock = nullptr;
@@ -593,12 +626,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
     if (stock == nullptr || *stock == 0) return ItemUseResult::Empty;
     --(*stock);
     switch (index) {
-        case 0: {
-            const bool trained = hunger_ < 100;
-            applyFeed(true);
-            if (trained) gainEv(CombatStat::Hp, 2);
-            break;
-        }
+        case 0: break;
         case 1:
             energy_ = clampStat(energy_ + 25);
             refreshCallAfterCare();
@@ -609,10 +637,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
             gainEv(CombatStat::Brn, 2);
             break;
         case 3: happiness_ = clampStat(happiness_ + 15); break;
-        case 4:
-            applyProtein();
-            gainEv(CombatStat::Off, 2);
-            break;
+        case 4: break;
         case 5:
             injured_ = false;
             injuredMs_ = 0;
@@ -624,6 +649,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
 
 bool PetState::itemVisible(uint8_t index) const {
     if (index == 6) return true;
+    if (index == 0 || index == 4) return false;
     return index < 6 && itemCount(index) > 0;
 }
 

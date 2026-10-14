@@ -22,9 +22,9 @@ def test_use_item_spends_stock_and_applies_plate_stats():
     pet.stats["p"] = 80
     pet.effort = 0
 
-    assert use_inventory_item(pet, 0) == "used"
-    assert pet.inventory["meat"] == 2
-    assert pet.stats["h"] == 100
+    assert use_inventory_item(pet, 0) == "blocked"
+    assert pet.inventory["meat"] == 3
+    assert pet.stats["h"] == 80
     assert use_inventory_item(pet, 1) == "used"
     assert pet.inventory["energy"] == 1
     assert pet.stats["e"] == 100
@@ -54,17 +54,17 @@ def test_empty_and_egg_do_not_change_stats():
     pet = Pet(species="rookie", state=STATE_LIVE)
     pet.inventory = {"meat": 0, "energy": 0, "exp": 0, "ring": 0}
     before = dict(pet.stats)
-    assert use_inventory_item(pet, 0) == "empty"
+    assert use_inventory_item(pet, 0) == "blocked"
     assert pet.stats == before
 
 
 def test_inventory_window_keeps_selection_visible():
-    visible = (0, 1, 2, 3, 4, 5, 6)
+    visible = (1, 2, 3, 5, 6)
     assert INVENTORY_WINDOW == 3
-    assert inventory_window(visible, 0) == (0, 1, 2)
-    assert inventory_window(visible, 3) == (2, 3, 4)
-    assert inventory_window(visible, 6) == (4, 5, 6)
-    assert inventory_window((0, 6), 6) == (0, 6)
+    assert inventory_window(visible, 1) == (1, 2, 3)
+    assert inventory_window(visible, 3) == (2, 3, 5)
+    assert inventory_window(visible, 6) == (3, 5, 6)
+    assert inventory_window((1, 6), 6) == (1, 6)
 
 
 def test_inventory_preview_has_a_short_blurb():
@@ -84,12 +84,12 @@ def test_inventory_uses_back_arrow_for_return_entry():
 def test_empty_items_disappear_from_inventory_list():
     pet = Pet(species="rookie", state=STATE_LIVE)
     pet.inventory = {"meat": 3, "energy": 0, "exp": 1, "ring": 0}
-    assert visible_inventory_indexes(pet) == (0, 2, 6)
-    assert next_visible_inventory_index(pet, 0) == 2
+    assert visible_inventory_indexes(pet) == (2, 6)
+    assert next_visible_inventory_index(pet, 1) == 2
     assert next_visible_inventory_index(pet, 2) == 6
-    assert next_visible_inventory_index(pet, 6) == 0
+    assert next_visible_inventory_index(pet, 6) == 2
     assert clamp_visible_inventory_index(pet, 1) == 2
 
     assert use_inventory_item(pet, 2) == "used"
-    assert visible_inventory_indexes(pet) == (0, 6)
+    assert visible_inventory_indexes(pet) == (6,)
     assert clamp_visible_inventory_index(pet, 2) == 6

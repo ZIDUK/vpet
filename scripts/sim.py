@@ -30,6 +30,7 @@ from config import (
     MENU_STATUS_INDEX,
     MENU_TRAINING_INDEX,
     MENU_BATTLE_INDEX,
+    MENU_FEED_INDEX,
     ROOKIE_SPECIES,
     SPARKMON_EVOLUTION_FRAME_COUNT,
 )
@@ -152,6 +153,8 @@ def main():
                 elif event.key == pygame.K_n:
                     if panel_mode == "inventory":
                         inventory_index = next_visible_inventory_index(pet, inventory_index)
+                    elif panel_mode == "feeding":
+                        inventory_index = (inventory_index + 1) % 3
                     elif panel_mode == "status":
                         inventory_index = (inventory_index + 1) % STATUS_PAGE_COUNT
                     elif panel_mode in ("evolution", "evolution_detail"):
@@ -162,7 +165,20 @@ def main():
                         panel_mode = None
                         menu_index = (menu_index + 1) % len(MENU_ICON_PATHS)
                 elif event.key == pygame.K_a and pet.is_live:
-                    if panel_mode == "inventory":
+                    if panel_mode == "feeding":
+                        if inventory_index == 2:
+                            panel_mode = None
+                        else:
+                            snapshot = pet.to_dict()
+                            food = ("meat", "protein")[inventory_index]
+                            result = pet.use_food(food, asleep=motion.state == MOTION_SLEEP)
+                            if result["applied"]:
+                                if services.save(pet):
+                                    motion.start_eat(pygame.time.get_ticks() / 1000)
+                                    panel_mode = None
+                                else:
+                                    pet.load_from_dict(snapshot)
+                    elif panel_mode == "inventory":
                         inventory_index = clamp_visible_inventory_index(pet, inventory_index)
                         result = use_inventory_item(pet, inventory_index)
                         if result == "used":
@@ -195,6 +211,9 @@ def main():
                     elif menu_index == MENU_INVENTORY_INDEX:
                         panel_mode = "inventory"
                         inventory_index = clamp_visible_inventory_index(pet, 0)
+                    elif menu_index == MENU_FEED_INDEX:
+                        panel_mode = "feeding"
+                        inventory_index = 0
                     elif menu_index == MENU_PEDIA_INDEX:
                         panel_mode = "evolution"
                         inventory_index = evolution_current_stage(pet)

@@ -52,6 +52,27 @@ observacion real o evidencia del usuario; el arranque serial no basta.
 
 Salida: paridad demostrada de Arena, no solo del motor numerico.
 
+## Despues de P1: elemento de la tecnica
+
+Estado: regla cerrada el 2026-10-14 en
+[estándar de técnicas](../specs/2026-10-14-technique-standard.md).
+No implementada. No entra dentro de los pendientes de arriba: ese
+bloque iguala el combate actual y no cambia la formula.
+
+- [ ] Implementar el elemento de Cyber Sleuth en el mismo cambio para el
+  simulador y para el firmware. Misma cuenta en Python y en C++:
+  si el elemento de la tecnica le gana al de quien recibe, dano por 3/2;
+  si no, el multiplicador queda en 1. Guardia parte despues, minimo 1.
+- [ ] Firemon es `fire`. Golpe es `neutral`. Guardia no tiene elemento.
+  Llama es `fire`.
+- [ ] Probar los dos lados con la misma partida: agua contra Firemon suma
+  la mitad, Llama contra planta suma la mitad, Llama contra agua no
+  resta, neutral no dispara el elemento.
+- [ ] No implementar Vaccine, Data ni Virus en este bloque.
+
+Salida: placa y simulador aplican el mismo multiplicador. Un solo lado
+no cuenta como hecho.
+
 ## P1: skills y pipeline reproducible para MiniMax
 
 Estado: propuestas, NO creadas ni instaladas.
@@ -71,6 +92,28 @@ Estado: propuestas, NO creadas ni instaladas.
 Salida: skills leidas por MiniMax y una entrega de ejemplo validada, no solo
 archivos SKILL.md presentes. No se ha autorizado una delegacion nueva.
 
+## Alimentacion y peso: implementacion integrada; validacion parcial
+
+Actualizacion: 2026-10-14. Python pasa 554 pruebas; el core C++ de nutricion y
+persistencia pasa chequeo sintactico. El runner PlatformIO no inicia por
+permisos de `~/.platformio`, y la placa aun no se valida con el build final.
+Plan y pendientes en
+[alimentacion, peso, combate y evolucion](2026-10-14-feeding-weight-combat-evolution.md).
+
+- [ ] Validar el balance propuesto: comida ilimitada sin EV, ciclo metabolico,
+  peso saludable por etapa y modificadores acotados de combate.
+- [ ] Implementar reglas Python/C++, migracion compatible y consumo recuperable.
+- [ ] Integrar Alimentar con exactamente carne/proteina ilimitadas, mochila,
+  stats efectivos y requisito de evolucion. Alimentar no descuenta inventario.
+- [ ] Definir en trabajo separado filete/champinon como mejoras de stats de
+  mochila: objetivo, magnitud, duracion, topes y origen. No entran en Alimentar.
+- [ ] Verificar paridad, guardado, animaciones por especie y comportamiento fisico.
+
+El plan contiene tareas, archivos, contratos y criterios de terminado. Las
+cifras son propuestas para medir, no un balance ya validado. Los efectos de
+los objetos actuales siguen documentados como implementados hasta completar
+la migracion; esta entrada no cambia el estado de P0/P1.
+
 ## P2: exploracion y recompensas
 
 Estado: en diseño (2026-10-11). No hay funcionalidad implementada.
@@ -83,16 +126,22 @@ Ya quedó el icono nuevo, la salida larga, el jugador de semana corta
 con combate el sábado, el piso **C**, el coste **A**, el retorno
 **B**, la etapa mínima, los relojes, el puesto del icono y las
 cantidades: Jornada +2 EV (tope 8/semana), Noche +2 de dominio
-(tope 4/semana) o el aprendizaje de Llama. Siguen abiertos los
-objetos de cada ruta, el catálogo nuevo y la persistencia. No cambiar
-economía ni guardado hasta aprobar el alcance.
+(tope 4/semana) o el aprendizaje de Llama. El 2026-10-14 quedaron el
+Patio (+25 o +10 ENE, sin objeto), la Guía de la Jornada (+1 EV en la
+próxima sesión, una sola) y la especie siguiente de elemento planta.
+Siguen abiertos el formato en bytes del guardado, el nombre y el poder
+de la técnica de planta, y filete/champiñón. No cambiar economía ni
+guardado hasta implementar ese formato.
 
 - [ ] Definir entrada del menu superior, destinos, duracion, coste, requisitos,
   retorno anticipado, actividad offline y comportamiento ante reinicio.
 - [ ] Presentar rutas con propositos distintos (materiales, cuidado, aprendizaje)
   y riesgos/recompensas comprensibles; valores concretos requieren aprobacion.
-- [ ] Para el botin futuro, estandarizar catalogo: ID estable, categoria, rareza, icono, ES/EN,
-  stack maximo, efecto tipado, objetivo, magnitud, duracion, limites y origen.
+- [ ] Para el botin futuro, llenar la ficha ya documentada en
+  [estándar de catálogo](../specs/2026-10-14-item-catalog-standard.md):
+  ID estable, categoria, rareza, icono, ES/EN, stack maximo, efecto tipado,
+  objetivo, magnitud, duracion, limites y origen. El esquema está escrito;
+  falta el objeto concreto de cada ruta.
 - [ ] Proponer familias: alimento, recuperacion, material, manual de tecnica y
   cosmetico. Distinguir recuperacion temporal de EV permanente; no cambiar IV
   ni regalar stats ilimitados. Identificar usos reales antes de crear materiales.
@@ -118,6 +167,9 @@ debe desplazar el cierre de errores/paridad de la placa.
 - Paridad de descanso/guardado y resto de menus fuera de Training/Tecnicas.
 - Ciclo BLE telefono: ADVERTISING -> CONNECTED -> ADVERTISING con evidencia.
 - Nuevas especies/evoluciones, paquetes `.vpetpack`, catalogo y app movil.
+  El camino de negocio posterior a la placa (casa en el telefono, recibo,
+  modulo 3D y sabado patrocinado) esta en
+  [plan del negocio](2026-10-13-mall-business-plan.md). No adelanta P0 ni P1.
 - Provisionamiento WiFi/HTTPS y seguridad de produccion requieren alcance y
   autorizacion separados. No habilitar WiFi como parte de estos pendientes.
 

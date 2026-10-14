@@ -42,8 +42,21 @@ public:
     );
 
 private:
+    struct CachedPalette {
+        char path[64]{};
+        uint16_t width = 0;
+        uint16_t height = 0;
+        uint16_t frameCount = 0;
+        uint16_t paletteCount = 0;
+        uint8_t transparent = 0;
+        uint32_t age = 0;
+        uint16_t colors[256]{};
+    };
+
     // Reused scratch space keeps multi-row LittleFS reads off the loop stack.
     uint8_t indexRows_[240 * 8]{};
+    CachedPalette paletteCache_[8]{};
+    uint32_t cacheAge_ = 0;
 };
 
 }  // namespace vpet

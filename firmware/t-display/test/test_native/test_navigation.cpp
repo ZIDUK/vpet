@@ -28,6 +28,18 @@ void test_menu_opens_expected_panels() {
     TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
 }
 
+void test_meat_menu_opens_feeding_without_moving_header_cursor() {
+    vpet::Navigation navigation;
+    navigation.setMenuIndex(1);
+    navigation.dispatch(vpet::InputEvent::Action);
+    TEST_ASSERT_EQUAL(vpet::PanelId::Feeding, navigation.panel());
+    TEST_ASSERT_EQUAL(1, navigation.menuIndex());
+    TEST_ASSERT_EQUAL(0, navigation.panelIndex());
+    navigation.dispatch(vpet::InputEvent::Next);
+    TEST_ASSERT_EQUAL(1, navigation.panelIndex());
+    TEST_ASSERT_EQUAL(1, navigation.menuIndex());
+}
+
 void test_evolution_tree_opens_on_current_species() {
     vpet::Navigation navigation;
     navigation.setMenuIndex(6);

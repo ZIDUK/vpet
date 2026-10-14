@@ -1,8 +1,19 @@
 #include "vpet/SettingsStore.h"
+#include "vpet/Nutrition.h"
+
+#include <cstdio>
 
 namespace vpet {
+namespace {
+uint8_t safeWeight(int value) {
+    if (value < 1) return 1;
+    if (value > 99) return 99;
+    return static_cast<uint8_t>(value);
+}
+}
 
 LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
+    if (!recoverFoodTransaction()) return LoadResult::Unsupported;
     const int version = store_.getInt("schema", 0);
     if (version == 0) {
         pet.evolveTo(pet.species());
@@ -36,7 +47,7 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
             store_.getInt("battles", 0),
             static_cast<uint8_t>(store_.getInt("wins", 0)),
             static_cast<uint8_t>(store_.getInt("losses", 0)),
-            static_cast<uint8_t>(store_.getInt("weight", 5)),
+            safeWeight(store_.getInt("weight", 5)),
             static_cast<uint8_t>(store_.getInt("dp", 0)),
             static_cast<uint8_t>(store_.getInt("protein", 0))
         );
@@ -49,6 +60,17 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
             static_cast<uint8_t>(store_.getInt("injuries", 0)),
             store_.getInt("dead", 0) != 0
         );
+        if (store_.getInt("nutVer", 0) >= 1) {
+            const int hungerRemainder = store_.getInt("nutHunRem", 0);
+            const int trainingRemainder = store_.getInt("nutTrainRem", 0);
+            pet.setNutritionState(
+                static_cast<uint8_t>(hungerRemainder < 0 ? 0 : (hungerRemainder > 19 ? 19 : hungerRemainder)),
+                static_cast<uint8_t>(trainingRemainder < 0 ? 0 : (trainingRemainder > 3 ? 3 : trainingRemainder)),
+                store_.getInt("nutProtein", 0) != 0
+            );
+        } else {
+            pet.setWeight(migrateLegacyWeight(pet.species(), safeWeight(store_.getInt("weight", 5))));
+        }
     } else {
         pet.restoreCare(0, 0, CallReason::None, 0, 0, 0, 0, 0, 5, 1, 0);
     }
@@ -96,7 +118,13 @@ bool SettingsStore::restartLifeIfNeeded(PetState& pet, Settings& settings) {
 }
 
 bool SettingsStore::save(const PetState& pet, const Settings& settings) {
-    bool ok = store_.putInt("schema", 3);
+    if (!recoverFoodTransaction()) return false;
+    bool ok = true;
+    if (store_.getInt("nutVer", 0) < 1) {
+        ok = store_.putInt("legacyWeight", safeWeight(store_.getInt("weight", 5))) && ok;
+    }
+    ok = store_.putInt("schema", 3) && ok;
+    ok = store_.putInt("nutVer", 1) && ok;
     ok = store_.putInt("species", static_cast<int>(pet.species())) && ok;
     ok = store_.putInt("hunger", pet.hunger()) && ok;
     ok = store_.putInt("energy", pet.energy()) && ok;
@@ -119,6 +147,9 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("wins", pet.wins()) && ok;
     ok = store_.putInt("losses", pet.losses()) && ok;
     ok = store_.putInt("weight", pet.weight()) && ok;
+    ok = store_.putInt("nutHunRem", pet.hungerCycleRemainder()) && ok;
+    ok = store_.putInt("nutTrainRem", pet.trainingWeightRemainder()) && ok;
+    ok = store_.putInt("nutProtein", pet.proteinFedThisCycle() ? 1 : 0) && ok;
     ok = store_.putInt("dp", pet.dp()) && ok;
     ok = store_.putInt("protein", pet.protein()) && ok;
     ok = store_.putInt("overfed", pet.overfedThisCycle() ? 1 : 0) && ok;
@@ -143,6 +174,53 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
     ok = savePractice(pet.practice) && ok;
     return ok;
+}
+
+bool SettingsStore::commitFood(const PetState& pet) {
+    char journal[80];
+    const int previousSequence = store_.getInt("foodSeq", 0);
+    const int sequence = previousSequence < 1 || previousSequence >= 2147483647
+        ? 1 : previousSequence + 1;
+    snprintf(journal, sizeof(journal), "1,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+             sequence, pet.hunger(), pet.energy(), pet.weight(), pet.meals(),
+             static_cast<int>(pet.callReason()), pet.overfedThisCycle() ? 1 : 0,
+             pet.overfeeds(), pet.hungerCycleRemainder(),
+             pet.trainingWeightRemainder(), pet.proteinFedThisCycle() ? 1 : 0);
+    if (!store_.putString("foodTx", journal)) return false;
+    recoverFoodTransaction();
+    return true;
+}
+
+bool SettingsStore::recoverFoodTransaction() {
+    const std::string journal = store_.getString("foodTx", "");
+    if (journal.empty()) return true;
+    int version = 0, sequence = 0, hunger = 0, energy = 0, weight = 0, meals = 0;
+    int call = 0, overfed = 0, overfeeds = 0, hungerRem = 0, trainRem = 0, protein = 0;
+    int consumed = 0;
+    const int fields = sscanf(journal.c_str(), "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n",
+                              &version, &sequence, &hunger, &energy, &weight, &meals, &call,
+                              &overfed, &overfeeds, &hungerRem, &trainRem, &protein, &consumed);
+    if (fields != 12 || journal[consumed] != '\0' || version != 1 || sequence < 1 ||
+        hunger < 0 || hunger > 100 ||
+        energy < 0 || energy > 100 || weight < 1 || weight > 99 || meals < 0 || meals > 255 ||
+        call < 0 || call > 3 || (overfed != 0 && overfed != 1) || overfeeds < 0 || overfeeds > 99 ||
+        hungerRem < 0 || hungerRem > 19 || trainRem < 0 || trainRem > 3 ||
+        (protein != 0 && protein != 1)) return false;
+
+    bool ok = true;
+    ok = store_.putInt("foodSeq", sequence) && ok;
+    ok = store_.putInt("hunger", hunger) && ok;
+    ok = store_.putInt("energy", energy) && ok;
+    ok = store_.putInt("weight", weight) && ok;
+    ok = store_.putInt("meals", meals) && ok;
+    ok = store_.putInt("call", call) && ok;
+    ok = store_.putInt("overfed", overfed) && ok;
+    ok = store_.putInt("overfeeds", overfeeds) && ok;
+    ok = store_.putInt("nutHunRem", hungerRem) && ok;
+    ok = store_.putInt("nutTrainRem", trainRem) && ok;
+    ok = store_.putInt("nutProtein", protein) && ok;
+    if (!ok) return false;
+    return store_.putString("foodTx", "");
 }
 
 bool SettingsStore::loadPractice(PracticeProgress& progress) const {

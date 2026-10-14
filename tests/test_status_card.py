@@ -94,7 +94,7 @@ def test_battle_page_does_not_reuse_the_sword_for_win_ratio():
     rows = battle_rows(_pet(), spanish=False)
     labels = [row[1] for row in rows]
     icons = [row[0] for row in rows]
-    assert labels == ["WEIGHT", "DP", "WIN RATE", "PROTEIN", "W-L"], labels
+    assert labels == ["WEIGHT 8-12", "DP", "WIN RATE", "PROTEIN", "W-L"], labels
     assert icons == ["Weight", "Battle", "Trophy", "Protein", "Versus"]
     assert icons[1] != icons[2]
     assert rows[2][2] == "80%"

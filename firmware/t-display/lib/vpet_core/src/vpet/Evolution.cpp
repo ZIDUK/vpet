@@ -7,9 +7,9 @@ namespace vpet {
 namespace {
 
 constexpr EvolutionRule kRules[] = {
-    {SpeciesId::Baby, SpeciesId::Rookie, true, false, 43800, 1, 0, 0, 0, 0, 0},
-    {SpeciesId::Rookie, SpeciesId::Champion, true, false, 86400, -1, 0, 55, 55, 55, 75},
-    {SpeciesId::Champion, SpeciesId::Ultimate, true, false, 129600, -1, 15, 0, 0, 0, 0},
+    {SpeciesId::Baby, SpeciesId::Rookie, true, false, 43800, 1, 0, 0, 0, 0, 0, 0, 0},
+    {SpeciesId::Rookie, SpeciesId::Champion, true, false, 86400, -1, 0, 55, 55, 55, 75, 8, 14},
+    {SpeciesId::Champion, SpeciesId::Ultimate, true, false, 129600, -1, 15, 0, 0, 0, 0, 0, 0},
 };
 
 bool barsMet(const EvolutionRule& rule, const PetState& pet) {
@@ -46,6 +46,8 @@ bool Evolution::check(const PetState& pet, uint32_t scale, SpeciesId& next) cons
     if (rule->maxCareMistakes >= 0 && pet.careMistakes() > rule->maxCareMistakes) return false;
     if (!barsMet(*rule, pet)) return false;
     if (pet.battles() < rule->battlesRequired) return false;
+    if ((rule->minWeight > 0 && pet.weight() < rule->minWeight) ||
+        (rule->maxWeight > 0 && pet.weight() > rule->maxWeight)) return false;
     if (rule->battlesRequired > 0 && !winRatioMet(pet)) return false;
     next = rule->to;
     return true;
@@ -86,7 +88,7 @@ void Evolution::writeRequirements(SpeciesId from, bool spanish, char* buffer, in
         buffer[0] = '\0';
         return;
     }
-    char parts[4][24];
+    char parts[5][24];
     uint8_t count = 0;
     const uint32_t hours = rule->minStageAgeSeconds / 3600;
     const uint32_t minutes = (rule->minStageAgeSeconds % 3600) / 60;
@@ -100,6 +102,9 @@ void Evolution::writeRequirements(SpeciesId from, bool spanish, char* buffer, in
     }
     if (rule->battlesRequired > 0) {
         snprintf(parts[count++], sizeof(parts[0]), "BAT%d WR60", rule->battlesRequired);
+    }
+    if (rule->minWeight > 0 || rule->maxWeight > 0) {
+        snprintf(parts[count++], sizeof(parts[0]), "W%u-%u", rule->minWeight, rule->maxWeight);
     }
     if (rule->minHunger > 0 || rule->minEnergy > 0 || rule->minHappiness > 0 || rule->minHealth > 0) {
         snprintf(

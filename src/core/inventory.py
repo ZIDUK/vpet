@@ -69,6 +69,8 @@ def item_visible(pet, index):
         return True
     if index < 0 or index >= len(INVENTORY_ITEMS):
         return False
+    if index in (0, 4):
+        return False
     _, key, _, _ = INVENTORY_ITEMS[index]
     return pet.inventory.get(key, 0) > 0
 
@@ -95,6 +97,8 @@ def use_inventory_item(pet, index):
         return "back"
     if index < 0 or index >= len(INVENTORY_ITEMS):
         return "empty"
+    if index in (0, 4):
+        return "blocked"
     if getattr(pet, "species", None) == "egg" or getattr(pet, "state", None) == "egg":
         return "blocked"
     if getattr(pet, "dead", False):

@@ -16,6 +16,8 @@ struct EvolutionRule {
     uint8_t minEnergy;
     uint8_t minHappiness;
     uint8_t minHealth;
+    uint8_t minWeight;
+    uint8_t maxWeight;
 };
 
 class Evolution {

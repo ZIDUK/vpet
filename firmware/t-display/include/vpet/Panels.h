@@ -41,6 +41,7 @@ private:
     );
     void drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs);
     void drawInventory(uint8_t selected, bool spanish, const PetState& pet);
+    void drawFeeding(uint8_t selected, bool spanish, const PetState& pet);
     void drawBar(const char* label, int value, int16_t y);
     void drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor);
     void drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail);

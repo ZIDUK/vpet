@@ -16,6 +16,8 @@ import time
 
 from core.dna import SPECIES_ID, combat_stat, iv_at, mix_entropy
 from core.techniques import TechniqueProgress
+from core.nutrition import (apply_food, body_condition, complete_training_weight,
+                            consume_hunger, effective_stat, migrate_legacy_weight)
 
 # Stat names in display order (left to right on the device's stat bar row)
 STAT_ORDER = ["h", "e", "p", "hp"]
@@ -86,6 +88,11 @@ class Pet:
         self.training_sessions = 0
         self.menu_train_sessions = 0
         self.weight = 5
+        if state == STATE_LIVE:
+            self.weight = body_condition(species, 5)["reference"]
+        self.hunger_cycle_remainder = 0
+        self.training_weight_remainder = 0
+        self.protein_fed_this_cycle = False
         self.dp = 1
         self.protein = 0
         self.protein_uses = 0
@@ -139,9 +146,10 @@ class Pet:
         now = time.monotonic()
         if now - self.last_decay > DECAY_PERIOD_SECONDS:
             for stat in STAT_ORDER:
+                before = self.stats[stat]
                 self.stats[stat] = max(0, self.stats[stat] - DECAY_AMOUNT)
-            if self.stats.get("h", 0) < 100:
-                self.overfed_this_cycle = False
+                if stat == "h" and before > self.stats[stat]:
+                    consume_hunger(self, before - self.stats[stat])
             self.last_decay = now
             return True
         return False
@@ -217,7 +225,16 @@ class Pet:
         return int(self.ev.get(stat, 0))
 
     def combat_stat(self, stat):
-        return combat_stat(self.dna, self.ev, stat)
+        return combat_stat(self.dna, self.ev, stat, self.species)
+
+    def effective_combat_stat(self, stat):
+        condition = body_condition(self.species, self.weight)
+        penalty = condition.get({"off": "off_penalty", "def": "def_penalty",
+                                "spd": "spd_penalty"}.get(stat, ""), 0)
+        return effective_stat(self.combat_stat(stat), penalty)
+
+    def use_food(self, food_id, asleep=False, busy=False):
+        return apply_food(self, food_id, asleep=asleep, busy=busy)
 
     def gain_ev(self, stat, amount):
         if stat not in self.ev:
@@ -225,23 +242,7 @@ class Pet:
         self.ev[stat] = min(252, self.ev[stat] + int(amount))
 
     def feed(self, from_item=False):
-        if not self.can_feed():
-            return False
-        trained = self.stats.get("h", 0) < 100
-        if self.stats.get("h", 0) >= 100:
-            self.overfed_this_cycle = True
-            self.overfeeds = min(99, self.overfeeds + 1)
-            self.weight = min(99, self.weight + 1)
-        elif from_item:
-            self.stats["h"] = min(100, self.stats["h"] + 20)
-            self.weight = min(99, self.weight + 1)
-        else:
-            self.apply_action(0)
-        if not from_item:
-            self.meals = getattr(self, "meals", 0) + 1
-        if trained:
-            self.gain_ev("hp", 2)
-        return True
+        return apply_food(self, "meat")["applied"]
 
     def effort_hearts(self):
         return min(4, getattr(self, "training_sessions", 0) // 4)
@@ -278,13 +279,15 @@ class Pet:
         self.effort = min(100, getattr(self, "effort", 0) + 4)
         self.battles_this_form = getattr(self, "battles_this_form", 0) + 1
         roll = self.battle_roll if self.battle_roll is not None else (int(self.age_seconds) + self.battles_this_form * 17) % 100
-        chance = 50 + self.effort_hearts() * 8 + self.stats.get("e", 0) // 20 - self.protein * 4
+        condition = body_condition(self.species, self.weight)
+        condition_penalty = (condition["off_penalty"] + condition["def_penalty"]
+                             + condition["spd_penalty"] + 2) // 3
+        chance = (50 + self.effort_hearts() * 8 + self.stats.get("e", 0) // 20
+                  - condition_penalty)
         chance = max(15, min(90, chance))
         self.last_battle_won = roll < chance
         if self.last_battle_won:
             self.battles_won += 1
-            if self.protein >= 4:
-                self._injure()
         else:
             self.battles_lost += 1
             self._injure()
@@ -395,6 +398,11 @@ class Pet:
             "training_sessions": self.training_sessions,
             "menu_train_sessions": getattr(self, "menu_train_sessions", 0),
             "weight": self.weight,
+            "nutrition_version": 1,
+            "legacy_weight": getattr(self, "legacy_weight", None),
+            "hunger_cycle_remainder": self.hunger_cycle_remainder,
+            "training_weight_remainder": self.training_weight_remainder,
+            "protein_fed_this_cycle": self.protein_fed_this_cycle,
             "dp": self.dp,
             "protein": self.protein,
             "overfeeds": self.overfeeds,
@@ -428,7 +436,15 @@ class Pet:
         self.meals = d.get("meals", 0)
         self.training_sessions = d.get("training_sessions", 0)
         self.menu_train_sessions = d.get("menu_train_sessions", 0)
-        self.weight = d.get("weight", 5)
+        self.weight = max(1, min(99, int(d.get("weight", 5))))
+        nutrition_version = int(d.get("nutrition_version", 0))
+        self.legacy_weight = d.get("legacy_weight")
+        if nutrition_version < 1:
+            self.legacy_weight = self.weight
+            self.weight = migrate_legacy_weight(self.species, self.weight)
+        self.hunger_cycle_remainder = max(0, min(19, int(d.get("hunger_cycle_remainder", 0))))
+        self.training_weight_remainder = max(0, min(3, int(d.get("training_weight_remainder", 0))))
+        self.protein_fed_this_cycle = bool(d.get("protein_fed_this_cycle", False))
         self.dp = d.get("dp", 0)
         self.protein = d.get("protein", 0)
         self.overfeeds = int(d.get("overfeeds", 0))

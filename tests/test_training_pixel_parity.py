@@ -58,3 +58,33 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
         result = sim_frame(sim, 4, language, 0, 0, 1, 10000, 80, 30)
         for x in (69, 121, 159, 199, 238):
             assert result.getpixel((x, 53)) == PANEL
+
+
+def test_training_select_uses_each_evolutions_animation_atlas(tmp_path):
+    sim = tmp_path / "sim"
+    data = tmp_path / "data"
+    include = tmp_path / "include"
+    build.main(profile_name="tdisplay", output_dir=sim)
+    build_tdisplay.build(ROOT, sim, data, include / "generated")
+    binary = tmp_path / "comparison" / "training-pixels"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    from scripts.verify_training_pixels import compile_renderer
+    compile_renderer(binary, include)
+    import subprocess
+
+    expected = {
+        0: ["firemon_punch", "firemon_block", "firemon_walk", "firemon_walk", "firemon_cast", "firemon_idle"],
+        1: ["flamemon_punch", "flamemon_cast", "flamemon_walk", "flamemon_walk", "flamemon_cast", "flamemon_idle"],
+        2: ["dragfiremon_punch", "dragfiremon_cast", "dragfiremon_walk", "dragfiremon_walk",
+            "dragfiremon_cast", "dragfiremon_idle"],
+        3: ["egg_idle"] * 6,
+        4: ["sparkmon_idle", "sparkmon_idle", "sparkmon_walk", "sparkmon_walk", "sparkmon_idle", "sparkmon_idle"],
+    }
+    for species, actions in expected.items():
+        for index, asset in enumerate(actions):
+            raw = subprocess.run(
+                [str(binary), str(data), "0", "ES", str(index), "0", "0", "1200", "80", "30",
+                 "0", "0", str(species)], capture_output=True
+            )
+            assert raw.returncode == 0, raw.stderr.decode(errors="replace")
+            assert f"/training/{asset}.vpa".encode() in raw.stderr.splitlines()

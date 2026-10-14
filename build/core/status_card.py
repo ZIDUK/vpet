@@ -103,6 +103,7 @@ def battle_rows(pet, spanish):
     clear labels. When the pet has no encounters, the win-rate and
     W-L show '--' instead of a misleading 0%."""
     from core.i18n import tr
+    from core.nutrition import healthy_weight_range
     played = (getattr(pet, "battles_won", 0)
               + getattr(pet, "battles_lost", 0))
     if played == 0:
@@ -114,8 +115,13 @@ def battle_rows(pet, spanish):
         wl = tr(pet, "status.battle.wl.value",
                  int(getattr(pet, "battles_won", 0)),
                  int(getattr(pet, "battles_lost", 0)))
+    healthy_range = healthy_weight_range(getattr(pet, "species", ""))
+    weight_label = tr(pet, "status.battle.weight.label")
+    if healthy_range:
+        low, high = healthy_range
+        weight_label = ("PESO %d-%d" if spanish else "WEIGHT %d-%d") % (low, high)
     return (
-        ("Weight", tr(pet, "status.battle.weight.label"),
+        ("Weight", weight_label,
             tr(pet, "status.battle.weight.value",
                int(getattr(pet, "weight", 5)))),
         ("Battle", tr(pet, "status.battle.dp.label"),

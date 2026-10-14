@@ -11,6 +11,7 @@ enum class PanelId : uint8_t {
     Home,
     Status,
     Rest,
+    Feeding,
     Inventory,
     EvolutionTree,
     EvolutionDetail,
@@ -28,6 +29,7 @@ class Navigation {
 public:
     static constexpr uint8_t kOptionCount = 9;
     static constexpr uint8_t kInventoryCount = 7;
+    static constexpr uint8_t kFeedingCount = 3;
     static constexpr uint8_t kStatusPages = 4;
     static constexpr uint8_t kRestCount = 4;
     static constexpr uint8_t kEvolutionNodeCount = 5;

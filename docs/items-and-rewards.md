@@ -9,11 +9,11 @@ una recompensa recurrente.
 
 | ID estable | Objeto | Descripcion | Efecto al usar | Stock inicial | Origen actual |
 |---|---|---|---|---:|---|
-| `meat` | Carne asada | Racion para recuperar hambre. | +20 HAM, max. 100; suma 1 de peso. Si HAM estaba por debajo de 100, tambien da +2 EV de HP. Con HAM en 100 puede contar como sobrealimentacion si el ciclo aun lo permite; en ese caso no da EV de HP. | 3 | Kit de inicio; sin reposicion implementada. |
+| `meat` | Carne asada | Alimento ilimitado de la pantalla Alimentar; el stock guardado antiguo se conserva y no se descuenta. | +20 HAM (max. 100) y +1 peso. Una sobrealimentacion por ciclo si HAM ya esta lleno; sin EV. | Ilimitado | No requiere obtenerlo; disponible al alimentar. |
 | `energy` | Tonico de energia | Frasco de recuperacion para volver a entrenar o combatir. | +25 ENE, max. 100, y +2 EV de MP. | 2 | Kit de inicio; sin reposicion implementada. |
 | `exp` | Estrella de experiencia | Insignia de practica que impulsa el esfuerzo general. | +8 ESF, max. 100, y +2 EV de BRN. | 1 | Kit de inicio; sin reposicion implementada. |
 | `ring` | Amuleto | Objeto de animo, valido para cualquier especie. El nombre visible dejo de ser «anillo de fuego» el 2026-10-12; el ID de guardado sigue siendo `ring`. | +15 animo, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
-| `protein` | Proteina | Suplemento para recuperar energia y fortalecer el perfil ofensivo. | +20 ENE, max. 100, y +2 EV de OFF. Cada cuarto uso aumenta Proteina en 1 (max. 7) y DP en 1 (max. 3). | 2 | Kit de inicio; sin reposicion implementada. |
+| `protein` | Proteina | Alimento ilimitado de la pantalla Alimentar; el stock guardado antiguo se conserva y no se descuenta. | +20 ENE (se ofrece con ENE <= 80) y +2 peso, una vez por ciclo metabolico; sin EV ni DP. | Ilimitado | No requiere obtenerla; disponible al alimentar. |
 | `medkit` | Botiquin | Kit de primeros auxilios para un vPet lesionado. | Solo se puede usar con lesion: la elimina y restaura +20 HP, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
 
 Los nombres visibles son genericos para cualquier especie. El animo usa el nombre **Amuleto**; el ID de guardado sigue siendo `ring`. No se crean objetos con tema de una sola especie, como un anillo de fuego.
@@ -23,32 +23,58 @@ Los objetos no cambian IV. El inventario se guarda en la partida.
 
 ## Como se obtienen hoy
 
-Las cantidades de la tabla se entregan al inicializar una partida nueva y se
+Los consumibles de mochila se entregan al inicializar una partida nueva y se
 usan como valores predeterminados cuando faltan claves de inventario en el
-guardado. **Hoy no hay una accion de compra, recoleccion, combate o exploracion
-que reponga estos objetos.** Usarlos descuenta una unidad. No se debe describir el stock
-inicial como botin ni como una fuente repetible.
+guardado. Usarlos descuenta una unidad. Carne y proteina son excepciones:
+Alimentar las ofrece ilimitadamente y no consulta ni descuenta sus claves de
+stock antiguas. **Hoy no hay una accion de compra, recoleccion, combate o
+exploracion que reponga consumibles de mochila.**
 
 ## Recompensas futuras: brainstorm de exploracion
 
 El brainstorm vivo esta en
 [Exploracion y recompensas](superpowers/specs/2026-10-11-exploration-design.md).
-Todavia no esta implementado y deja pendientes la aprobacion del alcance,
-balance, limites de inventario y persistencia. Por ahora sus caminos son
-familias conceptuales, no nuevas definiciones de objetos:
+Todavia no esta implementado. El Patio y la Jornada quedaron cerrados
+el 2026-10-14:
 
-| Camino propuesto | Familia de recompensa | Estado |
+| Camino | Familia de recompensa | Estado |
 |---|---|---|
-| Patio | Comida o energía | Propuesta. Podría reponer `meat` o `energy`. Las cantidades de EV y técnica de la exploración ya están cerradas; el objeto concreto de esta ruta no. |
-| Jornada | Material o cuidado | Propuesta. No hay un material con uso real en el catálogo actual. |
+| Patio | Energía al reclamar, sin objeto y sin EV | Cerrado. Buen cuidado +25 ENE, mal cuidado +10, tope 100. |
+| Jornada | Guía, mejora de la próxima sesión | Cerrado. Id `guide`. +1 EV en el stat de esa sesión. Cabe una. El mal cuidado no la deja. El +2 EV de la ruta no es este objeto. |
 | Noche | Progreso de técnica | Cerrado como regla, no como objeto: +2 de dominio (tope 4/semana) o +1 al contador de Llama. No es un ítem de la bolsa. |
 
-Antes de implementar botin, cada nuevo objeto debe recibir un ID estable,
-categoria, rareza, icono, nombre ES/EN, limite de stack, efecto tipado,
-objetivo, magnitud, duracion, topes y origen. Una recompensa de recuperacion
-temporal no debe confundirse con EV permanente. No agregar materiales sin uso
-real ni tratar esas reglas como codigo ya disponible. El EV y el dominio
-de la noche estan aprobados como diseno; no estan programados.
+Antes de implementar botin, cada objeto nuevo llena la ficha de
+[estándar de catálogo](superpowers/specs/2026-10-14-item-catalog-standard.md):
+ID estable, categoría, rareza, icono, ES/EN, stack máximo, efecto tipado,
+objetivo, magnitud, duración, límites de uso y origen. Esa ficha sale de
+las columnas de Digimon World y no copia sus nombres, precios ni cifras.
+Los seis objetos de esta tabla no se reescriben: la carne, el tónico, la
+estrella y la proteína siguen mezclando recuperación y EV porque ya están
+en el guardado. Una recuperación temporal nueva no se mezcla con EV
+permanente. No agregar materiales sin un uso real ni tratar la ficha como
+código ya disponible. El EV y el dominio de la noche están aprobados como
+diseño; no están programados.
+
+## Alimentacion y peso implementados
+
+El usuario confirmo que Alimentar contiene **solo carne y proteina, ambas
+ilimitadas**, con peso que impacta combate/evolucion. El comportamiento vive
+en `core.nutrition` y `vpet_core/Nutrition`; la placa y el simulador comparten
+la misma regla de alimentación. El plan de implementacion y su evidencia estan en
+[este plan](superpowers/plans/2026-10-14-feeding-weight-combat-evolution.md).
+Las comidas no otorgan EV ni descuentan los stocks legacy. El peso afecta OFF,
+DEF y SPD dentro de limites y el estado muestra el rango saludable por etapa.
+Filete, champinon y otros
+objetos se destinan a **mejorar stats desde la mochila**; sus stats objetivo,
+magnitudes, duracion y origen requieren su propia definicion de catalogo.
+Se descarta la propuesta previa de usarlos como comidas de hambre/peso en
+Alimentar, incluido su kit inicial. Todavia no existen como objetos del juego.
+
+La tabla refleja el comportamiento implementado para Alimentar. Filete,
+champinon y otros objetos de mejora siguen sin estar implementados y requieren
+definir stat, magnitud, limites y origen antes de incorporarse a la mochila.
+La recuperación de una escritura NVS incompleta usa la clave `foodTx` con
+valores finales absolutos; al reiniciar se completa sin volver a sumar el efecto.
 
 ## Iconografia
 

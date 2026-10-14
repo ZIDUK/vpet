@@ -51,6 +51,8 @@ EVOLUTION_REGISTRY = {
         "min_stage_age_seconds": 86400,
         "battles_required": 0,
         "requirements": {"h": 55, "e": 55, "p": 55, "hp": 75},
+        "min_weight": 8,
+        "max_weight": 14,
     },
     "champion": {
         "evolves_to": "ultimate",

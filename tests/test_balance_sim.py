@@ -29,7 +29,7 @@ def _fresh_firemon(energy=100):
     pet.restore_dna((0x20, 0x40, 0x60, 0x80))
     pet.restore_ev({})
     pet.stats = {"h": 80, "e": energy, "p": 80, "hp": 100}
-    pet.weight = 5
+    pet.weight = 10
     pet.effort = 0
     pet.training_sessions = 0
     pet.battles_won = 0
@@ -273,18 +273,16 @@ def test_battle_blocks_after_four_consecutive():
 # ---------------------------------------------------------------------------
 
 
-def test_feed_gives_one_hp_ev_per_hunger_cycle():
+def test_feed_is_bounded_by_hunger_and_overfeed_cycle_without_ev():
     pet = _fresh_firemon(energy=100)
     motion = _motion()
     feeds = 0
     while _feed(pet, motion):
         feeds += 1
-    # First feed: h<100, +2 HP EV, h -> 100. Second feed: h>=100, +
-    # overfeeds +1, weight +1, NO HP EV (trained=False). Third feed:
-    # can_feed returns False (overfed_this_cycle True).
+    # One normal meal and one allowed overfeed; neither grants EV.
     assert feeds == 2
-    assert pet.ev_at("hp") == 2
-    assert pet.weight == 6
+    assert pet.ev_at("hp") == 0
+    assert pet.weight == 12
     # To repeat, the player must wait for h to drop below 100 (decay) so
     # overfed_this_cycle resets. That is hours of real time, but
     # deterministic in tests.

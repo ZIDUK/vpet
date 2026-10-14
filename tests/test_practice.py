@@ -31,6 +31,15 @@ def test_battle_entry_starts_at_round_zero_without_spending_or_saving():
     assert pet.to_dict() == before
 
 
+def test_practice_fighter_uses_weight_adjusted_combat_stats():
+    pet = firemon()
+    pet.weight = 6
+    session = PracticeSession(pet, lambda _: True)
+    assert session.battle.player.stats[2] == pet.effective_combat_stat("off")
+    assert session.battle.player.stats[4] == pet.effective_combat_stat("spd")
+    assert session.battle.player.stats[2] < pet.combat_stat("off")
+
+
 def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause():
     pet = firemon()
     s = PracticeSession(pet, lambda _: True)

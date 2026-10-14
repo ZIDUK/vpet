@@ -200,6 +200,14 @@ La particion NVS mide `0x5000` bytes y utiliza namespaces separados:
   (`invMeat`, `invEner`, `invExp`, `invRing`; defaults 3/2/1/1).
 - `vpet_wifi`: namespace legado reservado; el firmware actual no lo consulta.
 
+Nutricion conserva el schema general 3 y usa `nutVer`, `nutHunRem`,
+`nutTrainRem` y `nutProtein` para sus campos versionados. `foodTx` es un
+registro idempotente de la ultima comida confirmada: se escribe antes de
+actualizar las claves afectadas y se reproduce al cargar si hubo un corte a
+mitad de NVS. El simulador reemplaza el JSON mediante archivo temporal y
+`os.replace`, por lo que una comida persiste el snapshot completo o conserva
+el anterior.
+
 Schema 1 migra con ceros y `stageAge=0` (no evo instantanea). Schema `>3`
 es Unsupported y `App::begin` deja un huevo nuevo. El anillo de 32 eventos
 de cria vive solo en RAM. Autosave ocurre al eclosionar, evolucionar, sumar

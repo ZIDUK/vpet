@@ -11,7 +11,8 @@ def test_generated_inventory_icons_are_distinct_pixel_art():
     assert all(image.size == (32, 32) and image.mode == "RGBA" for image in icons)
     assert len({image.tobytes() for image in icons}) == len(ICON_NAMES)
     assert all(len(image.getcolors(1024)) <= 20 for image in icons)
-    assert all(image.getpixel((0, 0))[:3] == (52, 82, 84) for image in icons)
+    assert icons[0].getpixel((0, 0))[:3] == (13, 20, 30)
+    assert all(image.getpixel((0, 0))[:3] == (52, 82, 84) for image in icons[1:])
 
 
 def test_custom_icons_are_packaged_for_the_shared_simulator_build(tmp_path, monkeypatch):

@@ -67,6 +67,10 @@ void Navigation::openSelectedMenu() {
             panel_ = PanelId::Status;
             panelIndex_ = 0;
             break;
+        case 1:
+            panel_ = PanelId::Feeding;
+            panelIndex_ = 0;
+            break;
         case 4:
             panel_ = PanelId::Rest;
             panelIndex_ = 0;
@@ -104,6 +108,8 @@ void Navigation::dispatch(InputEvent event) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kOptionCount);
         } else if (panel_ == PanelId::Inventory) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kInventoryCount);
+        } else if (panel_ == PanelId::Feeding) {
+            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kFeedingCount);
         } else if (panel_ == PanelId::Status) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kStatusPages);
         } else if (panel_ == PanelId::Rest) {

@@ -105,6 +105,7 @@ public:
     uint8_t ivAt(CombatStat stat) const;
     uint8_t evAt(CombatStat stat) const;
     uint8_t combatStat(CombatStat stat) const;
+    uint8_t effectiveCombatStat(CombatStat stat) const;
 
     // Public mutators used by TrainingSession (and other batched flows).
     // The single-rep path uses the private gainEv; batched callers go
@@ -115,6 +116,12 @@ public:
     void setHappiness(int value);
     void setEffort(int value);
     void setWeight(uint8_t value);
+    void setHunger(int value);
+    void noteMeal(bool overfeed);
+    void setNutritionState(uint8_t hungerRemainder, uint8_t trainingRemainder, bool proteinFed);
+    int completeTrainingWeight(int repetitions);
+    void setProteinFedThisCycle(bool value) { proteinFedThisCycle_ = value; }
+    void noteProteinMeal();
     void setTrainingSessions(int value);
 
     void setStageAgeSeconds(uint32_t seconds);
@@ -145,6 +152,9 @@ public:
     uint8_t wins() const { return wins_; }
     uint8_t losses() const { return losses_; }
     uint8_t weight() const { return weight_; }
+    uint8_t hungerCycleRemainder() const { return hungerCycleRemainder_; }
+    uint8_t trainingWeightRemainder() const { return trainingWeightRemainder_; }
+    bool proteinFedThisCycle() const { return proteinFedThisCycle_; }
     uint8_t dp() const { return dp_; }
     uint8_t protein() const { return protein_; }
     uint8_t overfeeds() const { return overfeeds_; }
@@ -171,8 +181,6 @@ private:
     CallUpdate startCall(CallReason reason, uint32_t nowMs);
     bool canFeed() const;
     bool canBattle() const;
-    void applyFeed(bool fromItem);
-    void applyProtein();
     void injure();
     void checkDeath();
     void resolveBattle();
@@ -198,6 +206,9 @@ private:
     uint8_t wins_ = 0;
     uint8_t losses_ = 0;
     uint8_t weight_ = 5;
+    uint8_t hungerCycleRemainder_ = 0;
+    uint8_t trainingWeightRemainder_ = 0;
+    bool proteinFedThisCycle_ = false;
     uint8_t dp_ = 1;
     uint8_t protein_ = 0;
     uint8_t proteinUses_ = 0;

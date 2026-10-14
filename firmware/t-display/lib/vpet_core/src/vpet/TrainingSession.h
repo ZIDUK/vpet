@@ -126,7 +126,7 @@ inline TrainingPlan trainingPlanOneRep(const PetState& pet, CombatStat stat) {
     plan.energyCost = kTrainingEnergyCost;
     plan.happinessAdd = 3;
     plan.effortAdd = 8;
-    plan.weightDelta = -1;
+    plan.weightDelta = (pet.trainingWeightRemainder() + 1 >= 4 && pet.weight() > 1) ? -1 : 0;
     plan.reason = kTrainingOk;
     return plan;
 }
@@ -218,14 +218,14 @@ inline TrainingApplySummary trainingApply(PetState& pet, CombatStat stat, uint8_
     pet.setEnergy(newEnergy < 0 ? 0 : newEnergy);
     pet.setHappiness(pet.happiness() + repsDone * plan.happinessAdd);
     pet.setEffort(pet.effort() + repsDone * plan.effortAdd);
-    pet.setWeight(pet.weight() > repsDone ? static_cast<uint8_t>(pet.weight() - repsDone) : 0);
+    const int8_t weightDelta = static_cast<int8_t>(pet.completeTrainingWeight(repsDone));
     pet.setTrainingSessions(pet.trainingSessions() + repsDone);
     summary.reps = repsDone;
     summary.evAdded = evAdded;
     summary.energyCharged = energyCharged;
     summary.effortAdded = static_cast<uint8_t>(repsDone * plan.effortAdd);
     summary.happinessAdded = static_cast<uint8_t>(repsDone * plan.happinessAdd);
-    summary.weightDelta = static_cast<int8_t>(repsDone * plan.weightDelta);
+    summary.weightDelta = weightDelta;
     return summary;
 }
 
@@ -263,6 +263,7 @@ inline TrainingApplySummary trainingCommit(
     const int snapHappiness = pet.happiness();
     const int snapEffort = pet.effort();
     const uint8_t snapWeight = pet.weight();
+    const uint8_t snapWeightRemainder = pet.trainingWeightRemainder();
     const int snapTraining = pet.trainingSessions();
 
     TrainingApplySummary summary = trainingApply(pet, stat, reps);
@@ -276,6 +277,7 @@ inline TrainingApplySummary trainingCommit(
         pet.setHappiness(snapHappiness);
         pet.setEffort(snapEffort);
         pet.setWeight(snapWeight);
+        pet.setNutritionState(pet.hungerCycleRemainder(), snapWeightRemainder, pet.proteinFedThisCycle());
         pet.setTrainingSessions(snapTraining);
         throw BatchSaveError("save failed; pet rolled back from in-memory snapshot");
     }
@@ -333,8 +335,9 @@ public:
         int happiness;
         int effort;
         uint8_t weight;
+        uint8_t weightRemainder;
         int training;
-    } rollback = {{0,0,0,0,0,0}, 0, 0, 0, 0, 0};
+    } rollback = {{0,0,0,0,0,0}, 0, 0, 0, 0, 0, 0};
 
     // Drive the session from an input event. The save callback is the
     // caller's persistence path. Returns true if the session is still
@@ -401,6 +404,7 @@ public:
         pet.setHappiness(rollback.happiness);
         pet.setEffort(rollback.effort);
         pet.setWeight(rollback.weight);
+        pet.setNutritionState(pet.hungerCycleRemainder(), rollback.weightRemainder, pet.proteinFedThisCycle());
         pet.setTrainingSessions(rollback.training);
         needsRollback = false;
         lastSummary = {0, 0, 0, 0, 0, 0};
@@ -418,6 +422,7 @@ public:
         rollback.happiness = pet.happiness();
         rollback.effort = pet.effort();
         rollback.weight = pet.weight();
+        rollback.weightRemainder = pet.trainingWeightRemainder();
         rollback.training = pet.trainingSessions();
     }
 

@@ -15,6 +15,8 @@ constexpr uint16_t ink = rgb(19,23,27), white = rgb(242,244,238);
 constexpr uint16_t yellow = rgb(255,220,70), muted = rgb(162,181,182);
 constexpr uint16_t panel = rgb(36,48,52), teal = rgb(40,74,75);
 constexpr uint16_t hp = rgb(241,93,112), mp = rgb(71,191,230), green = rgb(111,208,164);
+constexpr uint32_t kActionFrameIntervalMs = 40;
+constexpr uint32_t kIdleFrameIntervalMs = 85;
 constexpr const char* icons[] = {"attack", "defense", "speed", "hp", "mp", "mind"};
 constexpr const char* stats[] = {"off", "def", "spd", "hp", "mp", "brn"};
 constexpr const char* actions[] = {"punch", "block", "walk", "walk", "cast", "idle"};
@@ -50,8 +52,13 @@ template<class Canvas> class View {
         for (const unsigned char* p = reinterpret_cast<const unsigned char*>(value); *p; ++p) {
             const auto& glyph = font[(*p >= 32 && *p <= 126 ? *p : '?') - 32];
             for (int row=0; row<16; ++row) {
-                for (int col=0; col<16; ++col) {
-                    if (glyph.rows[row] & (1u << col)) c.drawPixel(x+col-2,y+row,color);
+                uint16_t bits = glyph.rows[row];
+                int col = 0;
+                while (col < 16) {
+                    while (col < 16 && !(bits & (1u << col))) ++col;
+                    const int start = col;
+                    while (col < 16 && (bits & (1u << col))) ++col;
+                    if (col > start) c.fillRect(x+start-2,y+row,col-start,1,color);
                 }
             }
             x += glyph.advance;
@@ -85,7 +92,6 @@ template<class Canvas> class View {
             case SpeciesId::Ultimate:
                 name="dragfiremon";
                 if (strcmp(action,"block")==0) resolved="cast";
-                if (strcmp(action,"walk")==0) resolved="fly";
                 break;
         }
         char path[64];
@@ -122,7 +128,7 @@ template<class Canvas> class View {
     }
     void portrait(bool active=false) {
         const int i = s.state == State::Select ? (s.cursor < 6 ? s.cursor : 5) : index();
-        const uint32_t interval = active ? 50 : 75;
+        const uint32_t interval = active ? kActionFrameIntervalMs : kIdleFrameIntervalMs;
         petAsset(active ? actions[i] : "idle",0,30,now/interval);
     }
     void info(int i, const char* value) {

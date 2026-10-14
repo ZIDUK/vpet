@@ -3,6 +3,7 @@
 #include <unity.h>
 
 #include "vpet/BleAdvertiseSession.h"
+#include "vpet/Nutrition.h"
 #include "vpet/SettingsStore.h"
 
 class FakeStore : public vpet::KeyValueStore {
@@ -10,13 +11,19 @@ public:
     int32_t getInt(const char* key, int32_t fallback) override {
         return ints.count(key) ? ints[key] : fallback;
     }
-    bool putInt(const char* key, int32_t value) override { ints[key] = value; return true; }
+    bool putInt(const char* key, int32_t value) override {
+        if (failIntWrite > 0 && ++intWriteCount == failIntWrite) return false;
+        ints[key] = value;
+        return true;
+    }
     std::string getString(const char* key, const char* fallback) override {
         return strings.count(key) ? strings[key] : fallback;
     }
     bool putString(const char* key, const char* value) override { strings[key] = value; return true; }
     std::map<std::string, int32_t> ints;
     std::map<std::string, std::string> strings;
+    int failIntWrite = -1;
+    int intWriteCount = 0;
 };
 
 void test_missing_save_keeps_current_species_discovered() {
@@ -106,13 +113,13 @@ void test_settings_persist_inventory_counts() {
     FakeStore store;
     vpet::PetState saved;
     saved.evolveTo(vpet::SpeciesId::Rookie);
-    saved.useItem(0);
+    saved.useItem(2);
     vpet::Settings settings;
     TEST_ASSERT_TRUE(vpet::SettingsStore(store).save(saved, settings));
     vpet::PetState restored;
     vpet::Settings after;
     TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, vpet::SettingsStore(store).load(restored, after));
-    TEST_ASSERT_EQUAL(2, restored.itemCount(0));
+    TEST_ASSERT_EQUAL(3, restored.itemCount(0));
     TEST_ASSERT_EQUAL(2, restored.itemCount(1));
 }
 
@@ -164,6 +171,65 @@ void test_settings_persist_dna_and_ev() {
     TEST_ASSERT_EQUAL(saved.dna()[3], restored.dna()[3]);
     TEST_ASSERT_EQUAL(10, restored.evAt(vpet::CombatStat::Hp));
     TEST_ASSERT_EQUAL(12, restored.evAt(vpet::CombatStat::Brn));
+}
+
+void test_nutrition_state_migrates_once_and_roundtrips() {
+    FakeStore store;
+    store.ints["schema"] = 2;
+    store.ints["species"] = static_cast<int>(vpet::SpeciesId::Rookie);
+    store.ints["weight"] = 5;
+    store.ints["hunger"] = 80;
+    store.ints["energy"] = 40;
+    store.ints["happy"] = 80;
+    store.ints["health"] = 100;
+    vpet::PetState pet;
+    vpet::Settings settings;
+    vpet::SettingsStore persistence(store);
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, persistence.load(pet, settings));
+    TEST_ASSERT_EQUAL(8, pet.weight());
+    pet.setNutritionState(13, 2, true);
+    TEST_ASSERT_TRUE(persistence.save(pet, settings));
+    TEST_ASSERT_EQUAL(5, store.ints["legacyWeight"]);
+    TEST_ASSERT_EQUAL(1, store.ints["nutVer"]);
+
+    vpet::PetState restored;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, persistence.load(restored, settings));
+    TEST_ASSERT_EQUAL(8, restored.weight());
+    TEST_ASSERT_EQUAL(13, restored.hungerCycleRemainder());
+    TEST_ASSERT_EQUAL(2, restored.trainingWeightRemainder());
+    TEST_ASSERT_TRUE(restored.proteinFedThisCycle());
+}
+
+void test_food_journal_recovers_partial_nvs_write_without_reapplying_delta() {
+    FakeStore store;
+    vpet::SettingsStore persistence(store);
+    vpet::Settings settings;
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.restore(vpet::SpeciesId::Rookie, 60, 60, 80, 0, 100, 0);
+    pet.restoreCare(0, 0, vpet::CallReason::None, 0, 0, 0, 0, 0, 10, 1, 0);
+    TEST_ASSERT_TRUE(persistence.save(pet, settings));
+
+    TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, vpet::FoodId::Meat));
+    store.intWriteCount = 0;
+    store.failIntWrite = 3;
+    TEST_ASSERT_TRUE(persistence.commitFood(pet));
+    TEST_ASSERT_FALSE(store.strings["foodTx"].empty());
+
+    store.failIntWrite = -1;
+    vpet::PetState restored;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, persistence.load(restored, settings));
+    TEST_ASSERT_EQUAL(80, restored.hunger());
+    TEST_ASSERT_EQUAL(11, restored.weight());
+    TEST_ASSERT_EQUAL(1, restored.meals());
+    TEST_ASSERT_EQUAL(1, store.ints["foodSeq"]);
+    TEST_ASSERT_TRUE(store.strings["foodTx"].empty());
+
+    vpet::PetState loadedAgain;
+    TEST_ASSERT_EQUAL(vpet::LoadResult::Loaded, persistence.load(loadedAgain, settings));
+    TEST_ASSERT_EQUAL(80, loadedAgain.hunger());
+    TEST_ASSERT_EQUAL(11, loadedAgain.weight());
+    TEST_ASSERT_EQUAL(1, loadedAgain.meals());
 }
 
 void test_schema2_rookie_synthesizes_stable_dna() {

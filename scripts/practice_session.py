@@ -9,7 +9,7 @@ class PracticeSession:
         self.training = training
         self.page, self.index, self.tech = "tech" if training else "battle", 0, 0
         self.battle = None if training else PracticeBattle(Fighter(
-            [pet.combat_stat(s) for s in COMBAT_STATS], pet.techniques.equipped,
+            [pet.effective_combat_stat(s) for s in COMBAT_STATS], pet.techniques.equipped,
             pet.techniques.mastery, pet.dna[3] % 3, pet.techniques.bond))
         self.message = ""
         self.updated_at = 0

@@ -65,6 +65,8 @@ class PracticeBattle:
         self.damage = (0, 0)
         self.uses = [0, 0, 0]
 
+
+
     def step(self, requested=AUTO):
         if self.result is not None:
             return False

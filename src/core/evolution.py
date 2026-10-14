@@ -127,6 +127,13 @@ class Evolution:
         if max_cm is not None and getattr(pet, "care_mistakes", 0) > max_cm:
             return (None, None)
 
+        weight_min = form_data.get("min_weight")
+        weight_max = form_data.get("max_weight")
+        if weight_min is not None and pet.weight < weight_min:
+            return (None, None)
+        if weight_max is not None and pet.weight > weight_max:
+            return (None, None)
+
         for stat, min_val in form_data.get("requirements", {}).items():
             if pet.get(stat) < min_val:
                 return (None, None)
@@ -163,6 +170,9 @@ class Evolution:
 
     @staticmethod
     def _apply(pet, new_form):
+        from core.nutrition import evolved_weight
+        old_form = pet.species
+        pet.weight = evolved_weight(old_form, new_form, pet.weight)
         pet.species = new_form
         for stat in pet.stats:
             pet.stats[stat] = min(100, pet.stats[stat] + 10)

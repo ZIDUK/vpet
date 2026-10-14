@@ -1,12 +1,14 @@
 """Safe desktop services for the simulator options menu."""
 
 import json
+import os
 import socket
 import subprocess
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from core.save import load_pet, save_pet
+from core.save import load_pet
 
 
 def clock_hour(clock, default=12):
@@ -34,7 +36,22 @@ class SimulatorServices:
 
     def save(self, pet):
         self.save_path.parent.mkdir(parents=True, exist_ok=True)
-        return save_pet(pet, self.save_path)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=self.save_path.parent,
+                prefix=f".{self.save_path.name}.", suffix=".tmp", delete=False,
+            ) as stream:
+                temporary = Path(stream.name)
+                json.dump(pet.to_dict(), stream, separators=(",", ":"))
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self.save_path)
+            return True
+        except (OSError, TypeError, ValueError):
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            return False
 
     def load(self, pet):
         return load_pet(pet, self.save_path)

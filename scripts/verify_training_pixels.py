@@ -24,6 +24,7 @@ def compile_renderer(output, include_dir):
                     "-I"+str(ROOT / "firmware/t-display/lib/vpet_core/src"),
                     str(ROOT / "tests/training_pixels.cpp"),
                     str(ROOT / "firmware/t-display/lib/vpet_core/src/vpet/PetState.cpp"),
+                    str(ROOT / "firmware/t-display/lib/vpet_core/src/vpet/Nutrition.cpp"),
                     "-o", str(output)], check=True)
 
 

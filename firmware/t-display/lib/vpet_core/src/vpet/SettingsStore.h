@@ -32,6 +32,7 @@ public:
         : store_(store), backup_(backup) {}
     LoadResult load(PetState& pet, Settings& settings);
     bool save(const PetState& pet, const Settings& settings);
+    bool commitFood(const PetState& pet);
     bool loadPractice(PracticeProgress& progress) const;
     bool savePractice(const PracticeProgress& progress);
     bool restartLifeIfNeeded(PetState& pet, Settings& settings);
@@ -41,6 +42,7 @@ public:
     bool migratedDna() const { return migratedDna_; }
 
 private:
+    bool recoverFoodTransaction();
     KeyValueStore& store_;
     KeyValueStore* backup_ = nullptr;
     bool migratedDna_ = false;

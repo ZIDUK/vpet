@@ -1,7 +1,48 @@
 #include <unity.h>
 
 #include "vpet/PetState.h"
+#include "vpet/Nutrition.h"
 #include "vpet/TrainingSession.h"
+
+void test_nutrition_condition_and_unlimited_food_contract() {
+    const vpet::BodyCondition low = vpet::bodyCondition(vpet::SpeciesId::Rookie, 6);
+    const vpet::BodyCondition high = vpet::bodyCondition(vpet::SpeciesId::Rookie, 14);
+    TEST_ASSERT_EQUAL(10, low.offPenalty);
+    TEST_ASSERT_EQUAL(10, low.defPenalty);
+    TEST_ASSERT_EQUAL(0, low.spdPenalty);
+    TEST_ASSERT_EQUAL(0, high.offPenalty);
+    TEST_ASSERT_EQUAL(10, high.spdPenalty);
+    TEST_ASSERT_EQUAL(45, vpet::effectiveStat(50, low.offPenalty));
+
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.setWeight(10);
+    pet.setHunger(50);
+    pet.setEnergy(60);
+    pet.restoreItems(3, 2, 1, 1, 2, 1);
+    TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, vpet::FoodId::Meat));
+    TEST_ASSERT_EQUAL(70, pet.hunger());
+    TEST_ASSERT_EQUAL(11, pet.weight());
+    TEST_ASSERT_EQUAL(3, pet.itemCount(0));
+    TEST_ASSERT_EQUAL(0, pet.evAt(vpet::CombatStat::Hp));
+    TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, vpet::FoodId::Protein));
+    TEST_ASSERT_EQUAL(80, pet.energy());
+    TEST_ASSERT_EQUAL(13, pet.weight());
+    TEST_ASSERT_EQUAL(2, pet.itemCount(4));
+    TEST_ASSERT_EQUAL(vpet::FoodResult::Cycle, vpet::applyFood(pet, vpet::FoodId::Protein));
+}
+
+void test_legacy_meat_and_protein_inventory_items_are_not_consumed() {
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.restoreItems(3, 2, 1, 1, 2, 1);
+    TEST_ASSERT_FALSE(pet.itemVisible(0));
+    TEST_ASSERT_FALSE(pet.itemVisible(4));
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(0));
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(4));
+    TEST_ASSERT_EQUAL(3, pet.itemCount(0));
+    TEST_ASSERT_EQUAL(2, pet.itemCount(4));
+}
 
 void test_cold_mode_freezes_decay_and_blocks_calls() {
     vpet::PetState pet;
@@ -100,9 +141,9 @@ void test_use_item_spends_stock_and_applies_stat() {
     vpet::PetState pet;
     pet.evolveTo(vpet::SpeciesId::Rookie);
     TEST_ASSERT_EQUAL(3, pet.itemCount(0));
-    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(0));
-    TEST_ASSERT_EQUAL(2, pet.itemCount(0));
-    TEST_ASSERT_EQUAL(100, pet.hunger());
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(0));
+    TEST_ASSERT_EQUAL(3, pet.itemCount(0));
+    TEST_ASSERT_EQUAL(80, pet.hunger());
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(1));
     TEST_ASSERT_EQUAL(1, pet.itemCount(1));
     TEST_ASSERT_EQUAL(100, pet.energy());
@@ -132,7 +173,7 @@ void test_use_item_empty_and_egg_do_not_change_stats() {
     pet.evolveTo(vpet::SpeciesId::Rookie);
     pet.restoreItems(0, 0, 0, 0);
     const int hunger = pet.hunger();
-    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Empty, pet.useItem(0));
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(0));
     TEST_ASSERT_EQUAL(hunger, pet.hunger());
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Empty, pet.useItem(9));
 }
@@ -141,20 +182,19 @@ void test_empty_items_disappear_from_inventory_list() {
     vpet::PetState pet;
     pet.evolveTo(vpet::SpeciesId::Rookie);
     pet.restoreItems(3, 0, 1, 0);
-    TEST_ASSERT_EQUAL(3, pet.visibleInventoryCount());
-    TEST_ASSERT_EQUAL(0, pet.inventoryIndexAt(0));
-    TEST_ASSERT_EQUAL(2, pet.inventoryIndexAt(1));
-    TEST_ASSERT_EQUAL(6, pet.inventoryIndexAt(2));
+    TEST_ASSERT_EQUAL(2, pet.visibleInventoryCount());
+    TEST_ASSERT_EQUAL(2, pet.inventoryIndexAt(0));
+    TEST_ASSERT_EQUAL(6, pet.inventoryIndexAt(1));
     TEST_ASSERT_EQUAL(2, pet.nextVisibleInventoryIndex(0));
     TEST_ASSERT_EQUAL(6, pet.nextVisibleInventoryIndex(2));
-    TEST_ASSERT_EQUAL(0, pet.nextVisibleInventoryIndex(6));
+    TEST_ASSERT_EQUAL(2, pet.nextVisibleInventoryIndex(6));
     TEST_ASSERT_EQUAL(2, pet.clampVisibleInventoryIndex(1));
 
     pet.useItem(2);
     TEST_ASSERT_EQUAL(0, pet.itemCount(2));
-    TEST_ASSERT_EQUAL(2, pet.visibleInventoryCount());
+    TEST_ASSERT_EQUAL(1, pet.visibleInventoryCount());
     TEST_ASSERT_EQUAL(6, pet.clampVisibleInventoryIndex(2));
-    TEST_ASSERT_EQUAL(6, pet.inventoryIndexAt(1));
+    TEST_ASSERT_EQUAL(6, pet.inventoryIndexAt(0));
 }
 
 void test_overfeed_once_when_full_is_not_a_care_mistake() {
@@ -166,7 +206,7 @@ void test_overfeed_once_when_full_is_not_a_care_mistake() {
     TEST_ASSERT_EQUAL(1, pet.overfeeds());
     TEST_ASSERT_TRUE(pet.overfedThisCycle());
     TEST_ASSERT_EQUAL(0, pet.careMistakes());
-    TEST_ASSERT_EQUAL(6, pet.weight());
+    TEST_ASSERT_EQUAL(11, pet.weight());
     TEST_ASSERT_EQUAL(1, pet.meals());
 }
 
@@ -185,8 +225,8 @@ void test_hunger_drop_allows_another_overfeed() {
     pet.restore(vpet::SpeciesId::Rookie, 100, 80, 80, 0, 100, 0);
     pet.beginAction(vpet::Action::Feed);
     pet.completeAction();
-    pet.tick(30000);
-    TEST_ASSERT_EQUAL(99, pet.hunger());
+    pet.tick(600000);
+    TEST_ASSERT_EQUAL(80, pet.hunger());
     TEST_ASSERT_FALSE(pet.overfedThisCycle());
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
     pet.completeAction();
@@ -195,17 +235,16 @@ void test_hunger_drop_allows_another_overfeed() {
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
     pet.completeAction();
     TEST_ASSERT_EQUAL(2, pet.overfeeds());
+    TEST_ASSERT_FALSE(pet.beginAction(vpet::Action::Feed));
+    TEST_ASSERT_EQUAL(2, pet.overfeeds());
 }
 
 void test_meat_item_blocked_after_overfeed() {
     vpet::PetState pet;
     pet.restore(vpet::SpeciesId::Rookie, 100, 80, 80, 0, 100, 0);
-    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(0));
-    TEST_ASSERT_EQUAL(2, pet.itemCount(0));
-    TEST_ASSERT_EQUAL(1, pet.overfeeds());
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(0));
-    TEST_ASSERT_EQUAL(2, pet.itemCount(0));
-    TEST_ASSERT_EQUAL(1, pet.overfeeds());
+    TEST_ASSERT_EQUAL(3, pet.itemCount(0));
+    TEST_ASSERT_EQUAL(0, pet.overfeeds());
 }
 
 void test_wake_at_night_adds_care_mistake() {
@@ -232,20 +271,17 @@ void test_egg_wake_does_not_add_care_mistake() {
     TEST_ASSERT_EQUAL(0, pet.careMistakes());
 }
 
-void test_protein_every_four_uses_raises_overdose_and_dp() {
+void test_protein_item_is_legacy_stock_only() {
     vpet::PetState pet;
     pet.evolveTo(vpet::SpeciesId::Rookie);
     pet.restoreItems(3, 2, 1, 1, 4, 1);
     TEST_ASSERT_EQUAL(4, pet.itemCount(4));
+    for (int i = 0; i < 4; ++i) {
+        TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(4));
+    }
+    TEST_ASSERT_EQUAL(4, pet.itemCount(4));
     TEST_ASSERT_EQUAL(1, pet.dp());
     TEST_ASSERT_EQUAL(0, pet.protein());
-    for (int i = 0; i < 4; ++i) {
-        TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(4));
-    }
-    TEST_ASSERT_EQUAL(0, pet.itemCount(4));
-    TEST_ASSERT_EQUAL(1, pet.protein());
-    TEST_ASSERT_EQUAL(2, pet.dp());
-    TEST_ASSERT_TRUE(pet.energy() >= 80);
 }
 
 void test_medkit_heals_injury_and_is_blocked_when_healthy() {
@@ -399,7 +435,7 @@ void test_care_and_items_gain_ev_with_caps() {
     pet.setBattleRoll(0);
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
     pet.completeAction();
-    TEST_ASSERT_EQUAL(2, pet.evAt(vpet::CombatStat::Hp));
+    TEST_ASSERT_EQUAL(0, pet.evAt(vpet::CombatStat::Hp));
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Training));
     pet.completeAction();
     TEST_ASSERT_EQUAL(2, pet.evAt(vpet::CombatStat::Off));
@@ -412,26 +448,26 @@ void test_care_and_items_gain_ev_with_caps() {
     pet.completeAction();
     TEST_ASSERT_EQUAL(2, pet.evAt(vpet::CombatStat::Mp));
     TEST_ASSERT_EQUAL(1, pet.evAt(vpet::CombatStat::Def));
-    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(0));
-    TEST_ASSERT_EQUAL(4, pet.evAt(vpet::CombatStat::Hp));
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(0));
+    TEST_ASSERT_EQUAL(0, pet.evAt(vpet::CombatStat::Hp));
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(1));
     TEST_ASSERT_EQUAL(4, pet.evAt(vpet::CombatStat::Mp));
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(2));
     TEST_ASSERT_EQUAL(3, pet.evAt(vpet::CombatStat::Brn));
-    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(4));
-    TEST_ASSERT_EQUAL(5, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(vpet::ItemUseResult::Blocked, pet.useItem(4));
+    TEST_ASSERT_EQUAL(3, pet.evAt(vpet::CombatStat::Off));
     const uint8_t beforeRing = pet.evAt(vpet::CombatStat::Hp);
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(3));
     TEST_ASSERT_EQUAL(beforeRing, pet.evAt(vpet::CombatStat::Hp));
     pet.setInjured(true);
     TEST_ASSERT_EQUAL(vpet::ItemUseResult::Used, pet.useItem(5));
-    TEST_ASSERT_EQUAL(5, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(3, pet.evAt(vpet::CombatStat::Off));
     const uint8_t cap[] = {251, 0, 0, 0, 0, 0};
     pet.restoreEv(cap);
     pet.restore(vpet::SpeciesId::Rookie, 50, 80, 80, 0, 100, 0);
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
     pet.completeAction();
-    TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Hp));
+    TEST_ASSERT_EQUAL(251, pet.evAt(vpet::CombatStat::Hp));
 }
 
 void test_overfeed_does_not_gain_ev() {

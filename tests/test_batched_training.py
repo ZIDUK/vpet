@@ -138,7 +138,7 @@ def test_plan_one_rep_does_not_mutate_pet():
     assert plan["energy_cost"] == TRAINING_ENERGY_COST
     assert plan["secondary"] == {
         "happiness": 3, "effort": 8,
-        "weight": -1, "training_sessions": 1,
+        "weight": 0, "training_sessions": 1,
     }
     assert plan["reason"] == ""
     assert pet.to_dict() == before

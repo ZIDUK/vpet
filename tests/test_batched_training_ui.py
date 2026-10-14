@@ -31,6 +31,7 @@ from scripts.practice_icons import info_icon, technique_icon
 from scripts.practice_renderer import (HP, INK, MP, MUTED, PRACTICE_IMPACT_MS,
                                         WHITE, YELLOW, GREEN, _draw_atlas, bar)
 from scripts.training_renderer import render_training
+from scripts import training_renderer
 from scripts.training_session import (TRAINING_ANIMATION_MS, TrainingSession,
                                         STATE_SELECT, STATE_PREPARE,
                                         STATE_SESSION, STATE_CONFIRM,
@@ -87,6 +88,22 @@ def _session(energy=100, ev=None, **kwargs):
         pet.restore_ev(ev)
     pet.stats["e"] = energy
     return TrainingSession(pet, lambda _: True, **kwargs)
+
+
+def test_training_sprite_cadence_matches_home_motion(monkeypatch, practice_assets):
+    seen = []
+    monkeypatch.setattr(
+        training_renderer, "pet_sprite",
+        lambda *args, **kwargs: seen.append(kwargs["frame_interval_ms"]),
+    )
+    session = _session()
+
+    render_training(practice_assets, session, 0)
+    assert seen[-1] == 40
+
+    session.index = 6
+    render_training(practice_assets, session, 0)
+    assert seen[-1] == 85
 
 
 def _patch_monotonic(monkeypatch):

@@ -84,6 +84,23 @@ def test_tdisplay_panels_stay_inside_content_area(tmp_path):
         assert frame.getpixel((239, 134)) == (214, 180, 112)
 
 
+def test_tdisplay_feeding_panel_keeps_meat_menu_icon_selected(tmp_path):
+    build_dir = tmp_path / "build-tdisplay"
+    profile = get_display_profile("tdisplay")
+    build_script.main(profile_name="tdisplay", output_dir=build_dir)
+
+    frame = render_frame(
+        build_dir,
+        _rookie(),
+        menu_index=1,
+        panel_mode="feeding",
+        profile=profile,
+    )
+
+    assert frame.getpixel((30, 0)) == (255, 215, 0)
+    assert frame.getpixel((150, 0)) == (0, 0, 0)
+
+
 def test_tdisplay_inventory_keeps_back_on_screen(tmp_path):
     from core.inventory import INVENTORY_BACK_INDEX
     from core.status_card import STATUS_SPLIT_X
@@ -131,7 +148,7 @@ def test_tdisplay_inventory_splits_preview_and_list(tmp_path):
         _rookie(),
         menu_index=5,
         panel_mode="inventory",
-        panel_index=1,
+        panel_index=2,
         profile=profile,
     )
     parchment = (214, 180, 112)
@@ -618,8 +635,8 @@ def test_backpack_panel_draws_items_and_selected_row():
     )
 
     assert inventory.getpixel((80, 0)) == (255, 215, 0)
-    assert inventory.getpixel((8, 60)) == (255, 210, 74)
-    assert inventory.getpixel((8, 40)) != (255, 210, 74)
+    assert inventory.getpixel((8, 40)) == (255, 210, 74)
+    assert inventory.getpixel((8, 60)) != (255, 210, 74)
 
 
 def test_book_panel_highlights_current_evolution_form(tmp_path):

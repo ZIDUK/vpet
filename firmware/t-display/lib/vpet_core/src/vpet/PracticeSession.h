@@ -77,7 +77,7 @@ public:
             else {
                 battle = practice::Battle();
                 int stats[6];
-                for (int i = 0; i < 6; ++i) stats[i] = pet.combatStat(static_cast<CombatStat>(i));
+                for (int i = 0; i < 6; ++i) stats[i] = pet.effectiveCombatStat(static_cast<CombatStat>(i));
                 battle.player.init(stats);
                 battle.player.equipped = pet.practice.equipped;
                 battle.player.personality = pet.dna()[3] % 3;

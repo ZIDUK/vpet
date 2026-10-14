@@ -213,7 +213,7 @@ void test_training_plan_one_rep_fields() {
     TEST_ASSERT_EQUAL(8, plan.energyCost);
     TEST_ASSERT_EQUAL(3, plan.happinessAdd);
     TEST_ASSERT_EQUAL(8, plan.effortAdd);
-    TEST_ASSERT_EQUAL(-1, plan.weightDelta);
+    TEST_ASSERT_EQUAL(0, plan.weightDelta);
     TEST_ASSERT_EQUAL_STRING(vpet::kTrainingOk, plan.reason);
 
     // 0 energy → cannot, with FALTA ENERGIA.
@@ -252,7 +252,7 @@ void test_training_apply_debits_energy_and_grows_ev() {
     TEST_ASSERT_EQUAL(24, summary.energyCharged);
     TEST_ASSERT_EQUAL(24, summary.effortAdded);
     TEST_ASSERT_EQUAL(9, summary.happinessAdded);
-    TEST_ASSERT_EQUAL(-3, summary.weightDelta);
+    TEST_ASSERT_EQUAL(0, summary.weightDelta);
     TEST_ASSERT_EQUAL(e0 - 24, pet.energy());
     TEST_ASSERT_EQUAL(18, pet.evAt(vpet::CombatStat::Off));
     TEST_ASSERT_EQUAL(3, pet.trainingSessions());
@@ -433,7 +433,7 @@ void test_training_apply_clamps_by_energy_and_headroom() {
         TEST_ASSERT_EQUAL(8, summary.energyCharged);
         TEST_ASSERT_EQUAL(8, summary.effortAdded);
         TEST_ASSERT_EQUAL(3, summary.happinessAdded);
-        TEST_ASSERT_EQUAL(-1, summary.weightDelta);
+        TEST_ASSERT_EQUAL(0, summary.weightDelta);
         TEST_ASSERT_EQUAL(e0 - 8, pet.energy());
         TEST_ASSERT_EQUAL(ts0 + 1, pet.trainingSessions());
         TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
