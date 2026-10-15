@@ -296,6 +296,7 @@ def test_simulator_dumbbell_route_and_held_action_do_not_repeat(practice_assets,
     press(sim.pygame.K_b)  # techniques → A
     press(sim.pygame.K_b)  # A → home
     press(sim.pygame.K_n)  # move off the dumbbell
+    press(sim.pygame.K_n)  # exploration sits between the dumbbell and the swords
     press(sim.pygame.K_a)  # open swords (battle)
     press(sim.pygame.K_b)  # close battle
     frames = iter(((0, start_events), (9999, []), (10000, []), (10001, events[:])))

@@ -47,7 +47,7 @@ def test_tdisplay_call_uses_corner_icon_not_bottom_bar(tmp_path):
     assert quiet.getpixel((220, 115)) == background.getpixel((220, 115))
 
 
-def test_renderer_outputs_tdisplay_frame_with_30_pixel_menu_cells(tmp_path):
+def test_renderer_fits_nine_menu_icons_on_the_tdisplay_bar(tmp_path):
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=build_dir)
@@ -55,17 +55,48 @@ def test_renderer_outputs_tdisplay_frame_with_30_pixel_menu_cells(tmp_path):
     frame = render_frame(
         build_dir,
         _rookie(),
-        menu_index=7,
+        menu_index=8,
         profile=profile,
     )
 
     assert frame.size == (240, 135)
-    assert frame.getpixel((210, 0)) == (255, 215, 0)
-    assert frame.getpixel((239, 23)) == (255, 215, 0)
-    assert frame.getpixel((209, 0)) == (0, 0, 0)
+    assert frame.getpixel((208, 0)) == (255, 215, 0)
+    assert frame.getpixel((233, 23)) == (255, 215, 0)
+    assert frame.getpixel((207, 0)) == (0, 0, 0)
 
 
-def test_tdisplay_panels_stay_inside_content_area(tmp_path):
+def test_tdisplay_explore_panel_lists_the_three_routes(tmp_path):
+    from core.exploration_menu import ExplorationMenu
+    from core.status_card import STATUS_CARD_Y
+
+    build_dir = tmp_path / "build-tdisplay"
+    profile = get_display_profile("tdisplay")
+    build_script.main(profile_name="tdisplay", output_dir=build_dir)
+    routes = ExplorationMenu()
+    jornada = ExplorationMenu()
+    jornada.index = 1
+    jornada.action()
+    frame = render_frame(
+        build_dir,
+        _rookie(),
+        menu_index=3,
+        panel_mode="explore",
+        exploration_menu=routes,
+        profile=profile,
+    )
+    stats = render_frame(
+        build_dir,
+        _rookie(),
+        menu_index=3,
+        panel_mode="explore",
+        exploration_menu=jornada,
+        profile=profile,
+    )
+
+    assert (build_dir / "UIIcons" / "Explore.bmp").is_file()
+    assert frame.getpixel((78, 0)) == (255, 215, 0)
+    assert frame.getpixel((20, STATUS_CARD_Y)) == (255, 215, 0)
+    assert frame.tobytes() != stats.tobytes()
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=build_dir)

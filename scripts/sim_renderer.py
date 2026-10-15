@@ -49,6 +49,7 @@ from config import (
     MENU_ICON_X,
     MENU_ICON_Y,
     MENU_SELECTOR_COLOR,
+    TDISPLAY_MENU_ICON_PATHS,
     PET_CAST_FRAME_COUNT,
     PET_CAST_IMAGE_PATH,
     PET_EAT_FRAME_COUNT,
@@ -458,7 +459,7 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
                         width=wide_w, height=wide_h)
 
 
-def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0):
+def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0, exploration_menu=None):
     draw = ImageDraw.Draw(frame)
     panel = (214, 180, 112)
     ink = (48, 42, 55)
@@ -496,6 +497,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         "evolution": "EVOLUTION",
         "evolution_detail": "EVOLUTION",
         "options": "OPTIONS",
+        "explore": "EXPLORE",
     }.get(panel_mode, "VPET")
     draw.text((120, 37), title, fill=(255, 255, 255), anchor="mm")
 
@@ -678,6 +680,27 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 _paste_ui_icon(frame, build_dir, OPTION_ICONS[index], x + 2, y + 2, 20)
                 text = label if not extra else "%s  %s" % (label, extra)
                 draw.text((x + 28, y + 6), text, fill=ink, font=_status_font(12))
+    elif panel_mode == "explore" and exploration_menu is not None:
+        spanish = getattr(pet, "language", "EN") == "ES"
+        draw.rectangle((3, 27, 236, 47), fill=ink)
+        draw.text((120, 37), exploration_menu.title(spanish), fill=(255, 255, 255), anchor="mm")
+        rows, start = exploration_menu.visible(spanish)
+        chip = _mix(ink, panel, 0.88)
+        outline = _mix(ink, panel, 0.45)
+        selector = (255, 215, 0)
+        x = 8
+        width = 224
+        for slot, row in enumerate(rows):
+            y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
+            selected = start + slot == exploration_menu.index
+            draw.rounded_rectangle(
+                (x, y, x + width, y + STATUS_CARD_H),
+                radius=5,
+                fill=selector if selected else chip,
+                outline=selector if selected else outline,
+            )
+            text = row["label"] if not row["detail"] else "%s  %s" % (row["label"], row["detail"])
+            draw.text((x + 8, y + 6), text, fill=ink, font=_status_font(12))
 
 
 def render_frame(
@@ -695,6 +718,7 @@ def render_frame(
     current_datetime=None,
     profile=None,
     now_ms=0,
+    exploration_menu=None,
 ):
     """Render the composition shared with the CircuitPython display group."""
     profile = profile or get_display_profile("pico")
@@ -710,20 +734,22 @@ def render_frame(
         (0, 0, profile.width - 1, profile.menu_height - 1),
         fill=(0, 0, 0),
     )
-    for index, path in enumerate(MENU_ICON_PATHS):
+    icons = TDISPLAY_MENU_ICON_PATHS if profile.name == "tdisplay" else MENU_ICON_PATHS
+    stride = profile.width // len(icons)
+    for index, path in enumerate(icons):
         icon = _load_image(device_path(build_dir, path)).convert("RGB")
-        icon_x = index * profile.cell_width + (profile.cell_width - profile.icon_size) // 2
+        icon_x = index * stride + (stride - profile.icon_size) // 2
         icon_y = (profile.menu_height - profile.icon_size) // 2
         frame.paste(icon, (icon_x, icon_y))
 
-    selector_x = (menu_index % len(MENU_ICON_PATHS)) * profile.cell_width
+    selector_x = (menu_index % len(icons)) * stride
     selector_color = (
         (MENU_SELECTOR_COLOR >> 16) & 0xFF,
         (MENU_SELECTOR_COLOR >> 8) & 0xFF,
         MENU_SELECTOR_COLOR & 0xFF,
     )
     ImageDraw.Draw(frame).rectangle(
-        (selector_x, 0, selector_x + profile.cell_width - 1, profile.menu_height - 1),
+        (selector_x, 0, selector_x + stride - 1, profile.menu_height - 1),
         outline=selector_color,
         width=1,
     )
@@ -853,7 +879,8 @@ def render_frame(
     if panel_mode is not None:
         if profile.name == "tdisplay":
             _draw_wide_panel(
-                frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime, now_ms
+                frame, build_dir, pet, panel_mode, panel_index, options_session,
+                current_datetime, now_ms, exploration_menu,
             )
             if status_split:
                 frame.paste(rookie.convert("RGB"), (sprite_x, sprite_y), transparency_mask)

@@ -21,6 +21,17 @@ MENU_ICON_PATHS = [
     "/UIIcons/Pedia.bmp",
     "/UIIcons/Options.bmp",
 ]
+TDISPLAY_MENU_ICON_PATHS = [
+    "/UIIcons/Status.bmp",
+    "/UIIcons/Feed.bmp",
+    "/UIIcons/Training.bmp",
+    "/UIIcons/Explore.bmp",
+    "/UIIcons/Battle.bmp",
+    "/UIIcons/Rest.bmp",
+    "/UIIcons/Backpack.bmp",
+    "/UIIcons/Pedia.bmp",
+    "/UIIcons/Options.bmp",
+]
 MENU_ICON_X = [index * MENU_CELL_SIZE + 1 for index in range(8)]
 MENU_STATUS_INDEX = 0
 MENU_FEED_INDEX = 1
