@@ -4,10 +4,12 @@ Requerimientos vivos del brainstorm del 2026-10-11. Índice de fase:
 `docs/superpowers/plans/2026-10-11-delivery-roadmap.md`, sección
 «P2: exploracion y recompensas».
 
-No hay funcionalidad implementada. Este documento no autoriza cambios de
-economía, persistencia, menú ni firmware. Los valores numéricos siguen
-pendientes de aprobación. La exploración no adelanta el cierre físico de la
-placa ni la paridad de combate.
+Actualizacion 2026-10-14: el usuario autorizo completar la funcionalidad en
+Make Sim. Patio, Jornada, Noche y Guia estan implementados en el simulador,
+con reloj, persistencia JSON y reclamacion unica. Contrato, decisiones de
+balance, pruebas y alcance: [Exploracion en Make Sim](../../exploration.md).
+El port C++, el formato binario NVS, la paridad y la aceptacion fisica de la
+placa siguen pendientes; esta entrega no modifica NVS ni se flashea.
 
 ## Jugador
 
@@ -49,7 +51,7 @@ un poco más fuerte. Dejar el aparato en un cajón no maxea al pet.
 | Especie siguiente | Cerrado el 2026-10-14. Elemento planta, para que Llama sume la mitad. Tres técnicas: golpe neutral, guardia y una de planta con el mismo contador de dos. Sin firma. Al cambiar de etapa se conservan las que esa etapa liste; si no tiene lista, se quedan las aprendidas. |
 | Atributo | Vaccine, Data y Virus quedan fuera hasta que haya tres especies. |
 | Guardado lógico | Cerrado el 2026-10-14. La partida guarda la ruta, la hora de salida, si ya se cobró y si hay una Guía pendiente. El formato en bytes de NVS se escribe al implementar. |
-| Implementación | No empieza hasta cerrar la paridad del combate actual y el formato de guardado. |
+| Implementación | Autorizada en Make Sim el 2026-10-14, con contrato JSON versionado. El port de placa conserva la dependencia de paridad y formato NVS. |
 
 ## Ritmo de la semana
 

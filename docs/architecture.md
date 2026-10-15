@@ -152,9 +152,11 @@ Status pagina 1 muestra barras HP / HAM / ENE. `NEXT` cicla a la pagina 2
 (edad de etapa, esfuerzo, batallas de forma, CM, call y reloj). Un Call
 activo pinta `*` en el selector. `ACTION` o `BACK` vuelven a Home.
 
-Inventario: Carne, Energia, EXP, Anillo y ATRAS. `ACTION` gasta un item
-(+20 HAM / +25 ENE / +8 ESF / +15 animo), baja el stock y se queda en el
-menu. Stock 0 no hace nada. El huevo no gasta. `ACTION` en ATRAS cierra.
+Alimentar ofrece carne y proteina ilimitadas; no consulta ni descuenta el
+stock legado. La mochila conserva Energia, EXP, Anillo, botiquin y ATRAS.
+`ACTION` consume un item valido, guarda la partida y permanece en el menu; si
+el guardado falla, restaura la instantanea anterior. Stock 0 o una accion
+bloqueada no cambia la partida. `ACTION` en ATRAS cierra.
 
 El simulador T-Display separa dos entradas para Firemon despierto:
 
@@ -261,6 +263,17 @@ El entorno de desarrollo conserva carga serial, logs y capacidad de recuperacion
 Secure Boot, Flash Encryption, bloqueo de interfaces y claves de produccion solo
 se habilitaran en dispositivos destinados a usuarios finales. Consulta
 [security.md](security.md).
+
+## Exploracion en Make Sim
+
+La exploracion de Make Sim usa `core.exploration` para reglas deterministas,
+`scripts/exploration_session.py` para transacciones/navegacion y
+`scripts/exploration_renderer.py` para ES/EN a 240x135. El registro versionado
+forma parte del snapshot de Pet; salida, premio, recibo y Guia se guardan con
+reemplazo atomico JSON. `batch_commit` consume la Guia junto al EV de la sesion.
+El reloj de expedicion avanza y se restaura con la partida. El firmware aun no
+implementa ese registro; no se alteran sus claves/enums NVS en esta entrega.
+Contrato detallado y pruebas: [exploration.md](exploration.md).
 
 ## Contrato de despliegue
 

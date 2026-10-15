@@ -79,6 +79,8 @@ public:
                 int stats[6];
                 for (int i = 0; i < 6; ++i) stats[i] = pet.effectiveCombatStat(static_cast<CombatStat>(i));
                 battle.player.init(stats);
+                battle.player.element = pet.species() == SpeciesId::Egg || pet.species() == SpeciesId::Baby
+                    ? practice::Element::Neutral : practice::Element::Fire;
                 battle.player.equipped = pet.practice.equipped;
                 battle.player.personality = pet.dna()[3] % 3;
                 battle.player.bond = pet.practice.bond;

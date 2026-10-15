@@ -9,10 +9,11 @@ INVENTORY_ITEMS = (
     ("MEDKIT", "medkit", "hp", 20),
 )
 INVENTORY_BACK_INDEX = len(INVENTORY_ITEMS)
-INVENTORY_ENTRY_COUNT = INVENTORY_BACK_INDEX + 1
+INVENTORY_GUIDE_INDEX = INVENTORY_BACK_INDEX + 1
+INVENTORY_ENTRY_COUNT = INVENTORY_GUIDE_INDEX + 1
 DEFAULT_INVENTORY = {"meat": 3, "energy": 2, "exp": 1, "ring": 1, "protein": 2, "medkit": 1}
 INVENTORY_WINDOW = 3
-INVENTORY_ICONS = ("ItemMeat", "ItemEnergy", "ItemExp", "ItemRing", "ItemProtein", "ItemMedkit", "Back")
+INVENTORY_ICONS = ("ItemMeat", "ItemEnergy", "ItemExp", "ItemRing", "ItemProtein", "ItemMedkit", "Back", "ItemGuide")
 INVENTORY_NAMES = (
     ("MEAT", "CARNE"),
     ("ENERGY", "ENERGIA"),
@@ -34,11 +35,15 @@ INVENTORY_BLURBS = (
 
 
 def inventory_name(index, spanish=False):
+    if index == INVENTORY_GUIDE_INDEX:
+        return "GUIA" if spanish else "GUIDE"
     names = INVENTORY_NAMES[INVENTORY_BACK_INDEX if index >= INVENTORY_BACK_INDEX else index]
     return names[1] if spanish else names[0]
 
 
 def inventory_blurb(index, spanish=False):
+    if index == INVENTORY_GUIDE_INDEX:
+        return "+1 EV AL ENTRENAR" if spanish else "+1 EV NEXT TRAIN"
     blurbs = INVENTORY_BLURBS[INVENTORY_BACK_INDEX if index >= INVENTORY_BACK_INDEX else index]
     return blurbs[1] if spanish else blurbs[0]
 
@@ -65,6 +70,8 @@ def inventory_window(visible, current, size=INVENTORY_WINDOW):
 
 
 def item_visible(pet, index):
+    if index == INVENTORY_GUIDE_INDEX:
+        return pet.exploration.guide
     if index == INVENTORY_BACK_INDEX:
         return True
     if index < 0 or index >= len(INVENTORY_ITEMS):
@@ -76,13 +83,16 @@ def item_visible(pet, index):
 
 
 def visible_inventory_indexes(pet):
-    return tuple(index for index in range(INVENTORY_ENTRY_COUNT) if item_visible(pet, index))
+    order = (*range(len(INVENTORY_ITEMS)), INVENTORY_GUIDE_INDEX, INVENTORY_BACK_INDEX)
+    return tuple(index for index in order if item_visible(pet, index))
 
 
 def next_visible_inventory_index(pet, index):
-    for step in range(1, INVENTORY_ENTRY_COUNT + 1):
-        candidate = (index + step) % INVENTORY_ENTRY_COUNT
-        if item_visible(pet, candidate):
+    visible = visible_inventory_indexes(pet)
+    if index in visible:
+        return visible[(visible.index(index) + 1) % len(visible)]
+    for candidate in visible:
+        if candidate > index:
             return candidate
     return INVENTORY_BACK_INDEX
 
@@ -95,6 +105,10 @@ def use_inventory_item(pet, index):
     """Use one selected item; return 'used', 'empty', 'blocked', or 'back'."""
     if index == INVENTORY_BACK_INDEX:
         return "back"
+    if index == INVENTORY_GUIDE_INDEX:
+        return "train" if pet.exploration.guide and not pet.exploration.away else "blocked"
+    if pet.exploration.away:
+        return "blocked"
     if index < 0 or index >= len(INVENTORY_ITEMS):
         return "empty"
     if index in (0, 4):

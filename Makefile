@@ -4,6 +4,7 @@
 PY ?= $(if $(wildcard .venv-platformio/bin/python),.venv-platformio/bin/python,python3)
 PORT ?=
 UPLOAD_SPEED ?= 115200
+SIM_ARGS ?=
 SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 /usr/bin/python3; do \
 	if [ -x "$$p" ] || command -v "$$p" >/dev/null 2>&1; then \
 		"$$p" -c 'import pygame, PIL' >/dev/null 2>&1 && echo "$$p" && break; \
@@ -61,7 +62,7 @@ deploy-pico: build-pico test
 
 sim: build-tdisplay
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi
-	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay
+	$(SIM_PY) scripts/sim.py --profile tdisplay --build-dir build-tdisplay $(SIM_ARGS)
 
 sim-practice: build-tdisplay
 	@if [ -z "$(SIM_PY)" ]; then echo "ERR: pygame and Pillow are required (python3 -m pip install pygame pillow)"; exit 1; fi

@@ -96,7 +96,7 @@ def _color_for_state(focus, target, color=YELLOW):
 def _block_label(pet, reason):
     key = {"FALTA ENERGIA": "training.block.energy",
            "EV AL MAXIMO": "training.block.ev",
-           "PET NO APTO": "training.block.pet"}.get(reason)
+           "PET NO APTO": "training.block.pet", "DE EXPLORACION": "explore.away"}.get(reason)
     return tr(pet, key) if key else reason
 
 
@@ -171,7 +171,7 @@ def _render_select(build_dir, session, now_ms):
     if session.index < len(TRAINING_TYPES):
         info_label(frame, draw, item["icon"], 70, 24,
                    tr_stat(session.pet, item["stat"]), YELLOW)
-        real, projected = batch_projected_value(session.pet, item["stat"], TRAINING_EV_GAIN)
+        real, projected = batch_projected_value(session.pet, item["stat"], TRAINING_EV_GAIN + int(session.pet.exploration.guide))
         draw.rectangle((66, 41, 67, 59), fill=YELLOW)
         text(draw, (72, 41), "%d > %d (+%d)" % (real, projected,
                                                  max(0, projected - real)),
@@ -196,6 +196,8 @@ def _render_select(build_dir, session, now_ms):
         text(draw, (185, 89), "%d ENE" % TRAINING_ENERGY_COST, MP, small=True)
         if reason:
             text(draw, (70, 105), _block_label(session.pet, reason), HP, small=True)
+        elif session.pet.exploration.guide:
+            text(draw, (70, 105), tr(session.pet, "explore.guide"), GREEN, small=True)
     elif session.index >= len(TRAINING_TYPES):
         text(draw, (70, 24), tr(session.pet, "training.techniques"), YELLOW)
         es = session.pet.language == "ES"
@@ -253,13 +255,15 @@ def _render_prepare(build_dir, session, now_ms):
                species=session.pet.species,
                frame_interval_ms=TRAINING_IDLE_FRAME_INTERVAL_MS)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
-    real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN)
+    real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN + int(session.pet.exploration.guide))
     es = session.pet.language == "ES"
     _metric(draw, 40, "VALOR" if es else "VALUE", "%d > %d" % (real, projected), GREEN)
     _metric(draw, 54, "ENTRENO" if es else "TRAINING", "%d/252" % session.pet.ev_at(stat), GREEN)
     _metric(draw, 68, "ENERGIA" if es else "ENERGY", "%d/100" % session.pet.get("e"), MP)
     _metric(draw, 82, "COSTE" if es else "COST", "-8", HP)
     _metric(draw, 96, "TIEMPO" if es else "TIME", "10s", YELLOW)
+    if session.pet.exploration.guide:
+        paste_icon(frame, asset_icon(build_dir, "ItemGuide"), 24, 95)
     if session.max_reps() <= 0:
         _feedback_band(draw, session.pet, session.train_block_reason() or tr(session.pet, "training.no_reps"), color=HP)
     # Two-option focus: INICIAR / VOLVER.

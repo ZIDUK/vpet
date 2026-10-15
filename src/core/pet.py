@@ -16,6 +16,7 @@ import time
 
 from core.dna import SPECIES_ID, combat_stat, iv_at, mix_entropy
 from core.techniques import TechniqueProgress
+from core.exploration import Exploration
 from core.nutrition import (apply_food, body_condition, complete_training_weight,
                             consume_hunger, effective_stat, migrate_legacy_weight)
 
@@ -107,6 +108,7 @@ class Pet:
         self.dna = [0, 0, 0, 0]
         self.ev = {"hp": 0, "mp": 0, "off": 0, "def": 0, "spd": 0, "brn": 0}
         self.techniques = TechniqueProgress()
+        self.exploration = Exploration()
         # Lifecycle: starts as egg unless overridden (live = already hatched)
         self.state = state if state is not None else STATE_EGG
         self.hatch_started_at = time.monotonic() if self.state == STATE_EGG else None
@@ -411,10 +413,12 @@ class Pet:
             "dna": list(self.dna),
             "ev": dict(self.ev),
             "techniques": self.techniques.to_dict(),
+            "exploration": self.exploration.to_dict(),
         }
 
     def load_from_dict(self, d):
         self.techniques = TechniqueProgress(d.get("techniques"))
+        self.exploration = Exploration(d.get("exploration"))
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live

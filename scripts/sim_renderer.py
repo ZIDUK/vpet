@@ -460,6 +460,10 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
 
 
 def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0, exploration_menu=None):
+    if panel_mode == "explore" and hasattr(exploration_menu, "choices"):
+        from scripts.exploration_renderer import draw_exploration
+        draw_exploration(frame, build_dir, pet, exploration_menu, exploration_menu.now(), now_ms)
+        return
     draw = ImageDraw.Draw(frame)
     panel = (214, 180, 112)
     ink = (48, 42, 55)
@@ -522,7 +526,9 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 outline=border,
             )
             _paste_ui_icon(frame, build_dir, inventory_icon(index), x + 2, y + 2, 20)
-            if index < len(INVENTORY_ITEMS):
+            if inventory_icon(index) == "ItemGuide":
+                label = inventory_name(index, spanish) + " x1"
+            elif index < len(INVENTORY_ITEMS):
                 _, key, _, _ = INVENTORY_ITEMS[index]
                 label = "%s x%d" % (inventory_name(index, spanish), pet.inventory.get(key, 0))
             else:
@@ -680,27 +686,6 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 _paste_ui_icon(frame, build_dir, OPTION_ICONS[index], x + 2, y + 2, 20)
                 text = label if not extra else "%s  %s" % (label, extra)
                 draw.text((x + 28, y + 6), text, fill=ink, font=_status_font(12))
-    elif panel_mode == "explore" and exploration_menu is not None:
-        spanish = getattr(pet, "language", "EN") == "ES"
-        draw.rectangle((3, 27, 236, 47), fill=ink)
-        draw.text((120, 37), exploration_menu.title(spanish), fill=(255, 255, 255), anchor="mm")
-        rows, start = exploration_menu.visible(spanish)
-        chip = _mix(ink, panel, 0.88)
-        outline = _mix(ink, panel, 0.45)
-        selector = (255, 215, 0)
-        x = 8
-        width = 224
-        for slot, row in enumerate(rows):
-            y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
-            selected = start + slot == exploration_menu.index
-            draw.rounded_rectangle(
-                (x, y, x + width, y + STATUS_CARD_H),
-                radius=5,
-                fill=selector if selected else chip,
-                outline=selector if selected else outline,
-            )
-            text = row["label"] if not row["detail"] else "%s  %s" % (row["label"], row["detail"])
-            draw.text((x + 8, y + 6), text, fill=ink, font=_status_font(12))
 
 
 def render_frame(
@@ -719,6 +704,7 @@ def render_frame(
     profile=None,
     now_ms=0,
     exploration_menu=None,
+    exploration_now=None,
 ):
     """Render the composition shared with the CircuitPython display group."""
     profile = profile or get_display_profile("pico")
@@ -874,6 +860,10 @@ def render_frame(
     transparency_mask = rookie.point([0] + [255] * 255, mode="L")
     if not status_split:
         frame.paste(rookie.convert("RGB"), (sprite_x, sprite_y), transparency_mask)
+    if profile.name == "tdisplay" and pet.exploration.away and panel_mode is None:
+        from scripts.exploration_renderer import draw_exploration
+        draw_exploration(frame, build_dir, pet, None, exploration_now, now_ms)
+        return frame
     if status_visible and panel_mode is None:
         panel_mode = "status"
     if panel_mode is not None:

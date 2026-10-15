@@ -193,6 +193,16 @@ EV. Eso ya está en el guardado. Esta ficha obliga a los objetos
 nuevos. Mover el EV fuera de la carne sería otro cambio de economía y
 no forma parte de este documento.
 
+## Estado de implementacion del simulador (2026-10-14)
+
+El usuario autorizo completar Patio/Jornada/Noche y Guia en Make Sim. La Guia
+ya tiene ficha, icono, origen determinista y consumo transaccional con la sesion
+de entrenamiento. El contrato vigente esta en [exploration.md](../../exploration.md).
+Los seis IDs antiguos no cambian. No hay una capacidad general de bolsa en el
+motor actual; tres es el numero de filas visibles, no el numero de tipos que
+puede guardar. Se conserva la capacidad de una Guia sin acumular una segunda.
+El formato binario NVS y el port de estas reglas al firmware siguen pendientes.
+
 ## Qué queda por cerrar
 
 1. El formato en bytes del guardado de exploración.

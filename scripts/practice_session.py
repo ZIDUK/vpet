@@ -10,7 +10,8 @@ class PracticeSession:
         self.page, self.index, self.tech = "tech" if training else "battle", 0, 0
         self.battle = None if training else PracticeBattle(Fighter(
             [pet.effective_combat_stat(s) for s in COMBAT_STATS], pet.techniques.equipped,
-            pet.techniques.mastery, pet.dna[3] % 3, pet.techniques.bond))
+            pet.techniques.mastery, pet.dna[3] % 3, pet.techniques.bond,
+            element="fire" if pet.species in ("rookie", "champion", "ultimate") else "neutral"))
         self.message = ""
         self.updated_at = 0
         self.awarded = False
@@ -18,6 +19,9 @@ class PracticeSession:
         self.next_round_at = None
 
     def _round(self, order, now_ms):
+        if self.pet.exploration.away:
+            self.message = "DE EXPLORACION"
+            return
         if not self.battle.step(order):
             return
         self.last_order = order

@@ -20,7 +20,7 @@ if str(SRC) not in sys.path:
 
 from core.options import OPTION_ICONS
 from display_profiles import get_display_profile
-from scripts.explore_icon import render_explore_icon
+from scripts.explore_icon import render_explore_icon, render_guide_icon
 from scripts.item_icons import ICON_NAMES as ITEM_ICONS, render_item_icon
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
@@ -528,12 +528,12 @@ def collect_ui():
         return image.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
     names = tuple(dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
-    names = tuple(dict.fromkeys((*names, *ITEM_ICONS)))
+    names = tuple(dict.fromkeys((*names, *ITEM_ICONS, "ItemGuide")))
     for name in names:
         target = BUILD / "UIIcons" / f"{name}.bmp"
-        if name == "Explore":
+        if name in ("Explore", "ItemGuide"):
             size = ACTIVE_PROFILE.icon_size
-            image = render_explore_icon(size).convert("RGB").quantize(
+            image = (render_explore_icon(size) if name == "Explore" else render_guide_icon(size)).convert("RGB").quantize(
                 colors=256,
                 method=Image.Quantize.MEDIANCUT,
                 dither=Image.Dither.NONE,

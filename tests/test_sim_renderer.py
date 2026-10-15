@@ -66,16 +66,16 @@ def test_renderer_fits_nine_menu_icons_on_the_tdisplay_bar(tmp_path):
 
 
 def test_tdisplay_explore_panel_lists_the_three_routes(tmp_path):
-    from core.exploration_menu import ExplorationMenu
+    from scripts.exploration_session import ExplorationSession
     from core.status_card import STATUS_CARD_Y
 
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=build_dir)
-    routes = ExplorationMenu()
-    jornada = ExplorationMenu()
+    routes = ExplorationSession(_rookie(), lambda _: True, lambda: 0)
+    jornada = ExplorationSession(_rookie(), lambda _: True, lambda: 0)
     jornada.index = 1
-    jornada.action()
+    jornada.input("action")
     frame = render_frame(
         build_dir,
         _rookie(),
@@ -95,7 +95,7 @@ def test_tdisplay_explore_panel_lists_the_three_routes(tmp_path):
 
     assert (build_dir / "UIIcons" / "Explore.bmp").is_file()
     assert frame.getpixel((78, 0)) == (255, 215, 0)
-    assert frame.getpixel((20, STATUS_CARD_Y)) == (255, 215, 0)
+    assert frame.getpixel((5, 50)) == (255, 217, 61)
     assert frame.tobytes() != stats.tobytes()
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")

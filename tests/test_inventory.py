@@ -75,7 +75,7 @@ def test_inventory_preview_has_a_short_blurb():
 
 
 def test_inventory_uses_back_arrow_for_return_entry():
-    assert INVENTORY_ICONS == (
+    assert INVENTORY_ICONS[:7] == (
         "ItemMeat", "ItemEnergy", "ItemExp", "ItemRing",
         "ItemProtein", "ItemMedkit", "Back",
     )

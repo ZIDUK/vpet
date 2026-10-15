@@ -1,11 +1,13 @@
 """Deterministic practice rules; integer arithmetic mirrored in PracticeBattle.h."""
 from core.techniques import TECHNIQUES
+from core.elements import ELEMENTS, elemental_damage
 
 AUTO = -1
 
 
 class Fighter:
-    def __init__(self, stats, equipped=(0, 1, 2), mastery=(0, 0, 0), personality=0, bond=50):
+    def __init__(self, stats, equipped=(0, 1, 2), mastery=(0, 0, 0), personality=0, bond=50,
+                 element="neutral"):
         self.stats = tuple(max(1, min(99, int(v))) for v in stats)
         if len(self.stats) != 6:
             raise ValueError("Expected HP MP OFF DEF SPD BRN")
@@ -15,6 +17,7 @@ class Fighter:
         self.equipped = tuple(equipped)
         self.mastery = tuple(mastery)
         self.personality, self.bond = personality % 3, max(0, min(100, bond))
+        self.element = element if element in ELEMENTS else "neutral"
         self.cooldowns = [0, 0, 0]
 
     def valid(self, action):
@@ -101,8 +104,8 @@ class PracticeBattle:
             if action != 2:
                 amount = max(1, tech["power"] + source.stats[2] // 3
                              + source.mastery[action] // 20 - target.stats[3] // 4)
-                if actions[1 - i] == 2:
-                    amount = max(1, amount // 2)
+                amount = elemental_damage(amount, tech["element"], target.element,
+                                          guarding=actions[1 - i] == 2)
                 damage[i] = min(target.hp, amount)
                 target.hp = max(0, target.hp - amount)
         self.actions, self.damage = tuple(executed), tuple(damage)

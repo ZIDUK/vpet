@@ -1,9 +1,12 @@
 #pragma once
 
 #include <stdint.h>
+#include "vpet/Elements.h"
 
 namespace vpet {
 namespace practice {
+static constexpr uint32_t kImpactMs = 1200;
+
 struct Fighter {
     int stats[6] = {25, 20, 24, 20, 22, 20};
     int hp = 90, mp = 30, maxHp = 90, maxMp = 30;
@@ -11,6 +14,7 @@ struct Fighter {
     int cooldown[3] = {0, 0, 0};
     uint8_t equipped = 7;
     int personality = 1, bond = 50;
+    Element element = Element::Neutral;
 
     void init(const int* values) {
         for (int i = 0; i < 6; ++i) stats[i] = values[i] < 1 ? 1 : (values[i] > 99 ? 99 : values[i]);
@@ -79,9 +83,8 @@ struct Battle {
             source.cooldown[action] = action == 1 ? 1 : 0;
             if (action == 2) continue;
             int amount = (action == 0 ? 12 : 24) + source.stats[2] / 3 + source.mastery[action] / 20 - target.stats[3] / 4;
-            if (amount < 1) amount = 1;
-            if (selected[1 - i] == 2) amount /= 2;
-            if (amount < 1) amount = 1;
+            amount = elementalDamage(amount, techniqueElement(action), target.element,
+                                     selected[1 - i] == 2);
             damage[i] = amount > target.hp ? target.hp : amount;
             target.hp -= damage[i];
         }
@@ -91,5 +94,19 @@ struct Battle {
         return true;
     }
 };
+
+inline int presentationAction(const Battle& battle, int fighterIndex) {
+    if (fighterIndex < 0 || fighterIndex > 1 || battle.round <= 0) return -1;
+    const int own = battle.actions[fighterIndex];
+    const int other = battle.actions[1 - fighterIndex];
+    const int damageTaken = battle.damage[1 - fighterIndex];
+    const int speed = battle.player.stats[4] - battle.rival.stats[4];
+    const int first = speed > 0 || (speed == 0 && battle.round % 2 == 1) ? 0 : 1;
+    const bool bothAttack = own >= 0 && own != 2 && other >= 0 && other != 2;
+    if (own >= 0 && own != 2) return bothAttack && fighterIndex != first ? 4 : 3;
+    if (damageTaken > 0) return 4;
+    if (own == 2) return 2;
+    return -1;
+}
 } // namespace practice
 } // namespace vpet

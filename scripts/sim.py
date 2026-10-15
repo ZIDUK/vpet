@@ -45,7 +45,7 @@ from core.evolution import (
     evolution_hidden,
     evolution_tree_node,
 )
-from core.exploration_menu import ExplorationMenu
+from scripts.exploration_session import ExplorationSession
 from core.inventory import (
     clamp_visible_inventory_index,
     next_visible_inventory_index,
@@ -116,6 +116,8 @@ def main():
     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = SimulatorServices(ROOT)
+    if profile.name == "tdisplay" and not (args.practice or args.training):
+        services.load(pet)
     practice = None
     training = None
     exploration_menu = None
@@ -134,7 +136,7 @@ def main():
             menu_index = MENU_TRAINING_INDEX
         else:
             practice = PracticeSession(pet, services.save)
-            menu_index = MENU_BATTLE_INDEX
+            menu_index = battle_index
     options_session = None
     frame_number = 0
     rendered_frames = 0
@@ -178,13 +180,20 @@ def main():
                     elif panel_mode in ("evolution", "evolution_detail"):
                         inventory_index = (inventory_index + 1) % EVOLUTION_NODE_COUNT
                     elif panel_mode == "explore" and exploration_menu is not None:
-                        exploration_menu.next()
+                        practice_keys.add(event.key)
+                        exploration_menu.input("next")
                     elif panel_mode == "options":
                         options_session.next()
                     else:
                         panel_mode = None
                         menu_index = (menu_index + 1) % len(menu_icons)
                 elif event.key == pygame.K_a and pet.is_live:
+                    if pet.exploration.away and panel_mode not in ("explore", "status") and menu_index not in (explore_index, MENU_STATUS_INDEX):
+                        exploration_menu = ExplorationSession(pet, services.save, services.exploration_time)
+                        menu_index = explore_index
+                        panel_mode = "explore"
+                        practice_keys.add(event.key)
+                        continue
                     if panel_mode == "feeding":
                         if inventory_index == 2:
                             panel_mode = None
@@ -209,6 +218,10 @@ def main():
                                 pet.load_from_dict(snapshot)
                         if result == "back":
                             panel_mode = None
+                        elif result == "train" and motion.state != MOTION_SLEEP:
+                            training = TrainingSession(pet, services.save)
+                            panel_mode = None
+                            practice_keys.add(event.key)
                     elif panel_mode == "evolution":
                         stage, dark = evolution_tree_node(inventory_index)
                         if not evolution_hidden(stage, dark, evolution_current_stage(pet)):
@@ -216,10 +229,13 @@ def main():
                     elif panel_mode == "evolution_detail":
                         panel_mode = "evolution"
                     elif panel_mode == "explore" and exploration_menu is not None:
-                        result = exploration_menu.action()
-                        if result == "back":
+                        practice_keys.add(event.key)
+                        was_away = pet.exploration.away
+                        if not exploration_menu.input("action"):
                             panel_mode = None
                             exploration_menu = None
+                        if pet.exploration.away != was_away:
+                            motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                     elif panel_mode == "options":
                         staying = options_session.action(pet, services)
                         if options_session.message == "EVOLVED":
@@ -249,9 +265,10 @@ def main():
                     elif menu_index == options_index:
                         options_session = OptionsSession()
                         panel_mode = "options"
-                    elif menu_index == explore_index and profile.name == "tdisplay" and motion.state != MOTION_SLEEP:
-                        exploration_menu = ExplorationMenu(pet.species)
+                    elif menu_index == explore_index and profile.name == "tdisplay":
+                        exploration_menu = ExplorationSession(pet, services.save, services.exploration_time)
                         panel_mode = "explore"
+                        practice_keys.add(event.key)
                     elif menu_index == MENU_TRAINING_INDEX and profile.name == "tdisplay" and pet.species not in ("egg", "baby") and motion.state != MOTION_SLEEP:
                         training = TrainingSession(pet, services.save)
                         practice_keys.add(event.key)
@@ -266,7 +283,7 @@ def main():
                             pygame.time.get_ticks() / 1000,
                             hour=clock_hour(services.get_datetime()),
                         )
-                elif event.key == pygame.K_e and pet.is_live:
+                elif event.key == pygame.K_e and pet.is_live and not pet.exploration.away:
                     if evolution.force(pet):
                         motion.start_evolution(
                             pygame.time.get_ticks() / 1000,
@@ -277,9 +294,11 @@ def main():
                 elif event.key == pygame.K_b:
                     if panel_mode == "evolution_detail":
                         panel_mode = "evolution"
-                    elif panel_mode == "explore" and exploration_menu is not None and exploration_menu.page == "stats":
-                        exploration_menu.page = "routes"
-                        exploration_menu.index = 1
+                    elif panel_mode == "explore" and exploration_menu is not None:
+                        practice_keys.add(event.key)
+                        if not exploration_menu.input("back"):
+                            panel_mode = None
+                            exploration_menu = None
                     else:
                         panel_mode = None
                         exploration_menu = None
@@ -338,9 +357,12 @@ def main():
             clock.tick(20)
             continue
 
-        pet.decay_if_due()
+        if not pet.exploration.away:
+            pet.decay_if_due()
+        else:
+            pet.last_decay = time.monotonic()
         now = pygame.time.get_ticks() / 1000
-        if pet.is_live:
+        if pet.is_live and not pet.exploration.away:
             hour = clock_hour(services.get_datetime())
             pet.update_call(
                 int(now * 1000),
@@ -351,7 +373,7 @@ def main():
         if pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
             pet.complete_hatch("baby")
             motion = PetMotion(now, **motion_kwargs)
-        if motion.state == MOTION_IDLE and evolution.evolve(pet):
+        if not pet.exploration.away and motion.state == MOTION_IDLE and evolution.evolve(pet):
             motion.start_evolution(
                 now,
                 SPARKMON_EVOLUTION_FRAME_COUNT
@@ -386,6 +408,7 @@ def main():
             profile=profile,
             now_ms=int(now * 1000),
             exploration_menu=exploration_menu,
+            exploration_now=services.exploration_time(),
         )
         surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
         scaled = pygame.transform.scale(surface, window_size)

@@ -7,6 +7,7 @@ import pytest
 from core.dna import COMBAT_STATS
 from core.pet import Pet
 from core.practice import Fighter, PracticeBattle, choose
+from core.elements import BEATS, ELEMENTS, elemental_damage
 from core.techniques import TechniqueProgress
 from scripts.practice_session import PracticeSession
 
@@ -38,6 +39,66 @@ def test_practice_fighter_uses_weight_adjusted_combat_stats():
     assert session.battle.player.stats[2] == pet.effective_combat_stat("off")
     assert session.battle.player.stats[4] == pet.effective_combat_stat("spd")
     assert session.battle.player.stats[2] < pet.combat_stat("off")
+
+
+def test_cpp_arena_presentation_uses_actual_round_result(tmp_path):
+    compiler = shutil.which("c++")
+    assert compiler
+    executable = tmp_path / "practice-presentation"
+    subprocess.run([
+        compiler, "-std=c++11", "-I", str(ROOT / "firmware/t-display/lib/vpet_core/src"),
+        str(ROOT / "tests/practice_presentation.cpp"), "-o", str(executable),
+    ], check=True)
+    assert subprocess.check_output([str(executable)], text=True).splitlines() == [
+        "3,4",  # attacker hit, guarded defender hurt
+        "3,2",  # attacker hit, clean guard block
+        "3,4",  # first actor hit; second is shown receiving the blow
+        "1200,-1",
+    ]
+
+
+def test_element_circle_and_cyber_sleuth_damage_order():
+    assert len(ELEMENTS) == 9
+    assert BEATS == {
+        "fire": "plant", "plant": "water", "water": "fire",
+        "electric": "wind", "wind": "earth", "earth": "electric",
+        "light": "dark", "dark": "light",
+    }
+    assert elemental_damage(27, "water", "fire") == 40
+    assert elemental_damage(27, "fire", "plant") == 40
+    assert elemental_damage(27, "fire", "water") == 27
+    assert elemental_damage(27, "neutral", "fire") == 27
+    assert elemental_damage(3, "fire", "plant", guarding=True) == 2
+
+
+def test_practice_battle_applies_technique_element_to_recipient():
+    stats = (25, 20, 24, 20, 22, 20)
+    fire_attacker = Fighter(stats, equipped=(1,), bond=100, element="fire")
+    plant_target = Fighter(stats, equipped=(0,), element="plant")
+    battle = PracticeBattle(fire_attacker, plant_target)
+    battle.step(1)
+    assert battle.actions[0] == 1
+    assert battle.damage[0] == 40
+
+    neutral_matchup = PracticeBattle(
+        Fighter(stats, equipped=(1,), bond=100, element="fire"),
+        Fighter(stats, equipped=(0,), element="water"),
+    )
+    neutral_matchup.step(1)
+    assert neutral_matchup.damage[0] == 27
+
+
+def test_cpp_elemental_battle_matches_python_and_guard_order(tmp_path):
+    compiler = shutil.which("c++")
+    assert compiler
+    executable = tmp_path / "practice-elements"
+    subprocess.run([
+        compiler, "-std=c++11", "-I", str(ROOT / "firmware/t-display/lib/vpet_core/src"),
+        str(ROOT / "tests/practice_elements.cpp"), "-o", str(executable),
+    ], check=True)
+    assert subprocess.check_output([str(executable)], text=True).splitlines() == [
+        "1,27", "1,40", "1,27", "40", "2",
+    ]
 
 
 def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause():

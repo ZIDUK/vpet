@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python, pytest, Pillow/pygame, C++ portable, PlatformIO native, ESP32 Arduino, TFT_eSPI, LittleFS y NVS.
 
-Fecha: 2026-10-14. Estado: **implementacion integrada; Python validado (554 tests), chequeo sintactico C++ correcto; runner PlatformIO y aceptacion fisica pendientes**.
+Fecha: 2026-10-14. Estado: **implementacion integrada; Python validado (555 tests), rutas de usuario del simulador automatizadas, chequeo sintactico C++ correcto; runner PlatformIO y aceptacion fisica pendientes**.
 El usuario aprobo el concepto y solicito este plan despues de la evaluacion de impacto.
 Las cifras de la seccion de balance son una **propuesta inicial para validar**, no resultados medidos ni cifras heredadas de Digimon World.
 
@@ -168,8 +168,15 @@ C++: BodyCondition, FoodPreview, FoodResult y funciones homonimas en camelCase;
 
 ### Evidencia de cierre de esta pasada (2026-10-14)
 
-- Python completo: `554 passed`; incluye alimentacion, combate, evolucion,
+- Python completo: `555 passed`; incluye alimentacion, combate, evolucion,
   status, inventario, assets y guardado atomico del simulador.
+- Aceptacion automatizada de usuario en `sim.main()`: recorre Status,
+  Alimentar con carne/proteina ilimitadas, Mochila, uso de Energia/EXP y
+  Evolucion; comprueba los efectos y el guardado. Se corrigio que los consumos
+  de la mochila no persistian y ahora se revierten si falla el guardado.
+- `make sim` regenera el perfil T-Display (120 assets, 7,150,022 bytes). Las
+  rutas normales, Training y Battle arrancan y renderizan bajo SDL dummy; la
+  ventana nativa no abre en este entorno porque SDL no detecta un display.
 - `SettingsStore.cpp` y `Nutrition.cpp` pasan `c++ -std=c++11 -fsyntax-only`.
 - El test nativo de NVS incluye un fallo parcial y verifica recuperacion
   idempotente del journal `foodTx`; aun falta ejecutar el runner PlatformIO.

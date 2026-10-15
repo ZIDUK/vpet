@@ -15,6 +15,7 @@ una recompensa recurrente.
 | `ring` | Amuleto | Objeto de animo, valido para cualquier especie. El nombre visible dejo de ser «anillo de fuego» el 2026-10-12; el ID de guardado sigue siendo `ring`. | +15 animo, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
 | `protein` | Proteina | Alimento ilimitado de la pantalla Alimentar; el stock guardado antiguo se conserva y no se descuenta. | +20 ENE (se ofrece con ENE <= 80) y +2 peso, una vez por ciclo metabolico; sin EV ni DP. | Ilimitado | No requiere obtenerla; disponible al alimentar. |
 | `medkit` | Botiquin | Kit de primeros auxilios para un vPet lesionado. | Solo se puede usar con lesion: la elimina y restaura +20 HP, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
+| `guide` | Guia / Guide | Manual para la proxima sesion, implementado en Make Sim. Icono `ItemGuide`; capacidad una. | +1 EV del stat entrenado al completar y guardar una sesion; se conserva en cancelacion/fallo/EV lleno. Seleccionarla abre entrenamiento. | 0 | Jornada completa con buen cuidado. |
 
 Los nombres visibles son genericos para cualquier especie. El animo usa el nombre **Amuleto**; el ID de guardado sigue siendo `ring`. No se crean objetos con tema de una sola especie, como un anillo de fuego.
 El botiquin y la carne tambien pueden estar bloqueados por sus condiciones de
@@ -28,14 +29,16 @@ usan como valores predeterminados cuando faltan claves de inventario en el
 guardado. Usarlos descuenta una unidad. Carne y proteina son excepciones:
 Alimentar las ofrece ilimitadamente y no consulta ni descuenta sus claves de
 stock antiguas. **Hoy no hay una accion de compra, recoleccion, combate o
-exploracion que reponga consumibles de mochila.**
+exploracion que reponga esos seis consumibles de mochila.** Make Sim obtiene
+la Guia mediante Jornada; la placa aun no implementa esa recompensa.
 
-## Recompensas futuras: brainstorm de exploracion
+## Recompensas de exploracion en Make Sim
 
 El brainstorm vivo esta en
 [Exploracion y recompensas](superpowers/specs/2026-10-11-exploration-design.md).
-Todavia no esta implementado. El Patio y la Jornada quedaron cerrados
-el 2026-10-14:
+Patio, Jornada, Noche y Guia estan implementados en el simulador el 2026-10-14.
+Flujo, cantidades, limites y guardado: [exploration.md](exploration.md).
+El port a placa sigue pendiente:
 
 | Camino | Familia de recompensa | Estado |
 |---|---|---|
@@ -53,7 +56,7 @@ estrella y la proteína siguen mezclando recuperación y EV porque ya están
 en el guardado. Una recuperación temporal nueva no se mezcla con EV
 permanente. No agregar materiales sin un uso real ni tratar la ficha como
 código ya disponible. El EV y el dominio de la noche están aprobados como
-diseño; no están programados.
+diseño y funcionan en Make Sim; siguen pendientes en firmware.
 
 ## Alimentacion y peso implementados
 

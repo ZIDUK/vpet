@@ -41,13 +41,22 @@ const char* battleSpritePath(SpeciesId species, int action) {
         case SpeciesId::Baby: return "/animations/baby/sparkmon_idle.vpa";
         case SpeciesId::Rookie:
             return action == 0 ? "/animations/rookie/firemon_punch.vpa" :
-                action == 1 ? "/animations/rookie/firemon_cast.vpa" : "/animations/rookie/firemon_idle.vpa";
+                action == 1 ? "/animations/rookie/firemon_cast.vpa" :
+                action == 2 ? "/animations/rookie/firemon_block.vpa" :
+                action == 3 ? "/animations/rookie/firemon_hit.vpa" :
+                action == 4 ? "/animations/rookie/firemon_hurt.vpa" : "/animations/rookie/firemon_idle.vpa";
         case SpeciesId::Champion:
             return action == 0 ? "/animations/champion/flamemon_punch.vpa" :
-                action == 1 ? "/animations/champion/flamemon_cast.vpa" : "/animations/champion/flamemon_idle.vpa";
+                action == 1 ? "/animations/champion/flamemon_cast.vpa" :
+                action == 2 ? "/animations/champion/flamemon_cast.vpa" :
+                action == 3 ? "/animations/champion/flamemon_punch.vpa" :
+                action == 4 ? "/animations/champion/flamemon_punch.vpa" : "/animations/champion/flamemon_idle.vpa";
         case SpeciesId::Ultimate:
             return action == 0 ? "/animations/ultimate/dragfiremon_punch.vpa" :
-                action == 1 ? "/animations/ultimate/dragfiremon_cast.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
+                action == 1 ? "/animations/ultimate/dragfiremon_cast.vpa" :
+                action == 2 ? "/animations/ultimate/dragfiremon_cast.vpa" :
+                action == 3 ? "/animations/ultimate/dragfiremon_punch.vpa" :
+                action == 4 ? "/animations/ultimate/dragfiremon_punch.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
     }
     return "/animations/rookie/firemon_idle.vpa";
 }
@@ -61,6 +70,25 @@ const char* battleSpeciesLabel(SpeciesId species) {
         case SpeciesId::Ultimate: return "DRAGFIRE";
     }
     return "VPET";
+}
+
+const char* practiceTechniqueLabel(int action, bool spanish) {
+    if (action == 0) return spanish ? "GOLPE" : "PUNCH";
+    if (action == 1) return spanish ? "LLAMA" : "FLAME";
+    if (action == 2) return spanish ? "GUARDIA" : "GUARD";
+    return spanish ? "NO ACTUO" : "NO ACTION";
+}
+
+const char* practiceReasonLabel(const char* reason, bool spanish) {
+    if (strcmp(reason, "ELIGE ORDEN") == 0) return spanish ? "ESPERANDO ORDEN" : "AWAITING ORDER";
+    if (strcmp(reason, "A SU CRITERIO") == 0) return spanish ? "DECIDE EL PET" : "PET DECIDES";
+    if (strcmp(reason, "SIGUE ORDEN") == 0) return spanish ? "SIGUIO TU ORDEN" : "FOLLOWED ORDER";
+    if (strcmp(reason, "PREFIERE DEFENDER") == 0) return spanish ? "PREFIRIO DEFENDER" : "CHOSE TO GUARD";
+    if (strcmp(reason, "PREFIERE ATACAR") == 0) return spanish ? "PREFIRIO ATACAR" : "CHOSE TO ATTACK";
+    if (strcmp(reason, "SIN MP") == 0) return spanish ? "SIN MP" : "NOT ENOUGH MP";
+    if (strcmp(reason, "EN RECARGA") == 0) return spanish ? "EN RECARGA" : "ON COOLDOWN";
+    if (strcmp(reason, "RECUPERA") == 0) return spanish ? "RECUPERA MP" : "RESTORES MP";
+    return reason;
 }
 }
 
@@ -895,23 +923,23 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
     if (s.page == PracticeSession::Page::Arena) {
         assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
         const uint32_t roundElapsed = nowMs - s.updatedAt;
-        const bool active = s.battle.round > 0 && roundElapsed < 1100;
+        const bool active = s.battle.round > 0 && roundElapsed < practice::kImpactMs;
         int lunge = 0;
         if (active && roundElapsed >= 150 && roundElapsed < 400) lunge = (roundElapsed - 150) * 18 / 250;
         else if (active && roundElapsed >= 400 && roundElapsed < 650) lunge = 18;
         else if (active && roundElapsed >= 650 && roundElapsed < 950) lunge = 18 - (roundElapsed - 650) * 18 / 300;
         for (int i = 0; i < 2; ++i) {
             const auto& fighter = i == 0 ? s.battle.player : s.battle.rival;
-            const int action = active ? s.battle.actions[i] : -1;
+            const int action = active ? practice::presentationAction(s.battle, i) : -1;
             const SpeciesId species = i == 0 ? pet.species() : SpeciesId::Rookie;
             const char* path = battleSpritePath(species, action);
-            const uint32_t elapsed = active ? nowMs - s.updatedAt : nowMs;
+            const uint32_t elapsed = active ? roundElapsed : nowMs;
             const int homeX = i == 0 ? 12 : 140;
             assets_.drawFrame(display_, path, (elapsed / 80) % (action < 0 || action == 2 ? 19 : 15),
                               homeX + (i == 0 ? lunge : -lunge), 22, i == 1);
             display_.fillRect(i * 120, 0, 120, 34, ink);
             display_.setTextColor(TFT_WHITE, ink);
-            display_.drawString(i == 0 ? battleSpeciesLabel(species) : "PRACTICA", i * 120 + 4, 1, 1);
+            display_.drawString(i == 0 ? battleSpeciesLabel(species) : (languageIsSpanish(language) ? "PRACTICA" : "PRACTICE"), i * 120 + 4, 1, 1);
             for (int stat = 0; stat < 2; ++stat) {
                 const int value = stat == 0 ? fighter.hp : fighter.mp;
                 const int maximum = stat == 0 ? fighter.maxHp : fighter.maxMp;
@@ -925,40 +953,71 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         if (s.battle.result) {
             const uint16_t resultColor = s.battle.result == 1 ? TFT_GREEN :
                 s.battle.result == 2 ? TFT_RED : TFT_YELLOW;
-            display_.fillRect(14, 37, 212, 66, TFT_DARKGREY);
-            display_.drawRect(14, 37, 212, 66, resultColor);
-            const char* reaction = s.battle.result == 1 ?
-                "/animations/firemon/firemon_happy.vpa" :
-                "/animations/firemon/firemon_sad.vpa";
-            if (pet.species() == SpeciesId::Rookie && s.battle.result < 3) {
-                assets_.drawFrame(display_, reaction, (nowMs / 100) % 15, 22, 38);
-            } else {
-                assets_.drawFrame(display_, battleSpritePath(pet.species(), -1),
-                                  (nowMs / 100) % 15, 22, 38);
-            }
+            display_.fillRect(0, 33, 240, 59, ink);
+            display_.fillRect(14, 37, 212, 54, TFT_DARKGREY);
+            display_.drawRect(14, 37, 212, 54, resultColor);
+            assets_.drawFrame(display_, battleSpritePath(pet.species(), -1),
+                              (nowMs / 100) % 19, 22, 38);
             display_.setTextColor(resultColor, TFT_DARKGREY);
-            display_.drawString(s.battle.result == 1 ? "VICTORIA" :
-                                s.battle.result == 2 ? "DERROTA" : "EMPATE", 96, 48, 2);
+            const bool es = languageIsSpanish(language);
+            display_.drawString(s.battle.result == 1 ? (es ? "VICTORIA" : "VICTORY") :
+                                s.battle.result == 2 ? (es ? "DERROTA" : "DEFEAT") : (es ? "EMPATE" : "DRAW"), 96, 48, 2);
             display_.setTextColor(TFT_WHITE, TFT_DARKGREY);
-            display_.drawString(s.battle.result == 1 ? "RIVAL DERROTADO" :
-                                s.battle.result == 2 ? "TE DERROTARON" :
-                                "LIMITE 30 RONDAS", 96, 72, 1);
+            display_.drawString(s.battle.result == 1 ? (es ? "RIVAL DERROTADO" : "RIVAL DEFEATED") :
+                                s.battle.result == 2 ? (es ? "TE DERROTARON" : "YOU WERE DEFEATED") :
+                                (es ? "LIMITE 30 RONDAS" : "30 ROUND LIMIT"), 96, 68, 1);
             char rounds[20];
-            snprintf(rounds, sizeof(rounds), "RONDAS %d", s.battle.round);
+            snprintf(rounds, sizeof(rounds), es ? "RONDAS %d" : "ROUNDS %d", s.battle.round);
             display_.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
-            display_.drawString(rounds, 96, 87, 1);
+            display_.drawString(rounds, 96, 78, 1);
         }
-        display_.fillRect(0, 108, 240, 27, ink);
+        const bool es = languageIsSpanish(language);
+        display_.fillRect(0, 92, 240, 23, ink);
+        display_.setTextColor(TFT_WHITE, ink);
+        char actionLine[48];
+        if (s.battle.round == 0) {
+            snprintf(actionLine, sizeof(actionLine), "%s", es ? "ESPERANDO ORDEN" : "AWAITING ORDER");
+        } else {
+            const int playerAction = s.battle.actions[0];
+            const int requested = s.cursor == 0 || s.cursor == s.count(pet) - 1
+                ? -1 : s.equippedAt(pet, s.cursor - 1);
+            snprintf(actionLine, sizeof(actionLine), "%s %s > %s %s  R%d",
+                     es ? "PEDISTE" : "ORDER", practiceTechniqueLabel(requested, es),
+                     es ? "HIZO" : "DID", practiceTechniqueLabel(playerAction, es), s.battle.round);
+        }
+        display_.drawString(actionLine, 4, 93, 1);
+        display_.setTextColor(TFT_LIGHTGREY, ink);
+        char detailLine[54];
+        if (s.battle.result) {
+            snprintf(detailLine, sizeof(detailLine), "%s", es ? "RESULTADO" : "BATTLE RESULT");
+        } else if (s.battle.round == 0) {
+            snprintf(detailLine, sizeof(detailLine), "%s", es ? "AUTO: DECIDE EL PET" : "AUTO: PET DECIDES");
+        } else {
+            const int dealt = s.battle.damage[0];
+            const int received = s.battle.damage[1];
+            snprintf(detailLine, sizeof(detailLine), "%s %s  %s -%d | %s -%d",
+                     es ? "MOTIVO:" : "WHY:", practiceReasonLabel(s.reason, es),
+                     es ? "RIVAL" : "RIVAL", dealt, es ? "PET" : "PET", received);
+        }
+        display_.drawString(*s.message ? s.message : detailLine, 4, 104, 1);
+        display_.fillRect(0, 116, 240, 19, ink);
         display_.setTextColor(accent, ink);
-        const char* reason = strcmp(s.reason, "A SU CRITERIO") == 0 ? "DECIDE EL PET" : s.reason;
-        display_.drawString(*s.message ? s.message : s.battle.result ? "RESULTADO" : reason, 4, 109, 1);
-        display_.fillRect(4, 121, 232, 12, accent);
-        display_.setTextColor(ink, accent);
+        display_.fillRect(3 + s.cursor * 26, 115, 22, 19, TFT_DARKGREY);
+        display_.drawRect(3 + s.cursor * 26, 115, 22, 19, accent);
         if (!s.battle.result && s.cursor > 0 && s.cursor < s.count(pet) - 1 &&
             s.equippedAt(pet, s.cursor - 1) == 2) {
-            display_.drawString("GUARDIA: -50% DANIO  +4 MP", 8, 123, 1);
+            display_.drawString(es ? "GUARDIA -50% +4MP" : "GUARD -50% +4MP", 111, 121, 1);
         } else {
-            display_.drawString(s.label(pet, s.cursor), 8, 123, 1);
+            const char* label = s.label(pet, s.cursor);
+            if (!es) {
+                if (strcmp(label, "RETIRARSE") == 0) label = "RETREAT";
+                else if (strcmp(label, "VOLVER") == 0) label = "BACK";
+                else if (strcmp(label, "GUARDIA") == 0) label = "GUARD";
+                else if (strcmp(label, "GOLPE") == 0) label = "PUNCH";
+                else if (strcmp(label, "LLAMA") == 0) label = "FLAME";
+                else if (strcmp(label, "AUTO") == 0) label = "AUTO";
+            }
+            display_.drawString(label, 111, 121, 1);
         }
     } else {
         char title[36];

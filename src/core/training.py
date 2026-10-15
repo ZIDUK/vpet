@@ -36,6 +36,8 @@ def training_values(pet, index):
 
 
 def training_block_reason(pet, index):
+    if pet.exploration.away:
+        return "DE EXPLORACION"
     if index not in range(len(TRAINING_TYPES)):
         return "TIPO INVALIDO"
     if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured or getattr(pet, "cold", False):
@@ -71,6 +73,8 @@ def menu_train_block_reason(pet):
     """Return a non-empty reason string if a menu training session is
     blocked, else an empty string. The block list mirrors the dumbbell
     plus the new cap and the per-stat cap of 252."""
+    if pet.exploration.away:
+        return "DE EXPLORACION"
     if pet.species == "egg" or pet.species == "baby":
         return "PET NO APTO"
     if pet.dead or pet.injured or getattr(pet, "cold", False):
@@ -130,6 +134,8 @@ def batch_block_reason(pet, stat):
     blocked (empty string if eligible). Mirrors ``training_block_reason``
     but for a stat name instead of a TRAINING_TYPES index, and is the
     single source of truth for state A and state B of the batched UI."""
+    if pet.exploration.away:
+        return "DE EXPLORACION"
     if stat not in (t["stat"] for t in TRAINING_TYPES):
         return "TIPO INVALIDO"
     if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured \
@@ -189,7 +195,7 @@ def batch_plan_one_rep(pet, stat):
         return {"can": False, "ev_added": 0, "energy_cost": 0,
                 "secondary": {}, "reason": "FALTA ENERGIA"}
     headroom = 252 - pet.ev_at(stat)
-    ev_added = min(TRAINING_EV_GAIN, headroom)
+    ev_added = min(TRAINING_EV_GAIN + int(pet.exploration.guide), headroom)
     return {"can": True, "ev_added": int(ev_added),
             "energy_cost": TRAINING_ENERGY_COST,
             "secondary": {
@@ -271,7 +277,10 @@ def batch_apply(pet, stat, reps):
     complete_training_weight(pet, int(reps))
     weight_delta = pet.weight - weight_before
     pet.training_sessions = getattr(pet, "training_sessions", 0) + int(reps)
+    guide_ev = pet.exploration.use_guide(pet, stat)
+    ev_added += guide_ev
     return {"reps": int(reps), "ev_added": ev_added,
+            "guide_ev": guide_ev,
             "energy_charged": energy_charged,
             "effort_added": effort_added,
             "happiness_added": happiness_added,

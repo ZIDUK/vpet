@@ -1,15 +1,14 @@
 """Safe desktop services for the simulator options menu."""
 
 import json
+import math
 import os
 import socket
 import subprocess
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
-
-from core.save import load_pet
-
 
 def clock_hour(clock, default=12):
     """Read hour from the shared get_datetime() 5-tuple."""
@@ -30,7 +29,7 @@ class SimulatorServices:
     def __init__(self, root):
         self.save_path = Path(root) / "out" / "sim_pet_save.json"
         self.wifi_path = Path(root) / "out" / "sim_wifi_config.json"
-        self.clock = datetime.now().replace(second=0, microsecond=0)
+        self._clock_offset = 0
         self.connected_ssid = None
         self.wifi_status = "OFF"
 
@@ -43,7 +42,10 @@ class SimulatorServices:
                 prefix=f".{self.save_path.name}.", suffix=".tmp", delete=False,
             ) as stream:
                 temporary = Path(stream.name)
-                json.dump(pet.to_dict(), stream, separators=(",", ":"))
+                data = pet.to_dict()
+                if self._clock_offset:
+                    data["_sim_clock_offset"] = self._clock_offset
+                json.dump(data, stream, separators=(",", ":"))
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self.save_path)
@@ -54,7 +56,24 @@ class SimulatorServices:
             return False
 
     def load(self, pet):
-        return load_pet(pet, self.save_path)
+        try:
+            with self.save_path.open(encoding="utf-8") as stream:
+                data = json.load(stream)
+            if not isinstance(data, dict):
+                return False
+            offset = float(data.get("_sim_clock_offset", 0))
+            if not math.isfinite(offset):
+                return False
+            snapshot = pet.to_dict()
+            try:
+                pet.load_from_dict(data)
+            except (TypeError, ValueError, KeyError, OverflowError):
+                pet.load_from_dict(snapshot)
+                return False
+            self._clock_offset = offset
+            return True
+        except (OSError, ValueError, TypeError, OverflowError):
+            return False
 
     def scan_wifi(self):
         try:
@@ -103,6 +122,18 @@ class SimulatorServices:
     def get_datetime(self):
         value = self.clock
         return value.year, value.month, value.day, value.hour, value.minute
+
+    @property
+    def clock(self):
+        return datetime.fromtimestamp(time.time() + self._clock_offset)
+
+    @clock.setter
+    def clock(self, value):
+        self._clock_offset = value.timestamp() - time.time()
+
+    def exploration_time(self):
+        # Encode local civil time so Monday caps follow the displayed calendar.
+        return int((self.clock - datetime(1970, 1, 1)).total_seconds())
 
     def set_date(self, year, month, day):
         self.clock = self.clock.replace(year=year, month=month, day=day)

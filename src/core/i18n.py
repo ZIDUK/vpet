@@ -181,6 +181,41 @@ STAT_STRINGS = {
     "brn": {"ES": "MENTE",    "EN": "MIND"},
 }
 
+TRAINING_STRINGS.update({
+    "explore.title": {"ES": "EXPLORAR", "EN": "EXPLORE"},
+    "explore.patio": {"ES": "PATIO", "EN": "PATIO"},
+    "explore.jornada": {"ES": "JORNADA", "EN": "SHIFT"},
+    "explore.noche": {"ES": "NOCHE", "EN": "NIGHT"},
+    "explore.stats": {"ES": "ELEGIR ATRIBUTO", "EN": "CHOOSE A STAT"},
+    "explore.confirm": {"ES": "PREPARAR SALIDA", "EN": "READY TO LEAVE"},
+    "explore.start": {"ES": "ENVIAR", "EN": "SEND"},
+    "explore.back": {"ES": "VOLVER", "EN": "BACK"},
+    "explore.done": {"ES": "CONTINUAR", "EN": "CONTINUE"},
+    "explore.claim": {"ES": "RECLAMAR", "EN": "CLAIM"},
+    "explore.recall": {"ES": "REGRESAR YA", "EN": "RETURN NOW"},
+    "explore.recall_title": {"ES": "REGRESO ANTICIPADO", "EN": "EARLY RETURN"},
+    "explore.away": {"ES": "DE EXPLORACION", "EN": "ON EXPEDITION"},
+    "explore.ready": {"ES": "DE VUELTA", "EN": "BACK FROM TRIP"},
+    "explore.receipt": {"ES": "RECOMPENSAS GUARDADAS", "EN": "REWARDS SAVED"},
+    "explore.good": {"ES": "BIEN CUIDADO", "EN": "WELL CARED FOR"},
+    "explore.poor": {"ES": "NECESITA CUIDADOS", "EN": "NEEDS CARE"},
+    "explore.home_only": {"ES": "EXPLORA DESDE ROOKIE", "EN": "EXPLORE FROM ROOKIE"},
+    "explore.energy": {"ES": "+%d ENERGIA", "EN": "+%d ENERGY"},
+    "explore.ev": {"ES": "+%d EV %s", "EN": "+%d EV %s"},
+    "explore.mastery": {"ES": "+%d DOMINIO LLAMA", "EN": "+%d FLAME MASTERY"},
+    "explore.learning": {"ES": "LLAMA %d/2 NOCHES", "EN": "FLAME %d/2 NIGHTS"},
+    "explore.learned": {"ES": "LLAMA APRENDIDA", "EN": "FLAME LEARNED"},
+    "explore.guide": {"ES": "GUIA: +1 EV AL ENTRENAR", "EN": "GUIDE: +1 EV NEXT TRAIN"},
+    "explore.none": {"ES": "SIN PREMIO EN ESTE REGRESO", "EN": "NO REWARD THIS RETURN"},
+    "explore.week": {"ES": "SEMANA  EV %d/8  DOM %d/4", "EN": "WEEK  EV %d/8  MAST %d/4"},
+    "explore.patio_reward": {"ES": "RECUPERA ENERGIA", "EN": "RESTORES ENERGY"},
+    "explore.jornada_reward": {"ES": "+2 EV Y GUIA", "EN": "+2 EV AND GUIDE"},
+    "explore.noche_reward": {"ES": "APRENDE / DOMINA LLAMA", "EN": "LEARN / MASTER FLAME"},
+    "explore.free": {"ES": "COSTE: 0 ENERGIA", "EN": "COST: 0 ENERGY"},
+    "explore.save_failed": {"ES": "NO SE GUARDO. REINTENTAR", "EN": "SAVE FAILED. RETRY"},
+    "explore.blocked": {"ES": "SALIDA NO DISPONIBLE", "EN": "TRIP UNAVAILABLE"},
+})
+
 DEFAULT_LANGUAGE = "ES"
 SUPPORTED_LANGUAGES = ("ES", "EN")
 

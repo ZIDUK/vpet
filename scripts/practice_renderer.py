@@ -49,6 +49,17 @@ REASON_LABELS = {
     "ELIGE ORDEN": "ESPERANDO ORDEN",
     "ESPERANDO": "ESPERANDO ORDEN",
 }
+REASON_LABELS_EN = {
+    "SIGUE ORDEN": "FOLLOWED ORDER",
+    "A SU CRITERIO": "PET DECIDES",
+    "SIN MP": "NOT ENOUGH MP",
+    "EN RECARGA": "ON COOLDOWN",
+    "PREFIERE DEFENDER": "CHOSE TO GUARD",
+    "PREFIERE ATACAR": "CHOSE TO ATTACK",
+    "RECUPERA": "RESTORES MP",
+    "ELIGE ORDEN": "AWAITING ORDER",
+    "ESPERANDO": "AWAITING ORDER",
+}
 REASON_CATEGORY = {
     "SIGUE ORDEN": "ok",
     "A SU CRITERIO": "neutral",
@@ -161,6 +172,15 @@ def _practice_species_label(species):
             "champion": "FLAMEMON", "ultimate": "DRAGFIRE"}.get(species, "VPET")
 
 
+def _english(session):
+    return session.pet.language != "ES"
+
+
+def _technique_label(action, english):
+    names = ("PUNCH", "FLAME", "GUARD") if english else ("GOLPE", "LLAMA", "GUARDIA")
+    return "NO ACTION" if english and action is None else "NO ACTUO" if action is None else names[action]
+
+
 def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False, species="rookie", frame_interval_ms=100):
     requested = {0: "punch", 1: "cast", 2: "block", "walk": "walk", "eat": "eat"}.get(action, "idle")
     path = _species_atlas(species, requested)
@@ -271,19 +291,21 @@ def battle_feedback(session):
     damage. The renderer paints two explicit lines from this struct so the
     player can see at a glance what they asked, what the pet did, and why."""
     battle = session.battle
+    english = _english(session)
     if battle.round == 0:
         return FeedbackInfo(
             awaiting=True, order_label="AUTO", order_is_auto=True,
             action_label="-", reason_key="ELIGE ORDEN",
-            reason_label=REASON_LABELS["ELIGE ORDEN"], is_substitution=False,
+            reason_label=REASON_LABELS_EN["ELIGE ORDEN"] if english else REASON_LABELS["ELIGE ORDEN"], is_substitution=False,
             round=0, damage=(0, 0),
         )
     order_is_auto = (session.last_order == -1)
-    order_label = "AUTO" if order_is_auto else TECHNIQUES[session.last_order]["name"]
+    order_label = "AUTO" if order_is_auto else _technique_label(session.last_order, english)
     action = battle.actions[0]
-    action_label = TECHNIQUES[action]["name"] if action is not None else "NO ACTUO"
+    action_label = _technique_label(action, english)
     reason_key = battle.reason or "ELIGE ORDEN"
-    reason_label = REASON_LABELS.get(reason_key, reason_key)
+    labels = REASON_LABELS_EN if english else REASON_LABELS
+    reason_label = labels.get(reason_key, reason_key)
     is_substitution = (not order_is_auto and action is not None
                         and action != session.last_order and not battle.result)
     return FeedbackInfo(
@@ -401,10 +423,11 @@ def _draw_combat_header(draw, frame, battle, pet):
     numbers. Each side occupies half the screen, split at ``SPLIT_X``."""
     draw.rectangle((0, 0, 239, HEADER_BOTTOM), fill=INK)
     draw.line((SPLIT_X, 3, SPLIT_X, 30), fill=TEAL)
-    # Left column: current pet form (x=4..118), right column: PRACTICA.
+    # Left column: current pet form (x=4..118), right column: practice rival.
+    rival_label = "PRACTICE" if pet.language != "ES" else "PRACTICA"
     for x, name, fighter, color_hp, color_mp in (
         (4, _practice_species_label(pet.species), battle.player, HP, MP),
-        (125, "PRACTICA", battle.rival, HP, MP),
+        (125, rival_label, battle.rival, HP, MP),
     ):
         text(draw, (x, 0), name)
         _draw_resource_row(frame, draw, x, 11, "hp", "HP",
@@ -431,15 +454,24 @@ def _draw_result_banner(frame, draw, build_dir, session, now_ms):
     banner_color = {"VICTORIA": GREEN, "DERROTA": HP, "EMPATE": YELLOW}.get(
         session.battle.result, YELLOW)
     draw.rectangle((10, 36, 229, 88), fill=PANEL, outline=banner_color, width=2)
-    text(draw, (16, 40), session.battle.result, banner_color)
-    summary = {
+    english = _english(session)
+    result_label = session.battle.result
+    if english:
+        result_label = {"VICTORIA": "VICTORY", "DERROTA": "DEFEAT", "EMPATE": "DRAW"}.get(
+            result_label, result_label)
+    text(draw, (16, 40), result_label, banner_color)
+    summary = ({
+        "VICTORIA": "RIVAL DEFEATED",
+        "DERROTA": "YOU WERE DEFEATED",
+        "EMPATE": "30 ROUND LIMIT",
+    } if english else {
         "VICTORIA": "RIVAL DERROTADO",
         "DERROTA": "TE DERROTARON",
         "EMPATE": "LIMITE 30 RONDAS",
-    }.get(session.battle.result, "")
+    }).get(session.battle.result, "")
     text(draw, (16, 56), summary, WHITE, small=True)
     if session.battle.round:
-        text(draw, (16, 70), "RONDAS %d" % session.battle.round, MUTED, small=True)
+        text(draw, (16, 70), ("ROUNDS %d" if english else "RONDAS %d") % session.battle.round, MUTED, small=True)
     if session.message:
         text(draw, (16, 80), session.message, YELLOW, small=True)
     action = {"VICTORIA": "happy", "DERROTA": "sad"}.get(session.battle.result)
@@ -461,12 +493,13 @@ def _draw_feedback_band(frame, draw, session, info):
     draw.rectangle((0, BAND_TOP, 239, BAND_BOTTOM), fill=INK)
     # Line 1: [icon] PEDISTE <order>  ->  HIZO <action>          R#X
     paste_icon(frame, _order_icon(session, 10), 4, BAND_TOP + 1)
-    pediste = "PEDISTE %s" % info.order_label
+    english = _english(session)
+    pediste = ("ORDER %s" if english else "PEDISTE %s") % info.order_label
     text(draw, (18, BAND_TOP + 1), pediste, WHITE, small=True)
     arrow = "  >  "
     arrow_x = 18 + text_width(draw, pediste, small=True)
     text(draw, (arrow_x, BAND_TOP + 1), arrow, MUTED, small=True)
-    hizo = "HIZO %s" % info.action_label
+    hizo = ("DID %s" if english else "HIZO %s") % info.action_label
     hizo_x = arrow_x + text_width(draw, arrow, small=True)
     action_color = HP if info.is_substitution else GREEN
     text(draw, (hizo_x, BAND_TOP + 1), hizo, action_color, small=True)
@@ -476,13 +509,14 @@ def _draw_feedback_band(frame, draw, session, info):
              round_label, MUTED, small=True)
     # Line 2: MOTIVO: <reason>                      PRACT -X | FIRE -Y
     reason_color = REASON_COLORS[REASON_CATEGORY.get(info.reason_key, "muted")]
-    reason_text = "MOTIVO: %s" % info.reason_label
+    reason_text = ("WHY: %s" if english else "MOTIVO: %s") % info.reason_label
     text(draw, (4, BAND_TOP + 13), reason_text, reason_color, small=True)
     if not info.awaiting and (info.damage[0] or info.damage[1]):
         # damage[i] is the amount fighter i inflicts on the opponent:
         # damage[0] = damage Firemon dealt to Practica (PRACT's HP loss).
         # damage[1] = damage Practica dealt to Firemon (FIRE's HP loss).
-        damage_text = "PRACT -%d | FIRE -%d" % (info.damage[0], info.damage[1])
+        damage_text = (("RIVAL -%d | PET -%d" if english else "PRACT -%d | FIRE -%d")
+                       % (info.damage[0], info.damage[1]))
         text(draw, (238 - text_width(draw, damage_text, small=True), BAND_TOP + 13),
              damage_text, HP, small=True)
 
@@ -495,7 +529,7 @@ def _draw_action_selector(frame, draw, build_dir, session):
     if session.battle.result:
         icon_button(frame, draw, asset_icon(build_dir, "Back"), 4,
                     SELECTOR_TOP + 1, True, size=18)
-        text(draw, (28, SELECTOR_TOP + 3), "VOLVER", YELLOW)
+        text(draw, (28, SELECTOR_TOP + 3), "BACK" if _english(session) else "VOLVER", YELLOW)
         return
     commands = [-1] + list(session.pet.techniques.equipped) + [None]
     for i, command in enumerate(commands):
@@ -506,8 +540,11 @@ def _draw_action_selector(frame, draw, build_dir, session):
         icon_button(frame, draw, icon, x, SELECTOR_TOP, i == session.index,
                     size=20, unavailable=unavailable)
     command = commands[session.index]
-    label = ("RETIRARSE" if command is None else
+    english = _english(session)
+    label = (("RETREAT" if english else "RETIRARSE") if command is None else
              "AUTO" if command == -1 else TECHNIQUES[command]["name"])
+    if english and command is not None and command >= 0:
+        label = _technique_label(command, True)
     text(draw, (114, SELECTOR_TOP), label, YELLOW)
     text(draw, (114, SELECTOR_TOP + 11), _selector_status(session, command), _selector_color(command, session), small=True)
 
@@ -521,18 +558,19 @@ def _selector_color(command, session):
 
 
 def _selector_status(session, command):
+    english = _english(session)
     if command is None:
-        return "FIN BATALLA"
+        return "END BATTLE" if english else "FIN BATALLA"
     if command == -1:
-        return "PET DECIDE"
+        return "PET DECIDES" if english else "PET DECIDE"
     tech = TECHNIQUES[command]
     if session.battle.player.cooldowns[command]:
-        return "RECARGA %d" % session.battle.player.cooldowns[command]
+        return ("COOLDOWN %d" if english else "RECARGA %d") % session.battle.player.cooldowns[command]
     if session.battle.player.mp < tech["mp"]:
-        return "SIN MP"
+        return "NOT ENOUGH MP" if english else "SIN MP"
     if command == 2:
-        return "MITIGA 50% +4MP"
-    return "COSTE %d MP" % tech["mp"]
+        return "HALF DAMAGE +4MP" if english else "MITIGA 50% +4MP"
+    return ("COST %d MP" if english else "COSTE %d MP") % tech["mp"]
 
 
 def render_battle(frame, draw, build_dir, session, now_ms):

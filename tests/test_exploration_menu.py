@@ -1,44 +1,67 @@
-"""Exploration icon and its internal routes in the simulator menu."""
+"""User navigation through route, stat, confirmation, trip and recall screens."""
 from config import TDISPLAY_MENU_ICON_PATHS
-from core.exploration_menu import ExplorationMenu
+from core.pet import Pet
+from scripts.exploration_session import ExplorationSession
+
+
+def session(species="rookie"):
+    return ExplorationSession(Pet(species=species, state="live"), lambda _: True, lambda: 100000)
 
 
 def test_explore_icon_sits_between_training_and_battle():
     icons = TDISPLAY_MENU_ICON_PATHS
-    training = icons.index("/UIIcons/Training.bmp")
-    explore = icons.index("/UIIcons/Explore.bmp")
-    battle = icons.index("/UIIcons/Battle.bmp")
-    assert explore == training + 1
-    assert battle == explore + 1
+    assert icons.index("/UIIcons/Explore.bmp") == icons.index("/UIIcons/Training.bmp") + 1
+    assert icons.index("/UIIcons/Battle.bmp") == icons.index("/UIIcons/Explore.bmp") + 1
     assert len(icons) == 9
 
 
-def test_routes_are_patio_jornada_and_night():
-    menu = ExplorationMenu()
-    assert [row["id"] for row in menu.rows()] == ["patio", "jornada", "noche", "back"]
-    assert menu.rows(spanish=True)[0]["label"] == "PATIO"
-    assert menu.rows(spanish=True)[0]["detail"] == "30M"
-    assert menu.rows(spanish=True)[1]["detail"] == "8H"
+def test_jornada_requires_stat_then_explicit_departure():
+    s = session()
+    assert s.choices() == ("patio", "jornada", "noche", "back")
+    s.input("next")
+    s.input("action")
+    assert s.page == "stats"
+    s.input("next")
+    s.input("next")
+    s.input("action")
+    assert s.page == "confirm" and s.stat == "off"
+    assert not s.pet.exploration.away
+    s.input("action")
+    assert s.page == "trip" and s.pet.exploration.away
 
 
-def test_jornada_opens_the_six_stats_and_remembers_the_choice():
-    menu = ExplorationMenu()
-    menu.index = 1
-    assert menu.action() == "stats"
-    assert [row["id"] for row in menu.rows()][:6] == [
-        "hp", "mp", "off", "def", "spd", "brn",
-    ]
-    menu.index = 2
-    assert menu.action() == ("jornada", "off")
-    assert menu.choice == ("jornada", "off")
-    assert menu.page == "routes"
+def test_return_is_explicit_and_back_never_claims():
+    s = session()
+    s.input("action")
+    s.input("action")
+    s.input("next")
+    s.input("action")
+    assert s.page == "recall" and s.index == 0
+    s.input("back")
+    assert s.page == "trip" and s.pet.exploration.away
+    assert not s.input("back")
+    assert s.pet.exploration.away
+
+
+def test_six_stats_and_back_are_all_reachable_and_cancel_returns_to_route():
+    s = session()
+    s.index = 1
+    s.input("action")
+    visited = []
+    for _ in range(7):
+        visited.append(s.choices()[s.index])
+        s.input("next")
+    assert visited == ["hp", "mp", "off", "def", "spd", "brn", "back"]
+    s.input("back")
+    assert s.page == "routes" and s.index == 1
+    s.input("action")
+    s.index = 6
+    s.input("action")
+    assert s.page == "routes" and s.index == 1
 
 
 def test_egg_and_baby_only_get_back():
-    menu = ExplorationMenu(species="egg")
-    assert [row["id"] for row in menu.rows()] == ["back"]
-    menu = ExplorationMenu(species="baby")
-    assert menu.action() == "back"
-    menu = ExplorationMenu(species="rookie")
-    menu.index = 0
-    assert menu.action() == ("patio", None)
+    for species in ("egg", "baby"):
+        s = session(species)
+        assert s.choices() == ("back",)
+        assert not s.input("action")

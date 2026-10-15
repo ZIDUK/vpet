@@ -68,11 +68,69 @@ def practice_assets(tmp_path):
 def session(training=False, learned=False):
     pet = Pet()
     pet.complete_hatch("rookie", entropy=12345)
+    pet.language = "ES"
     if learned:
         pet.techniques.training = 255
         pet.techniques.mastery = [100] * 3
         pet.techniques.equipped = [0, 1]
     return PracticeSession(pet, lambda _: True, training=training)
+
+
+@pytest.mark.parametrize(("result", "es_label", "en_label"), [
+    (None, "ESPERANDO ORDEN", "AWAITING ORDER"),
+    ("VICTORIA", "VICTORIA", "VICTORY"),
+    ("DERROTA", "DERROTA", "DEFEAT"),
+    ("EMPATE", "EMPATE", "DRAW"),
+])
+def test_arena_state_images_render_in_both_languages(practice_assets, result,
+                                                      es_label, en_label):
+    from scripts.practice_renderer import render_practice
+
+    frames = []
+    for language in ("ES", "EN"):
+        s = session(learned=True)
+        s.pet.language = language
+        if result:
+            s.battle.result = result
+            s.battle.round = 30 if result == "EMPATE" else 4
+        frame = render_practice(practice_assets, s, 500)
+        assert frame.size == (240, 135)
+        frames.append(frame)
+    assert frames[0].tobytes() != frames[1].tobytes()
+
+
+@pytest.mark.parametrize("language,expected", [
+    ("ES", ("PEDISTE GOLPE", "HIZO GOLPE", "MOTIVO: SIGUIO TU ORDEN", "VICTORIA")),
+    ("EN", ("ORDER PUNCH", "DID PUNCH", "WHY: FOLLOWED ORDER", "VICTORY")),
+])
+def test_arena_round_and_result_copy_matches_language(practice_assets, monkeypatch,
+                                                       language, expected):
+    import scripts.practice_renderer as renderer
+
+    painted = []
+    original_text = renderer.text
+
+    def capture(draw, xy, value, *args, **kwargs):
+        painted.append(str(value))
+        return original_text(draw, xy, value, *args, **kwargs)
+
+    monkeypatch.setattr(renderer, "text", capture)
+    s = session(learned=True)
+    s.pet.language = language
+    s.battle.round = 2
+    s.battle.actions = (0, 2)
+    s.battle.damage = (7, 0)
+    s.last_order = 0
+    s.battle.reason = "SIGUE ORDEN"
+    round_image = renderer.render_practice(practice_assets, s, 400)
+    assert round_image.size == (240, 135)
+    assert all(label in painted for label in expected[:3])
+
+    painted.clear()
+    s.battle.result = "VICTORIA"
+    result_image = renderer.render_practice(practice_assets, s, 1600)
+    assert result_image.size == (240, 135)
+    assert expected[3] in painted
 
 
 @pytest.mark.parametrize("name", PATTERNS)
@@ -325,6 +383,70 @@ def test_simulator_dumbbell_route_and_held_action_do_not_repeat(practice_assets,
     assert len(practices) == 2
     assert practices[-1].page == "battle"
     assert practices[-1].battle.round == 0
+
+
+def test_simulator_feeding_and_backpack_route_commit_items(monkeypatch):
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    monkeypatch.setenv("SDL_AUDIODRIVER", "dummy")
+    from scripts import sim
+    from scripts import sim_renderer
+
+    pet = Pet(species="rookie", state="live")
+    pet.stats.update(h=20, e=20, p=80, hp=90)
+    pet.weight = 10
+    saves = []
+    frames = []
+    monkeypatch.setattr(sim, "Pet", lambda: pet)
+    monkeypatch.setattr(sim, "parse_args", lambda: SimpleNamespace(
+        profile="tdisplay", scale=1, build_dir=".", record=None,
+        practice=False, training=False, max_frames=100,
+    ))
+    monkeypatch.setattr(sim.SimulatorServices, "load", lambda *_: False)
+    monkeypatch.setattr(sim.SimulatorServices, "save",
+                        lambda _, value: saves.append(value.to_dict()) or True)
+    monkeypatch.setattr(sim_renderer, "render_boot_intro", lambda *_: Image.new("RGB", (240, 135)))
+    monkeypatch.setattr(sim, "render_frame", lambda *args, **_: frames.append(args[8])
+                        or Image.new("RGB", (240, 135)))
+
+    now = [0]
+    monotonic = [100.0]
+    monkeypatch.setattr(sim.pygame.time, "get_ticks", lambda: now[0])
+    monkeypatch.setattr(sim.pygame.time, "Clock", lambda: SimpleNamespace(tick=lambda *_: None))
+    monkeypatch.setattr(sim.time, "monotonic",
+                        lambda: monotonic.__setitem__(0, monotonic[0] + .1) or monotonic[0])
+    keys = (
+        sim.pygame.K_a, sim.pygame.K_n, sim.pygame.K_n, sim.pygame.K_n,
+        sim.pygame.K_b, sim.pygame.K_n, sim.pygame.K_a, sim.pygame.K_a,
+        sim.pygame.K_a, sim.pygame.K_n, sim.pygame.K_a,
+        sim.pygame.K_n, sim.pygame.K_n, sim.pygame.K_n, sim.pygame.K_n, sim.pygame.K_n,
+        sim.pygame.K_a, sim.pygame.K_a, sim.pygame.K_n, sim.pygame.K_a,
+        sim.pygame.K_b, sim.pygame.K_n, sim.pygame.K_a, sim.pygame.K_ESCAPE,
+    )
+    events = [[] for _ in range(50)]
+    for key in keys:
+        events.append([sim.pygame.event.Event(sim.pygame.KEYDOWN, key=key)])
+        events.append([sim.pygame.event.Event(sim.pygame.KEYUP, key=key)])
+    queue = iter(events)
+
+    def next_events():
+        now[0] += 100
+        return next(queue, [])
+
+    monkeypatch.setattr(sim.pygame.event, "get", next_events)
+    sim.main()
+
+    assert [entry["stats"]["h"] for entry in saves[:1]] == [40]
+    assert saves[1]["stats"]["e"] == 40
+    assert len(saves) == 4
+    assert pet.inventory["meat"] == 3
+    assert pet.inventory["protein"] == 2
+    assert pet.inventory["energy"] == 1
+    assert pet.inventory["exp"] == 0
+    assert pet.stats["h"] == 40
+    assert pet.stats["e"] >= 64
+    assert pet.weight == 13
+    assert pet.ev_at("brn") == 2
+    assert {"status", "feeding", "inventory", "evolution"} <= set(frames)
 
 
 # ---------------------------------------------------------------------------

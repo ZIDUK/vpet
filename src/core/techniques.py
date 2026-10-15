@@ -1,9 +1,9 @@
 """Versioned progress for the initial Firemon practice catalogue."""
 
 TECHNIQUES = (
-    {"id": "punch", "name": "GOLPE", "power": 12, "mp": 0, "range": 1, "cooldown": 0},
-    {"id": "flame", "name": "LLAMA", "power": 24, "mp": 8, "range": 2, "cooldown": 1},
-    {"id": "guard", "name": "GUARDIA", "power": 0, "mp": 0, "range": 2, "cooldown": 0},
+    {"id": "punch", "name": "GOLPE", "power": 12, "mp": 0, "range": 1, "cooldown": 0, "element": "neutral"},
+    {"id": "flame", "name": "LLAMA", "power": 24, "mp": 8, "range": 2, "cooldown": 1, "element": "fire"},
+    {"id": "guard", "name": "GUARDIA", "power": 0, "mp": 0, "range": 2, "cooldown": 0, "element": None},
 )
 
 
@@ -49,6 +49,8 @@ class TechniqueProgress:
         return True
 
     def train(self, pet, index):
+        if pet.exploration.away:
+            return False
         if pet.species != "rookie" or pet.dead or pet.injured or getattr(pet, "cold", False) or pet.get("e") < 4:
             return False
         if index not in (0, 1, 2):

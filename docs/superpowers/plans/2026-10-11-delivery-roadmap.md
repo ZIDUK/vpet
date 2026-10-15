@@ -94,20 +94,23 @@ archivos SKILL.md presentes. No se ha autorizado una delegacion nueva.
 
 ## Alimentacion y peso: implementacion integrada; validacion parcial
 
-Actualizacion: 2026-10-14. Python pasa 554 pruebas; el core C++ de nutricion y
-persistencia pasa chequeo sintactico. El runner PlatformIO no inicia por
-permisos de `~/.platformio`, y la placa aun no se valida con el build final.
+Actualizacion: 2026-10-14. Python pasa 555 pruebas, incluida navegacion real
+automatizada del simulador para Status, Alimentar, Mochila y persistencia de
+items; tambien se verificaron previews de Training/Battle. El core C++ de
+nutricion y persistencia pasa chequeo sintactico. El runner PlatformIO no inicia
+por permisos de `~/.platformio`, y la placa aun no se valida con el build final.
 Plan y pendientes en
 [alimentacion, peso, combate y evolucion](2026-10-14-feeding-weight-combat-evolution.md).
 
-- [ ] Validar el balance propuesto: comida ilimitada sin EV, ciclo metabolico,
+- [ ] Cerrar aceptacion de balance: comida ilimitada sin EV, ciclo metabolico,
   peso saludable por etapa y modificadores acotados de combate.
-- [ ] Implementar reglas Python/C++, migracion compatible y consumo recuperable.
-- [ ] Integrar Alimentar con exactamente carne/proteina ilimitadas, mochila,
+- [x] Implementar reglas Python/C++, migracion compatible y consumo recuperable.
+- [x] Integrar Alimentar con exactamente carne/proteina ilimitadas, mochila,
   stats efectivos y requisito de evolucion. Alimentar no descuenta inventario.
 - [ ] Definir en trabajo separado filete/champinon como mejoras de stats de
   mochila: objetivo, magnitud, duracion, topes y origen. No entran en Alimentar.
-- [ ] Verificar paridad, guardado, animaciones por especie y comportamiento fisico.
+- [x] Verificar rutas de simulador, persistencia en mochila, paridad y
+  animaciones renderizadas; la aceptacion fisica sigue pendiente.
 
 El plan contiene tareas, archivos, contratos y criterios de terminado. Las
 cifras son propuestas para medir, no un balance ya validado. Los efectos de
@@ -116,12 +119,16 @@ la migracion; esta entrada no cambia el estado de P0/P1.
 
 ## P2: exploracion y recompensas
 
-Estado: en diseño (2026-10-11). No hay funcionalidad implementada.
+Estado: ciclo completo implementado en Make Sim (2026-10-14), por autorizacion
+del usuario. La placa sigue pendiente. El contrato de guardado JSON, el flujo
+y las decisiones de balance estan en [Exploracion en Make Sim](../../exploration.md).
+La suite completa de esta entrega pasa 634 pruebas Python, incluido el flujo
+de teclas pygame Jornada -> reclamar -> Guia -> entrenamiento con +7 EV.
 Los requerimientos vivos están en
 [exploración](../specs/2026-10-11-exploration-design.md).
 El inventario actual, sus efectos y su adquisicion estan en
 [catalogo de objetos](../../items-and-rewards.md); el botin de exploracion
-sigue siendo propuesta.
+sigue pendiente en firmware; Patio/Jornada/Noche y Guia ya funcionan en sim.
 Ya quedó el icono nuevo, la salida larga, el jugador de semana corta
 con combate el sábado, el piso **C**, el coste **A**, el retorno
 **B**, la etapa mínima, los relojes, el puesto del icono y las
@@ -130,13 +137,13 @@ cantidades: Jornada +2 EV (tope 8/semana), Noche +2 de dominio
 Patio (+25 o +10 ENE, sin objeto), la Guía de la Jornada (+1 EV en la
 próxima sesión, una sola) y la especie siguiente de elemento planta.
 Siguen abiertos el formato en bytes del guardado, el nombre y el poder
-de la técnica de planta, y filete/champiñón. No cambiar economía ni
-guardado hasta implementar ese formato.
+de la técnica de planta, y filete/champiñón. El formato NVS se implementara
+al portar a placa; el simulador usa guardado JSON atomico y versionado.
 
-- [ ] Definir entrada del menu superior, destinos, duracion, coste, requisitos,
+- [x] Implementar en sim entrada del menu superior, destinos, duracion, coste, requisitos,
   retorno anticipado, actividad offline y comportamiento ante reinicio.
-- [ ] Presentar rutas con propositos distintos (materiales, cuidado, aprendizaje)
-  y riesgos/recompensas comprensibles; valores concretos requieren aprobacion.
+- [x] Presentar rutas de energia, EV y tecnica, con confirmacion, tiempo restante,
+  retorno anticipado, preview de recompensa y recibo guardado, en ES/EN.
 - [ ] Para el botin futuro, llenar la ficha ya documentada en
   [estándar de catálogo](../specs/2026-10-14-item-catalog-standard.md):
   ID estable, categoria, rareza, icono, ES/EN, stack maximo, efecto tipado,
@@ -150,8 +157,14 @@ guardado hasta implementar ese formato.
 - [ ] Aprobar alcance y balance; despues escribir plan implementable del motor
   portable, persistencia compatible y pruebas deterministas Python/C++.
 
-Salida de esta fase: propuesta aprobada y catalogo versionado. Exploracion no
-debe desplazar el cierre de errores/paridad de la placa.
+Entregado en sim: topes semanales, reclamacion unica, migracion de partidas,
+fallo/reintento atomico y Guia consumida con el entrenamiento completado.
+La mochila actual no tiene capacidad general: se conserva el limite de una
+Guia sin inventar una bolsa de tres tipos (tres es la ventana visible).
+
+Pendientes reales de la fase: motor C++, reloj de placa, formato/transacciones
+NVS y pruebas de paridad y hardware. Filete, champinon, disco de pelea, especie
+planta y su tecnica siguen en trabajo separado. Exploracion no cierra P0/P1.
 
 ## P2: entrega versionada
 
