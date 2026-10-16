@@ -71,16 +71,20 @@ void Navigation::openSelectedMenu() {
             panel_ = PanelId::Feeding;
             panelIndex_ = 0;
             break;
-        case 4:
-            panel_ = PanelId::Rest;
+        case 3:
+            panel_ = PanelId::Exploration;
             panelIndex_ = 0;
             break;
         case 5:
+            panel_ = PanelId::Rest;
+            panelIndex_ = 0;
+            break;
+        case 6:
             panel_ = PanelId::Inventory;
             panelIndex_ = 0;
             break;
-        case 6: openEvolutionTree(); break;
-        case 7:
+        case 7: openEvolutionTree(); break;
+        case 8:
             panel_ = PanelId::Options;
             panelIndex_ = 0;
             break;
@@ -91,7 +95,7 @@ void Navigation::openSelectedMenu() {
 void Navigation::dispatch(InputEvent event) {
     if (event == InputEvent::None) return;
     if (panel_ == PanelId::Home) {
-        if (event == InputEvent::Next) menuIndex_ = (menuIndex_ + 1) % 8;
+        if (event == InputEvent::Next) menuIndex_ = (menuIndex_ + 1) % kMenuCount;
         else if (event == InputEvent::Action) openSelectedMenu();
         return;
     }

@@ -9,6 +9,7 @@
 #include "vpet/PetState.h"
 #include "vpet/PracticeSession.h"
 #include "vpet/TrainingSession.h"
+#include "vpet/ExplorationSession.h"
 
 namespace vpet {
 
@@ -30,6 +31,9 @@ public:
     void drawStorageError(const char* language);
     void drawPractice(const PracticeSession& session, const PetState& pet, uint32_t nowMs, const char* language = "ES");
     void drawTraining(const TrainingSession& session, const PetState& pet, uint32_t nowMs, const char* language);
+    void drawExploration(const ExplorationSession& session, const PetState& pet,
+                         uint64_t wall, uint32_t nowMs, const char* language,
+                         bool home = false, uint8_t menu = 3);
 
 private:
     void drawChrome(uint8_t selected, const char* title, bool calling);

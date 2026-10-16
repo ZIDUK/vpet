@@ -5,7 +5,7 @@
 
 void test_rest_icon_opens_rest_panel() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(4);
+    navigation.setMenuIndex(5);
     navigation.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::Rest, navigation.panel());
     TEST_ASSERT_EQUAL(0, navigation.panelIndex());
@@ -21,7 +21,7 @@ void test_rest_icon_opens_rest_panel() {
 
 void test_menu_opens_expected_panels() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(6);
+    navigation.setMenuIndex(7);
     navigation.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
     navigation.dispatch(vpet::InputEvent::Back);
@@ -42,7 +42,7 @@ void test_meat_menu_opens_feeding_without_moving_header_cursor() {
 
 void test_evolution_tree_opens_on_current_species() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(6);
+    navigation.setMenuIndex(7);
     navigation.dispatch(vpet::InputEvent::Action);
     navigation.openEvolutionTree(vpet::SpeciesId::Champion);
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, navigation.panel());
@@ -67,14 +67,14 @@ void test_internal_pages_advance_one_step_per_next() {
     TEST_ASSERT_EQUAL(1, status.panelIndex());
 
     vpet::Navigation inventory;
-    inventory.setMenuIndex(5);
+    inventory.setMenuIndex(6);
     inventory.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(0, inventory.panelIndex());
     inventory.dispatch(vpet::InputEvent::Next);
     TEST_ASSERT_EQUAL(1, inventory.panelIndex());
 
     vpet::Navigation pedia;
-    pedia.setMenuIndex(6);
+    pedia.setMenuIndex(7);
     pedia.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::EvolutionTree, pedia.panel());
     TEST_ASSERT_EQUAL(0, pedia.panelIndex());
@@ -84,7 +84,7 @@ void test_internal_pages_advance_one_step_per_next() {
 
 void test_next_moves_options_cursor() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(7);
+    navigation.setMenuIndex(8);
     navigation.dispatch(vpet::InputEvent::Action);
 
     TEST_ASSERT_EQUAL(vpet::PanelId::Options, navigation.panel());
@@ -96,7 +96,7 @@ void test_next_moves_options_cursor() {
 
 void test_options_next_wraps_like_header_menu() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(7);
+    navigation.setMenuIndex(8);
     navigation.dispatch(vpet::InputEvent::Action);
 
     for (uint8_t step = 0; step < 9; ++step) {
@@ -110,7 +110,7 @@ void test_options_next_wraps_like_header_menu() {
 
 void test_back_in_options_is_ignored() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(7);
+    navigation.setMenuIndex(8);
     navigation.dispatch(vpet::InputEvent::Action);
     navigation.dispatch(vpet::InputEvent::Next);
     navigation.dispatch(vpet::InputEvent::Next);
@@ -183,7 +183,7 @@ void test_action_on_hidden_evolution_stays_on_tree() {
 
 void test_next_wraps_inventory_like_options() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(5);
+    navigation.setMenuIndex(6);
     navigation.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
     TEST_ASSERT_EQUAL(0, navigation.panelIndex());
@@ -196,7 +196,7 @@ void test_next_wraps_inventory_like_options() {
 
 void test_action_on_inventory_item_stays_in_menu() {
     vpet::Navigation navigation;
-    navigation.setMenuIndex(5);
+    navigation.setMenuIndex(6);
     navigation.dispatch(vpet::InputEvent::Action);
     TEST_ASSERT_EQUAL(vpet::PanelId::Inventory, navigation.panel());
 

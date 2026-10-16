@@ -1,8 +1,57 @@
-# Exploracion en Make Sim
+# Exploracion en Make Sim y T-Display
 
-Implementada el 2026-10-14 para el simulador T-Display. La barra tiene nueve
-iconos; Explorar esta entre entrenamiento y batalla. El firmware conserva su
-menu actual. Esta entrega no se flashea.
+Implementada el 2026-10-14 para el simulador y portada al firmware el
+2026-10-16. La barra de ambos tiene nueve iconos; Explorar esta entre
+entrenamiento y batalla. La placa incluye rutas, atributo, tabla de salida,
+viaje, regreso anticipado, reclamacion unica y recibo, en ES/EN.
+
+## Reloj y persistencia de placa
+
+La T-Display usa segundos del calendario civil para viajes y semana, nunca
+millis para recompensas. Sin RTC respaldado no puede medir un intervalo sin
+alimentacion: cuando pierde la hora pide AJUSTAR RELOJ / SET THE CLOCK.
+Las rutas se pueden consultar, pero enviar/reclamar requiere hora fiable.
+El ajuste abre Fecha y luego Hora. Retroceder el calendario no repone topes
+semanales; el tiempo anterior a la salida da cero progreso.
+
+Se conserva `clockCheckpoint`, el ultimo calendario fiable observado al guardar,
+con checkpoint cada minuto durante viaje. Un reinicio con calendario conservado
+reanuda el viaje; un calendario perdido o anterior al checkpoint pide ajuste.
+No se simulan expediciones adicionales ni se inventa tiempo apagado.
+
+NVS principal sigue en schema 3. La clave opcional `expState` es un String
+ASCII, version 1, maximo 320 bytes, 25 enteros decimales separados por coma:
+
+```text
+version,week,weekEv,weekMastery,guide,guidePending,clockCheckpoint,
+away,route,stat,started,good,learning,hasReceipt,
+receiptRoute,receiptStat,receiptGood,receiptFull,receiptElapsed,
+receiptEnergy,receiptEv,receiptMastery,receiptLearning,receiptGuide,receiptLearned
+```
+
+Rutas 0=Patio, 1=Jornada, 2=Noche; stats siguen CombatStat Hp/Mp/Off/Def/Spd/Brn
+0..5. Es una clave nueva: no se renumera ningun enum persistido anterior.
+Campos booleanos solo aceptan 0/1; tiempos no negativos hasta 2^53-1, EV semanal
+0..8, dominio semanal 0..4. Registros truncados/futuros/incompatibles bloquean la
+carga sin borrar la partida. Ausencia de la clave migra a estado vacio.
+
+Salida, cobro y reconocimiento del recibo usan el snapshot completo atomico
+`saveTx` version 2, junto con EV, energia, tecnicas y stock. Se leen journals
+version 1, que no sobrescriben una exploracion existente. Rechazo restaura el
+snapshot en RAM; intent aceptado pendiente bloquea acciones y se recupera antes
+de confirmar. Swap/park conservan el estado por mascota. La evolucion normal
+conserva la expedicion; una vida nueva limpia viajes, topes y Guia.
+
+Guia ocupa el indice legacy 7 sin reutilizar Volver=6. Se muestra cuando existe
+y abre Entrenamiento sin gastarse. Al completar una sesion con hueco de EV se
+consume antes que Manual y no se suman ambos bonos. App guarda la sesion completa,
+incluida la Guia; cancelar o rechazar el guardado conserva el objeto.
+
+El renderer de placa usa `ExplorationUi.h`, llamado desde Panels.cpp y desde
+el harness nativo de imagen. Las tablas mantienen celdas delineadas, divisor,
+colores por fila, sprite de la evolucion actual y botones de contorno en salida.
+`scripts/preview_exploration_board.py` produce capturas ES/EN reproducibles.
+Las pruebas de host no sustituyen la inspeccion visual fisica posterior.
 
 ## Visual aprobada 2026-10-15
 
@@ -125,8 +174,8 @@ reemplaza trip por un recibo con route/stat/good/elapsed/full y cantidades
 energy/ev/mastery/learning/guide/learned. Un recibo nunca vuelve a aplicar los
 premios. Un fallo al guardar restaura el snapshot anterior y permite reintentar.
 Partidas antiguas reciben un registro vacio, sin perder inventario o tecnicas.
-No se agregan claves ni enums a NVS en esta entrega. El formato binario,
-transacciones NVS, reloj de placa y motor C++ pertenecen al port posterior.
+Este contrato JSON es el del simulador. El port de placa del 2026-10-16 usa
+el registro y transacciones NVS descritos arriba; no guarda JSON ni SQLite.
 
 ## Evidencia reproducible
 

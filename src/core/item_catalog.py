@@ -22,7 +22,7 @@ def _item(item_id, index, category, icon, names, descriptions, blurbs, effects,
         "duration": "next_completed_training" if item_id == "guide" else "instant",
         "limits": ("hatched", "alive", *limits), "source": source, "initial_stock": initial,
         "unlimited": unlimited, "legacy_mixed": legacy_mixed,
-        "firmware_available": item_id != "guide",
+        "firmware_available": True,
     }
 
 

@@ -195,7 +195,7 @@ void test_call_cues_the_matching_care_icon() {
     TEST_ASSERT_EQUAL(255, vpet::callMenuIndex(vpet::CallReason::None));
     TEST_ASSERT_EQUAL(1, vpet::callMenuIndex(vpet::CallReason::Hunger));
     TEST_ASSERT_EQUAL(2, vpet::callMenuIndex(vpet::CallReason::Strength));
-    TEST_ASSERT_EQUAL(4, vpet::callMenuIndex(vpet::CallReason::Lights));
+    TEST_ASSERT_EQUAL(5, vpet::callMenuIndex(vpet::CallReason::Lights));
     TEST_ASSERT_NULL(vpet::callIconPath(vpet::CallReason::None));
     TEST_ASSERT_EQUAL_STRING("/ui/icons/feed.vpa", vpet::callIconPath(vpet::CallReason::Hunger));
     TEST_ASSERT_EQUAL_STRING("/ui/icons/training.vpa", vpet::callIconPath(vpet::CallReason::Strength));

@@ -34,6 +34,18 @@ def package_training(sim_build, data_dir, include_dir):
                     cell.putalpha(alpha)
                     frames.append(cell.resize((68, 68), Image.Resampling.NEAREST))
                 asset(f"{pet_name}_{action}", frames)
+                if action in ("idle", "walk"):
+                    size = 48 if action == "idle" else 28
+                    # Exploration has a narrower portrait column than Training.
+                    explore_frames = []
+                    for x in range(0, atlas.width, atlas.height):
+                        cell = atlas.crop((x, 0, x + atlas.height, atlas.height))
+                        alpha = cell.point([0] + [255] * 255, mode="L")
+                        cell = cell.convert("RGBA")
+                        cell.putalpha(alpha)
+                        explore_frames.append(cell.resize((size, size), Image.Resampling.NEAREST))
+                    records.append(write_asset(data_dir / "exploration" / f"{pet_name}_{action}{size}.vpa",
+                                               explore_frames, (size, size)))
 
     for action in ("idle", "punch", "block", "walk", "cast"):
         with Image.open(sim_build / "digimon1/Rookie" / f"firemon_{action}_atlas.bmp") as atlas:
@@ -48,6 +60,11 @@ def package_training(sim_build, data_dir, include_dir):
     for name in ("Training", "Pedia", "Back"):
         with Image.open(sim_build / "UIIcons" / (name + ".bmp")) as icon:
             asset(name.lower(), [icon.convert("RGBA").resize((16, 16), Image.Resampling.NEAREST)])
+    for name in ("Energy", "ItemGuide", "Pedia", "Clock", "Back"):
+        with Image.open(sim_build / "UIIcons" / (name + ".bmp")) as icon:
+            frame = icon.convert("RGBA").resize((10, 10), Image.Resampling.NEAREST)
+            records.append(write_asset(data_dir / "exploration" / (name.lower() + "10.vpa"),
+                                       [frame], (10, 10)))
     for name in ("punch", "flame", "guard"):
         asset("tech_" + name, [technique_icon(name)])
     for name in ("power", "cost", "mastery", "training", "lock"):
@@ -60,7 +77,7 @@ def package_training(sim_build, data_dir, include_dir):
              "#pragma once", "#include <stdint.h>", "#include <string.h>",
              "namespace vpet { namespace training_assets {",
              "struct Glyph { uint8_t advance; uint8_t top; uint8_t rasterTop; uint16_t rows[16]; };" ]
-    for size in (9, 10):
+    for size in (9, 10, 12):
         font = ImageFont.load_default(size=size)
         lines.append(f"static const Glyph font{size}[] = {{")
         for code in range(32, 127):

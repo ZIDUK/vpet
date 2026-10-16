@@ -17,7 +17,7 @@ Los objetos y fichas de evolucion estan excluidos de ambos catalogos.
 | `ring` | AMULETO / AMULET | Animo | 1 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/ring.png) |
 | `protein` | PROTEINA / PROTEIN | Alimentacion | Ilimitado | Menu Alimentar, ilimitado | [PNG](../assets/ui/items/protein.png) |
 | `medkit` | BOTIQUIN / MEDKIT | Recuperacion | 1 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/medkit.png) |
-| `guide` | GUIA / GUIDE | Mejora de entrenamiento | 0 inicial; max. 1 | Jornada completa con buen cuidado (solo Make Sim por ahora) | [PNG](../assets/ui/items/guide.png) |
+| `guide` | GUIA / GUIDE | Mejora de entrenamiento | 0 inicial; max. 1 | Jornada completa con buen cuidado (simulador y T-Display) | [PNG](../assets/ui/items/guide.png) |
 
 ## Fichas estandarizadas
 
@@ -186,7 +186,7 @@ Manual that grants +1 EV in the next completed and saved attribute session.
 | Magnitud | trained_stat +1 (tope 252) |
 | Duracion | Proxima sesion de atributo completada y guardada |
 | Limites | `hatched`, `alive`, `backpack`, `home`, `completed_attribute_training`, `keep_on_cancel_or_save_failure`, `keep_if_stat_full` |
-| Origen | Jornada completa con buen cuidado (solo Make Sim por ahora) |
+| Origen | Jornada completa con buen cuidado (simulador y T-Display) |
 
 ## Contratos de uso
 
@@ -202,8 +202,8 @@ Manual that grants +1 EV in the next completed and saved attribute session.
 
 ## Alcance de plataforma
 
-Los siete objetos tienen catalogo y sprite. Los seis legacy funcionan en sim/firmware; la Guia funciona en Make Sim.
-La metadata C++ se regenera desde la misma fuente. No habilita la Guia en NVS ni cambia enums guardados.
+Los siete objetos tienen catalogo y sprite. Los seis legacy y la Guia funcionan en simulador y firmware.
+La Guia se guarda en expState y se consume atomicamente con el entrenamiento; no cambia enums guardados.
 El inventario muestra tres filas desplazables; no es una bolsa limitada a tres tipos.
 Para viajes, topes semanales, cuidado y guardado: [Exploracion](exploration.md).
 

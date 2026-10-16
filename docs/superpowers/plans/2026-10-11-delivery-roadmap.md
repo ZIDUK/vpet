@@ -147,6 +147,14 @@ la migracion; esta entrada no cambia el estado de P0/P1.
 
 ## P2: exploracion y recompensas
 
+Actualizacion 2026-10-16: port a firmware autorizado e implementado. Incluye
+barra de nueve iconos, motor portable, tablas ES/EN, Guia, recibo unico y
+snapshot NVS v2 compatible con v1. Ver [plan del port](2026-10-16-exploration-board.md)
+y [contrato de placa](../../exploration.md). Sin RTC respaldado, perder el
+calendario requiere ajuste manual; no se certifica progreso sin alimentacion.
+El texto inferior conserva el corte del simulador. La aceptacion fisica visual
+continua separada de build, pruebas de host y verificacion serial.
+
 Estado: ciclo completo implementado en Make Sim (2026-10-14), por autorizacion
 del usuario. La placa sigue pendiente. El contrato de guardado JSON, el flujo
 y las decisiones de balance estan en [Exploracion en Make Sim](../../exploration.md).

@@ -61,13 +61,13 @@ inline bool validSnapshotValue(const char* key, int32_t value) {
 
 inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
     std::ostringstream out;
-    out << "1\n";
+    out << "2\n";
     for (const auto key : kSnapshotKeys) {
         const auto found = snapshot.ints.find(key);
         if (found == snapshot.ints.end() || !validSnapshotValue(key, found->second)) return "";
         out << key << ' ' << found->second << '\n';
     }
-    for (const auto key : {"language", "adoptBag"}) {
+    for (const auto key : {"language", "adoptBag", "expState"}) {
         const auto found = snapshot.strings.find(key);
         if (found == snapshot.strings.end() || found->second.find('\n') != std::string::npos) return "";
         out << found->second << '\n';
@@ -80,7 +80,8 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     if (record.size() > 3800) return false;
     std::istringstream in(record);
     std::string line, key;
-    if (!std::getline(in, line) || line != "1") return false;
+    if (!std::getline(in, line) || (line != "1" && line != "2")) return false;
+    const bool explorationPresent = line == "2";
     SnapshotStore next;
     for (const auto expected : kSnapshotKeys) {
         if (!std::getline(in, line)) return false;
@@ -94,6 +95,11 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     AdoptedInventory stock;
     if (!std::getline(in, line) || line.empty() || !stock.decode(line)) return false;
     next.strings["adoptBag"] = line;
+    if (explorationPresent) {
+        Exploration exploration;
+        if (!std::getline(in, line) || line.empty() || !exploration.decode(line)) return false;
+        next.strings["expState"] = line;
+    }
     if (!std::getline(in, line) || line != "END") return false;
     if (std::getline(in, line)) return false;
     snapshot = next;
@@ -107,6 +113,11 @@ inline bool replaySnapshot(KeyValueStore& destination, const SnapshotStore& snap
     for (const auto key : {"language", "adoptBag"})
         if (destination.getString(key, "") != snapshot.strings.at(key) &&
             !destination.putString(key, snapshot.strings.at(key).c_str())) return false;
+    // V1 never owned this key: recovery must preserve the destination's trip.
+    const auto exploration = snapshot.strings.find("expState");
+    if (exploration != snapshot.strings.end() &&
+        destination.getString("expState", "") != exploration->second &&
+        !destination.putString("expState", exploration->second.c_str())) return false;
     return true;
 }
 

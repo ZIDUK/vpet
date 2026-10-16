@@ -15,15 +15,16 @@ secundaria mediante los comandos terminados en `-pico`.
 - Firemon, Flamemon y Dragfiremon con idle, movimiento, comida, entrenamiento,
   descanso, ataque y transiciones de evolucion. Sparkmon incluye idle, caminar,
   comer y dormir; entrenamiento y batalla se habilitan desde Firemon.
-- Menu superior de ocho iconos y navegacion completa con dos botones.
-- Estado en dos paginas: barras HP/HAM/ENE; NEXT muestra edad de etapa,
-  esfuerzo, batallas de forma, CM, call y reloj. Un Call pinta `*` en el
-  selector.
+- Menu superior de nueve iconos y navegacion completa con dos botones.
+- Status en cuatro paginas: vitales, cuidado, combate y DNA.
+- Exploracion en simulador y firmware: Patio, Jornada y Noche, con recibo
+  persistente y reclamacion unica. Si se pierde la hora al apagar la placa,
+  requiere ajustar Fecha/Hora; no inventa tiempo offline sin RTC respaldado.
 - Evolucion automatica COLOR: Sparkmon (12 h 10 min + CM<=1), Firemon
   (24 h + barras), Flamemon (36 h + 15 batallas). La placa usa scale 1;
   el sim usa 600 (~73 s hasta Firemon).
-- Mochila gastable: Carne, Energia, EXP y Anillo. ACTION consume y se queda
-  en el menu; ATRAS cierra. El stock se guarda en NVS.
+- Alimentar ofrece Carne y Proteina ilimitadas. Mochila conserva objetos legacy
+  y consumibles adoptados, con stock guardado en NVS y bolsa de Arena.
 - Pedia con umbrales reales del catalogo. Opciones: BLE, idioma, sonido,
   save/load, fecha/hora, EVOLVE.
 - El foco alterna descanso persistente: fondo nocturno y sprite acostado

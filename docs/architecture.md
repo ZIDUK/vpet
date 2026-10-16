@@ -341,15 +341,25 @@ Volver=6 ni las claves NVS; Guia=7 conserva su disponibilidad solo en sim.
 El arte editable es pixel-art determinista en `scripts/item_icons.py` y se
 exporta sin fondo para uso independiente, con marco neutral en el runtime.
 
-## Exploracion en Make Sim
+## Exploracion en Make Sim y firmware
+
+Port de placa del 2026-10-16: `Exploration` es un dominio C++ portable,
+`ExplorationSession` controla opciones, `ExplorationUi` dibuja tablas en
+Panels.cpp y App aplica transacciones completas. Navigation y MenuBar usan
+nueve entradas; Exploration se agrega al final de PanelId sin renumerar.
+La clave `expState` v1 se captura en snapshots `saveTx` v2 compatibles con v1.
+La hora fiable se valida separadamente del reloj de animacion; sin calendario
+tras un corte de alimentacion se requiere ajuste manual. Durante viaje se pausan
+cuidado/evolucion y las acciones no disponibles abren la expedicion.
+Contrato y formato: [Exploracion](exploration.md).
 
 La exploracion de Make Sim usa `core.exploration` para reglas deterministas,
 `scripts/exploration_session.py` para transacciones/navegacion y
 `scripts/exploration_renderer.py` para ES/EN a 240x135. El registro versionado
 forma parte del snapshot de Pet; salida, premio, recibo y Guia se guardan con
 reemplazo atomico JSON. `batch_commit` consume la Guia junto al EV de la sesion.
-El reloj de expedicion avanza y se restaura con la partida. El firmware aun no
-implementa ese registro; no se alteran sus claves/enums NVS en esta entrega.
+El reloj de expedicion del simulador avanza y se restaura con la partida.
+El firmware usa el registro expState y la validacion de calendario descritos arriba.
 Contrato detallado y pruebas: [exploration.md](exploration.md).
 
 ## Contrato de despliegue

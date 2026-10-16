@@ -21,6 +21,7 @@ uint8_t safeWeight(int value) {
 
 LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
     if (!recoverAll()) return LoadResult::Unsupported;
+    if (!pet.exploration.decode(store_.getString("expState", ""))) return LoadResult::Unsupported;
     if (!pet.adoptedStock.decode(store_.getString("adoptBag", ""))) return LoadResult::Unsupported;
     const int version = store_.getInt("schema", 0);
     if (version == 0) {
@@ -221,6 +222,7 @@ bool SettingsStore::writeSnapshot(const PetState& pet, const Settings& settings)
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
     ok = savePractice(pet.practice) && ok;
     if (ok) ok = store_.putString("adoptBag", pet.adoptedStock.encode().c_str());
+    if (ok) ok = store_.putString("expState", pet.exploration.encode().c_str());
     return ok;
 }
 

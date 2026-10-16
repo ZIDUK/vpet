@@ -60,7 +60,7 @@ def test_inactivity_timeout_preserves_live_activities():
 def test_battle_menu_opens_practice_for_all_combat_evolutions():
     source = (ROOT / "firmware/t-display/src/App.cpp").read_text()
     activation = source.split("void App::activate", 1)[1]
-    branch = activation.split("case 3:", 1)[1].split("case 4:", 1)[0]
+    branch = activation.split("case 4:", 1)[1].split("case 5:", 1)[0]
     assert "pet_.species() != SpeciesId::Egg" in branch
     assert "pet_.species() != SpeciesId::Baby" in branch
     assert "practice_ = PracticeSession();" in branch

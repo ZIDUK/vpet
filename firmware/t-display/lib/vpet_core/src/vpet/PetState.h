@@ -4,6 +4,7 @@
 #include "vpet/PracticeProgress.h"
 #include "vpet/ItemCatalog.generated.h"
 #include "vpet/AdoptedInventory.h"
+#include "vpet/Exploration.h"
 
 namespace vpet {
 
@@ -55,6 +56,7 @@ struct CareSnapshot {
 class PetState {
 public:
     PracticeProgress practice;
+    Exploration exploration;
     AdoptedInventory adoptedStock;
     bool trainTechnique(uint8_t technique);
     void tick(uint32_t elapsedMs);
@@ -96,6 +98,12 @@ public:
     uint8_t clampVisibleInventoryIndex(uint8_t index) const;
     bool hasDiscovered(SpeciesId species) const;
     CallUpdate updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour = 12, bool asleep = false);
+    void pauseCareClock(uint32_t elapsedMs) {
+        if (callReason_ != CallReason::None) callStartedMs_ += elapsedMs;
+    }
+    void rebaseCareClock(uint32_t nowMs) {
+        callStartedMs_ = callReason_ == CallReason::None ? 0 : nowMs;
+    }
     void noteWake(uint8_t hour);
     void restoreOverfeed(bool usedThisCycle, uint8_t count);
     void restoreInjury(bool injured, uint8_t injuries, bool dead, uint32_t elapsedMs = 0);

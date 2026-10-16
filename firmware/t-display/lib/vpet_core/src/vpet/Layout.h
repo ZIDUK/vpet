@@ -68,7 +68,7 @@ inline uint8_t callMenuIndex(CallReason reason) {
     switch (reason) {
         case CallReason::Hunger: return 1;
         case CallReason::Strength: return 2;
-        case CallReason::Lights: return 4;
+        case CallReason::Lights: return 5;
         case CallReason::None: return 255;
     }
     return 255;

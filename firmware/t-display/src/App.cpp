@@ -8,11 +8,12 @@
 
 namespace vpet {
 
-App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth)
+App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock)
     : renderer_(renderer),
       panels_(panels),
       settingsStore_(settingsStore),
       bluetooth_(bluetooth),
+      wallClock_(wallClock),
       motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
@@ -40,6 +41,9 @@ void App::begin(uint32_t nowMs) {
         return;
     }
     lastInjuryCheckpointMs_ = nowMs;
+    lastExplorationCheckpointMs_ = nowMs;
+    explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
+    if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
     motion_.setSpecies(pet_.species());
     motion_.alignClock(nowMs);
     eggStartedMs_ = nowMs;
@@ -47,11 +51,58 @@ void App::begin(uint32_t nowMs) {
 
 bool App::saveState() {
     lastSaveAttemptMs_ = lastTickMs_;
+    if (explorationClock_.trusted(calendarNow())) pet_.exploration.clockCheckpoint=calendarNow();
     if (settingsStore_.save(pet_, settings_)) return settleStorage();
     savePending_ = true;
     Serial.println("VPET_SAVE_PENDING");
     panels_.drawStorageError(settings_.language.c_str());
     return false;
+}
+
+uint64_t App::calendarNow() const {
+    if (wallClock_) return wallClock_();
+    const time_t now=time(nullptr);
+    return now<0 ? 0 : static_cast<uint64_t>(now);
+}
+
+void App::openExploration() {
+    navigation_.setMenuIndex(3);
+    navigation_.setPanel(PanelId::Exploration);
+    exploration_.open(pet_,explorationClock_.trusted(calendarNow()));
+    panels_.invalidate();
+}
+
+void App::explorationInput(InputEvent event) {
+    const uint64_t now=calendarNow();
+    if (pet_.exploration.away() && !explorationClock_.trusted(now) && exploration_.page!=ExplorationSession::Page::Clock)
+        exploration_.open(pet_,false);
+    const auto op=exploration_.input(pet_,event,now);
+    using Operation=ExplorationSession::Operation;
+    if(op==Operation::Close) { navigation_.setPanel(PanelId::Home); return; }
+    if(op==Operation::SetClock) { explorationClockStep_=1; beginDateTime(true); return; }
+    if(op==Operation::None) return;
+    if(!explorationClock_.trusted(now)) {
+        exploration_.page=ExplorationSession::Page::Clock;
+        exploration_.cursor=0;
+        return;
+    }
+    const PetState before=pet_;
+    bool applied=true;
+    if(op==Operation::Start) applied=pet_.exploration.start(pet_,exploration_.route,exploration_.stat,now);
+    else if(op==Operation::Claim) applied=pet_.exploration.claim(pet_,now);
+    else if(op==Operation::Acknowledge) pet_.exploration.acknowledge();
+    if(!applied) return;
+    pet_.exploration.clockCheckpoint=now;
+    if(!settingsStore_.save(pet_,settings_)) {
+        pet_=before;
+        exploration_.saveFailed=true;
+        Serial.println("VPET_EXPLORE_SAVE_REJECTED");
+        return;
+    }
+    exploration_.open(pet_,true);
+    Serial.printf("VPET_EXPLORE away=%u receipt=%u route=%u\n",
+        pet_.exploration.away(),pet_.exploration.hasReceipt(),static_cast<unsigned>(pet_.exploration.route));
+    settleStorage();
 }
 
 bool App::settleStorage() {
@@ -93,10 +144,16 @@ void App::applyDateTime() {
     const time_t epoch = mktime(&value);
     const timeval clock = {epoch, 0};
     settimeofday(&clock, nullptr);
+    if (explorationClockStep_!=1) {
+        explorationClock_.adjusted(calendarNow());
+        if(explorationClock_.trusted(calendarNow())) pet_.exploration.clockCheckpoint=calendarNow();
+        saveState();
+    }
 }
 
 void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
+    if (panel == PanelId::Exploration) { explorationInput(event); return; }
     if (panel == PanelId::Options) {
         if (event == InputEvent::Next || event == InputEvent::Back) {
             navigation_.dispatch(event);
@@ -129,10 +186,13 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 }
                 motion_.setSpecies(pet_.species());
                 bluetooth_.setEnabled(settings_.bluetoothEnabled);
+                explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
+                if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
                 break;
             case 5: beginDateTime(true); break;
             case 6: beginDateTime(false); break;
             case 7: {
+                if(pet_.exploration.away()) { openExploration(); return; }
                 const bool fromEgg = pet_.species() == SpeciesId::Egg;
                 if (evolution_.force(pet_)) {
                     if (fromEgg && !pet_.hasDna()) pet_.rollDna(esp_random() ^ nowMs);
@@ -164,6 +224,12 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         }
         if (event != InputEvent::Action) return;
         const uint8_t selected=navigation_.panelIndex();
+        if(selected==7 && pet_.exploration.guide) {
+            if(!pet_.dead() && !pet_.cold() && !pet_.injured() && !pet_.exploration.away()) {
+                training_.reset(); trainingActive_=true;
+            }
+            return;
+        }
         if (selected>=8 && selected<8+adopted::kCount &&
             !strcmp(adopted::kItems[selected-8].id,"training_manual")) {
             if (pet_.canOpenTrainingManual(selected)) {
@@ -231,6 +297,8 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 break;
             case 2:
                 if (settingsStore_.swapOrPark(pet_, settings_)) {
+                    explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
+                    if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
                     motion_.setSpecies(pet_.species());
                     motion_.alignClock(nowMs);
                     if (pet_.species() == SpeciesId::Egg) eggStartedMs_ = nowMs;
@@ -250,6 +318,15 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         } else if (event == InputEvent::Action) {
             const DateTimeAction result = dateMenu_.activate();
             if (result == DateTimeAction::Saved) applyDateTime();
+            if (explorationClockStep_ && result != DateTimeAction::None) {
+                if(result==DateTimeAction::Saved && explorationClockStep_==1) {
+                    explorationClockStep_=2; beginDateTime(false);
+                } else {
+                    explorationClockStep_=0;
+                    openExploration();
+                }
+                return;
+            }
             if (result != DateTimeAction::None) {
                 navigation_.setPanel(PanelId::Options, dateMenu_.editingDate() ? 5 : 6);
             }
@@ -270,6 +347,10 @@ uint8_t App::clockHour() const {
 }
 
 void App::activate(uint32_t nowMs) {
+    if(navigation_.menuIndex()==3 || pet_.exploration.away()) {
+        openExploration();
+        return;
+    }
     if (pet_.dead()) {
         pet_.resetToEgg();
         motion_.setSpecies(SpeciesId::Egg);
@@ -279,7 +360,7 @@ void App::activate(uint32_t nowMs) {
         return;
     }
     if (motion_.state() == MotionState::Sleep) {
-        if (navigation_.menuIndex() == 4) {
+        if (navigation_.menuIndex() == 5) {
             motion_.wake(nowMs);
             pet_.noteWake(clockHour());
             saveState();
@@ -296,7 +377,7 @@ void App::activate(uint32_t nowMs) {
             training_.reset();
             trainingActive_ = true;
             return;
-        case 3:
+        case 4:
             if (pet_.species() != SpeciesId::Egg && pet_.species() != SpeciesId::Baby &&
                 !pet_.dead() && !pet_.cold()) {
                 practice_ = PracticeSession();
@@ -304,7 +385,7 @@ void App::activate(uint32_t nowMs) {
                 return;
             }
             action = Action::Battle; break;
-        case 4:
+        case 5:
             navigation_.setPanel(PanelId::Rest);
             return;
         default: return;
@@ -320,6 +401,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         return;
     }
     if (savePending_) {
+        if(pet_.exploration.away()) pet_.pauseCareClock(nowMs-lastTickMs_);
         lastTickMs_ = nowMs;
         motion_.alignClock(nowMs);
         if (nowMs - lastSaveAttemptMs_ >= 1000) saveState();
@@ -336,6 +418,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         && (trainingActive_ || practicing_ || navigation_.panel() != PanelId::Home)) {
         trainingActive_ = false;
         practicing_ = false;
+        explorationClockStep_ = 0;
         training_ = TrainingSession();
         navigation_.setPanel(PanelId::Home);
         panels_.invalidate();
@@ -370,7 +453,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             return;
         }
         if (training_.dirty && training_.needsRollback) {
-            if (!settingsStore_.commitConsumables(pet_)) {
+            if (!settingsStore_.save(pet_,settings_)) {
                 training_.rollbackFromSnapshot(pet_);
             } else settleStorage();
             training_.dirty = false;
@@ -387,6 +470,14 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         }
         return;
     }
+    if(pet_.exploration.away()) {
+        pet_.pauseCareClock(elapsed);
+        motion_.alignClock(nowMs);
+        if(explorationClock_.trusted(calendarNow()) && nowMs-lastExplorationCheckpointMs_>=60000) {
+            lastExplorationCheckpointMs_=nowMs;
+            if(!saveState()) return;
+        }
+    } else {
     const bool wasDead = pet_.dead();
     pet_.tick(elapsed);
     if (pet_.dead() != wasDead || (pet_.injured() && !pet_.cold() && nowMs - lastInjuryCheckpointMs_ >= 60000)) {
@@ -445,16 +536,19 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (pet_.dead()) Serial.printf("VPET_DEAD\n");
     }
 
+    }
+
     const bool acceptsInput =
         navigation_.panel() != PanelId::Home ||
         pet_.pendingAction() == Action::None ||
         motion_.state() == MotionState::Sleep;
     if (acceptsInput && event != InputEvent::None) {
         if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
-            (pet_.dead() || (navigation_.menuIndex() >= 1 && navigation_.menuIndex() <= 4))) {
+            (pet_.dead() || (navigation_.menuIndex() >= 1 && navigation_.menuIndex() <= 5) ||
+             (pet_.exploration.away() && navigation_.menuIndex()==6))) {
             activate(nowMs);
         } else if (navigation_.panel() == PanelId::Home && event == InputEvent::Action &&
-                   navigation_.menuIndex() == 6) {
+                   navigation_.menuIndex() == 7) {
             navigation_.dispatch(event);
             navigation_.setCurrentSpecies(pet_.species());
             navigation_.openEvolutionTree(pet_.species());
@@ -477,7 +571,13 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     }
     if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {
         lastRenderMs_ = nowMs;
-        if (navigation_.panel() == PanelId::Home) {
+        if (navigation_.panel() == PanelId::Exploration) {
+            panels_.drawExploration(exploration_,pet_,calendarNow(),nowMs,settings_.language.c_str());
+        } else if (navigation_.panel() == PanelId::Home && pet_.exploration.away()) {
+            ExplorationSession home;
+            home.open(pet_,explorationClock_.trusted(calendarNow()));
+            panels_.drawExploration(home,pet_,calendarNow(),nowMs,settings_.language.c_str(),true,navigation_.menuIndex());
+        } else if (navigation_.panel() == PanelId::Home) {
             panels_.invalidate();
             renderer_.draw({
                 pet_,

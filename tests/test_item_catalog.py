@@ -24,6 +24,10 @@ def test_exported_catalog_and_sprites_are_current():
         assert inventory_icon(item["index"]) == item["icon"]
 
 
+def test_exploration_guide_is_available_on_the_board():
+    assert next(item for item in ITEMS if item["id"] == "guide")["firmware_available"]
+
+
 def test_evolution_items_and_effects_are_rejected():
     bad = copy.deepcopy(ITEMS)
     bad[0]["category"] = "evolution"

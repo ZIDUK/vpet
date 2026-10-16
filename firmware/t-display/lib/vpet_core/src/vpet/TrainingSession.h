@@ -58,6 +58,7 @@ inline const char* trainingBlockReason(const PetState& pet, CombatStat stat) {
     if (!found) return kTrainingTypeInvalid;
     if (pet.species() == SpeciesId::Egg || pet.species() == SpeciesId::Baby) return kTrainingNotFit;
     if (pet.dead() || pet.injured() || pet.cold()) return kTrainingNotFit;
+    if (pet.exploration.away()) return kTrainingNotFit;
     if (pet.evAt(stat) >= kTrainingEvMax) return kTrainingEvMaxReason;
     if (pet.energy() < kTrainingEnergyCost) return kTrainingNoEnergy;
     return kTrainingOk;
@@ -135,8 +136,21 @@ inline uint8_t trainingPreviewEv(const PetState& pet, CombatStat stat, uint8_t b
     const int headroom=kTrainingEvMax-pet.evAt(stat);
     const int gain=baseEv<headroom ? baseEv : headroom;
     const bool bonus=gain>0 && gain<headroom &&
-        pet.adoptedStock.count(adopted::indexOf("training_manual"));
+        (pet.exploration.guide || pet.adoptedStock.count(adopted::indexOf("training_manual")));
     return gain+(bonus ? 1 : 0);
+}
+
+inline uint8_t consumeTrainingBonus(PetState& pet, CombatStat stat) {
+    if (pet.exploration.away() || pet.evAt(stat) >= kTrainingEvMax) return 0;
+    const int manual = adopted::indexOf("training_manual");
+    if (pet.exploration.guide) {
+        pet.exploration.guide = pet.exploration.guidePending;
+        pet.exploration.guidePending = false;
+    } else if (pet.adoptedStock.count(manual)) {
+        pet.adoptedStock.set(manual, 0);
+    } else return 0;
+    pet.addEv(stat, 1);
+    return 1;
 }
 
 // Project the combat_stat value (or HP/MP pool) after adding `evDelta` EV
@@ -273,11 +287,16 @@ inline TrainingApplySummary trainingCommit(
     const uint8_t snapWeight = pet.weight();
     const uint8_t snapWeightRemainder = pet.trainingWeightRemainder();
     const int snapTraining = pet.trainingSessions();
+    const Exploration snapExploration = pet.exploration;
+    const AdoptedInventory snapStock = pet.adoptedStock;
 
     TrainingApplySummary summary = trainingApply(pet, stat, reps);
     if (summary.reps == 0) return summary;
+    summary.evAdded += consumeTrainingBonus(pet, stat);
     if (save != nullptr && !save(pet)) {
         // Rollback
+        pet.exploration = snapExploration;
+        pet.adoptedStock = snapStock;
         for (uint8_t i = 0; i < 6; ++i) {
             pet.setEvAt(static_cast<CombatStat>(i), snapEv[i]);
         }
@@ -406,6 +425,7 @@ public:
     void rollbackFromSnapshot(PetState& pet) {
         if (!needsRollback) return;
         pet.adoptedStock = rollbackStock;
+        pet.exploration = rollbackExploration;
         for (uint8_t i = 0; i < 6; ++i) {
             pet.setEvAt(static_cast<CombatStat>(i), rollback.ev[i]);
         }
@@ -425,6 +445,7 @@ public:
     // Capture a snapshot of the mutable fields into `rollback`.
     void captureSnapshot(const PetState& pet) {
         rollbackStock = pet.adoptedStock;
+        rollbackExploration = pet.exploration;
         for (uint8_t i = 0; i < 6; ++i) {
             rollback.ev[i] = pet.evAt(static_cast<CombatStat>(i));
         }
@@ -461,6 +482,7 @@ public:
 
 private:
     AdoptedInventory rollbackStock;
+    Exploration rollbackExploration;
     bool inputSelect(PetState& pet, InputEvent event) {
         if (event == InputEvent::Back) {
             return false;  // exit session
@@ -536,12 +558,7 @@ private:
                 return true;
             }
             needsRollback = true;
-            const int manual=adopted::indexOf("training_manual");
-            if (pet.adoptedStock.count(manual) && pet.evAt(chosenStat)<kTrainingEvMax) {
-                pet.addEv(chosenStat,1);
-                ++lastSummary.evAdded;
-                pet.adoptedStock.set(manual,0);
-            }
+            lastSummary.evAdded += consumeTrainingBonus(pet, chosenStat);
             dirty = true;
             message = "ENTRENO LISTO";
             state = State::Result;

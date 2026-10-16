@@ -4,6 +4,8 @@
 #include "vpet/Nutrition.h"
 #include "vpet/Strings.h"
 #include "vpet/TrainingUi.h"
+#include "vpet/MenuBar.h"
+#include "vpet/ExplorationUi.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -11,11 +13,6 @@
 
 namespace vpet {
 namespace {
-constexpr const char* kMenuIcons[] = {
-    "/ui/icons/status.vpa", "/ui/icons/feed.vpa", "/ui/icons/training.vpa",
-    "/ui/icons/battle.vpa", "/ui/icons/rest.vpa", "/ui/icons/backpack.vpa",
-    "/ui/icons/pedia.vpa", "/ui/icons/options.vpa",
-};
 constexpr uint16_t kPanel = 0xD6B4;
 constexpr uint16_t kChip = 0xC52D;
 constexpr uint16_t kInk = 0x31C7;
@@ -95,6 +92,19 @@ const char* practiceReasonLabel(const char* reason, bool spanish) {
 Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
     : output_(display), display_(canvas), assets_(assets) {}
 
+void Panels::drawExploration(const ExplorationSession& session,const PetState& pet,
+                            uint64_t wall,uint32_t nowMs,const char* language,bool home,uint8_t menu) {
+    struct Canvas {
+        TFT_eSprite& pixels;
+        AssetStore& assets;
+        void fillRect(int x,int y,int w,int h,uint16_t color) { if(w>0 && h>0) pixels.fillRect(x,y,w,h,color); }
+        void drawPixel(int x,int y,uint16_t color) { pixels.drawPixel(x,y,color); }
+        void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
+    } canvas{display_,assets_};
+    exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language)).draw(home,menu);
+    display_.pushSprite(0,0);
+}
+
 void Panels::drawStorageError(const char* language) {
     const bool spanish = languageIsSpanish(language);
     display_.fillSprite(TFT_BLACK);
@@ -129,21 +139,21 @@ void Panels::drawLabel(const char* text, int16_t x, int16_t y, int16_t width, ui
 
 void Panels::drawCallBadge(uint8_t selected, bool calling) {
     if (!calling) return;
-    const int16_t selectorX = (selected % 8) * 30;
+    const int16_t selectorX = menu_bar::left(selected);
     display_.setTextDatum(TR_DATUM);
     display_.setTextColor(TFT_YELLOW, TFT_BLACK);
-    display_.drawString("*", selectorX + 28, 1, 2);
+    display_.drawString("*", selectorX + menu_bar::width(selected) - 2, 1, 2);
     display_.setTextDatum(TL_DATUM);
 }
 
 void Panels::drawChrome(uint8_t selected, const char* title, bool calling) {
     display_.fillScreen(TFT_BLACK);
-    for (uint8_t index = 0; index < 8; ++index) {
-        assets_.drawFrame(display_, kMenuIcons[index], 0, index * 30 + 5, 2);
+    for (uint8_t index = 0; index < menu_bar::count; ++index) {
+        assets_.drawFrame(display_, menu_bar::icons[index], 0, menu_bar::iconX(index), 2);
     }
-    const int16_t selectorX = (selected % 8) * 30;
-    display_.drawRect(selectorX, 0, 30, 24, TFT_YELLOW);
-    display_.drawRect(selectorX + 1, 1, 28, 22, TFT_YELLOW);
+    const int16_t selectorX = menu_bar::left(selected), width = menu_bar::width(selected);
+    display_.drawRect(selectorX, 0, width, 24, TFT_YELLOW);
+    display_.drawRect(selectorX + 1, 1, width - 2, 22, TFT_YELLOW);
     drawCallBadge(selected, calling);
     display_.fillRect(0, 24, 240, 111, kPanel);
     display_.fillRect(3, 27, 234, 20, kInk);

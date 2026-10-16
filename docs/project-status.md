@@ -1,6 +1,26 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-11
+## Estado vigente: 2026-10-16
+
+Exploracion portada y cargada a T-Display: nueve iconos, Patio/Jornada/Noche,
+tablas ES/EN, retorno anticipado, cobro unico, recibo y Guia en entrenamiento.
+El registro expState v1 usa snapshots atomicos v2 compatibles con v1, sin
+cambiar schema principal 3 ni enums persistidos. Sin reloj respaldado, perder
+el calendario exige ajustar Fecha/Hora antes de enviar o reclamar un viaje.
+
+Evidencia final: 1067 pruebas Python, 172 nativas, 162 vectores numericos
+sim/C++, 127 casos de UI y regresiones de App/persistencia. Firmware y LittleFS
+verificados por digest en placa; heap libre 72644, minimo 72568, manifest 1.
+La aceptacion visual fisica y del viaje en uso real continua abierta. BLE
+conecto pero el ultimo arranque registro PAIR_FAILED; no se certifica pairing.
+Contrato: [Exploracion](exploration.md). Evidencia y hashes:
+[port de placa](superpowers/plans/2026-10-16-exploration-board.md).
+
+El roadmap vigente sigue en
+[Plan de cierre](superpowers/plans/2026-10-11-delivery-roadmap.md).
+Los cortes inferiores son historia, no la lista actual de pendientes.
+
+## Corte historico: 2026-10-11
 
 Este bloque sustituye las afirmaciones de entrega del registro historico inferior.
 El indice de pendientes vigente es

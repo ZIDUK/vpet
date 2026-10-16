@@ -1,5 +1,10 @@
 # Exploración y recompensas
 
+Actualizacion 2026-10-16: port autorizado a la T-Display. Motor, sesion, tablas
+ES/EN y registro NVS versionado estan implementados; el contrato de reloj sin
+RTC respaldado y la reclamacion atomica estan en [Exploracion](../../exploration.md).
+Las menciones inferiores al port pendiente describen el corte anterior.
+
 Requerimientos vivos del brainstorm del 2026-10-11. Índice de fase:
 `docs/superpowers/plans/2026-10-11-delivery-roadmap.md`, sección
 «P2: exploracion y recompensas».

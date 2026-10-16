@@ -607,6 +607,7 @@ uint8_t PetState::itemCount(uint8_t index) const {
         case 3: return ring_;
         case 4: return proteinItem_;
         case 5: return medkit_;
+        case 7: return exploration.guide ? 1 : 0;
         default: return 0;
     }
 }
@@ -660,6 +661,8 @@ ItemUseResult PetState::useItem(uint8_t index) {
 }
 
 bool PetState::canOpenTrainingManual(uint8_t menuIndex) const {
+    if (menuIndex == 7) return exploration.guide && !exploration.away() &&
+        !cold() && !dead() && species()!=SpeciesId::Egg && species()!=SpeciesId::Baby;
     return menuIndex>=8 && menuIndex<8+adopted::kCount &&
         !strcmp(adopted::kItems[menuIndex-8].id,"training_manual") &&
         adoptedStock.count(menuIndex-8)>0 && !cold() && !dead() && species()!=SpeciesId::Egg;
@@ -668,6 +671,7 @@ bool PetState::canOpenTrainingManual(uint8_t menuIndex) const {
 bool PetState::itemVisible(uint8_t index) const {
     if (index >= 8) return adoptedStock.count(index-8)>0;
     if (index == 6) return true;
+    if (index == 7) return exploration.guide;
     if (index == 0 || index == 4) return false;
     return index < 6 && itemCount(index) > 0;
 }

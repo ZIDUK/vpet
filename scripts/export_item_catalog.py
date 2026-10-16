@@ -81,7 +81,7 @@ def markdown():
     categories = {"food": "Alimentacion", "recovery": "Recuperacion", "effort": "Esfuerzo (legacy)",
                   "mood": "Animo", "training_boost": "Mejora de entrenamiento"}
     sources = {"unlimited_feeding": "Menu Alimentar, ilimitado", "starter_kit": "Kit inicial; sin reposicion repetible",
-               "full_jornada_good_care": "Jornada completa con buen cuidado (solo Make Sim por ahora)"}
+               "full_jornada_good_care": "Jornada completa con buen cuidado (simulador y T-Display)"}
     lines = ["# Objetos legacy y compatibilidad de partidas vPet", "",
              "Version %d. Oficializado el 2026-10-14. Generado desde `src/core/item_catalog.py`" % CATALOG_VERSION,
              "por `scripts/export_item_catalog.py`. Actualizar la fuente y regenerar; no editar esta ficha a mano.", "",
@@ -128,8 +128,8 @@ def markdown():
               "- `hp` del botiquin es salud de cuidado (0..100), no el HP temporal de una pelea. `e` es la energia para entrenar.",
               "- Los EV se limitan a 252 por stat; ningun objeto cambia IV ni la especie.", "",
               "## Alcance de plataforma", "",
-              "Los siete objetos tienen catalogo y sprite. Los seis legacy funcionan en sim/firmware; la Guia funciona en Make Sim.",
-              "La metadata C++ se regenera desde la misma fuente. No habilita la Guia en NVS ni cambia enums guardados.",
+              "Los siete objetos tienen catalogo y sprite. Los seis legacy y la Guia funcionan en simulador y firmware.",
+              "La Guia se guarda en expState y se consume atomicamente con el entrenamiento; no cambia enums guardados.",
               "El inventario muestra tres filas desplazables; no es una bolsa limitada a tres tipos.",
               "Para viajes, topes semanales, cuidado y guardado: [Exploracion](exploration.md).", "",
               "## Pipeline de arte y validacion", "",

@@ -14,12 +14,14 @@
 #include "vpet/SettingsStore.h"
 #include "vpet/PracticeSession.h"
 #include "vpet/TrainingSession.h"
+#include "vpet/ExplorationSession.h"
 
 namespace vpet {
 
 class App {
 public:
-    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth);
+    using WallClock = uint64_t (*)();
+    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock = nullptr);
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
     bool ready() const { return storageReady_ && !savePending_; }
@@ -32,6 +34,9 @@ private:
     uint8_t clockHour() const;
     bool saveState();
     bool settleStorage();
+    uint64_t calendarNow() const;
+    void openExploration();
+    void explorationInput(InputEvent event);
 
     Renderer& renderer_;
     Panels& panels_;
@@ -45,6 +50,11 @@ private:
     Evolution evolution_;
     Motion motion_;
     Navigation navigation_;
+    ExplorationSession exploration_;
+    ExplorationClock explorationClock_;
+    WallClock wallClock_;
+    uint8_t explorationClockStep_ = 0;
+    uint32_t lastExplorationCheckpointMs_ = 0;
     PracticeSession practice_;
     bool practicing_ = false;
     TrainingSession training_;

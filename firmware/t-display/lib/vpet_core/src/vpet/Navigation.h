@@ -17,6 +17,7 @@ enum class PanelId : uint8_t {
     EvolutionDetail,
     Options,
     DateTime,
+    Exploration,
 };
 
 struct EvolutionNode {
@@ -28,6 +29,7 @@ struct EvolutionNode {
 class Navigation {
 public:
     static constexpr uint8_t kOptionCount = 9;
+    static constexpr uint8_t kMenuCount = 9;
     static constexpr uint8_t kInventoryCount = 7;
     static constexpr uint8_t kFeedingCount = 3;
     static constexpr uint8_t kStatusPages = 4;
@@ -40,7 +42,7 @@ public:
     }
 
     void dispatch(InputEvent event);
-    void setMenuIndex(uint8_t index) { menuIndex_ = index % 8; }
+    void setMenuIndex(uint8_t index) { menuIndex_ = index % kMenuCount; }
     void setDiscovered(bool champion, bool ultimate);
     void setCurrentSpecies(SpeciesId species);
     void openEvolutionTree(SpeciesId currentSpecies);

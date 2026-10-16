@@ -4,19 +4,10 @@
 
 #include "vpet/Layout.h"
 #include "vpet/Strings.h"
+#include "vpet/MenuBar.h"
 
 namespace vpet {
 namespace {
-constexpr const char* kMenuIcons[] = {
-    "/ui/icons/status.vpa",
-    "/ui/icons/feed.vpa",
-    "/ui/icons/training.vpa",
-    "/ui/icons/battle.vpa",
-    "/ui/icons/rest.vpa",
-    "/ui/icons/backpack.vpa",
-    "/ui/icons/pedia.vpa",
-    "/ui/icons/options.vpa",
-};
 
 const char* speciesName(SpeciesId species) {
     switch (species) {
@@ -120,21 +111,21 @@ void Renderer::rebuildStaticScene(bool night) {
         0
     );
     staticScene_.fillRect(0, 0, 240, 24, TFT_BLACK);
-    for (uint8_t index = 0; index < 8; ++index) {
-        assets_.drawFrame(staticScene_, kMenuIcons[index], 0, index * 30 + 5, 2);
+    for (uint8_t index = 0; index < menu_bar::count; ++index) {
+        assets_.drawFrame(staticScene_, menu_bar::icons[index], 0, menu_bar::iconX(index), 2);
     }
     staticSceneReady_ = true;
     staticSceneNight_ = night;
 }
 
 void Renderer::drawSelector(uint8_t selected, bool calling) {
-    const int16_t x = (selected % 8) * 30;
-    canvas_.drawRect(x, 0, 30, 24, TFT_YELLOW);
-    canvas_.drawRect(x + 1, 1, 28, 22, TFT_YELLOW);
+    const int16_t x = menu_bar::left(selected), width = menu_bar::width(selected);
+    canvas_.drawRect(x, 0, width, 24, TFT_YELLOW);
+    canvas_.drawRect(x + 1, 1, width - 2, 22, TFT_YELLOW);
     if (calling) {
         canvas_.setTextDatum(TR_DATUM);
         canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);
-        canvas_.drawString("*", x + 28, 1, 2);
+        canvas_.drawString("*", x + width - 2, 1, 2);
         canvas_.setTextDatum(TL_DATUM);
     }
 }
@@ -143,10 +134,10 @@ void Renderer::drawCallCue(const AppViewModel& model) {
     const CallReason reason = model.pet.callReason();
     if (reason == CallReason::None) return;
     const uint8_t cue = callMenuIndex(reason);
-    if (cue < 8 && callBlinkOn(model.nowMs)) {
-        const int16_t x = cue * 30;
-        canvas_.drawRect(x, 0, 30, 24, TFT_RED);
-        canvas_.drawRect(x + 1, 1, 28, 22, TFT_RED);
+    if (cue < menu_bar::count && callBlinkOn(model.nowMs)) {
+        const int16_t x = menu_bar::left(cue), width = menu_bar::width(cue);
+        canvas_.drawRect(x, 0, width, 24, TFT_RED);
+        canvas_.drawRect(x + 1, 1, width - 2, 22, TFT_RED);
     }
     const char* icon = callIconPath(reason);
     if (icon == nullptr || !callBlinkOn(model.nowMs)) return;

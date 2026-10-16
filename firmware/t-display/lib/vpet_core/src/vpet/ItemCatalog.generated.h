@@ -17,7 +17,7 @@ static constexpr Definition kCatalog[] = {
     {"ring", 3, "AMULETO", "AMULET", "+15 ANIMO", "+15 MOOD", "/ui/icons/itemring.vpa", "mood", "common", "instant", "starter_kit", 99, 1, true},
     {"protein", 4, "PROTEINA", "PROTEIN", "+20 ENE +2 PESO", "+20 ENE +2 WT", "/ui/icons/itemprotein.vpa", "food", "common", "instant", "unlimited_feeding", -1, 2, true},
     {"medkit", 5, "BOTIQUIN", "MEDKIT", "CURA +20 HP", "HEAL +20 HP", "/ui/icons/itemmedkit.vpa", "recovery", "common", "instant", "starter_kit", 99, 1, true},
-    {"guide", 7, "GUIA", "GUIDE", "+1 EV/SESION", "+1 EV/TRAIN", "/ui/icons/itemguide.vpa", "training_boost", "common", "next_completed_training", "full_jornada_good_care", 1, 0, false},
+    {"guide", 7, "GUIA", "GUIDE", "+1 EV/SESION", "+1 EV/TRAIN", "/ui/icons/itemguide.vpa", "training_boost", "common", "next_completed_training", "full_jornada_good_care", 1, 0, true},
 };
 inline const Definition* at(uint8_t index) {
     for (const auto& item : kCatalog) if (item.index == index) return &item;
