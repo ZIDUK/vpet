@@ -16,10 +16,10 @@ AssetStatus AssetStore::begin() {
     if (!manifest) {
         return status;
     }
-    String contents = manifest.readString();
+    // Keep the generated-manifest check streaming: String growth can briefly
+    // hold two large buffers while both display framebuffers are allocated.
+    status.version = manifest.find("\"format\": 1") ? "1" : "invalid";
     manifest.close();
-    int format = contents.indexOf("\"format\": 1");
-    status.version = format >= 0 ? "1" : "invalid";
     return status;
 }
 

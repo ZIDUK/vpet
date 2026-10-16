@@ -25,3 +25,11 @@ def test_ready_telemetry_is_guarded_and_only_after_initialization():
     assert setup.index("app.begin(") < setup.index("reportReady();")
     loop = source.split("void loop()", 1)[1]
     assert loop.index("app.tick(") < loop.index("reportReady();")
+
+
+def test_asset_startup_checks_manifest_without_loading_it_into_heap():
+    source = (ROOT / "firmware/t-display/src/AssetStore.cpp").read_text()
+    begin = source.split("AssetStatus AssetStore::begin()", 1)[1].split("namespace {", 1)[0]
+    assert "readString" not in begin
+    assert 'manifest.find("\\\"format\\\": 1")' in begin
+    assert begin.index("manifest.find(") < begin.index("manifest.close()")

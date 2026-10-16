@@ -27,6 +27,11 @@ vpet::App app(renderer, panels, settingsStore, bluetooth);
 vpet::AssetStatus startupAssets;
 bool readyReported = false;
 
+void reportHeap(const char* stage) {
+    Serial.printf("VPET_HEAP stage=%s heap_free=%u heap_min=%u\n",
+                  stage, ESP.getFreeHeap(), ESP.getMinFreeHeap());
+}
+
 void reportReady() {
     if (readyReported || !app.ready()) return;
     Serial.printf(
@@ -119,7 +124,9 @@ void setup() {
     }
     staticScene.setSwapBytes(true);
     bluetooth.begin();
+    reportHeap("before_assets");
     const vpet::AssetStatus status = assets.begin();
+    reportHeap("after_assets");
     startupAssets = status;
     drawBootIntro(status);
     if (!buttons.begin()) {
@@ -128,7 +135,9 @@ void setup() {
         display.drawString("INPUT ERROR", 20, 60, 2);
         while (true) delay(1000);
     }
+    reportHeap("before_app");
     app.begin(millis());
+    reportHeap("after_app");
     reportReady();
 }
 

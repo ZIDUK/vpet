@@ -101,6 +101,13 @@ Los VPA1 contienen cabecera, paleta RGB565, offsets de frame y un byte indexado
 por pixel. El indice transparente permite dibujar solamente los segmentos
 opacos sobre el fondo.
 
+El arranque comprueba la marca de formato del manifiesto generado mediante
+`File::find`, sin cargar todo el JSON como un `String`. La lectura anterior
+provocaba un pico de heap por reallocaciones. `VPET_HEAP` mide antes/despues de
+assets y App; `VPET_READY` conserva los umbrales de despliegue sin rebajarlos.
+La correccion y mediciones de placa estan en
+[despliegue del 16 de octubre](superpowers/reviews/2026-10-16-board-deployment.md).
+
 ## Ciclo de vida actual
 
 ```text
