@@ -68,6 +68,10 @@ class PracticeBattle:
         self.damage = (0, 0)
         self.uses = [0, 0, 0]
 
+    def use_item(self, stock, item_id):
+        from core.adopted_items import use_combat_item
+        return self.result is None and use_combat_item(self.player, stock, item_id)
+
 
 
     def step(self, requested=AUTO):

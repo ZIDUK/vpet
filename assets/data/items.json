@@ -1,0 +1,820 @@
+{
+  "version": 2,
+  "items": [
+    {
+      "id": "meat",
+      "name": "Carne",
+      "reference": "Meat",
+      "category": "feeding",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "h",
+          "amount": 20
+        },
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": 1
+        }
+      ],
+      "duration": "instant",
+      "unlimited": true,
+      "stack_max": 0,
+      "sprite": "assets/ui/items/adopted/meat.png",
+      "acquisition": "feeding",
+      "ui_available": true
+    },
+    {
+      "id": "protein",
+      "name": "Proteina",
+      "reference": "vPet Protein",
+      "category": "feeding",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "e",
+          "amount": 20
+        },
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": true,
+      "stack_max": 0,
+      "sprite": "assets/ui/items/adopted/protein.png",
+      "acquisition": "feeding",
+      "ui_available": true
+    },
+    {
+      "id": "small_recovery",
+      "name": "Recuperador pequeno",
+      "reference": "sm.recovery",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 20
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/small_recovery.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "medium_recovery",
+      "name": "Recuperador mediano",
+      "reference": "med.recovery",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 50
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/medium_recovery.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "large_recovery",
+      "name": "Recuperador grande",
+      "reference": "lrg.recovery",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 90
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/large_recovery.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "super_recovery",
+      "name": "Recuperador completo",
+      "reference": "sup.recovery",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 100
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/super_recovery.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "mp_floppy",
+      "name": "Disco MP pequeno",
+      "reference": "MP Floppy",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 20
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/mp_floppy.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "medium_mp",
+      "name": "Disco MP mediano",
+      "reference": "Medium MP",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 50
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/medium_mp.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "large_mp",
+      "name": "Disco MP grande",
+      "reference": "Large MP",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 90
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/large_mp.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "super_veggy",
+      "name": "Verdura MP",
+      "reference": "Super veggy",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 100
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/super_veggy.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "double_floppy",
+      "name": "Disco doble",
+      "reference": "Double flop",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 50
+        },
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 50
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/double_floppy.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "sweet_nut",
+      "name": "Nuez vital",
+      "reference": "Sweet Nut",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 100
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/sweet_nut.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "orange_banana",
+      "name": "Banana restauradora",
+      "reference": "Orange bana",
+      "category": "combat_recovery",
+      "effects": [
+        {
+          "kind": "restore_percent",
+          "target": "hp",
+          "amount": 100
+        },
+        {
+          "kind": "restore_percent",
+          "target": "mp",
+          "amount": 100
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/orange_banana.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "bandage",
+      "name": "Venda",
+      "reference": "Bandage",
+      "category": "condition",
+      "effects": [
+        {
+          "kind": "cure",
+          "target": "injured",
+          "amount": 1
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/bandage.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "medicine",
+      "name": "Medicina",
+      "reference": "Medicine",
+      "category": "condition",
+      "effects": [
+        {
+          "kind": "cure",
+          "target": "injured",
+          "amount": 1
+        },
+        {
+          "kind": "restore_care",
+          "target": "hp",
+          "amount": 20
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/medicine.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "off_disk",
+      "name": "Disco de ataque",
+      "reference": "Off. Disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "off",
+          "amount": 20
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/off_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "def_disk",
+      "name": "Disco de defensa",
+      "reference": "Def. Disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "def",
+          "amount": 20
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/def_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "speed_disk",
+      "name": "Disco de velocidad",
+      "reference": "Hispeed dsk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "spd",
+          "amount": 20
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/speed_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "omni_disk",
+      "name": "Disco integral",
+      "reference": "Omni Disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "off",
+          "amount": 20
+        },
+        {
+          "kind": "boost_percent",
+          "target": "def",
+          "amount": 20
+        },
+        {
+          "kind": "boost_percent",
+          "target": "spd",
+          "amount": 20
+        },
+        {
+          "kind": "boost_percent",
+          "target": "brn",
+          "amount": 20
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/omni_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "super_off_disk",
+      "name": "Superdisco de ataque",
+      "reference": "S.Off.disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "off",
+          "amount": 40
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/super_off_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "super_def_disk",
+      "name": "Superdisco de defensa",
+      "reference": "S.Def.disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "def",
+          "amount": 40
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/super_def_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "super_speed_disk",
+      "name": "Superdisco de velocidad",
+      "reference": "S.speed.disk",
+      "category": "battle_boost",
+      "effects": [
+        {
+          "kind": "boost_percent",
+          "target": "spd",
+          "amount": 40
+        }
+      ],
+      "duration": "one_battle",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/super_speed_disk.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "off_chip",
+      "name": "Chip OFF",
+      "reference": "Off. Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "off",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/off_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "power_fruit",
+      "name": "Fruta de fuerza",
+      "reference": "Power fruit",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "off",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/power_fruit.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "def_chip",
+      "name": "Chip DEF",
+      "reference": "Def. Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "def",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/def_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "power_ice",
+      "name": "Hielo defensivo",
+      "reference": "Power Ice",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "def",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/power_ice.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "spd_chip",
+      "name": "Chip SPD",
+      "reference": "Quick Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "spd",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/spd_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "speed_leaf",
+      "name": "Hoja veloz",
+      "reference": "Speed Leaf",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "spd",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/speed_leaf.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "brn_chip",
+      "name": "Chip BRN",
+      "reference": "Brain Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "brn",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/brn_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "sage_fruit",
+      "name": "Fruta sabia",
+      "reference": "Sage Fruit",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "brn",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/sage_fruit.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "hp_chip",
+      "name": "Chip HP",
+      "reference": "HP Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "hp",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/hp_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "muscle_yam",
+      "name": "Tuberculo vital",
+      "reference": "Muscle Yam",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "hp",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/muscle_yam.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "mp_chip",
+      "name": "Chip MP",
+      "reference": "MP Chip",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "mp",
+          "amount": 4
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/mp_chip.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "calm_berry",
+      "name": "Baya serena",
+      "reference": "Calm berry",
+      "category": "permanent",
+      "effects": [
+        {
+          "kind": "ev",
+          "target": "mp",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/calm_berry.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "giant_meat",
+      "name": "Carne grande",
+      "reference": "Giant Meat",
+      "category": "care",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "h",
+          "amount": 40
+        },
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": 2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/giant_meat.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "sirloin",
+      "name": "Solomillo",
+      "reference": "Sirloin",
+      "category": "care",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "h",
+          "amount": 60
+        },
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": 3
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/sirloin.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "digimushroom",
+      "name": "Champinon",
+      "reference": "Digimushrm",
+      "category": "care",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "h",
+          "amount": 15
+        },
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": 1
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/digimushroom.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "blue_apple",
+      "name": "Manzana azul",
+      "reference": "Blue apple",
+      "category": "care",
+      "effects": [
+        {
+          "kind": "restore_care",
+          "target": "p",
+          "amount": 20
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/blue_apple.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "prickly_pear",
+      "name": "Pera ligera",
+      "reference": "Pricklypear",
+      "category": "care",
+      "effects": [
+        {
+          "kind": "weight",
+          "target": "weight",
+          "amount": -2
+        }
+      ],
+      "duration": "instant",
+      "unlimited": false,
+      "stack_max": 99,
+      "sprite": "assets/ui/items/adopted/prickly_pear.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    },
+    {
+      "id": "training_manual",
+      "name": "Manual de entrenamiento",
+      "reference": "Trn. manual",
+      "category": "training_boost",
+      "effects": [
+        {
+          "kind": "training_ev_bonus",
+          "target": "trained_stat",
+          "amount": 1
+        }
+      ],
+      "duration": "next_completed_training",
+      "unlimited": false,
+      "stack_max": 1,
+      "sprite": "assets/ui/items/adopted/training_manual.png",
+      "acquisition": "practice_victory_rotation",
+      "ui_available": true
+    }
+  ]
+}

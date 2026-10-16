@@ -10,6 +10,7 @@ ICON_NAMES = (
     "ItemRing",
     "ItemProtein",
     "ItemMedkit",
+    "ItemGuide",
 )
 
 _COLORS = {
@@ -34,7 +35,7 @@ _COLORS = {
 }
 
 
-def render_item_icon(name, size=16):
+def render_item_icon(name, size=16, framed=True):
     """Return one crisp RGBA pixel-art icon at the requested square size."""
     if name not in ICON_NAMES:
         raise ValueError(f"Unknown item icon: {name}")
@@ -59,7 +60,8 @@ def render_item_icon(name, size=16):
             rect((1, 1, 14, 14), "tile")
             rect((1, 1, 14, 1), "blue_dark")
 
-    tile()
+    if framed:
+        tile()
     if name == "Backpack":
         rect((5, 2, 10, 4), "leather")
         rect((4, 4, 11, 13), "outline")
@@ -77,10 +79,11 @@ def render_item_icon(name, size=16):
         poly([(4, 5), (6, 3), (10, 3), (12, 5), (12, 9), (10, 12),
               (6, 12), (4, 10)], "outline")
         poly([(5, 5), (7, 4), (10, 4), (11, 6), (11, 9), (9, 11),
-              (6, 10), (5, 8)], "red")
-        rect((7, 4, 9, 5), "red_light")
-        rect((6, 7, 7, 8), "leather_light")
-        rect((10, 10, 11, 11), "red_light")
+              (6, 10), (5, 8)], "leather")
+        rect((7, 4, 9, 5), "leather_light")
+        rect((6, 7, 7, 7), "gold_light")
+        rect((8, 8, 9, 8), "outline")
+        rect((8, 10, 9, 10), "leather_light")
         rect((3, 10, 5, 11), "cream")
         rect((2, 9, 3, 10), "white")
         rect((4, 12, 5, 13), "white")
@@ -94,6 +97,7 @@ def render_item_icon(name, size=16):
         poly([(6, 7), (9, 7), (10, 9), (10, 12), (5, 12), (5, 9)], "cyan")
         rect((6, 8, 7, 10), "cyan_light")
         rect((8, 11, 9, 12), "blue_light")
+        poly([(8, 7), (6, 10), (8, 10), (7, 12), (9, 9), (8, 9)], "gold_light")
     elif name == "ItemExp":
         poly([(8, 2), (9, 5), (12, 5), (10, 7), (11, 11), (8, 9),
               (5, 11), (6, 7), (4, 5), (7, 5)], "outline")
@@ -103,17 +107,12 @@ def render_item_icon(name, size=16):
         rect((8, 7, 9, 8), "red_light")
         rect((7, 12, 9, 13), "blue_light")
     elif name == "ItemRing":
-        rect((5, 3, 10, 4), "outline")
-        rect((3, 5, 4, 10), "outline")
-        rect((11, 5, 12, 10), "outline")
-        rect((5, 11, 10, 12), "outline")
-        rect((5, 4, 10, 5), "gold")
-        rect((4, 5, 5, 10), "gold")
-        rect((10, 5, 11, 10), "gold_light")
-        rect((5, 10, 10, 11), "gold")
-        rect((6, 6, 9, 9), "tile")
-        poly([(7, 2), (9, 3), (9, 5), (7, 6), (5, 5), (5, 3)], "red")
-        rect((7, 3, 8, 3), "red_light")
+        poly([(4, 2), (6, 5), (8, 6), (10, 5), (12, 2), (11, 6), (8, 8), (5, 6)], "outline")
+        poly([(5, 2), (6, 4), (8, 6), (10, 4), (11, 2), (10, 5), (8, 7), (6, 5)], "gold")
+        rect((7, 6, 8, 8), "gold_light")
+        poly([(4, 8), (6, 7), (8, 8), (10, 7), (12, 8), (12, 10), (8, 14), (4, 10)], "outline")
+        poly([(5, 8), (6, 8), (8, 9), (10, 8), (11, 8), (11, 10), (8, 13), (5, 10)], "red")
+        rect((6, 9, 7, 9), "red_light")
     elif name == "ItemProtein":
         rect((5, 3, 10, 4), "outline")
         rect((6, 2, 9, 3), "green_light")
@@ -133,5 +132,14 @@ def render_item_icon(name, size=16):
         rect((7, 7, 8, 11), "red")
         rect((6, 8, 9, 9), "red")
         rect((5, 11, 10, 12), "blue_light")
+    elif name == "ItemGuide":
+        rect((3, 2, 12, 14), "outline")
+        rect((4, 3, 11, 13), "cream")
+        rect((3, 2, 5, 13), "blue")
+        rect((4, 3, 4, 12), "cyan")
+        rect((8, 3, 9, 6), "red")
+        rect((8, 3, 8, 4), "red_light")
+        for y in (8, 10, 12):
+            rect((7, y, 10, y), "leather")
 
     return image.resize((size, size), Image.Resampling.NEAREST)

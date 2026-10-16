@@ -1,6 +1,7 @@
 """Targeted Firemon training prototype; integer EV gains preserve hatch DNA."""
 from core.dna import combat_stat
 from core.nutrition import complete_training_weight
+from core.item_catalog import effect_amount
 
 TRAINING_ENERGY_COST = 8
 TRAINING_EV_GAIN = 6
@@ -195,7 +196,9 @@ def batch_plan_one_rep(pet, stat):
         return {"can": False, "ev_added": 0, "energy_cost": 0,
                 "secondary": {}, "reason": "FALTA ENERGIA"}
     headroom = 252 - pet.ev_at(stat)
-    ev_added = min(TRAINING_EV_GAIN + int(pet.exploration.guide), headroom)
+    from core.adopted_items import has_training_bonus
+    bonus = 1 if has_training_bonus(pet) else 0
+    ev_added = min(TRAINING_EV_GAIN + bonus, headroom)
     return {"can": True, "ev_added": int(ev_added),
             "energy_cost": TRAINING_ENERGY_COST,
             "secondary": {
@@ -277,7 +280,8 @@ def batch_apply(pet, stat, reps):
     complete_training_weight(pet, int(reps))
     weight_delta = pet.weight - weight_before
     pet.training_sessions = getattr(pet, "training_sessions", 0) + int(reps)
-    guide_ev = pet.exploration.use_guide(pet, stat)
+    from core.adopted_items import consume_training_bonus
+    guide_ev = consume_training_bonus(pet, stat)
     ev_added += guide_ev
     return {"reps": int(reps), "ev_added": ev_added,
             "guide_ev": guide_ev,

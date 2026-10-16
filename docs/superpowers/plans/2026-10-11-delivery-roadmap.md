@@ -6,6 +6,13 @@ Alcance de esta revision: documentacion. No se cambia codigo ni se flashea.
 
 ## Entregado con evidencia
 
+- [x] Catalogo adoptado de 40 consumibles sin evolucion/mapas/pesca/venta:
+  JSON de desarrollo, header C++, fichas, sprites y funciones de efecto.
+- [x] Conectar objetos adoptados a stock persistente, Mochila y selector de
+  objetos de Arena en ambos runtimes; implementar adquisicion sin duplicados.
+- [x] Conectar Manual a la transaccion de entrenamiento sin acumular Guia.
+- [ ] Validar consumibles y journal fisicamente en placa tras autorizacion.
+
 - [x] Status, entrenamiento temporizado y Tecnicas integrados en sim/firmware.
 - [x] Sesion de atributo: START, 10 segundos, aplicacion/guardado unico,
   cancelacion sin cobro y reintento transaccional.
@@ -38,11 +45,20 @@ observacion real o evidencia del usuario; el arranque serial no basta.
 
 ## P1: paridad del combate
 
+Auditoria de firmware del 2026-10-15:
+[informe y reproducciones](../reviews/2026-10-15-board-audit.md).
+Los P1 de intercambio de respaldo/snapshots parciales y el P2 del borrado vacio
+tienen correcciones con pruebas de host. La confirmacion ambigua de commit
+usa estado Pending y barrera sync. Falta validacion fisica de cortes de energia.
+La optimizacion de placa exige mediciones reales de latencia, heap y BLE;
+compilar y pasar pruebas de host no la demuestra.
+
 - [ ] Comparar `scripts/practice_renderer.py` con la rama Arena de
   `firmware/t-display/src/Panels.cpp` para los estados esperando, ronda,
   victoria, derrota y empate, con la misma partida y reloj.
 - [ ] Llevar feedback de orden/accion/motivo y dano bidireccional al firmware;
-  igualar la ventana de impacto, actualmente 1200 ms en sim y 1500 ms en placa.
+  verificarlo visualmente con la misma partida y reloj. La ventana de impacto
+  ya es 1200 ms en sim y placa; la orden historica se conserva al mover cursor.
 - [ ] Incluir Guardia y frames hit/hurt derivados del resultado real; no
   insinuar esquiva sin que exista una regla de evasion.
 - [ ] Ampliar harness nativo y comparaciones de imagen de Arena en ES/EN,
@@ -52,23 +68,35 @@ observacion real o evidencia del usuario; el arranque serial no basta.
 
 Salida: paridad demostrada de Arena, no solo del motor numerico.
 
+Revision 2026-10-15: sigue pendiente el harness de imagen para Arena de
+`Panels.cpp` en ES/EN. El harness actual compara Training/Tecnicas, no Arena.
+Las reacciones de resultado (happy/sad frente a idle en firmware) tampoco
+son equivalentes; no marcar P1 cerrado por las pruebas numericas.
+
 ## Despues de P1: elemento de la tecnica
 
 Estado: regla cerrada el 2026-10-14 en
 [estándar de técnicas](../specs/2026-10-14-technique-standard.md).
-No implementada. No entra dentro de los pendientes de arriba: ese
-bloque iguala el combate actual y no cambia la formula.
+Implementada en ambos motores; revisada el 2026-10-15. La evidencia numerica
+no cierra por si sola la paridad visual ni la validacion fisica de P1.
 
-- [ ] Implementar el elemento de Cyber Sleuth en el mismo cambio para el
+- [x] Implementar el elemento de Cyber Sleuth en el mismo cambio para el
   simulador y para el firmware. Misma cuenta en Python y en C++:
   si el elemento de la tecnica le gana al de quien recibe, dano por 3/2;
   si no, el multiplicador queda en 1. Guardia parte despues, minimo 1.
-- [ ] Firemon es `fire`. Golpe es `neutral`. Guardia no tiene elemento.
+- [x] Firemon es `fire`. Golpe es `neutral`. Guardia no tiene elemento.
   Llama es `fire`.
-- [ ] Probar los dos lados con la misma partida: agua contra Firemon suma
+- [x] Probar los dos lados con la misma partida: agua contra Firemon suma
   la mitad, Llama contra planta suma la mitad, Llama contra agua no
   resta, neutral no dispara el elemento.
-- [ ] No implementar Vaccine, Data ni Virus en este bloque.
+- [x] No implementar Vaccine, Data ni Virus en este bloque.
+
+Evidencia: `tests/test_practice.py` y `tests/practice_elements.cpp` comparan
+810 combinaciones de elemento atacante/receptor, dano base y Guardia entre
+Python y C++; incluyen 27 -> 40 con ventaja, 27 -> 27 sin ventaja y
+3 -> 4 -> 2 con Guardia. Las sesiones asignan fuego a las tres etapas de
+Firemon y al rival Firemon. No se agregan tecnicas de agua ni una especie
+planta: los cruces se ejercitan con combatientes de prueba.
 
 Salida: placa y simulador aplican el mismo multiplicador. Un solo lado
 no cuenta como hecho.
@@ -167,6 +195,17 @@ NVS y pruebas de paridad y hardware. Filete, champinon, disco de pelea, especie
 planta y su tecnica siguen en trabajo separado. Exploracion no cierra P0/P1.
 
 ## P2: entrega versionada
+
+Actualizacion de catalogo (2026-10-14): siete objetos oficiales con los doce
+campos, descripciones ES/EN y sprites PNG. La fuente `core.item_catalog`
+genera documentacion y metadata C++; el Amuleto conserva `ring`/`ItemRing`.
+Los objetos de evolucion estan excluidos. Filete, champinon y discos no se
+agregan al inventario activo hasta cerrar sus propias reglas.
+
+Validacion del catalogo: 642 pruebas Python, 161 casos nativos C++, compilacion
+T-Display correcta, verificacion de artefactos generados y 14 pantallas ES/EN
+inspeccionadas. El ultimo ajuste de etiquetas paso 68 regresiones enfocadas.
+No se flasheo la placa en esta entrega.
 
 - [ ] Revisar el diff y archivos nuevos, separando trabajo previo del usuario.
 - [ ] Seleccionar codigo, tests, assets fuente y documentos necesarios; no

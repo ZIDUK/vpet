@@ -30,6 +30,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from core.dna import combat_stat
+from core.item_catalog import effect_amount
+from core.adopted_items import has_training_bonus
 from core.i18n import tr, tr_stat
 from core.training import (TRAINING_ENERGY_COST, TRAINING_EV_GAIN, TRAINING_TYPES,
                             batch_projected_value, batch_plan_one_rep,
@@ -171,7 +173,8 @@ def _render_select(build_dir, session, now_ms):
     if session.index < len(TRAINING_TYPES):
         info_label(frame, draw, item["icon"], 70, 24,
                    tr_stat(session.pet, item["stat"]), YELLOW)
-        real, projected = batch_projected_value(session.pet, item["stat"], TRAINING_EV_GAIN + int(session.pet.exploration.guide))
+        bonus = 1 if has_training_bonus(session.pet) else 0
+        real, projected = batch_projected_value(session.pet, item["stat"], TRAINING_EV_GAIN + bonus)
         draw.rectangle((66, 41, 67, 59), fill=YELLOW)
         text(draw, (72, 41), "%d > %d (+%d)" % (real, projected,
                                                  max(0, projected - real)),
@@ -196,8 +199,10 @@ def _render_select(build_dir, session, now_ms):
         text(draw, (185, 89), "%d ENE" % TRAINING_ENERGY_COST, MP, small=True)
         if reason:
             text(draw, (70, 105), _block_label(session.pet, reason), HP, small=True)
-        elif session.pet.exploration.guide:
-            text(draw, (70, 105), tr(session.pet, "explore.guide"), GREEN, small=True)
+        elif has_training_bonus(session.pet):
+            bonus_label = tr(session.pet, 'explore.guide') if session.pet.exploration.guide else (
+                'MANUAL: +1 EV AL ENTRENAR' if session.pet.language == 'ES' else 'MANUAL: +1 EV NEXT TRAIN')
+            text(draw, (70, 105), bonus_label, GREEN, small=True)
     elif session.index >= len(TRAINING_TYPES):
         text(draw, (70, 24), tr(session.pet, "training.techniques"), YELLOW)
         es = session.pet.language == "ES"
@@ -255,15 +260,20 @@ def _render_prepare(build_dir, session, now_ms):
                species=session.pet.species,
                frame_interval_ms=TRAINING_IDLE_FRAME_INTERVAL_MS)
     info_label(frame, draw, _icon_name_for(stat), 70, 24, name, YELLOW)
-    real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN + int(session.pet.exploration.guide))
+    bonus = 1 if has_training_bonus(session.pet) else 0
+    real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN + bonus)
     es = session.pet.language == "ES"
     _metric(draw, 40, "VALOR" if es else "VALUE", "%d > %d" % (real, projected), GREEN)
     _metric(draw, 54, "ENTRENO" if es else "TRAINING", "%d/252" % session.pet.ev_at(stat), GREEN)
     _metric(draw, 68, "ENERGIA" if es else "ENERGY", "%d/100" % session.pet.get("e"), MP)
     _metric(draw, 82, "COSTE" if es else "COST", "-8", HP)
     _metric(draw, 96, "TIEMPO" if es else "TIME", "10s", YELLOW)
-    if session.pet.exploration.guide:
-        paste_icon(frame, asset_icon(build_dir, "ItemGuide"), 24, 95)
+    if has_training_bonus(session.pet):
+        if session.pet.exploration.guide:
+            paste_icon(frame, asset_icon(build_dir, "ItemGuide"), 24, 95)
+        else:
+            from scripts.sim_renderer import _paste_ui_icon
+            _paste_ui_icon(frame, build_dir, 'Adopted:training_manual', 24, 95, 16)
     if session.max_reps() <= 0:
         _feedback_band(draw, session.pet, session.train_block_reason() or tr(session.pet, "training.no_reps"), color=HP)
     # Two-option focus: INICIAR / VOLVER.

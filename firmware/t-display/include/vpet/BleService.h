@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <atomic>
 #include <string>
 
 #include "vpet/BleAdvertiseSession.h"
@@ -13,20 +14,22 @@ class BleCallbacks;
 
 class BleService {
 public:
+    // Lifecycle and name access belong to the application task. Callbacks only
+    // transition the atomic status and retain their own immutable name.
     void begin();
     bool setEnabled(bool enabled);
-    BleStatus status() const { return status_; }
+    BleStatus status() const { return status_.load(); }
     const char* deviceName() const { return deviceName_.c_str(); }
 
 private:
     friend class BleCallbacks;
 
     void startAdvertising();
-    void stop();
-    void onConnected();
+    bool stop();
+    bool onConnected();
     void onDisconnected();
 
-    volatile BleStatus status_ = BleStatus::Off;
+    std::atomic<BleStatus> status_{BleStatus::Off};
     bool initialized_ = false;
     std::string deviceName_;
     BleAdvertiseSession advertiseSession_;

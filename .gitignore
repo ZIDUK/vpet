@@ -79,6 +79,9 @@ assets/ui/*
 !assets/ui/icons/
 assets/ui/icons/*
 !assets/ui/icons/*.png
+!assets/ui/items/
+assets/ui/items/*
+!assets/ui/items/*.png
 build-tdisplay/
 out/
 
@@ -117,6 +120,10 @@ firmware/t-display/include/generated/*
 _backup_v6/
 
 # Old code.py versions (before we moved to src/+ build/)
+!assets/ui/items/adopted/
+!assets/ui/items/adopted/*.png
+!assets/data/
+!assets/data/items.json
 code.py.v7
 code.py.v13tmp
 code.py.bak

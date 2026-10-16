@@ -1,10 +1,17 @@
 #include "vpet/SettingsStore.h"
 #include "vpet/Nutrition.h"
+#include "vpet/StateSnapshot.h"
 
 #include <cstdio>
+#include <sstream>
 
 namespace vpet {
 namespace {
+const char* kItemTxKeys[] = {"hunger","energy","happy","effort","health","weight",
+    "injured","training","nutTrainRem","evHp","evMp","evOff","evDef","evSpd","evBrn",
+    "techTrain","techBond","techM0","techM1","techM2","techEquip",
+    "nutVer","nutHunRem","nutProtein","legacyWeight"};
+constexpr size_t kItemTxCount=sizeof(kItemTxKeys)/sizeof(kItemTxKeys[0]);
 uint8_t safeWeight(int value) {
     if (value < 1) return 1;
     if (value > 99) return 99;
@@ -13,7 +20,8 @@ uint8_t safeWeight(int value) {
 }
 
 LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
-    if (!recoverFoodTransaction()) return LoadResult::Unsupported;
+    if (!recoverAll()) return LoadResult::Unsupported;
+    if (!pet.adoptedStock.decode(store_.getString("adoptBag", ""))) return LoadResult::Unsupported;
     const int version = store_.getInt("schema", 0);
     if (version == 0) {
         pet.evolveTo(pet.species());
@@ -58,7 +66,8 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
         pet.restoreInjury(
             store_.getInt("injured", 0) != 0,
             static_cast<uint8_t>(store_.getInt("injuries", 0)),
-            store_.getInt("dead", 0) != 0
+            store_.getInt("dead", 0) != 0,
+            static_cast<uint32_t>(store_.getInt("injuredMs", 0) < 0 ? 0 : store_.getInt("injuredMs", 0))
         );
         if (store_.getInt("nutVer", 0) >= 1) {
             const int hungerRemainder = store_.getInt("nutHunRem", 0);
@@ -111,18 +120,55 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
 
 bool SettingsStore::restartLifeIfNeeded(PetState& pet, Settings& settings) {
     if (store_.getInt("life", 0) != 0) return false;
+    const PetState before = pet;
     pet.resetToEgg();
-    store_.putInt("life", 1);
-    save(pet, settings);
+    if (!save(pet, settings)) { pet = before; return false; }
     return true;
 }
 
 bool SettingsStore::save(const PetState& pet, const Settings& settings) {
-    if (!recoverFoodTransaction()) return false;
+    if (!recoverAll()) return false;
+    storage::SnapshotStore captured(&store_);
+    SettingsStore writer(captured);
+    if (!writer.writeSnapshot(pet, settings)) return false;
+    const auto record = storage::encodeSnapshot(captured);
+    storage::SnapshotStore validated;
+    if (!storage::decodeSnapshot(record, validated)) return false;
+    // A single atomic NVS string write commits the complete desired state.
+    if (store_.commitString("saveTx", record.c_str()) == StoreCommit::Rejected) return false;
+    recoverSnapshotTransaction();
+    return true;
+}
+
+bool SettingsStore::recoverAll() {
+    return store_.sync() && recoverSwapTransaction() && recoverSnapshotTransaction() &&
+        recoverFoodTransaction() && recoverConsumableTransaction();
+}
+
+bool SettingsStore::recoverSnapshotTransaction() {
+    if (!store_.sync()) return false;
+    const auto record = store_.getString("saveTx", "");
+    if (record.empty()) return true;
+    storage::SnapshotStore snapshot;
+    if (!storage::decodeSnapshot(record, snapshot) || !storage::replaySnapshot(store_, snapshot)) return false;
+    return store_.putString("saveTx", "");
+}
+
+bool SettingsStore::recoverSwapTransaction() {
+    if (!store_.sync()) return false;
+    const auto marker = store_.getString("swapTx", "");
+    if (marker.empty()) return true;
+    if (marker != "1" || backup_ == nullptr || !backup_->sync()) return false;
+    storage::SnapshotStore active, parked;
+    if (!storage::decodeSnapshot(store_.getString("swapLive", ""), active) ||
+        !storage::decodeSnapshot(store_.getString("swapBack", ""), parked)) return false;
+    if (!storage::replaySnapshot(*backup_, parked) || !storage::replaySnapshot(store_, active)) return false;
+    return store_.putString("swapTx", "");
+}
+
+bool SettingsStore::writeSnapshot(const PetState& pet, const Settings& settings) {
     bool ok = true;
-    if (store_.getInt("nutVer", 0) < 1) {
-        ok = store_.putInt("legacyWeight", safeWeight(store_.getInt("weight", 5))) && ok;
-    }
+    ok = store_.putInt("legacyWeight", safeWeight(store_.getInt("legacyWeight", store_.getInt("weight", 5)))) && ok;
     ok = store_.putInt("schema", 3) && ok;
     ok = store_.putInt("nutVer", 1) && ok;
     ok = store_.putInt("species", static_cast<int>(pet.species())) && ok;
@@ -156,6 +202,7 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("overfeeds", pet.overfeeds()) && ok;
     ok = store_.putInt("injured", pet.injured() ? 1 : 0) && ok;
     ok = store_.putInt("injuries", pet.injuries()) && ok;
+    ok = store_.putInt("injuredMs", pet.injuredMs()) && ok;
     ok = store_.putInt("dead", pet.dead() ? 1 : 0) && ok;
     ok = store_.putInt("cold", pet.cold() ? 1 : 0) && ok;
     ok = store_.putInt("dna0", pet.dna()[0]) && ok;
@@ -173,10 +220,55 @@ bool SettingsStore::save(const PetState& pet, const Settings& settings) {
     ok = store_.putInt("sound", settings.soundEnabled ? 1 : 0) && ok;
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
     ok = savePractice(pet.practice) && ok;
+    if (ok) ok = store_.putString("adoptBag", pet.adoptedStock.encode().c_str());
     return ok;
 }
 
+bool SettingsStore::commitConsumables(const PetState& pet) {
+    if (!recoverAll()) return false;
+    // The single string write is the commit point. Replay is idempotent.
+    std::ostringstream out;
+    out << pet.adoptedStock.encode() << '\n';
+    const int values[] = {pet.hunger(),pet.energy(),pet.happiness(),pet.effort(),pet.health(),pet.weight(),
+        pet.injured()?1:0,pet.trainingSessions(),pet.trainingWeightRemainder(),
+        pet.evAt(CombatStat::Hp),pet.evAt(CombatStat::Mp),pet.evAt(CombatStat::Off),
+        pet.evAt(CombatStat::Def),pet.evAt(CombatStat::Spd),pet.evAt(CombatStat::Brn),
+        pet.practice.training,pet.practice.bond,pet.practice.mastery[0],pet.practice.mastery[1],
+        pet.practice.mastery[2],pet.practice.equipped,1,pet.hungerCycleRemainder(),
+        pet.proteinFedThisCycle()?1:0,
+        safeWeight(store_.getInt("legacyWeight",store_.getInt("weight",5)))};
+    for (size_t i=0; i<kItemTxCount; ++i) out << kItemTxKeys[i] << ' ' << values[i] << '\n';
+    if (store_.commitString("itemTx",out.str().c_str()) == StoreCommit::Rejected) return false;
+    recoverConsumableTransaction();
+    return true;
+}
+
+bool SettingsStore::recoverConsumableTransaction() {
+    if (!store_.sync()) return false;
+    const auto journal=store_.getString("itemTx", "");
+    if (journal.empty()) return true;
+    std::istringstream in(journal);
+    std::string bag;
+    std::getline(in,bag);
+    AdoptedInventory stock;
+    if (bag.empty() || !stock.decode(bag)) return false;
+    int32_t values[kItemTxCount];
+    std::string key;
+    const int maxima[] = {100,100,100,100,100,99,1,2147483647,3,252,252,252,252,252,252,255,100,100,100,100,7,
+        1,19,1,99};
+    for (size_t i=0; i<kItemTxCount; ++i) {
+        if (!(in>>key>>values[i]) || key!=kItemTxKeys[i] || values[i]<0 || values[i]>maxima[i]) return false;
+    }
+    if (values[5]<1 || values[21]!=1 || values[24]<1 || in>>key) return false;
+    bool ok=true;
+    for (size_t i=0;i<kItemTxCount;++i) ok=store_.putInt(kItemTxKeys[i],values[i]) && ok;
+    ok=store_.putString("adoptBag",bag.c_str()) && ok;
+    if (!ok) return false;
+    return store_.putString("itemTx", "");
+}
+
 bool SettingsStore::commitFood(const PetState& pet) {
+    if (!recoverAll()) return false;
     char journal[80];
     const int previousSequence = store_.getInt("foodSeq", 0);
     const int sequence = previousSequence < 1 || previousSequence >= 2147483647
@@ -186,12 +278,13 @@ bool SettingsStore::commitFood(const PetState& pet) {
              static_cast<int>(pet.callReason()), pet.overfedThisCycle() ? 1 : 0,
              pet.overfeeds(), pet.hungerCycleRemainder(),
              pet.trainingWeightRemainder(), pet.proteinFedThisCycle() ? 1 : 0);
-    if (!store_.putString("foodTx", journal)) return false;
+    if (store_.commitString("foodTx", journal) == StoreCommit::Rejected) return false;
     recoverFoodTransaction();
     return true;
 }
 
 bool SettingsStore::recoverFoodTransaction() {
+    if (!store_.sync()) return false;
     const std::string journal = store_.getString("foodTx", "");
     if (journal.empty()) return true;
     int version = 0, sequence = 0, hunger = 0, energy = 0, weight = 0, meals = 0;
@@ -264,19 +357,26 @@ SpeciesId SettingsStore::backupSpecies() const {
 }
 
 bool SettingsStore::swapOrPark(PetState& pet, Settings& settings) {
-    if (backup_ == nullptr) return false;
+    if (backup_ == nullptr || !recoverAll()) return false;
     SettingsStore parkedStore(*backup_);
-    if (!hasBackup()) {
-        if (!parkedStore.save(pet, settings)) return false;
-        pet.resetToEgg();
-        return save(pet, settings);
-    }
-    PetState parked;
+    PetState target;
     Settings ignored;
-    if (parkedStore.load(parked, ignored) != LoadResult::Loaded) return false;
-    if (!parkedStore.save(pet, settings)) return false;
-    pet = parked;
-    return save(pet, settings);
+    const auto result = parkedStore.load(target, ignored);
+    if (result == LoadResult::Unsupported) return false;
+    if (result == LoadResult::Missing) { target = pet; target.resetToEgg(); }
+    storage::SnapshotStore active(&store_), parked(backup_);
+    SettingsStore activeWriter(active), parkedWriter(parked);
+    if (!activeWriter.writeSnapshot(target, settings) || !parkedWriter.writeSnapshot(pet, settings)) return false;
+    const auto activeRecord = storage::encodeSnapshot(active), parkedRecord = storage::encodeSnapshot(parked);
+    storage::SnapshotStore validated;
+    if (!storage::decodeSnapshot(activeRecord, validated) || !storage::decodeSnapshot(parkedRecord, validated)) return false;
+    // Staging writes do not change either pet. Only the final marker commits.
+    if (!store_.putString("swapLive", activeRecord.c_str()) ||
+        !store_.putString("swapBack", parkedRecord.c_str()) ||
+        store_.commitString("swapTx", "1") == StoreCommit::Rejected) return false;
+    pet = target;
+    recoverSwapTransaction();
+    return true;
 }
 
 }  // namespace vpet

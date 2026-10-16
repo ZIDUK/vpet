@@ -83,6 +83,7 @@ def test_inventory_uses_back_arrow_for_return_entry():
 
 def test_empty_items_disappear_from_inventory_list():
     pet = Pet(species="rookie", state=STATE_LIVE)
+    pet.adopted_inventory = dict.fromkeys(pet.adopted_inventory, 0)
     pet.inventory = {"meat": 3, "energy": 0, "exp": 1, "ring": 0}
     assert visible_inventory_indexes(pet) == (2, 6)
     assert next_visible_inventory_index(pet, 1) == 2

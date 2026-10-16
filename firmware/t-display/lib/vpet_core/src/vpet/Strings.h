@@ -1,6 +1,8 @@
 #pragma once
+#include "vpet/AdoptedInventory.h"
 
 #include <string.h>
+#include "vpet/ItemCatalog.generated.h"
 
 namespace vpet {
 
@@ -143,31 +145,30 @@ inline const char* day(bool spanish) { return pick(spanish, "DAY", "DIA"); }
 inline const char* hour(bool spanish) { return pick(spanish, "HOUR", "HORA"); }
 inline const char* minute(bool spanish) { return pick(spanish, "MIN", "MIN"); }
 
-inline const char* meat(bool spanish) { return pick(spanish, "MEAT", "CARNE"); }
-inline const char* itemEnergy(bool spanish) { return pick(spanish, "ENERGY", "ENERGIA"); }
-inline const char* exp(bool spanish) { return pick(spanish, "EXP", "EXP"); }
-inline const char* fireRing(bool spanish) { return pick(spanish, "RING", "ANILLO"); }
+inline const char* meat(bool spanish) { return spanish ? items::kCatalog[0].es : items::kCatalog[0].en; }
+inline const char* itemEnergy(bool spanish) { return spanish ? items::kCatalog[1].es : items::kCatalog[1].en; }
+inline const char* exp(bool spanish) { return spanish ? items::kCatalog[2].es : items::kCatalog[2].en; }
+inline const char* fireRing(bool spanish) { return spanish ? items::kCatalog[3].es : items::kCatalog[3].en; }
 inline const char* itemName(uint8_t index, bool spanish) {
-    switch (index) {
-        case 0: return meat(spanish);
-        case 1: return itemEnergy(spanish);
-        case 2: return exp(spanish);
-        case 3: return fireRing(spanish);
-        case 4: return protein(spanish);
-        case 5: return medkit(spanish);
-        default: return back(spanish);
+    if (index>=8 && index<8+adopted::kCount) {
+        const auto& item=adopted::kItems[index-8];
+        return spanish ? item.name : item.nameEn;
     }
+    const auto* item = items::at(index);
+    return item ? (spanish ? item->es : item->en) : back(spanish);
 }
 inline const char* itemBlurb(uint8_t index, bool spanish) {
-    switch (index) {
-        case 0: return pick(spanish, "+20 HUN", "+20 HAM");
-        case 1: return pick(spanish, "+25 ENE", "+25 ENE");
-        case 2: return pick(spanish, "+8 EFF", "+8 ESF");
-        case 3: return pick(spanish, "+15 POW", "+15 POD");
-        case 4: return pick(spanish, "+20 ENE", "+20 ENE");
-        case 5: return pick(spanish, "HEAL HURT", "CURA");
-        default: return pick(spanish, "CLOSE BAG", "CERRAR");
+    if (index>=8 && index<8+adopted::kCount) {
+        const auto& item=adopted::kItems[index-8];
+        return spanish ? item.blurbEs : item.blurbEn;
     }
+    const auto* item = items::at(index);
+    return item ? (spanish ? item->blurbEs : item->blurbEn) : pick(spanish, "CLOSE BAG", "CERRAR");
+}
+inline const char* itemIcon(uint8_t index) {
+    if (index>=8 && index<8+adopted::kCount) return adopted::kItems[index-8].sprite;
+    const auto* item = items::at(index);
+    return item ? item->icon : "/ui/icons/back.vpa";
 }
 inline const char* yourLine(bool spanish) { return pick(spanish, "YOUR LINE", "TU LINEA"); }
 inline const char* evoShort(uint8_t stage, bool spanish) {

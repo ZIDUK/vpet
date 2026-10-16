@@ -16,19 +16,54 @@ App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleSe
       motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
+    savePending_ = false;
     lastInteractionMs_ = nowMs;
     lastTickMs_ = nowMs;
     lastRenderMs_ = nowMs - 50;
-    if (settingsStore_.load(pet_, settings_) == LoadResult::Unsupported) {
-        pet_ = PetState();
-        settings_ = Settings();
+    storageReady_=settingsStore_.load(pet_, settings_) != LoadResult::Unsupported;
+    if (!storageReady_) {
+        Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
+        panels_.drawStorageError(settings_.language.c_str());
+        return;
     }
-    settingsStore_.restartLifeIfNeeded(pet_, settings_);
-    if (settingsStore_.migratedDna()) settingsStore_.save(pet_, settings_);
-    bluetooth_.setEnabled(settings_.bluetoothEnabled);
+    if ((settingsStore_.needsLifeRestart() && !settingsStore_.restartLifeIfNeeded(pet_, settings_)) ||
+        (settingsStore_.migratedDna() && !settingsStore_.save(pet_, settings_)) ||
+        !settingsStore_.recoverPending()) {
+        storageReady_ = false;
+        Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
+        panels_.drawStorageError(settings_.language.c_str());
+        return;
+    }
+    if (!bluetooth_.setEnabled(settings_.bluetoothEnabled)) {
+        storageReady_ = false;
+        Serial.println("VPET_INIT_BLOCKED reason=BLE");
+        return;
+    }
+    lastInjuryCheckpointMs_ = nowMs;
     motion_.setSpecies(pet_.species());
     motion_.alignClock(nowMs);
     eggStartedMs_ = nowMs;
+}
+
+bool App::saveState() {
+    lastSaveAttemptMs_ = lastTickMs_;
+    if (settingsStore_.save(pet_, settings_)) return settleStorage();
+    savePending_ = true;
+    Serial.println("VPET_SAVE_PENDING");
+    panels_.drawStorageError(settings_.language.c_str());
+    return false;
+}
+
+bool App::settleStorage() {
+    lastSaveAttemptMs_ = lastTickMs_;
+    savePending_ = !settingsStore_.recoverPending();
+    if (savePending_) {
+        Serial.println("VPET_SAVE_PENDING");
+        panels_.drawStorageError(settings_.language.c_str());
+    } else {
+        panels_.invalidate();
+    }
+    return !savePending_;
 }
 
 void App::beginDateTime(bool date) {
@@ -74,7 +109,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 if (!bluetooth_.setEnabled(settings_.bluetoothEnabled)) {
                     settings_.bluetoothEnabled = false;
                 }
-                settingsStore_.save(pet_, settings_);
+                saveState();
                 break;
             case 1:
                 settings_.language = settings_.language == "ES" ? "EN" : "ES";
@@ -83,10 +118,15 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 settings_.soundEnabled = !settings_.soundEnabled;
                 break;
             case 3:
-                settingsStore_.save(pet_, settings_);
+                saveState();
                 break;
             case 4:
-                settingsStore_.load(pet_, settings_);
+                if (settingsStore_.load(pet_, settings_) != LoadResult::Loaded) {
+                    storageReady_ = false;
+                    Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
+                    panels_.drawStorageError(settings_.language.c_str());
+                    return;
+                }
                 motion_.setSpecies(pet_.species());
                 bluetooth_.setEnabled(settings_.bluetoothEnabled);
                 break;
@@ -103,7 +143,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                     } else {
                         motion_.startEvolution(nowMs);
                     }
-                    settingsStore_.save(pet_, settings_);
+                    saveState();
                     navigation_.setPanel(PanelId::Home);
                 }
                 break;
@@ -123,9 +163,23 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
             return;
         }
         if (event != InputEvent::Action) return;
+        const uint8_t selected=navigation_.panelIndex();
+        if (selected>=8 && selected<8+adopted::kCount &&
+            !strcmp(adopted::kItems[selected-8].id,"training_manual")) {
+            if (pet_.canOpenTrainingManual(selected)) {
+                training_.reset(); trainingActive_=true;
+            }
+            return;
+        }
+        const PetState before=pet_;
         const ItemUseResult result = pet_.useItem(navigation_.panelIndex());
         if (result == ItemUseResult::Used) {
-            settingsStore_.save(pet_, settings_);
+            if (selected>=8) {
+                if (!settingsStore_.commitConsumables(pet_)) {
+                    pet_=before;
+                    Serial.println("VPET_ITEM_SAVE_FAILED");
+                } else settleStorage();
+            } else saveState();
             navigation_.setPanelIndex(pet_.clampVisibleInventoryIndex(navigation_.panelIndex()));
         }
         if (result == ItemUseResult::Back) navigation_.setPanel(PanelId::Home);
@@ -151,6 +205,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
             if (settingsStore_.commitFood(pet_)) {
                 motion_.startAction(Action::Feed, nowMs);
                 navigation_.setPanel(PanelId::Home);
+                settleStorage();
             } else {
                 pet_ = before;
             }
@@ -172,7 +227,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 break;
             case 1:
                 pet_.setCold(!pet_.cold());
-                settingsStore_.save(pet_, settings_);
+                saveState();
                 break;
             case 2:
                 if (settingsStore_.swapOrPark(pet_, settings_)) {
@@ -180,6 +235,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                     motion_.alignClock(nowMs);
                     if (pet_.species() == SpeciesId::Egg) eggStartedMs_ = nowMs;
                     navigation_.setPanel(PanelId::Home);
+                    settleStorage();
                 }
                 break;
             case 3:
@@ -219,14 +275,14 @@ void App::activate(uint32_t nowMs) {
         motion_.setSpecies(SpeciesId::Egg);
         motion_.alignClock(nowMs);
         eggStartedMs_ = nowMs;
-        settingsStore_.save(pet_, settings_);
+        saveState();
         return;
     }
     if (motion_.state() == MotionState::Sleep) {
         if (navigation_.menuIndex() == 4) {
             motion_.wake(nowMs);
             pet_.noteWake(clockHour());
-            settingsStore_.save(pet_, settings_);
+            saveState();
         }
         return;
     }
@@ -259,10 +315,22 @@ void App::activate(uint32_t nowMs) {
 }
 
 void App::tick(uint32_t nowMs, InputEvent event) {
+    if (!storageReady_) {
+        if (nowMs-lastRenderMs_>=1000) begin(nowMs);
+        return;
+    }
+    if (savePending_) {
+        lastTickMs_ = nowMs;
+        motion_.alignClock(nowMs);
+        if (nowMs - lastSaveAttemptMs_ >= 1000) saveState();
+        return;
+    }
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
     const bool busy = (trainingActive_ && training_.state == TrainingSession::State::Session)
-        || (practicing_ && practice_.page == PracticeSession::Page::Arena && !practice_.battle.result);
+        || (practicing_ && (practice_.page == PracticeSession::Page::Arena ||
+            practice_.page == PracticeSession::Page::Bag) &&
+            (!practice_.battle.result || practice_.pendingAward));
     if (event != InputEvent::None || busy) lastInteractionMs_ = nowMs;
     if (!busy && nowMs - lastInteractionMs_ >= 10000
         && (trainingActive_ || practicing_ || navigation_.panel() != PanelId::Home)) {
@@ -274,11 +342,16 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         motion_.alignClock(nowMs);
     }
     if (practicing_) {
+        const PetState beforePet=pet_;
+        const PracticeSession beforeSession=practice_;
         practice_.tick(pet_, nowMs);
-        practicing_ = practice_.input(pet_, event, nowMs);
+        if (!practice_.battle.result || beforeSession.battle.result)
+            practicing_ = practice_.input(pet_, event, nowMs);
         if (practice_.dirty) {
-            if (!settingsStore_.save(pet_, settings_)) practice_.message = "ERROR AL GUARDAR";
-            practice_.dirty = false;
+            const bool committed=settingsStore_.commitConsumables(pet_);
+            practice_.finishSave(pet_,beforePet,beforeSession,committed);
+            if (!committed) practicing_=true;
+            else if (!settleStorage()) return;
         }
         if (!practicing_) { panels_.invalidate(); motion_.alignClock(nowMs); }
         else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
@@ -297,12 +370,13 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             return;
         }
         if (training_.dirty && training_.needsRollback) {
-            if (!settingsStore_.save(pet_, settings_)) {
+            if (!settingsStore_.commitConsumables(pet_)) {
                 training_.rollbackFromSnapshot(pet_);
-            }
+            } else settleStorage();
             training_.dirty = false;
             training_.needsRollback = false;
         }
+        if (savePending_) return;
         if (!stillActive) {
             trainingActive_ = false;
             panels_.invalidate();
@@ -313,7 +387,12 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         }
         return;
     }
+    const bool wasDead = pet_.dead();
     pet_.tick(elapsed);
+    if (pet_.dead() != wasDead || (pet_.injured() && !pet_.cold() && nowMs - lastInjuryCheckpointMs_ >= 60000)) {
+        lastInjuryCheckpointMs_ = nowMs;
+        if (!saveState()) return;
+    }
     const uint8_t hour = clockHour();
     const CallUpdate call = pet_.updateCall(
         nowMs,
@@ -328,7 +407,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         Serial.printf("VPET_CALL reason=%s\n", reason);
     }
     if (call == CallUpdate::Missed) {
-        settingsStore_.save(pet_, settings_);
+        if (!saveState()) return;
     }
     if (pet_.species() == SpeciesId::Egg && !pet_.cold()) {
         constexpr uint32_t kEggLifeMs = 2000;
@@ -341,12 +420,12 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             if (!pet_.hasDna()) pet_.rollDna(esp_random() ^ nowMs);
             motion_.setSpecies(SpeciesId::Baby);
             motion_.alignClock(nowMs);
-            settingsStore_.save(pet_, settings_);
+            if (!saveState()) return;
         }
     } else if (!pet_.cold() && !pet_.dead() && motion_.state() != MotionState::Evolution && evolution_.evolve(pet_, kCareTimeScale)) {
         motion_.setSpecies(pet_.species());
         motion_.startEvolution(nowMs);
-        settingsStore_.save(pet_, settings_);
+        if (!saveState()) return;
     }
     motion_.tick(nowMs);
     if (motion_.consumeActionCompleted()) {
@@ -358,7 +437,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
                 pet_.lastBattleWon() ? 1U : 0U,
                 pet_.injured() ? 1U : 0U
             );
-            settingsStore_.save(pet_, settings_);
+            if (!saveState()) return;
             if (!pet_.dead()) {
                 motion_.startReaction(pet_.lastBattleWon(), pet_.injured(), nowMs);
             }
@@ -386,6 +465,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         }
     }
 
+    if (savePending_ || !storageReady_) return;
     navigation_.setCurrentSpecies(pet_.species());
 
     const PanelId panel = navigation_.panel();

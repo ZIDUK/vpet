@@ -4,6 +4,36 @@ Implementada el 2026-10-14 para el simulador T-Display. La barra tiene nueve
 iconos; Explorar esta entre entrenamiento y batalla. El firmware conserva su
 menu actual. Esta entrega no se flashea.
 
+## Visual aprobada 2026-10-15
+
+Rutas y atributos mantienen tres filas visibles a 240x135, con iconos,
+franja amarilla y fondo resaltado solo en la seleccion. Las rutas separan
+nombre y premio en dos areas de texto medidas; la duracion tiene su propia
+columna derecha. Los atributos reutilizan los iconos de Training, incluido
+el icono de flecha para Volver.
+
+Preparar salida muestra el vPet evolucionado a la izquierda y una tabla de
+atributo/recurso/tecnica, premio, objeto y coste a la derecha. La Guia solo
+se anuncia cuando el premio real la incluye. La condicion de cuidado y
+los botones ocupan bandas separadas. No cambia balance ni persistencia.
+
+Correccion segun referencia de Training: Preparar salida usa celdas
+delineadas con divisor central, etiquetas verdes/amarillas/rosas y valores
+blancos alineados a la izquierda. Los botones tienen contorno amarillo o
+neutro, sin relleno brillante. El cuidado permanece junto al sprite para
+dar mas altura a las filas. Las tablas de regreso comparten los bordes.
+
+`scripts/preview_exploration.py` genera las pantallas ES/EN y `layout.png`;
+`tests/test_exploration_layout.py` verifica la contencion de texto y que
+no se superponga al recorrer todas las posiciones de ambas listas.
+
+De vuelta, Regreso anticipado y Recompensas guardadas comparten otra tabla:
+tiempo transcurrido (no tiempo restante), atributo/recurso/tecnica, premio y
+objeto. El estado Por reclamar distingue una prevision del recibo Ya guardado.
+El recibo usa sus valores persistidos aunque los atributos del pet cambien.
+`returns.png` muestra estas tres pantallas ES/EN; sus pruebas incluyen las
+tres rutas y premios parciales, sin modificar el protocolo de reclamacion.
+
 ## Flujo
 
 Rutas -> atributo (solo Jornada) -> confirmar -> viaje -> reclamar -> recibo.

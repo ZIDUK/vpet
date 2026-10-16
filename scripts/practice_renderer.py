@@ -450,10 +450,10 @@ def _draw_resource_row(frame, draw, x, y, icon_name, label, value, maximum, colo
 
 def _draw_result_banner(frame, draw, build_dir, session, now_ms):
     """Show a compact result card with a Firemon-specific reaction."""
-    draw.rectangle((0, 33, 239, 91), fill=INK)
+    draw.rectangle((0, 33, 239, 114), fill=INK)
     banner_color = {"VICTORIA": GREEN, "DERROTA": HP, "EMPATE": YELLOW}.get(
         session.battle.result, YELLOW)
-    draw.rectangle((10, 36, 229, 88), fill=PANEL, outline=banner_color, width=2)
+    draw.rectangle((10, 36, 229, 110), fill=PANEL, outline=banner_color, width=2)
     english = _english(session)
     result_label = session.battle.result
     if english:
@@ -473,13 +473,17 @@ def _draw_result_banner(frame, draw, build_dir, session, now_ms):
     if session.battle.round:
         text(draw, (16, 70), ("ROUNDS %d" if english else "RONDAS %d") % session.battle.round, MUTED, small=True)
     if session.message:
-        text(draw, (16, 80), session.message, YELLOW, small=True)
+        text(draw, (16, 91), session.message, YELLOW, small=True)
+    elif session.reward_item:
+        from core.adopted_items import BY_ID, short_name
+        reward = 'ITEM +1 ' + short_name(BY_ID[session.reward_item], not english)
+        text(draw, (16, 84), reward, GREEN, small=True)
     action = {"VICTORIA": "happy", "DERROTA": "sad"}.get(session.battle.result)
     if action and session.pet.species == "rookie":
         _draw_atlas(frame, build_dir, _species_atlas("rookie", action),
-                    174, 38, 48, now_ms, frame_interval_ms=100)
+                    174, 57, 48, now_ms, frame_interval_ms=100)
     else:
-        pet_sprite(frame, build_dir, 174, 38, 48, None, now_ms,
+        pet_sprite(frame, build_dir, 174, 57, 48, None, now_ms,
                    species=session.pet.species)
 
 
@@ -527,30 +531,37 @@ def _draw_action_selector(frame, draw, build_dir, session):
     In the terminal state only the ``VOLVER`` back button is shown."""
     draw.rectangle((0, SELECTOR_TOP, 239, SELECTOR_BOTTOM), fill=INK)
     if session.battle.result:
+        if not session.awarded:
+            for i, choice in enumerate(session.choices()):
+                x = 4 + i * 118
+                draw.rectangle((x, 116, x + 112, 133), outline=YELLOW if i == session.index else MUTED)
+                text(draw, (x + 5, 118), ('RETRY' if choice == 'REINTENTAR' else 'BACK') if _english(session) else choice,
+                     YELLOW if i == session.index else MUTED)
+            return
         icon_button(frame, draw, asset_icon(build_dir, "Back"), 4,
                     SELECTOR_TOP + 1, True, size=18)
         text(draw, (28, SELECTOR_TOP + 3), "BACK" if _english(session) else "VOLVER", YELLOW)
         return
-    commands = [-1] + list(session.pet.techniques.equipped) + [None]
+    commands = [-1] + list(session.pet.techniques.equipped) + ['bag', None]
     for i, command in enumerate(commands):
-        icon = (asset_icon(build_dir, "Back") if command is None else
+        icon = (asset_icon(build_dir, 'Backpack') if command == 'bag' else asset_icon(build_dir, "Back") if command is None else
                 technique_icon("auto" if command == -1 else TECHNIQUES[command]["id"]))
-        unavailable = command not in (None, -1) and not session.battle.player.valid(command)
-        x = 4 + i * 26
+        unavailable = command not in (None, -1, 'bag') and not session.battle.player.valid(command)
+        x = 4 + i * 20
         icon_button(frame, draw, icon, x, SELECTOR_TOP, i == session.index,
-                    size=20, unavailable=unavailable)
+                    size=18, unavailable=unavailable)
     command = commands[session.index]
     english = _english(session)
-    label = (("RETREAT" if english else "RETIRARSE") if command is None else
+    label = ('BAG' if english else 'MOCHILA') if command == 'bag' else (("RETREAT" if english else "RETIRARSE") if command is None else
              "AUTO" if command == -1 else TECHNIQUES[command]["name"])
-    if english and command is not None and command >= 0:
+    if english and isinstance(command, int) and command >= 0:
         label = _technique_label(command, True)
-    text(draw, (114, SELECTOR_TOP), label, YELLOW)
-    text(draw, (114, SELECTOR_TOP + 11), _selector_status(session, command), _selector_color(command, session), small=True)
+    text(draw, (128, SELECTOR_TOP), label, YELLOW)
+    text(draw, (128, SELECTOR_TOP + 11), _selector_status(session, command), _selector_color(command, session), small=True)
 
 
 def _selector_color(command, session):
-    if command is None or command == -1:
+    if command is None or command in (-1, 'bag'):
         return YELLOW
     if not session.battle.player.valid(command):
         return HP
@@ -559,6 +570,8 @@ def _selector_color(command, session):
 
 def _selector_status(session, command):
     english = _english(session)
+    if command == 'bag':
+        return '%d ITEMS' % len(session.combat_items())
     if command is None:
         return "END BATTLE" if english else "FIN BATALLA"
     if command == -1:
@@ -584,13 +597,43 @@ def render_battle(frame, draw, build_dir, session, now_ms):
     _draw_combat_header(draw, frame, battle, session.pet)
     if battle.result:
         _draw_result_banner(frame, draw, build_dir, session, now_ms)
-    _draw_feedback_band(frame, draw, session, info)
+    else:
+        _draw_feedback_band(frame, draw, session, info)
     _draw_action_selector(frame, draw, build_dir, session)
 
 
 def render_practice(build_dir, session, now_ms=0):
     frame = Image.new("RGB", (240, 135), INK)
     draw = ImageDraw.Draw(frame)
-    renderers = {"tech": render_tech, "detail": render_detail, "battle": render_battle}
+    renderers = {"tech": render_tech, "detail": render_detail, "battle": render_battle, 'items': render_battle_items}
     renderers[session.page](frame, draw, Path(build_dir), session, now_ms)
     return frame
+
+
+def render_battle_items(frame, draw, build_dir, session, now_ms):
+    from core.adopted_items import BY_ID, short_name, item_blurb
+    from core.inventory import inventory_window
+    from scripts.sim_renderer import _paste_ui_icon
+    from scripts.exploration_renderer import fitted_text
+    english = _english(session)
+    header(draw, 'BATTLE ITEMS' if english else 'MOCHILA DE COMBATE', 'R%d' % session.battle.round)
+    fighter = session.battle.player
+    text(draw, (5, 22), 'HP %d/%d    MP %d/%d' % (fighter.hp, fighter.max_hp, fighter.mp, fighter.max_mp), MP, small=True)
+    choices = session.choices()
+    indexes = tuple(range(len(choices)))
+    for slot, index in enumerate(inventory_window(indexes, session.index)):
+        y = 37 + slot * 25
+        draw.rectangle((4, y, 235, y + 22), fill=PANEL, outline=YELLOW if index == session.index else TEAL)
+        key = choices[index]
+        if key == 'VOLVER':
+            _paste_ui_icon(frame, build_dir, 'Back', 8, y + 3, 16)
+            fitted_text(draw, (31, y + 3, 218, y + 19), 'BACK' if english else 'VOLVER', FONT, WHITE)
+        else:
+            item = BY_ID[key]
+            _paste_ui_icon(frame, build_dir, 'Adopted:' + key, 8, y + 3, 16)
+            fitted_text(draw, (31, y + 1, 144, y + 12), short_name(item, not english), SMALL, WHITE)
+            fitted_text(draw, (31, y + 13, 144, y + 22), item_blurb(item, not english), SMALL, MP)
+            fitted_text(draw, (151, y + 3, 229, y + 19), 'x%d' % session.pet.adopted_inventory[key], FONT, YELLOW, right=True)
+    message = {'ERROR AL GUARDAR': 'SAVE FAILED', 'SIN EFECTO': 'NO EFFECT', 'OBJETO USADO': 'ITEM USED'}.get(session.message, session.message) if english else session.message
+    if session.message:
+        text(draw, (5, 117), message, YELLOW, small=True)

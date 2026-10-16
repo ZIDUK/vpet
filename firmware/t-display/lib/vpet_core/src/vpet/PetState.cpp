@@ -1,4 +1,5 @@
 #include "vpet/PetState.h"
+#include "vpet/ConsumableEffects.h"
 #include "vpet/Nutrition.h"
 
 namespace vpet {
@@ -16,7 +17,7 @@ uint8_t PetState::clampByte(int value, uint8_t maxValue) {
 namespace {
 uint8_t clampItem(int value) {
     if (value < 0) return 0;
-    if (value > 99) return 99;
+    if (value > items::kStackMax) return items::kStackMax;
     return static_cast<uint8_t>(value);
 }
 }
@@ -49,7 +50,9 @@ bool PetState::trainTechnique(uint8_t technique) {
 }
 
 void PetState::resetToEgg() {
+    const AdoptedInventory stock=adoptedStock;
     *this = PetState();
+    adoptedStock=stock;
 }
 
 void PetState::rollDna(uint32_t entropy) {
@@ -249,11 +252,11 @@ void PetState::setHealth(int value) {
     health_ = clampStat(value);
 }
 
-void PetState::restoreInjury(bool injured, uint8_t injuries, bool dead) {
+void PetState::restoreInjury(bool injured, uint8_t injuries, bool dead, uint32_t elapsedMs) {
     injured_ = injured;
     injuries_ = injuries > 99 ? 99 : injuries;
     dead_ = dead;
-    if (!injured_) injuredMs_ = 0;
+    injuredMs_ = !injured_ ? 0 : elapsedMs > 21600000U ? 21600000U : elapsedMs;
 }
 
 uint8_t PetState::effortHearts() const {
@@ -420,7 +423,7 @@ void PetState::tick(uint32_t elapsedMs) {
     if (species_ == SpeciesId::Egg) return;
     stageAgeMs_ += elapsedMs;
     if (injured_ && !dead_) {
-        injuredMs_ += elapsedMs;
+        injuredMs_ = elapsedMs >= 21600000U - injuredMs_ ? 21600000U : injuredMs_ + elapsedMs;
         checkDeath();
     }
     if (dead_) return;
@@ -596,6 +599,7 @@ void PetState::restoreCare(
 }
 
 uint8_t PetState::itemCount(uint8_t index) const {
+    if (index >= 8) return adoptedStock.count(index-8);
     switch (index) {
         case 0: return meat_;
         case 1: return energyItem_;
@@ -608,6 +612,14 @@ uint8_t PetState::itemCount(uint8_t index) const {
 }
 
 ItemUseResult PetState::useItem(uint8_t index) {
+    if (index >= 8) {
+        if (cold() || dead()) return ItemUseResult::Blocked;
+        uint8_t stock = adoptedStock.count(index-8);
+        if (!stock) return ItemUseResult::Empty;
+        if (!consumables::useHome(*this, stock, index-8)) return ItemUseResult::Blocked;
+        adoptedStock.set(index-8,stock);
+        return ItemUseResult::Used;
+    }
     if (index == 6) return ItemUseResult::Back;
     if (index > 5) return ItemUseResult::Empty;
     if (dead_ || cold_ || species_ == SpeciesId::Egg) return ItemUseResult::Blocked;
@@ -628,26 +640,33 @@ ItemUseResult PetState::useItem(uint8_t index) {
     switch (index) {
         case 0: break;
         case 1:
-            energy_ = clampStat(energy_ + 25);
+            energy_ = clampStat(energy_ + items::kEnergyRecovery);
             refreshCallAfterCare();
-            gainEv(CombatStat::Mp, 2);
+            gainEv(CombatStat::Mp, items::kEnergyEv);
             break;
         case 2:
-            effort_ = clampStat(effort_ + 8);
-            gainEv(CombatStat::Brn, 2);
+            effort_ = clampStat(effort_ + items::kExpEffort);
+            gainEv(CombatStat::Brn, items::kExpEv);
             break;
-        case 3: happiness_ = clampStat(happiness_ + 15); break;
+        case 3: happiness_ = clampStat(happiness_ + items::kRingMood); break;
         case 4: break;
         case 5:
             injured_ = false;
             injuredMs_ = 0;
-            health_ = clampStat(health_ + 20);
+            health_ = clampStat(health_ + items::kMedkitHealth);
             break;
     }
     return ItemUseResult::Used;
 }
 
+bool PetState::canOpenTrainingManual(uint8_t menuIndex) const {
+    return menuIndex>=8 && menuIndex<8+adopted::kCount &&
+        !strcmp(adopted::kItems[menuIndex-8].id,"training_manual") &&
+        adoptedStock.count(menuIndex-8)>0 && !cold() && !dead() && species()!=SpeciesId::Egg;
+}
+
 bool PetState::itemVisible(uint8_t index) const {
+    if (index >= 8) return adoptedStock.count(index-8)>0;
     if (index == 6) return true;
     if (index == 0 || index == 4) return false;
     return index < 6 && itemCount(index) > 0;
@@ -655,7 +674,8 @@ bool PetState::itemVisible(uint8_t index) const {
 
 uint8_t PetState::visibleInventoryCount() const {
     uint8_t count = 1;
-    for (uint8_t index = 0; index < 6; ++index) {
+    for (uint8_t index = 0; index < 8+adopted::kCount; ++index) {
+        if (index == 6) continue;
         if (itemVisible(index)) ++count;
     }
     return count;
@@ -663,7 +683,8 @@ uint8_t PetState::visibleInventoryCount() const {
 
 uint8_t PetState::inventoryIndexAt(uint8_t visibleSlot) const {
     uint8_t slot = 0;
-    for (uint8_t index = 0; index < 7; ++index) {
+    for (uint8_t index = 0; index < 8+adopted::kCount; ++index) {
+        if (index == 6) continue;
         if (!itemVisible(index)) continue;
         if (slot == visibleSlot) return index;
         ++slot;
@@ -672,10 +693,9 @@ uint8_t PetState::inventoryIndexAt(uint8_t visibleSlot) const {
 }
 
 uint8_t PetState::nextVisibleInventoryIndex(uint8_t index) const {
-    for (uint8_t step = 1; step <= 7; ++step) {
-        const uint8_t candidate = static_cast<uint8_t>((index + step) % 7);
-        if (itemVisible(candidate)) return candidate;
-    }
+    const int start = index == 6 ? 0 : index+1;
+    for (int candidate=start; candidate<8+adopted::kCount; ++candidate)
+        if (candidate!=6 && itemVisible(candidate)) return candidate;
     return 6;
 }
 

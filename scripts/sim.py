@@ -330,7 +330,7 @@ def main():
         if practice is not None:
             practice.tick(now_ms)
         busy = ((training is not None and training.state == "session")
-                or (practice is not None and practice.page == "battle" and not practice.battle.result))
+                or (practice is not None and practice.busy))
         if busy:
             last_interaction_ms = now_ms
         elif now_ms - last_interaction_ms >= 10000:

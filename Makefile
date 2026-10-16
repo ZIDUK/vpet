@@ -39,6 +39,8 @@ build-pico:
 	$(PY) scripts/build.py --profile pico --output build
 
 build-tdisplay:
+	$(PY) scripts/export_item_catalog.py --check
+	$(PY) scripts/export_adopted_items.py --check
 	$(PY) scripts/build.py --profile tdisplay --output build-tdisplay
 	$(PY) scripts/build_tdisplay.py --sim-build build-tdisplay
 

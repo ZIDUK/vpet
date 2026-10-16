@@ -157,9 +157,12 @@ la técnica le gana al elemento de quien recibe, el daño se multiplica
 por 3 y se divide por 2. Si no le gana, el multiplicador queda en 1.
 Guardia se aplica después y parte el daño a la mitad, con mínimo 1.
 
-El cálculo de hoy no cambia hasta cerrar la paridad de combate del
-roadmap. Después, el mismo cambio entra en el simulador y en la placa.
-El pendiente está en
+La implementacion actual aplica esta regla en Python (`core/elements.py`)
+y C++ (`vpet/Elements.h`), conectada al motor de Arena en ambos lados.
+La revision del 2026-10-15 cubre los nueve elementos, el orden de Guardia
+y el elemento fuego del rival Firemon y de sus tres etapas jugables.
+La comparacion numerica no sustituye la paridad visual ni las pruebas
+fisicas pendientes. El seguimiento esta en
 [el roadmap](../plans/2026-10-11-delivery-roadmap.md), sección
 «Despues de P1: elemento de la tecnica».
 

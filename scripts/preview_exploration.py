@@ -39,6 +39,18 @@ def previews(build_dir, output):
     for i, image in enumerate(images):
         gallery.paste(image, ((i % 7) * 240, (i // 7) * 135))
     gallery.resize((1680, 270)).save(output / "gallery.png")
+    layout = Image.new('RGB', (720, 270))
+    for row, language in enumerate(('ES', 'EN')):
+        for column, page in enumerate(('routes', 'stats', 'confirm')):
+            with Image.open(output / (language + '-' + page + '.png')) as panel:
+                layout.paste(panel, (column * 240, row * 135))
+    layout.resize((1440, 540), Image.Resampling.NEAREST).save(output / 'layout.png')
+    returns = Image.new('RGB', (720, 270))
+    for row, language in enumerate(('ES', 'EN')):
+        for column, page in enumerate(('ready', 'recall', 'receipt')):
+            with Image.open(output / (language + '-' + page + '.png')) as panel:
+                returns.paste(panel, (column * 240, row * 135))
+    returns.resize((1440, 540), Image.Resampling.NEAREST).save(output / 'returns.png')
     return images
 
 

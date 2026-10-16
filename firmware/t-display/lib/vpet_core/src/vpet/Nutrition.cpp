@@ -62,16 +62,16 @@ FoodResult applyFood(PetState& pet, FoodId food) {
     if (pet.cold()) return FoodResult::Frozen;
     if (food == FoodId::Meat) {
         if (pet.hunger() >= 100 && pet.overfedThisCycle()) return FoodResult::Cycle;
-        const int hungerGain = pet.hunger() >= 100 ? 0 : (pet.hunger() + 20 > 100 ? 100 - pet.hunger() : 20);
-        pet.setHunger(pet.hunger() + 20);
-        pet.setWeight(static_cast<uint8_t>(pet.weight() < 99 ? pet.weight() + 1 : 99));
+        const int hungerGain = pet.hunger() >= 100 ? 0 : (pet.hunger() + items::kMeatHunger > 100 ? 100 - pet.hunger() : items::kMeatHunger);
+        pet.setHunger(pet.hunger() + items::kMeatHunger);
+        pet.setWeight(static_cast<uint8_t>(pet.weight() <= 99 - items::kMeatWeight ? pet.weight() + items::kMeatWeight : 99));
         pet.noteMeal(hungerGain == 0);
         return FoodResult::Applied;
     }
     if (pet.proteinFedThisCycle()) return FoodResult::Cycle;
-    if (pet.energy() > 80) return FoodResult::Full;
-    pet.setEnergy(pet.energy() + 20);
-    pet.setWeight(static_cast<uint8_t>(pet.weight() <= 97 ? pet.weight() + 2 : 99));
+    if (pet.energy() > 100 - items::kProteinEnergy) return FoodResult::Full;
+    pet.setEnergy(pet.energy() + items::kProteinEnergy);
+    pet.setWeight(static_cast<uint8_t>(pet.weight() <= 99 - items::kProteinWeight ? pet.weight() + items::kProteinWeight : 99));
     pet.noteProteinMeal();
     return FoodResult::Applied;
 }

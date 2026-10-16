@@ -1,7 +1,16 @@
 # Estándar de catálogo de objetos
 
-Fecha: 2026-10-14. Referencia de diseño. No autoriza objetos nuevos,
-cambios de economía, persistencia ni firmware.
+Actualizacion 2026-10-15: [catalogo adoptado](../../adopted-items.md),
+40 consumibles filtrados, define el contenido nuevo. Las siete entradas
+descritas debajo son el contrato legacy de partidas y runtime existentes.
+No se adopta SQLite. La disponibilidad de los nuevos objetos en menus y
+guardado extendido se valida separadamente de sus datos y sprites.
+
+Fecha: 2026-10-14. Estandar oficial para los siete objetos vigentes, por
+autorizacion del usuario. Fuente unica: `src/core/item_catalog.py`.
+Nombres, efectos, limites, origen, sprites y metadata C++ se exportan con
+`scripts/export_item_catalog.py`. Se conservan cantidades y reglas actuales.
+Los objetos de evolucion estan excluidos y el catalogo rechaza esa familia.
 
 Los objetos que sí existen siguen en
 [Catálogo de objetos](../../items-and-rewards.md). La exploración que
@@ -26,7 +35,9 @@ recibo, no un precio.
 
 La lista pública completa está en Grindosaur
 (`digimon-world/items`): una sola tabla, 128 objetos, con nombre,
-efecto corto y precio. El recuento por efecto, revisado el 2026-10-14:
+efecto corto y precio. La copia de consulta, con las once familias,
+vive en [Objetos de Digimon World 1](2026-10-14-digimon-world-1-items.md).
+El recuento por efecto, revisado el 2026-10-14:
 
 | Grupo | Cantidad | Ejemplos del grupo |
 |---|---:|---|
@@ -79,7 +90,7 @@ la mejora de entrenamiento, esta vez como equipo que se lleva puesto;
 en la placa basta con gastar el objeto antes de la sesión. Revisado el
 2026-10-14 y no adoptado.
 
-## Los 12 campos
+## Los 12 campos (auditoria anterior a la oficializacion)
 
 El roadmap pide estos campos antes de crear botín. Estado contra el
 código de hoy (`INVENTORY_ITEMS` en `src/core/inventory.py`): una
@@ -101,9 +112,9 @@ efectos está escrito aparte.
 | Límites | `使用可`: libre, en combate, en desplazamiento | No está. El botiquín exige lesión y el huevo no usa objetos, pero no es un campo |
 | Origen | `主な入手先`: lugar o personaje | No está. Hoy la única fuente es el kit inicial |
 
-Faltan como datos: categoría, rareza, stack, duración, cuándo se puede
-usar y origen. El efecto tipado, el objetivo y la magnitud cubren un
-solo número. Precio y mérito de Digimon World no se agregan a los 12.
+En esa auditoria faltaban categoria, rareza, stack, duracion, condiciones y
+origen. Esos campos ahora estan presentes en `core.item_catalog`, junto con
+todos los efectos, objetivos y magnitudes. Precio y merito no se agregan.
 
 `使用可` es el campo que más falta. Dice en qué pantalla el objeto
 hace algo. Un tónico de combate no se bebe desde la mochila de casa,
@@ -131,7 +142,7 @@ estas. Un objeto nuevo declara una.
 | Ánimo | Ánimo, con tope | No sube EV |
 | Mejora de entrenamiento | La próxima sesión rinde más, o dura hasta la próxima comida | No suma EV por sí misma |
 | Disco de pelea | Un combate, y se acaba | No escribe el stat al terminar |
-| Ficha de especie | Solo la usa una especie. Es el objeto exclusivo de un pet futuro | No reemplaza a la comida genérica |
+| Esfuerzo legacy | Conserva la estrella de experiencia existente y su efecto mixto | No autoriza objetos nuevos que salten el entrenamiento |
 
 La mejora de entrenamiento es el uso que le faltaba al material de la
 Jornada: no es un recurso suelto, es un objeto que mejora la pesa que
@@ -188,10 +199,9 @@ decide el resultado.
 
 ## Los seis objetos de hoy no se reescriben con esta ficha
 
-La carne, el tónico, la estrella y la proteína mezclan recuperación y
-EV. Eso ya está en el guardado. Esta ficha obliga a los objetos
-nuevos. Mover el EV fuera de la carne sería otro cambio de economía y
-no forma parte de este documento.
+El tonico y la estrella conservan sus efectos mixtos legacy. Carne y proteina
+ya usan las reglas de Alimentar: hambre/energia y peso, sin EV. La
+oficializacion documenta esas reglas existentes; no cambia su balance.
 
 ## Estado de implementacion del simulador (2026-10-14)
 

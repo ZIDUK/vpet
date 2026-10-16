@@ -225,8 +225,30 @@ void test_noisy_next_press_is_emitted_once() {
     TEST_ASSERT_EQUAL(InputEvent::Next, input.poll({true, false}, 230));
 }
 
+void test_adopted_runtime();
+void test_adopted_battle_and_rewards();
+void test_adopted_manual_rollback();
+void test_adopted_journal_each_write_failure();
+void test_adopted_terminal_and_reward_rollback();
+void test_adopted_bag_depletion_and_icons();
+void test_adopted_save_failure_preserves_bag_and_manual_gate();
+void test_adopted_manual_preview_matches_commit();
+void test_adopted_journal_finishes_legacy_nutrition_migration();
+void test_practice_last_order_survives_cursor_changes();
 int main(int, char**) {
+    extern void test_adopted_care_items_cap_and_consume();
     UNITY_BEGIN();
+    RUN_TEST(test_adopted_runtime);
+    RUN_TEST(test_adopted_battle_and_rewards);
+    RUN_TEST(test_adopted_manual_rollback);
+    RUN_TEST(test_adopted_journal_each_write_failure);
+    RUN_TEST(test_adopted_terminal_and_reward_rollback);
+    RUN_TEST(test_adopted_bag_depletion_and_icons);
+    RUN_TEST(test_adopted_save_failure_preserves_bag_and_manual_gate);
+    RUN_TEST(test_adopted_manual_preview_matches_commit);
+    RUN_TEST(test_adopted_journal_finishes_legacy_nutrition_migration);
+    RUN_TEST(test_practice_last_order_survives_cursor_changes);
+    RUN_TEST(test_adopted_care_items_cap_and_consume);
     RUN_TEST(test_short_next_press);
     RUN_TEST(test_deliberate_next_press_under_two_seconds_stays_next);
     RUN_TEST(test_normal_tap_does_not_repeat);

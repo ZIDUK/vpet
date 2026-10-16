@@ -34,9 +34,9 @@ class SimulatorServices:
         self.wifi_status = "OFF"
 
     def save(self, pet):
-        self.save_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = None
         try:
+            self.save_path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                 mode="w", encoding="utf-8", dir=self.save_path.parent,
                 prefix=f".{self.save_path.name}.", suffix=".tmp", delete=False,

@@ -147,7 +147,7 @@ template<class Canvas> class View {
     }
     void pair() {
         const int real = projectedStatValue(pet,s.chosenStat,0);
-        const int projected = projectedStatValue(pet,s.chosenStat,s.pendingEv);
+        const int projected = projectedStatValue(pet,s.chosenStat,trainingPreviewEv(pet,s.chosenStat,s.pendingEv));
         label(70,41,white,true,"training.session.real_proj",name(index()),real);
         label(170,41,projected != real ? green : white,true,"training.session.proj",projected);
     }
@@ -163,7 +163,7 @@ template<class Canvas> class View {
             const CombatStat stat = trainingTypeAt(s.cursor).stat;
             info(s.cursor,name(s.cursor));
             const int real = projectedStatValue(pet,stat,0);
-            const int projected = projectedStatValue(pet,stat,6);
+            const int projected = projectedStatValue(pet,stat,trainingPreviewEv(pet,stat,trainingPlanOneRep(pet,stat).evAdded));
             char line[40]; snprintf(line,sizeof(line),"%d > %d (+%d)",real,projected,projected-real);
             rect(66,41,2,19,yellow);
             text(72,41,line,green);
@@ -230,7 +230,9 @@ template<class Canvas> class View {
         char title[64]; snprintf(title,sizeof(title),tr("training.prepare.title"),name(index()));
         header(title,"B"); portrait(); info(index(),name(index()));
         const int real = projectedStatValue(pet,s.chosenStat,0);
-        const int projected = projectedStatValue(pet,s.chosenStat,6);
+        const auto plan=trainingPlanOneRep(pet,s.chosenStat);
+        const int previewEv=trainingPreviewEv(pet,s.chosenStat,plan.evAdded);
+        const int projected = projectedStatValue(pet,s.chosenStat,previewEv);
         char value[24];
         snprintf(value,sizeof(value),"%d > %d",real,projected);
         metric(40,es ? "VALOR" : "VALUE",value,green);
@@ -240,6 +242,7 @@ template<class Canvas> class View {
         metric(68,es ? "ENERGIA" : "ENERGY",value,mp);
         metric(82,es ? "COSTE" : "COST","-8",hp);
         metric(96,es ? "TIEMPO" : "TIME","10s",yellow);
+        if (previewEv>plan.evAdded) text(70,106,"MANUAL +1 EV",yellow,true);
         if (!maxReps()) { rect(0,99,240,12,ink); text(6,99,block(),hp,true); }
         button(4,"training.prepare.start",s.secondary ? muted : yellow);
         button(100,"training.prepare.back",s.secondary ? yellow : muted);
@@ -252,14 +255,16 @@ template<class Canvas> class View {
         portrait(active);
         info(index(),name(index()));
         char value[24];
-        snprintf(value,sizeof(value),"%d > %d",projectedStatValue(pet,s.chosenStat,0),projectedStatValue(pet,s.chosenStat,s.pendingEv));
+        const int previewEv=trainingPreviewEv(pet,s.chosenStat,s.pendingEv);
+        snprintf(value,sizeof(value),"%d > %d",projectedStatValue(pet,s.chosenStat,0),projectedStatValue(pet,s.chosenStat,previewEv));
         metric(40,es ? "VALOR" : "VALUE",value,green);
-        snprintf(value,sizeof(value),"+%u EV",s.pendingEv);
+        snprintf(value,sizeof(value),"+%u EV",static_cast<unsigned>(previewEv));
         metric(54,es ? "GANANCIA" : "GAIN",value,green);
         snprintf(value,sizeof(value),"%d > %d",pet.energy(),pet.energy()-s.energyReserved);
         metric(68,es ? "ENERGIA" : "ENERGY",value,mp);
         const uint32_t progress = elapsed<kTrainingDurationMs ? elapsed : kTrainingDurationMs;
         label(70,87,yellow,true,"training.timed.remaining",(kTrainingDurationMs-progress+999)/1000);
+        if (previewEv>s.pendingEv) text(70,94,"MANUAL +1 EV",yellow,true);
         rect(70,103,164,3,panel); rect(70,103,progress*164/kTrainingDurationMs,3,green);
         button(4,"training.timed.cancel",yellow);
         feedback();
@@ -269,7 +274,7 @@ template<class Canvas> class View {
         portrait();
         char line[64]; snprintf(line,sizeof(line),tr("training.confirm.x_rep"),name(index()),s.repsCompleted);
         info(index(),line); pair();
-        label(70,57,green,true,"training.confirm.ev_added",s.pendingEv);
+        label(70,57,green,true,"training.confirm.ev_added",trainingPreviewEv(pet,s.chosenStat,s.pendingEv));
         label(70,72,hp,true,"training.confirm.ene_delta",s.energyReserved);
         label(70,87,muted,true,"training.confirm.effort",s.repsCompleted*8);
         button(4,"training.confirm.confirm",s.secondary ? muted : yellow);

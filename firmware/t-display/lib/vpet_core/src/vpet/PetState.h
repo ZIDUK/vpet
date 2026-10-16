@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 #include "vpet/PracticeProgress.h"
+#include "vpet/ItemCatalog.generated.h"
+#include "vpet/AdoptedInventory.h"
 
 namespace vpet {
 
@@ -53,6 +55,7 @@ struct CareSnapshot {
 class PetState {
 public:
     PracticeProgress practice;
+    AdoptedInventory adoptedStock;
     bool trainTechnique(uint8_t technique);
     void tick(uint32_t elapsedMs);
     bool beginAction(Action action);
@@ -84,6 +87,7 @@ public:
         uint8_t protein
     );
     ItemUseResult useItem(uint8_t index);
+    bool canOpenTrainingManual(uint8_t menuIndex) const;
     uint8_t itemCount(uint8_t index) const;
     bool itemVisible(uint8_t index) const;
     uint8_t visibleInventoryCount() const;
@@ -94,7 +98,8 @@ public:
     CallUpdate updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour = 12, bool asleep = false);
     void noteWake(uint8_t hour);
     void restoreOverfeed(bool usedThisCycle, uint8_t count);
-    void restoreInjury(bool injured, uint8_t injuries, bool dead);
+    void restoreInjury(bool injured, uint8_t injuries, bool dead, uint32_t elapsedMs = 0);
+    uint32_t injuredMs() const { return injured_ ? injuredMs_ : 0; }
     void record(CareEventType type, uint8_t value);
     CareSnapshot snapshot() const;
     void rollDna(uint32_t entropy);
@@ -224,12 +229,12 @@ private:
     bool championDiscovered_ = false;
     bool ultimateDiscovered_ = false;
     bool rookieDiscovered_ = false;
-    uint8_t meat_ = 3;
-    uint8_t energyItem_ = 2;
-    uint8_t expItem_ = 1;
-    uint8_t ring_ = 1;
-    uint8_t proteinItem_ = 2;
-    uint8_t medkit_ = 1;
+    uint8_t meat_ = items::kCatalog[0].initialStock;
+    uint8_t energyItem_ = items::kCatalog[1].initialStock;
+    uint8_t expItem_ = items::kCatalog[2].initialStock;
+    uint8_t ring_ = items::kCatalog[3].initialStock;
+    uint8_t proteinItem_ = items::kCatalog[4].initialStock;
+    uint8_t medkit_ = items::kCatalog[5].initialStock;
     CareEvent events_[32] = {};
     uint8_t eventIndex_ = 0;
     uint8_t eventCount_ = 0;

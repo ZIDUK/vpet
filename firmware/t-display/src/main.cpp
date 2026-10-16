@@ -24,6 +24,20 @@ vpet::NvsKeyValueStore backupStore("vpet_bak");
 vpet::SettingsStore settingsStore(stateStore, &backupStore);
 vpet::BleService bluetooth;
 vpet::App app(renderer, panels, settingsStore, bluetooth);
+vpet::AssetStatus startupAssets;
+bool readyReported = false;
+
+void reportReady() {
+    if (readyReported || !app.ready()) return;
+    Serial.printf(
+        "VPET_READY heap_free=%u heap_min=%u flash=%u fs_used=%u fs_total=%u manifest=%s\n",
+        ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getFlashChipSize(),
+        startupAssets.mounted ? LittleFS.usedBytes() : 0,
+        startupAssets.mounted ? LittleFS.totalBytes() : 0,
+        startupAssets.version.c_str()
+    );
+    readyReported = true;
+}
 
 void drawBoot(const vpet::AssetStatus& status) {
     display.fillScreen(TFT_BLACK);
@@ -69,7 +83,7 @@ void drawBootIntro(const vpet::AssetStatus& status) {
     if (status.manifestPresent) {
         assets.drawFrame(framebuffer, "/animations/rookie/firemon_idle.vpa", 0, 76, 35);
         framebuffer.setTextColor(TFT_GREEN, TFT_BLACK);
-        framebuffer.drawString("READY", 120, 119, 2);
+        framebuffer.drawString("ASSETS OK", 120, 119, 2);
     } else {
         framebuffer.setTextColor(TFT_RED, TFT_BLACK);
         framebuffer.drawString("ASSETS MISSING", 120, 76, 2);
@@ -106,6 +120,7 @@ void setup() {
     staticScene.setSwapBytes(true);
     bluetooth.begin();
     const vpet::AssetStatus status = assets.begin();
+    startupAssets = status;
     drawBootIntro(status);
     if (!buttons.begin()) {
         Serial.println("VPET_FATAL code=INPUT_TASK_ALLOCATION");
@@ -113,16 +128,8 @@ void setup() {
         display.drawString("INPUT ERROR", 20, 60, 2);
         while (true) delay(1000);
     }
-    Serial.printf(
-        "VPET_READY heap_free=%u heap_min=%u flash=%u fs_used=%u fs_total=%u manifest=%s\n",
-        ESP.getFreeHeap(),
-        ESP.getMinFreeHeap(),
-        ESP.getFlashChipSize(),
-        status.mounted ? LittleFS.usedBytes() : 0,
-        status.mounted ? LittleFS.totalBytes() : 0,
-        status.version.c_str()
-    );
     app.begin(millis());
+    reportReady();
 }
 
 void loop() {
@@ -131,5 +138,6 @@ void loop() {
         Serial.printf("VPET_INPUT event=%u\n", static_cast<unsigned>(event));
     }
     app.tick(millis(), event);
+    reportReady();
     delay(2);
 }

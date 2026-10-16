@@ -2,6 +2,22 @@
 
 #include "vpet/PracticeBattle.h"
 #include "vpet/PracticeSession.h"
+#include "vpet/ConsumableEffects.h"
+
+void test_adopted_care_items_cap_and_consume() {
+    vpet::PetState pet;
+    pet.evolveTo(vpet::SpeciesId::Rookie);
+    pet.setEvAt(vpet::CombatStat::Off, 250);
+    uint8_t stock = 2;
+    uint8_t chip = 0;
+    for (uint8_t i = 0; i < vpet::adopted::kCount; ++i)
+        if (strcmp(vpet::adopted::kItems[i].id, "off_chip") == 0) chip = i;
+    TEST_ASSERT_TRUE(vpet::consumables::useHome(pet, stock, chip));
+    TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(1, stock);
+    TEST_ASSERT_FALSE(vpet::consumables::useHome(pet, stock, chip));
+    TEST_ASSERT_EQUAL(1, stock);
+}
 
 void test_practice_session_training_battle_and_reset() {
     vpet::PetState pet;
@@ -23,6 +39,8 @@ void test_practice_session_training_battle_and_reset() {
     session.input(pet, vpet::InputEvent::Next, 0);
     session.input(pet, vpet::InputEvent::Action, 0);
     TEST_ASSERT_EQUAL(vpet::PracticeSession::Page::Arena, session.page);
+    TEST_ASSERT_EQUAL(vpet::practice::Element::Fire, session.battle.player.element);
+    TEST_ASSERT_EQUAL(vpet::practice::Element::Fire, session.battle.rival.element);
     session.dirty = false;
     while (!session.battle.result) session.input(pet, vpet::InputEvent::Action, 1000);
     TEST_ASSERT_TRUE(session.dirty);
@@ -32,6 +50,16 @@ void test_practice_session_training_battle_and_reset() {
     TEST_ASSERT_EQUAL(bond, pet.practice.bond);
     pet.evolveTo(vpet::SpeciesId::Champion);
     TEST_ASSERT_TRUE(pet.practice.flameLearned());
+    for (auto species : {vpet::SpeciesId::Rookie, vpet::SpeciesId::Champion,
+                         vpet::SpeciesId::Ultimate}) {
+        pet.evolveTo(species);
+        vpet::PracticeSession arena;
+        arena.cursor = 1;
+        arena.input(pet, vpet::InputEvent::Action, 0);
+        TEST_ASSERT_EQUAL(vpet::PracticeSession::Page::Arena, arena.page);
+        TEST_ASSERT_EQUAL(vpet::practice::Element::Fire, arena.battle.player.element);
+        TEST_ASSERT_EQUAL(vpet::practice::Element::Fire, arena.battle.rival.element);
+    }
     pet.resetToEgg();
     TEST_ASSERT_FALSE(pet.practice.flameLearned());
 }

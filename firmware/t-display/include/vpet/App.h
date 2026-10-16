@@ -22,6 +22,7 @@ public:
     App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth);
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
+    bool ready() const { return storageReady_ && !savePending_; }
 
 private:
     void activate(uint32_t nowMs);
@@ -29,6 +30,8 @@ private:
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
+    bool saveState();
+    bool settleStorage();
 
     Renderer& renderer_;
     Panels& panels_;
@@ -46,6 +49,10 @@ private:
     bool practicing_ = false;
     TrainingSession training_;
     bool trainingActive_ = false;
+    bool storageReady_ = false;
+    bool savePending_ = false;
+    uint32_t lastSaveAttemptMs_ = 0;
+    uint32_t lastInjuryCheckpointMs_ = 0;
     uint32_t lastTickMs_ = 0;
     uint32_t lastInteractionMs_ = 0;
     uint32_t lastRenderMs_ = 0;

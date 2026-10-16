@@ -27,6 +27,7 @@ public:
         uint32_t nowMs = 0
     );
     void invalidate();
+    void drawStorageError(const char* language);
     void drawPractice(const PracticeSession& session, const PetState& pet, uint32_t nowMs, const char* language = "ES");
     void drawTraining(const TrainingSession& session, const PetState& pet, uint32_t nowMs, const char* language);
 

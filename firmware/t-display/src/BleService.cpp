@@ -22,11 +22,14 @@ static const uint8_t kHidReportMap[] = {
 
 class BleCallbacks final : public NimBLEServerCallbacks {
 public:
-    explicit BleCallbacks(BleService& service) : service_(service) {}
+    explicit BleCallbacks(BleService& service)
+        : service_(service), deviceName_(service.deviceName()) {}
 
     void onConnect(NimBLEServer*, NimBLEConnInfo& connInfo) override {
-        NimBLEDevice::startSecurity(connInfo.getConnHandle());
-        service_.onConnected();
+        if (service_.onConnected()) {
+            NimBLEDevice::startSecurity(connInfo.getConnHandle());
+            Serial.printf("VPET_BLE status=CONNECTED name=%s\n", deviceName_.c_str());
+        }
     }
 
     void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
@@ -37,15 +40,17 @@ public:
         Serial.printf(
             "VPET_BLE status=%s name=%s\n",
             connInfo.isEncrypted() ? "PAIRED" : "PAIR_FAILED",
-            service_.deviceName()
+            deviceName_.c_str()
         );
     }
 
 private:
     BleService& service_;
+    const std::string deviceName_;
 };
 
 void BleService::begin() {
+    if (!deviceName_.empty()) return;
     const uint64_t mac = ESP.getEfuseMac();
     char name[16];
     snprintf(name, sizeof(name), "vPet-%04X", static_cast<unsigned>(mac & 0xFFFF));
@@ -54,12 +59,12 @@ void BleService::begin() {
 
 bool BleService::setEnabled(bool enabled) {
     if (!enabled) {
-        stop();
-        return true;
+        return stop();
     }
-    if (status_ == BleStatus::Advertising || status_ == BleStatus::Connected) return true;
+    const BleStatus current = status();
+    if (current == BleStatus::Advertising || current == BleStatus::Connected) return true;
     if (deviceName_.empty()) begin();
-    if (initialized_ || status_ == BleStatus::Error) stop();
+    if ((initialized_ || status_ == BleStatus::Error) && !stop()) return false;
 
     if (!NimBLEDevice::init(deviceName_)) {
         status_ = BleStatus::Error;
@@ -105,7 +110,8 @@ bool BleService::setEnabled(bool enabled) {
     information->createCharacteristic("2A26", NIMBLE_PROPERTY::READ)->setValue("0.1.0");
     information->createCharacteristic("2A25", NIMBLE_PROPERTY::READ)->setValue(deviceName_);
     startAdvertising();
-    return status_ == BleStatus::Advertising;
+    const BleStatus started = status();
+    return started == BleStatus::Advertising || started == BleStatus::Connected;
 }
 
 void BleService::startAdvertising() {
@@ -127,24 +133,34 @@ void BleService::startAdvertising() {
         advertising->setMinInterval(32);
         advertising->setMaxInterval(96);
     }
+    // Publish before start: a connection callback may run before start returns.
+    status_ = BleStatus::Advertising;
     if (!advertising->start()) {
         status_ = BleStatus::Error;
         Serial.println("VPET_BLE status=ERROR reason=START");
         return;
     }
-    status_ = BleStatus::Advertising;
     Serial.printf("VPET_BLE status=ADVERTISING name=%s heap_free=%u heap_min=%u\n",
                   deviceName_.c_str(), ESP.getFreeHeap(), ESP.getMinFreeHeap());
 }
 
-void BleService::stop() {
+bool BleService::stop() {
+    // Close callback transitions before asking the host to stop. CAS in the
+    // callbacks cannot resurrect Off, even if they raced with this store.
+    status_ = BleStatus::Off;
     advertiseSession_.reset();
     if (!initialized_) {
-        status_ = BleStatus::Off;
-        return;
+        return true;
+    }
+    NimBLEDevice::stopAdvertising();
+    // Stop/join the host before freeing anything a callback could still use.
+    // deinit(true) clears objects even when host stop fails in installed NimBLE.
+    if (!NimBLEDevice::deinit(false)) {
+        status_ = BleStatus::Error;
+        Serial.println("VPET_BLE status=ERROR reason=DEINIT");
+        return false;
     }
     initialized_ = false;
-    NimBLEDevice::stopAdvertising();
     delete gHid;
     gHid = nullptr;
     NimBLEDevice::deinit(true);
@@ -152,16 +168,20 @@ void BleService::stop() {
     callbacks_ = nullptr;
     status_ = BleStatus::Off;
     Serial.println("VPET_BLE status=OFF");
+    return true;
 }
 
-void BleService::onConnected() {
-    status_ = BleStatus::Connected;
-    Serial.printf("VPET_BLE status=CONNECTED name=%s\n", deviceName_.c_str());
+bool BleService::onConnected() {
+    BleStatus expected = status_.load();
+    while (expected == BleStatus::Advertising || expected == BleStatus::Connected) {
+        if (status_.compare_exchange_weak(expected, BleStatus::Connected)) return true;
+    }
+    return false;
 }
 
 void BleService::onDisconnected() {
-    if (!initialized_) return;
-    status_ = BleStatus::Advertising;
+    BleStatus expected = BleStatus::Connected;
+    status_.compare_exchange_strong(expected, BleStatus::Advertising);
 }
 
 }  // namespace vpet

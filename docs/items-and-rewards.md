@@ -1,88 +1,220 @@
-# Catalogo de objetos vPet
+# Objetos legacy y compatibilidad de partidas vPet
 
-Catalogo vigente del inventario, contrastado con `src/core/inventory.py`,
-`src/core/pet.py` y `firmware/t-display/lib/vpet_core/src/vpet/PetState.cpp`.
-Los efectos respetan topes y condiciones del motor; la cantidad inicial no es
-una recompensa recurrente.
+Version 1. Oficializado el 2026-10-14. Generado desde `src/core/item_catalog.py`
+por `scripts/export_item_catalog.py`. Actualizar la fuente y regenerar; no editar esta ficha a mano.
 
-## Objetos implementados
+El catalogo adoptado esta en [Consumibles vPet](adopted-items.md).
+Estas siete entradas documentan el runtime anterior y sus partidas; no son el catalogo futuro.
+Los objetos y fichas de evolucion estan excluidos de ambos catalogos.
 
-| ID estable | Objeto | Descripcion | Efecto al usar | Stock inicial | Origen actual |
-|---|---|---|---|---:|---|
-| `meat` | Carne asada | Alimento ilimitado de la pantalla Alimentar; el stock guardado antiguo se conserva y no se descuenta. | +20 HAM (max. 100) y +1 peso. Una sobrealimentacion por ciclo si HAM ya esta lleno; sin EV. | Ilimitado | No requiere obtenerlo; disponible al alimentar. |
-| `energy` | Tonico de energia | Frasco de recuperacion para volver a entrenar o combatir. | +25 ENE, max. 100, y +2 EV de MP. | 2 | Kit de inicio; sin reposicion implementada. |
-| `exp` | Estrella de experiencia | Insignia de practica que impulsa el esfuerzo general. | +8 ESF, max. 100, y +2 EV de BRN. | 1 | Kit de inicio; sin reposicion implementada. |
-| `ring` | Amuleto | Objeto de animo, valido para cualquier especie. El nombre visible dejo de ser «anillo de fuego» el 2026-10-12; el ID de guardado sigue siendo `ring`. | +15 animo, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
-| `protein` | Proteina | Alimento ilimitado de la pantalla Alimentar; el stock guardado antiguo se conserva y no se descuenta. | +20 ENE (se ofrece con ENE <= 80) y +2 peso, una vez por ciclo metabolico; sin EV ni DP. | Ilimitado | No requiere obtenerla; disponible al alimentar. |
-| `medkit` | Botiquin | Kit de primeros auxilios para un vPet lesionado. | Solo se puede usar con lesion: la elimina y restaura +20 HP, max. 100. | 1 | Kit de inicio; sin reposicion implementada. |
-| `guide` | Guia / Guide | Manual para la proxima sesion, implementado en Make Sim. Icono `ItemGuide`; capacidad una. | +1 EV del stat entrenado al completar y guardar una sesion; se conserva en cancelacion/fallo/EV lleno. Seleccionarla abre entrenamiento. | 0 | Jornada completa con buen cuidado. |
+## Lista oficial
 
-Los nombres visibles son genericos para cualquier especie. El animo usa el nombre **Amuleto**; el ID de guardado sigue siendo `ring`. No se crean objetos con tema de una sola especie, como un anillo de fuego.
-El botiquin y la carne tambien pueden estar bloqueados por sus condiciones de
-uso. Los stats temporales se limitan a 100; los EV permanentes, a 252 por stat.
-Los objetos no cambian IV. El inventario se guarda en la partida.
+| ID estable | ES / EN | Familia | Stock / limite | Origen | Sprite |
+|---|---|---|---|---|---|
+| `meat` | CARNE / MEAT | Alimentacion | Ilimitado | Menu Alimentar, ilimitado | [PNG](../assets/ui/items/meat.png) |
+| `energy` | TONICO / TONIC | Recuperacion | 2 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/energy.png) |
+| `exp` | ESTRELLA / STAR | Esfuerzo (legacy) | 1 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/exp.png) |
+| `ring` | AMULETO / AMULET | Animo | 1 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/ring.png) |
+| `protein` | PROTEINA / PROTEIN | Alimentacion | Ilimitado | Menu Alimentar, ilimitado | [PNG](../assets/ui/items/protein.png) |
+| `medkit` | BOTIQUIN / MEDKIT | Recuperacion | 1 inicial; max. 99 | Kit inicial; sin reposicion repetible | [PNG](../assets/ui/items/medkit.png) |
+| `guide` | GUIA / GUIDE | Mejora de entrenamiento | 0 inicial; max. 1 | Jornada completa con buen cuidado (solo Make Sim por ahora) | [PNG](../assets/ui/items/guide.png) |
 
-## Como se obtienen hoy
+## Fichas estandarizadas
 
-Los consumibles de mochila se entregan al inicializar una partida nueva y se
-usan como valores predeterminados cuando faltan claves de inventario en el
-guardado. Usarlos descuenta una unidad. Carne y proteina son excepciones:
-Alimentar las ofrece ilimitadamente y no consulta ni descuenta sus claves de
-stock antiguas. **Hoy no hay una accion de compra, recoleccion, combate o
-exploracion que reponga esos seis consumibles de mochila.** Make Sim obtiene
-la Guia mediante Jornada; la placa aun no implementa esa recompensa.
+Las fichas cubren los 12 campos aprobados. Descripciones y nombres estan disponibles en ES/EN.
 
-## Recompensas de exploracion en Make Sim
+### CARNE / MEAT
 
-El brainstorm vivo esta en
-[Exploracion y recompensas](superpowers/specs/2026-10-11-exploration-design.md).
-Patio, Jornada, Noche y Guia estan implementados en el simulador el 2026-10-14.
-Flujo, cantidades, limites y guardado: [exploration.md](exploration.md).
-El port a placa sigue pendiente:
+Carne asada para saciar el hambre y ganar peso.
 
-| Camino | Familia de recompensa | Estado |
-|---|---|---|
-| Patio | Energía al reclamar, sin objeto y sin EV | Cerrado. Buen cuidado +25 ENE, mal cuidado +10, tope 100. |
-| Jornada | Guía, mejora de la próxima sesión | Cerrado. Id `guide`. +1 EV en el stat de esa sesión. Cabe una. El mal cuidado no la deja. El +2 EV de la ruta no es este objeto. |
-| Noche | Progreso de técnica | Cerrado como regla, no como objeto: +2 de dominio (tope 4/semana) o +1 al contador de Llama. No es un ítem de la bolsa. |
+Roasted meat that restores hunger and increases weight.
 
-Antes de implementar botin, cada objeto nuevo llena la ficha de
-[estándar de catálogo](superpowers/specs/2026-10-14-item-catalog-standard.md):
-ID estable, categoría, rareza, icono, ES/EN, stack máximo, efecto tipado,
-objetivo, magnitud, duración, límites de uso y origen. Esa ficha sale de
-las columnas de Digimon World y no copia sus nombres, precios ni cifras.
-Los seis objetos de esta tabla no se reescriben: la carne, el tónico, la
-estrella y la proteína siguen mezclando recuperación y EV porque ya están
-en el guardado. Una recuperación temporal nueva no se mezcla con EV
-permanente. No agregar materiales sin un uso real ni tratar la ficha como
-código ya disponible. El EV y el dominio de la noche están aprobados como
-diseño y funcionan en Make Sim; siguen pendientes en firmware.
+![CARNE](../assets/ui/items/meat.png)
 
-## Alimentacion y peso implementados
+| Campo | Definicion |
+|---|---|
+| ID | `meat` (indice de interfaz 0) |
+| Categoria | Alimentacion |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemMeat`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | CARNE / MEAT; descripciones arriba |
+| Stack maximo | Ilimitado en Alimentar; stock antiguo conservado sin uso |
+| Efecto tipado | `restore`; `weight` |
+| Objetivo | `h`, `weight` |
+| Magnitud | h +20 (tope 100); weight +1 (tope 99) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `one_overfeed_per_hunger_cycle` |
+| Origen | Menu Alimentar, ilimitado |
 
-El usuario confirmo que Alimentar contiene **solo carne y proteina, ambas
-ilimitadas**, con peso que impacta combate/evolucion. El comportamiento vive
-en `core.nutrition` y `vpet_core/Nutrition`; la placa y el simulador comparten
-la misma regla de alimentación. El plan de implementacion y su evidencia estan en
-[este plan](superpowers/plans/2026-10-14-feeding-weight-combat-evolution.md).
-Las comidas no otorgan EV ni descuentan los stocks legacy. El peso afecta OFF,
-DEF y SPD dentro de limites y el estado muestra el rango saludable por etapa.
-Filete, champinon y otros
-objetos se destinan a **mejorar stats desde la mochila**; sus stats objetivo,
-magnitudes, duracion y origen requieren su propia definicion de catalogo.
-Se descarta la propuesta previa de usarlos como comidas de hambre/peso en
-Alimentar, incluido su kit inicial. Todavia no existen como objetos del juego.
+### TONICO / TONIC
 
-La tabla refleja el comportamiento implementado para Alimentar. Filete,
-champinon y otros objetos de mejora siguen sin estar implementados y requieren
-definir stat, magnitud, limites y origen antes de incorporarse a la mochila.
-La recuperación de una escritura NVS incompleta usa la clave `foodTx` con
-valores finales absolutos; al reiniciar se completa sin volver a sumar el efecto.
+Tonico que recupera energia. Conserva el bono antiguo de EV de MP.
 
-## Iconografia
+Tonic that restores energy and retains its legacy MP EV bonus.
 
-La mochila y los seis consumibles usan sprites pixel-art propios, definidos en
-`scripts/item_icons.py` y rasterizados por `scripts/build.py`. El mismo BMP
-generado alimenta el simulador; `scripts/build_tdisplay.py` lo empaqueta como
-VPA para LittleFS y firmware. Los IDs visuales (`ItemMeat`, `ItemEnergy`, etc.)
-son presentacion, no IDs de guardado.
+![TONICO](../assets/ui/items/energy.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `energy` (indice de interfaz 1) |
+| Categoria | Recuperacion |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemEnergy`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | TONICO / TONIC; descripciones arriba |
+| Stack maximo | 99 |
+| Efecto tipado | `restore`; `ev` |
+| Objetivo | `e`, `mp` |
+| Magnitud | e +25 (tope 100); mp +2 (tope 252) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `backpack`, `home`, `energy_below_100` |
+| Origen | Kit inicial; sin reposicion repetible |
+
+Excepcion legacy: conserva su efecto mixto para no cambiar el balance guardado.
+
+### ESTRELLA / STAR
+
+Insignia de experiencia que aumenta esfuerzo y EV de mente.
+
+Experience badge that increases effort and mind EV.
+
+![ESTRELLA](../assets/ui/items/exp.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `exp` (indice de interfaz 2) |
+| Categoria | Esfuerzo (legacy) |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemExp`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | ESTRELLA / STAR; descripciones arriba |
+| Stack maximo | 99 |
+| Efecto tipado | `effort`; `ev` |
+| Objetivo | `effort`, `brn` |
+| Magnitud | effort +8 (tope 100); brn +2 (tope 252) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `backpack`, `home` |
+| Origen | Kit inicial; sin reposicion repetible |
+
+Excepcion legacy: conserva su efecto mixto para no cambiar el balance guardado.
+
+### AMULETO / AMULET
+
+Amuleto generico que mejora el animo; no aumenta fuerza ni evoluciona al pet.
+
+A generic charm that improves mood; it does not increase strength or evolve the pet.
+
+![AMULETO](../assets/ui/items/ring.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `ring` (indice de interfaz 3) |
+| Categoria | Animo |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemRing`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | AMULETO / AMULET; descripciones arriba |
+| Stack maximo | 99 |
+| Efecto tipado | `mood` |
+| Objetivo | `p` |
+| Magnitud | p +15 (tope 100) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `backpack`, `home` |
+| Origen | Kit inicial; sin reposicion repetible |
+
+### PROTEINA / PROTEIN
+
+Suplemento alimenticio que recupera energia y aumenta peso, sin EV.
+
+Food supplement that restores energy and increases weight, without EV.
+
+![PROTEINA](../assets/ui/items/protein.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `protein` (indice de interfaz 4) |
+| Categoria | Alimentacion |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemProtein`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | PROTEINA / PROTEIN; descripciones arriba |
+| Stack maximo | Ilimitado en Alimentar; stock antiguo conservado sin uso |
+| Efecto tipado | `restore`; `weight` |
+| Objetivo | `e`, `weight` |
+| Magnitud | e +20 (tope 100); weight +2 (tope 99) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `energy_at_most_80`, `once_per_hunger_cycle` |
+| Origen | Menu Alimentar, ilimitado |
+
+### BOTIQUIN / MEDKIT
+
+Primeros auxilios: elimina una lesion y recupera salud de cuidado.
+
+First aid: clears an injury and restores care health.
+
+![BOTIQUIN](../assets/ui/items/medkit.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `medkit` (indice de interfaz 5) |
+| Categoria | Recuperacion |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemMedkit`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | BOTIQUIN / MEDKIT; descripciones arriba |
+| Stack maximo | 99 |
+| Efecto tipado | `restore`; `heal_injury` |
+| Objetivo | `hp`, `injured` |
+| Magnitud | hp +20 (tope 100); injured +1 (tope 1) |
+| Duracion | Inmediata |
+| Limites | `hatched`, `alive`, `backpack`, `home`, `injured` |
+| Origen | Kit inicial; sin reposicion repetible |
+
+### GUIA / GUIDE
+
+Manual que da +1 EV en la proxima sesion de atributo completada y guardada.
+
+Manual that grants +1 EV in the next completed and saved attribute session.
+
+![GUIA](../assets/ui/items/guide.png)
+
+| Campo | Definicion |
+|---|---|
+| ID | `guide` (indice de interfaz 7) |
+| Categoria | Mejora de entrenamiento |
+| Rareza | Comun, sin tirada aleatoria |
+| Icono | `ItemGuide`, sprite RGBA 32x32; runtime 16/20 px |
+| ES/EN | GUIA / GUIDE; descripciones arriba |
+| Stack maximo | 1 |
+| Efecto tipado | `training_ev_bonus` |
+| Objetivo | `trained_stat` |
+| Magnitud | trained_stat +1 (tope 252) |
+| Duracion | Proxima sesion de atributo completada y guardada |
+| Limites | `hatched`, `alive`, `backpack`, `home`, `completed_attribute_training`, `keep_on_cancel_or_save_failure`, `keep_if_stat_full` |
+| Origen | Jornada completa con buen cuidado (solo Make Sim por ahora) |
+
+## Contratos de uso
+
+- Alimentar contiene solo carne y proteina ilimitadas. No descuenta sus stocks legacy 3/2.
+- Carne: +20 hambre y +1 peso; una sobrealimentacion por ciclo cuando ya esta lleno.
+- Proteina: +20 energia y +2 peso; ENE <=80, una vez por ciclo metabolico. No da EV ni DP.
+- Amuleto mejora animo, no fuerza. Conserva el ID `ring` y el recurso `ItemRing` por compatibilidad.
+- Los cuatro consumibles de mochila se gastan desde casa; la Guia abre entrenamiento y solo se consume al completar la sesion.
+- Guia: maximo una; conserva el objeto al cancelar, fallar el guardado o llenar el atributo con el entrenamiento base.
+- Los consumibles heredados respetan el limite de stock 99 de la placa. Volver=6 sigue siendo navegacion; Guia=7.
+- `hp` del botiquin es salud de cuidado (0..100), no el HP temporal de una pelea. `e` es la energia para entrenar.
+- Los EV se limitan a 252 por stat; ningun objeto cambia IV ni la especie.
+
+## Alcance de plataforma
+
+Los siete objetos tienen catalogo y sprite. Los seis legacy funcionan en sim/firmware; la Guia funciona en Make Sim.
+La metadata C++ se regenera desde la misma fuente. No habilita la Guia en NVS ni cambia enums guardados.
+El inventario muestra tres filas desplazables; no es una bolsa limitada a tres tipos.
+Para viajes, topes semanales, cuidado y guardado: [Exploracion](exploration.md).
+
+## Pipeline de arte y validacion
+
+El pixel-art editable vive en `scripts/item_icons.py`; los PNG transparentes exportados estan en `assets/ui/items/`.
+`scripts/build.py` genera BMP de pixel nitido y `scripts/build_tdisplay.py` los empaqueta en LittleFS/VPA.
+El Amuleto es un colgante de corazon; el Tonico un frasco con rayo; la Guia un libro con marcador.
+
+```sh
+.venv-platformio/bin/python scripts/export_item_catalog.py
+.venv-platformio/bin/python scripts/export_item_catalog.py --check
+make build-tdisplay
+```

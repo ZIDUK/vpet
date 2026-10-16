@@ -89,6 +89,11 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
     singles = []
     singles.extend((path, Path("backgrounds") / f"{path.stem}.vpa", False) for path in sorted((sim_build / "Background").glob("*.bmp")))
     singles.extend((path, Path("ui/icons") / f"{path.stem.lower()}.vpa", False) for path in sorted((sim_build / "UIIcons").glob("*.bmp")))
+    adopted_dir = Path(__file__).resolve().parents[1] / "assets/ui/items/adopted"
+    for source in sorted(adopted_dir.glob("*.png")):
+        with Image.open(source) as sprite:
+            image = sprite.convert("RGBA").resize((16, 16), Image.Resampling.NEAREST)
+            records.append(write_asset(data_dir / "ui/items" / (source.stem + ".vpa"), [image], image.size))
     singles.extend((path, Path("ui/evolution") / f"{path.stem.lower()}.vpa", True) for path in sorted((sim_build / "UIEvolution").glob("*.bmp")))
     for source, relative, transparent in singles:
         image = _rgba_image(source, transparent=transparent)

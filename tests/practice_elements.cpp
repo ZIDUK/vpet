@@ -19,4 +19,16 @@ int main() {
     }
     std::cout << elementalDamage(27, Element::Water, Element::Fire, false) << '\n';
     std::cout << elementalDamage(3, Element::Fire, Element::Plant, true) << '\n';
+    const Element elements[] = {Element::Fire, Element::Plant, Element::Water,
+        Element::Electric, Element::Wind, Element::Earth, Element::Light,
+        Element::Dark, Element::Neutral};
+    for (Element attack : elements) {
+        for (Element target : elements) {
+            for (int base : {1, 2, 3, 27, 99}) {
+                for (bool guarding : {false, true}) {
+                    std::cout << elementalDamage(base, attack, target, guarding) << '\n';
+                }
+            }
+        }
+    }
 }

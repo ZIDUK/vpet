@@ -60,8 +60,14 @@ def practice_assets(tmp_path):
         atlas.save(target)
     icons = tmp_path / "UIIcons"
     icons.mkdir()
-    for name in ("Pedia", "Battle", "Back", "Training"):
+    for name in ("Pedia", "Battle", "Back", "Training", "Backpack"):
         Image.new("RGB", (20, 20), (90, 140, 160)).save(icons / (name + ".bmp"))
+    from core.adopted_items import ITEMS
+    from scripts.adopted_item_icons import render
+    item_dir = tmp_path / 'UIItems'
+    item_dir.mkdir()
+    for item in ITEMS:
+        render(item).save(item_dir / (item['id'] + '.png'))
     return tmp_path
 
 
@@ -131,6 +137,8 @@ def test_arena_round_and_result_copy_matches_language(practice_assets, monkeypat
     result_image = renderer.render_practice(practice_assets, s, 1600)
     assert result_image.size == (240, 135)
     assert expected[3] in painted
+    assert not any(label.startswith(("ORDER ", "DID ", "WHY:", "PEDISTE ",
+                                     "HIZO ", "MOTIVO:")) for label in painted)
 
 
 @pytest.mark.parametrize("name", PATTERNS)
@@ -333,7 +341,7 @@ def test_simulator_dumbbell_route_and_held_action_do_not_repeat(practice_assets,
         events.extend(sim.pygame.event.Event(sim.pygame.KEYDOWN, key=key) for _ in range(repeats))
         events.append(sim.pygame.event.Event(sim.pygame.KEYUP, key=key))
 
-    for _ in range(3):
+    for _ in range(4):
         press(sim.pygame.K_n)
     press(sim.pygame.K_a, repeats=2)  # retreat must not reopen battle while held
     for _ in range(7):
@@ -1197,7 +1205,7 @@ def test_result_card_uses_matching_firemon_emotion(practice_assets, result, expe
     s.last_order = -1
     s.battle.actions = (0, 0)
     frame = render_practice(practice_assets, s, now_ms=1000)
-    assert frame.getpixel((186, 44)) == expected
+    assert frame.getpixel((186, 63)) == expected
 
 
 def test_action_selector_shows_fin_batalla_for_retirarse(practice_assets):

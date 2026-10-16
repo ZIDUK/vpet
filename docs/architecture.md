@@ -170,6 +170,16 @@ El simulador T-Display separa dos entradas para Firemon despierto:
   Retirarse o confirmar un resultado cierra la sesion y devuelve a Home con
   las espadas seleccionadas. Abrir el icono no ejecuta la primera ronda.
 
+El motor de Arena aplica nueve elementos compartidos por Python y C++:
+fuego/planta/agua, electrico/viento/tierra, luz/oscuridad y neutral.
+`elemental_damage` / `elementalDamage` multiplican por 3/2 (division entera)
+solo con ventaja de la tecnica sobre el receptor; los demas cruces usan 1.
+Guardia divide despues por 2, con minimo 1. Golpe es neutral, Llama fuego
+y Guardia no tiene elemento. Las tres etapas de Firemon y el rival de
+practica usan fuego. No se agregan atributos Vaccine/Data/Virus ni campos
+elementales persistidos en NVS. La paridad numerica no certifica la paridad
+visual de Panels ni el comportamiento fisico sin desplegar.
+
 `scripts/practice_icons.py` define iconos pixel-art compartidos por ambas vistas.
 Guardia y el ejercicio de defensa usan el atlas `block`; no se cambia el motor
 de combate. Las sesiones pausan el tick de crianza. NEXT selecciona, ACTION
@@ -263,6 +273,66 @@ El entorno de desarrollo conserva carga serial, logs y capacidad de recuperacion
 Secure Boot, Flash Encryption, bloqueo de interfaces y claves de produccion solo
 se habilitaran en dispositivos destinados a usuarios finales. Consulta
 [security.md](security.md).
+
+## Catalogo adoptado y compatibilidad
+
+`src/core/adopted_items.py` define los 40 consumibles adoptados el 2026-10-15.
+`scripts/export_adopted_items.py` genera JSON de desarrollo, fichas oficiales,
+sprites RGBA y `AdoptedItems.generated.h`. No se instala SQLite en ESP32.
+`build_tdisplay.py` empaqueta estos iconos a 16x16 en `ui/items/*.vpa`.
+`ConsumableEffects.h` y `PracticeBattle.use_item` ejecutan recuperacion
+porcentual y bonos temporales sin modificar reglas de dano ni EV.
+Mochila y Arena consumen el stock separado de objetos adoptados. El kit
+inicial se migra una vez; victorias de practica otorgan un objeto mediante
+rotacion determinista persistida. Manual y Guia no acumulan bonos.
+Sim persiste `adopted_items` v1 dentro del JSON atomico; ESP32 usa las claves
+aditivas `adoptBag`/`itemTx` con journal y recuperacion idempotente. La
+operacion distingue rechazo, aceptacion pendiente y commit confirmado.
+Solo un rechazo restaura efecto/stock; una confirmacion ambigua bloquea nuevas
+acciones y muestra guardado pendiente hasta sincronizar y recuperar el journal.
+El schema NVS principal permanece en 3. Registros incompatibles no se
+sobrescriben con una mascota nueva. No cambia ningun enum antiguo.
+Ver [adquisicion y limites](adopted-items.md). Validacion fisica pendiente.
+
+## Recuperacion de snapshots e intercambio
+
+El guardado general usa `saveTx`, snapshot interno v1 con campos conocidos,
+rangos y terminador obligatorio. Primero registra el estado absoluto; despues
+reproduce las claves legacy del schema 3. Omite escrituras de valores iguales.
+`swapLive` y `swapBack` preparan snapshots separados (cada uno menor de 3800
+bytes); `swapTx=1` acepta el intercambio de las dos mascotas. El marcador se
+limpia solo despues de recuperar ambos lados. La carga recupera estas
+operaciones antes de leer campos; registros incompatibles fallan cerrados.
+
+`StoreCommit` distingue Rejected/Pending/Committed. El adaptador conserva un
+handle si NVS acepta un valor pero falla `nvs_commit`; `sync()` debe confirmar
+ese handle antes de reproducir o iniciar otra operacion. No se interpreta un
+fallo de confirmacion como rechazo del journal. Tampoco se usan lecturas de
+cache como prueba de durabilidad. App conserva el modelo pendiente, bloquea
+entrada y tiempo de cuidado, y reintenta una vez por segundo sin repetir el
+efecto. Solo muestra exito cuando sync y recuperacion terminan.
+
+`injuredMs` es opcional y acotado a seis horas; saves antiguos parten de cero.
+Se guarda al cambiar el estado y cada minuto mientras hay herida. Un corte
+puede perder como maximo el progreso desde el ultimo checkpoint; no se cuenta
+tiempo apagado. Training/Arena mantienen la pausa de cuidado aprobada.
+`VPET_READY` se emite despues de recuperar almacenamiento e iniciar el BLE
+configurado. Las callbacks solo cambian estado atomico y usan nombre inmutable;
+el desmontaje espera a detener el host antes de liberar sus objetos.
+
+Ver [correcciones y pruebas](superpowers/plans/2026-10-15-board-audit-fixes.md).
+
+`src/core/item_catalog.py` mantiene los siete objetos legacy activos:
+IDs, nombres/descripciones ES/EN, familias, rareza, sprites, stock, efectos
+tipados, magnitudes, duracion, limites y origen. No admite evolucion.
+`scripts/export_item_catalog.py` genera `ItemCatalog.generated.h`, las fichas
+de `docs/items-and-rewards.md` y siete PNG RGBA en `assets/ui/items/`.
+La compilacion de assets comprueba que esas salidas esten actualizadas.
+Inventario y nutricion Python consumen los datos; C++ consume los nombres,
+iconos, cantidades y defaults generados. No se renumeran los seis IDs legacy,
+Volver=6 ni las claves NVS; Guia=7 conserva su disponibilidad solo en sim.
+El arte editable es pixel-art determinista en `scripts/item_icons.py` y se
+exporta sin fondo para uso independiente, con marco neutral en el runtime.
 
 ## Exploracion en Make Sim
 

@@ -1,4 +1,5 @@
 """Portable, deterministic expedition rewards; clocks are injected Unix seconds."""
+from core.item_catalog import effect_amount
 
 STATS = ("hp", "mp", "off", "def", "spd", "brn")
 DURATIONS = {"patio": 1800, "jornada": 28800, "noche": 28800}
@@ -135,11 +136,12 @@ class Exploration:
     def use_guide(self, pet, stat):
         if not self.guide or self.away or stat not in STATS or pet.ev_at(stat) >= 252:
             return 0
-        pet.gain_ev(stat, 1)
+        bonus = min(252 - pet.ev_at(stat), effect_amount("guide", "training_ev_bonus", "trained_stat"))
+        pet.gain_ev(stat, bonus)
         self.guide = False
         if self.guide_pending:
             self.guide, self.guide_pending = True, False
-        return 1
+        return bonus
 
 
 def departure_reward(pet, route, stat, now):

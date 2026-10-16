@@ -20,7 +20,8 @@ if str(SRC) not in sys.path:
 
 from core.options import OPTION_ICONS
 from display_profiles import get_display_profile
-from scripts.explore_icon import render_explore_icon, render_guide_icon
+from scripts.explore_icon import render_explore_icon
+from scripts.menu_icons import render_menu_icon
 from scripts.item_icons import ICON_NAMES as ITEM_ICONS, render_item_icon
 
 ENTRYPOINT = "from app import run\n\nrun()\n"
@@ -55,6 +56,12 @@ def copy_runtime_sources():
             "device_services.py",
             "dna.py",
             "inventory.py",
+            "item_catalog.py",
+            "adopted_items.py",
+            "exploration.py",
+            "nutrition.py",
+            "training.py",
+            "i18n.py",
             "menu.py",
             "motion.py",
             "options.py",
@@ -394,11 +401,11 @@ def collect_pet_images():
         ),
         (
             "Rookie", "happy", rookie_dir / "firemon-happy.png", 5, 25,
-            (0, 20, 204, 190), (64, 54), tuple(range(5, 20)), 64, 256,
+            (20, 20, 228, 228), (64, 64), tuple(range(5, 20)), 64, 256,
         ),
         (
             "Rookie", "sad", rookie_dir / "firemon-sad.png", 5, 25,
-            (0, 20, 204, 190), (64, 54), tuple(range(5, 20)), 64, 256,
+            (20, 20, 228, 228), (64, 64), tuple(range(5, 20)), 64, 256,
         ),
         (
             "Rookie",
@@ -522,18 +529,24 @@ def collect_pet_images():
 
 def collect_ui():
     source_dir = ASSETS / "ui" / "icons"
+    from core.adopted_items import ITEMS as adopted_items
+    from scripts.adopted_item_icons import render as render_adopted
+    item_dir = BUILD / 'UIItems'
+    item_dir.mkdir(parents=True, exist_ok=True)
+    for item in adopted_items:
+        render_adopted(item).save(item_dir / (item['id'] + '.png'))
 
     def resize_icon(image):
         size = ACTIVE_PROFILE.icon_size
         return image.convert("RGB").resize((size, size), Image.Resampling.LANCZOS)
 
     names = tuple(dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
-    names = tuple(dict.fromkeys((*names, *ITEM_ICONS, "ItemGuide")))
+    names = tuple(dict.fromkeys((*names, *ITEM_ICONS)))
     for name in names:
         target = BUILD / "UIIcons" / f"{name}.bmp"
-        if name in ("Explore", "ItemGuide"):
+        if name in ("Explore", "Back"):
             size = ACTIVE_PROFILE.icon_size
-            image = (render_explore_icon(size) if name == "Explore" else render_guide_icon(size)).convert("RGB").quantize(
+            image = (render_explore_icon(size) if name == "Explore" else render_menu_icon(name, size)).convert("RGB").quantize(
                 colors=256,
                 method=Image.Quantize.MEDIANCUT,
                 dither=Image.Dither.NONE,

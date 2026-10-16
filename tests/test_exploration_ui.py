@@ -51,6 +51,8 @@ def test_real_simulator_jornada_claim_guide_and_training(assets, tmp_path, monke
     from scripts.sim_services import SimulatorServices
 
     p = Pet(species="rookie", state="live")
+    # This input trace exercises the legacy Guide path, not the new starter bag.
+    p.adopted_inventory = {item_id: 0 for item_id in p.adopted_inventory}
     p.stats.update(h=100, e=100, p=100)
     services = SimulatorServices(tmp_path)
     travel = [0]

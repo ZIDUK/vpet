@@ -1,4 +1,5 @@
 """Portable nutrition and body-condition rules shared with vpet_core."""
+from core.item_catalog import effect_amount
 
 BODY_WEIGHT_REFERENCE = {
     "baby": 5,
@@ -68,19 +69,19 @@ def food_preview(pet, food_id, available=True, asleep=False, busy=False):
             result["reason"] = "overfeed_used"
         else:
             result.update(allowed=True, hunger_after=100,
-                          weight_after=min(99, int(pet.weight) + 1))
+                          weight_after=min(99, int(pet.weight) + effect_amount("meat", "weight", "weight")))
     elif food_id == "protein" and getattr(pet, "protein_fed_this_cycle", False):
         result["reason"] = "protein_cycle"
-    elif food_id == "protein" and pet.get("e") > 80:
+    elif food_id == "protein" and pet.get("e") > 100 - effect_amount("protein", "restore", "e"):
         result["reason"] = "full"
     else:
         result["allowed"] = True
         if food_id == "meat":
-            result["hunger_after"] = min(100, pet.get("h") + 20)
-            result["weight_after"] = min(99, int(pet.weight) + 1)
+            result["hunger_after"] = min(100, pet.get("h") + effect_amount("meat", "restore", "h"))
+            result["weight_after"] = min(99, int(pet.weight) + effect_amount("meat", "weight", "weight"))
         else:
-            result["energy_after"] = min(100, pet.get("e") + 20)
-            result["weight_after"] = min(99, int(pet.weight) + 2)
+            result["energy_after"] = min(100, pet.get("e") + effect_amount("protein", "restore", "e"))
+            result["weight_after"] = min(99, int(pet.weight) + effect_amount("protein", "weight", "weight"))
     return result
 
 
@@ -89,6 +90,7 @@ def apply_food(pet, food_id, available=True, asleep=False, busy=False):
     preview = food_preview(pet, food_id, available, asleep, busy)
     if not preview["allowed"]:
         return {"applied": False, "reason": preview["reason"], "changed_fields": {}}
+    weight_before = int(pet.weight)
     if food_id == "meat":
         gained = preview["hunger_after"] - pet.get("h")
         pet.stats["h"] = preview["hunger_after"]
@@ -100,7 +102,7 @@ def apply_food(pet, food_id, available=True, asleep=False, busy=False):
         if getattr(pet, "call_reason", None) == "hunger" and preview["hunger_after"] > 0:
             pet.call_reason = None
             pet.call_started_ms = 0
-        changed = {"hunger": gained, "weight": 1}
+        changed = {"hunger": gained, "weight": pet.weight - weight_before}
     else:
         energy_before = pet.get("e")
         pet.stats["e"] = preview["energy_after"]
@@ -110,7 +112,7 @@ def apply_food(pet, food_id, available=True, asleep=False, busy=False):
                 and preview["energy_after"] > 0):
             pet.call_reason = None
             pet.call_started_ms = 0
-        changed = {"energy": preview["energy_after"] - energy_before, "weight": 2}
+        changed = {"energy": preview["energy_after"] - energy_before, "weight": pet.weight - weight_before}
     return {"applied": True, "reason": "ok", "changed_fields": changed}
 
 

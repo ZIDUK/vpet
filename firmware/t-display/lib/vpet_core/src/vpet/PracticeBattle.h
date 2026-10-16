@@ -12,6 +12,8 @@ struct Fighter {
     int hp = 90, mp = 30, maxHp = 90, maxMp = 30;
     int mastery[3] = {0, 0, 0};
     int cooldown[3] = {0, 0, 0};
+    uint8_t itemBase[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t itemBoosts[6] = {0, 0, 0, 0, 0, 0};
     uint8_t equipped = 7;
     int personality = 1, bond = 50;
     Element element = Element::Neutral;
@@ -21,6 +23,7 @@ struct Fighter {
         hp = maxHp = 40 + stats[0] * 2;
         mp = maxMp = 10 + stats[1];
         for (int i = 0; i < 3; ++i) cooldown[i] = 0;
+        for (int i = 0; i < 6; ++i) itemBase[i] = itemBoosts[i] = 0;
     }
     bool valid(int action) const {
         return action >= 0 && action < 3 && (equipped & (1 << action)) &&

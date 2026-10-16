@@ -26,7 +26,7 @@ def test_battle_entry_starts_at_round_zero_without_spending_or_saving():
     s = PracticeSession(pet, lambda _: pytest.fail("Opening battle must not save"))
     assert s.page == "battle"
     assert s.battle.round == 0
-    assert s.choices() == ["AUTO", "GOLPE", "GUARDIA", "RETIRARSE"]
+    assert s.choices() == ["AUTO", "GOLPE", "GUARDIA", "MOCHILA", "RETIRARSE"]
     assert s.battle.player.hp == s.battle.player.max_hp
     assert s.battle.player.mp == s.battle.player.max_mp
     assert pet.to_dict() == before
@@ -96,9 +96,33 @@ def test_cpp_elemental_battle_matches_python_and_guard_order(tmp_path):
         compiler, "-std=c++11", "-I", str(ROOT / "firmware/t-display/lib/vpet_core/src"),
         str(ROOT / "tests/practice_elements.cpp"), "-o", str(executable),
     ], check=True)
-    assert subprocess.check_output([str(executable)], text=True).splitlines() == [
+    lines = subprocess.check_output([str(executable)], text=True).splitlines()
+    assert lines[:5] == [
         "1,27", "1,40", "1,27", "40", "2",
     ]
+    elements = ("fire", "plant", "water", "electric", "wind", "earth",
+                "light", "dark", "neutral")
+    expected = []
+    for attack in elements:
+        for target in elements:
+            for base in (1, 2, 3, 27, 99):
+                for guarding in (False, True):
+                    damage = base * 3 // 2 if BEATS.get(attack) == target else base
+                    if guarding:
+                        damage = max(1, damage // 2)
+                    assert elemental_damage(base, attack, target, guarding) == damage
+                    expected.append(str(damage))
+    assert lines[5:] == expected
+
+
+@pytest.mark.parametrize("species", ["rookie", "champion", "ultimate"])
+def test_firemon_evolutions_enter_arena_as_fire(species):
+    pet = Pet(species=species, state="live")
+    session = PracticeSession(pet, lambda _: True)
+    assert session.battle.player.element == "fire"
+    assert session.battle.rival.element == "fire"
+    from core.techniques import TECHNIQUES
+    assert [tech["element"] for tech in TECHNIQUES] == ["neutral", "fire", None]
 
 
 def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause():

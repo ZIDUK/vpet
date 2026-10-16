@@ -95,6 +95,18 @@ const char* practiceReasonLabel(const char* reason, bool spanish) {
 Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
     : output_(display), display_(canvas), assets_(assets) {}
 
+void Panels::drawStorageError(const char* language) {
+    const bool spanish = languageIsSpanish(language);
+    display_.fillSprite(TFT_BLACK);
+    display_.setTextDatum(TL_DATUM);
+    display_.setTextColor(TFT_YELLOW, TFT_BLACK);
+    drawLabel(spanish ? "GUARDADO PENDIENTE" : "SAVE PENDING", 16, 42, 208, 2);
+    display_.setTextColor(TFT_WHITE, TFT_BLACK);
+    drawLabel(spanish ? "REINTENTANDO..." : "RETRYING...", 16, 70, 208, 2);
+    display_.pushSprite(0, 0);
+    invalidate();
+}
+
 void Panels::invalidate() {
     lastPanel_ = PanelId::Home;
     lastSpanish_ = true;
@@ -425,15 +437,6 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
 }
 
 void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) {
-    const char* icons[] = {
-        "/ui/icons/itemmeat.vpa",
-        "/ui/icons/itemenergy.vpa",
-        "/ui/icons/itemexp.vpa",
-        "/ui/icons/itemring.vpa",
-        "/ui/icons/itemprotein.vpa",
-        "/ui/icons/itemmedkit.vpa",
-        "/ui/icons/back.vpa",
-    };
     const uint8_t current = pet.clampVisibleInventoryIndex(selected);
     const uint8_t visible = pet.visibleInventoryCount();
     uint8_t pos = 0;
@@ -441,11 +444,26 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
         if (pet.inventoryIndexAt(pos) == current) break;
     }
     const uint8_t start = inventoryWindowStart(visible, pos);
-    assets_.drawFrame(display_, icons[current], 0, 40, 70, false, -1, 72);
+    assets_.drawFrame(display_, copy::itemIcon(current), 0, 40, 70, false, -1, 72);
     display_.setTextColor(kInk, kPanel);
     display_.setTextDatum(MC_DATUM);
-    drawLabel(copy::itemName(current, spanish), 50, 104, 88, 2);
-    drawLabel(copy::itemBlurb(current, spanish), 50, 118, 88, 1);
+    if (current>=8) {
+        String name(copy::itemName(current,spanish));
+        int split=name.length();
+        while (split>1 && display_.textWidth(name.substring(0,split),1)>88) --split;
+        if (split<static_cast<int>(name.length())) {
+            const int space=name.substring(0,split+1).lastIndexOf(' ');
+            if (space>0) split=space;
+        }
+        String second=name.substring(split);
+        second.trim();
+        drawLabel(name.substring(0,split).c_str(),50,102,88,1);
+        drawLabel(second.c_str(),50,112,88,1);
+        drawLabel(copy::itemBlurb(current,spanish),50,124,88,1);
+    } else {
+        drawLabel(copy::itemName(current, spanish), 50, 104, 88, 2);
+        drawLabel(copy::itemBlurb(current, spanish), 50, 118, 88, 1);
+    }
     display_.setTextDatum(TL_DATUM);
     const int16_t x = kStatusSplitX + 4;
     const int16_t width = 232 - kStatusSplitX;
@@ -457,10 +475,15 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
         const uint16_t fill = active ? TFT_YELLOW : kChip;
         display_.fillRoundRect(x, y, width, kStatusCardH, 4, fill);
         display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
-        assets_.drawFrame(display_, icons[index], 0, x + 2, y + 2, false, -1, 72);
+        assets_.drawFrame(display_, copy::itemIcon(index), 0, x + 2, y + 2, false, -1, 72);
         display_.setTextColor(kInk, fill);
-        if (index < 6) {
-            char line[20];
+        if (index >= 8) {
+            char stock[8];
+            snprintf(stock,sizeof(stock),"x%u",pet.itemCount(index));
+            drawLabel(copy::itemName(index,spanish),x+24,y+5,width-52,1);
+            drawLabel(stock,x+width-25,y+5,23,1);
+        } else if (index < 6) {
+            char line[80];
             snprintf(line, sizeof(line), "%s x%u", copy::itemName(index, spanish), pet.itemCount(index));
             drawLabel(line, x + 24, y + 5, width - 28, 2);
         } else {
@@ -470,13 +493,12 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
 }
 
 void Panels::drawFeeding(uint8_t selected, bool spanish, const PetState& pet) {
-    const char* meat = spanish ? "CARNE" : "MEAT";
-    const char* protein = spanish ? "PROTEINA" : "PROTEIN";
+    const char* meat = copy::itemName(0, spanish);
+    const char* protein = copy::itemName(4, spanish);
     const char* back = spanish ? "VOLVER" : "BACK";
     const char* foodIcons[] = {"/ui/icons/itemmeat.vpa", "/ui/icons/itemprotein.vpa"};
     const char* names[] = {meat, protein};
-    const char* effects[] = {spanish ? "+20 HAM  +1 PESO" : "+20 HUN  +1 WT",
-                             spanish ? "+20 ENE  +2 PESO" : "+20 ENE  +2 WT"};
+    const char* effects[] = {copy::itemBlurb(0, spanish), copy::itemBlurb(4, spanish)};
     for (uint8_t index = 0; index < 2; ++index) {
         const int16_t x = 7 + index * 115;
         const bool active = selected == index;
@@ -488,7 +510,7 @@ void Panels::drawFeeding(uint8_t selected, bool spanish, const PetState& pet) {
         drawLabel(names[index], x + 31, 65, 73, 2);
         drawLabel(effects[index], x + 31, 87, 73, 1);
         const bool proteinResting = index == 1 &&
-                                    (pet.proteinFedThisCycle() || pet.energy() > 80);
+                                    (pet.proteinFedThisCycle() || pet.energy() > 100 - items::kProteinEnergy);
         display_.setTextColor(proteinResting ? TFT_DARKGREY : TFT_GREEN, fill);
         drawLabel(proteinResting
                       ? (spanish ? "EN DESCANSO" : "RESTING")
@@ -903,6 +925,39 @@ void Panels::draw(
 }
 
 void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_t nowMs, const char* language) {
+    if (s.page == PracticeSession::Page::Bag) {
+        const bool es=languageIsSpanish(language);
+        display_.fillSprite(TFT_BLACK);
+        display_.setTextDatum(TL_DATUM);
+        display_.setTextColor(TFT_WHITE,TFT_BLACK);
+        display_.drawString(es ? "MOCHILA" : "BAG",6,3,2);
+        char pools[48];
+        snprintf(pools,sizeof(pools),"HP %d/%d  MP %d/%d",s.battle.player.hp,
+            s.battle.player.maxHp,s.battle.player.mp,s.battle.player.maxMp);
+        display_.drawString(pools,6,22,1);
+        const int start=inventoryWindowStart(s.bagCount(pet),s.cursor);
+        const int rows=s.bagCount(pet)<3 ? s.bagCount(pet) : 3;
+        for (int row=0;row<rows;++row) {
+            const int slot=start+row, item=s.bagItemAt(pet,slot), y=36+row*29;
+            const uint16_t fill=slot==s.cursor ? TFT_YELLOW : TFT_DARKGREY;
+            display_.fillRect(4,y,232,27,fill);
+            assets_.drawFrame(display_,item<0 ? "/ui/icons/back.vpa" : copy::itemIcon(8+item),
+                0,6,y+2,false,-1,72);
+            display_.setTextColor(slot==s.cursor ? TFT_BLACK : TFT_WHITE,fill);
+            char line[80];
+            if (item<0) snprintf(line,sizeof(line),"%s",copy::back(es));
+            else snprintf(line,sizeof(line),"%s",copy::itemName(8+item,es));
+            drawLabel(line,32,y+2,164,1);
+            if (item>=0) {
+                char stock[8];
+                snprintf(stock,sizeof(stock),"x%u",pet.adoptedStock.count(item));
+                drawLabel(stock,205,y+2,27,1);
+            }
+            if (item>=0) drawLabel(copy::itemBlurb(8+item,es),32,y+15,198,1);
+        }
+        display_.pushSprite(0,0);
+        return;
+    }
     if (s.page == PracticeSession::Page::Tech || s.page == PracticeSession::Page::Detail) {
         struct Canvas {
             TFT_eSprite& pixels;
@@ -953,25 +1008,47 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         if (s.battle.result) {
             const uint16_t resultColor = s.battle.result == 1 ? TFT_GREEN :
                 s.battle.result == 2 ? TFT_RED : TFT_YELLOW;
-            display_.fillRect(0, 33, 240, 59, ink);
-            display_.fillRect(14, 37, 212, 54, TFT_DARKGREY);
-            display_.drawRect(14, 37, 212, 54, resultColor);
-            assets_.drawFrame(display_, battleSpritePath(pet.species(), -1),
-                              (nowMs / 100) % 19, 22, 38);
+            display_.fillRect(0, 33, 240, 82, ink);
+            display_.fillRect(10, 36, 220, 75, TFT_DARKGREY);
+            display_.drawRect(10, 36, 220, 75, resultColor);
+            const bool emotion = pet.species() == SpeciesId::Rookie && s.battle.result != 3;
+            const char* reaction = emotion ? (s.battle.result == 1 ?
+                "/animations/rookie/firemon_happy.vpa" : "/animations/rookie/firemon_sad.vpa") :
+                battleSpritePath(pet.species(), -1);
+            assets_.drawFrameScaled(display_, reaction, nowMs / 100, 174, 57, 48, 48);
             display_.setTextColor(resultColor, TFT_DARKGREY);
             const bool es = languageIsSpanish(language);
             display_.drawString(s.battle.result == 1 ? (es ? "VICTORIA" : "VICTORY") :
-                                s.battle.result == 2 ? (es ? "DERROTA" : "DEFEAT") : (es ? "EMPATE" : "DRAW"), 96, 48, 2);
+                                s.battle.result == 2 ? (es ? "DERROTA" : "DEFEAT") : (es ? "EMPATE" : "DRAW"), 16, 40, 2);
             display_.setTextColor(TFT_WHITE, TFT_DARKGREY);
             display_.drawString(s.battle.result == 1 ? (es ? "RIVAL DERROTADO" : "RIVAL DEFEATED") :
                                 s.battle.result == 2 ? (es ? "TE DERROTARON" : "YOU WERE DEFEATED") :
-                                (es ? "LIMITE 30 RONDAS" : "30 ROUND LIMIT"), 96, 68, 1);
+                                (es ? "LIMITE 30 RONDAS" : "30 ROUND LIMIT"), 16, 56, 1);
             char rounds[20];
             snprintf(rounds, sizeof(rounds), es ? "RONDAS %d" : "ROUNDS %d", s.battle.round);
             display_.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
-            display_.drawString(rounds, 96, 78, 1);
+            display_.drawString(rounds, 16, 70, 1);
+            if (*s.message) {
+                display_.setTextColor(TFT_YELLOW, TFT_DARKGREY);
+                drawLabel(s.message,16,94,150,1);
+            } else if (s.rewardItem>=0) {
+                String reward("+1 ");
+                reward+=copy::itemName(8+s.rewardItem,es);
+                int split=reward.length();
+                while (split>1 && display_.textWidth(reward.substring(0,split),1)>150) --split;
+                if (split<static_cast<int>(reward.length())) {
+                    const int space=reward.substring(0,split+1).lastIndexOf(' ');
+                    if (space>0) split=space;
+                }
+                String second=reward.substring(split);
+                second.trim();
+                display_.setTextColor(TFT_GREEN,TFT_DARKGREY);
+                drawLabel(reward.substring(0,split).c_str(),16,84,150,1);
+                drawLabel(second.c_str(),16,95,150,1);
+            }
         }
         const bool es = languageIsSpanish(language);
+        if (!s.battle.result) {
         display_.fillRect(0, 92, 240, 23, ink);
         display_.setTextColor(TFT_WHITE, ink);
         char actionLine[48];
@@ -979,8 +1056,7 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             snprintf(actionLine, sizeof(actionLine), "%s", es ? "ESPERANDO ORDEN" : "AWAITING ORDER");
         } else {
             const int playerAction = s.battle.actions[0];
-            const int requested = s.cursor == 0 || s.cursor == s.count(pet) - 1
-                ? -1 : s.equippedAt(pet, s.cursor - 1);
+            const int requested = s.lastOrder;
             snprintf(actionLine, sizeof(actionLine), "%s %s > %s %s  R%d",
                      es ? "PEDISTE" : "ORDER", practiceTechniqueLabel(requested, es),
                      es ? "HIZO" : "DID", practiceTechniqueLabel(playerAction, es), s.battle.round);
@@ -1000,24 +1076,31 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
                      es ? "RIVAL" : "RIVAL", dealt, es ? "PET" : "PET", received);
         }
         display_.drawString(*s.message ? s.message : detailLine, 4, 104, 1);
+        }
         display_.fillRect(0, 116, 240, 19, ink);
         display_.setTextColor(accent, ink);
-        display_.fillRect(3 + s.cursor * 26, 115, 22, 19, TFT_DARKGREY);
-        display_.drawRect(3 + s.cursor * 26, 115, 22, 19, accent);
-        if (!s.battle.result && s.cursor > 0 && s.cursor < s.count(pet) - 1 &&
+        for (int i=0;i<s.count(pet);++i) {
+            const int x=2+i*20;
+            if (i==s.cursor) display_.fillRect(x,116,18,19,TFT_DARKGREY);
+            assets_.drawFrameScaled(display_,s.actionIcon(pet,i),0,x,116,18,18);
+            if (i==s.cursor) display_.drawRect(x,116,18,19,accent);
+        }
+        if (!s.battle.result && s.cursor > 0 && s.cursor < s.count(pet) - 2 &&
             s.equippedAt(pet, s.cursor - 1) == 2) {
-            display_.drawString(es ? "GUARDIA -50% +4MP" : "GUARD -50% +4MP", 111, 121, 1);
+            drawLabel(es ? "GUARDIA -50% +4MP" : "GUARD -50% +4MP", 128, 121, 108, 1);
         } else {
             const char* label = s.label(pet, s.cursor);
             if (!es) {
                 if (strcmp(label, "RETIRARSE") == 0) label = "RETREAT";
+                else if (strcmp(label,"MOCHILA")==0) label="BAG";
+                else if (strcmp(label,"REINTENTAR")==0) label="RETRY";
                 else if (strcmp(label, "VOLVER") == 0) label = "BACK";
                 else if (strcmp(label, "GUARDIA") == 0) label = "GUARD";
                 else if (strcmp(label, "GOLPE") == 0) label = "PUNCH";
                 else if (strcmp(label, "LLAMA") == 0) label = "FLAME";
                 else if (strcmp(label, "AUTO") == 0) label = "AUTO";
             }
-            display_.drawString(label, 111, 121, 1);
+            drawLabel(label, 128, 121, 108, 1);
         }
     } else {
         char title[36];

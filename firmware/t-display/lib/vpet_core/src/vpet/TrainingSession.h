@@ -131,6 +131,14 @@ inline TrainingPlan trainingPlanOneRep(const PetState& pet, CombatStat stat) {
     return plan;
 }
 
+inline uint8_t trainingPreviewEv(const PetState& pet, CombatStat stat, uint8_t baseEv) {
+    const int headroom=kTrainingEvMax-pet.evAt(stat);
+    const int gain=baseEv<headroom ? baseEv : headroom;
+    const bool bonus=gain>0 && gain<headroom &&
+        pet.adoptedStock.count(adopted::indexOf("training_manual"));
+    return gain+(bonus ? 1 : 0);
+}
+
 // Project the combat_stat value (or HP/MP pool) after adding `evDelta` EV
 // to `stat`, without mutating the pet. The formula mirrors
 // PetState::combatStat exactly:
@@ -397,6 +405,7 @@ public:
     // apply. Called by the App when settingsStore_.save returns false.
     void rollbackFromSnapshot(PetState& pet) {
         if (!needsRollback) return;
+        pet.adoptedStock = rollbackStock;
         for (uint8_t i = 0; i < 6; ++i) {
             pet.setEvAt(static_cast<CombatStat>(i), rollback.ev[i]);
         }
@@ -415,6 +424,7 @@ public:
 
     // Capture a snapshot of the mutable fields into `rollback`.
     void captureSnapshot(const PetState& pet) {
+        rollbackStock = pet.adoptedStock;
         for (uint8_t i = 0; i < 6; ++i) {
             rollback.ev[i] = pet.evAt(static_cast<CombatStat>(i));
         }
@@ -450,6 +460,7 @@ public:
     }
 
 private:
+    AdoptedInventory rollbackStock;
     bool inputSelect(PetState& pet, InputEvent event) {
         if (event == InputEvent::Back) {
             return false;  // exit session
@@ -525,6 +536,12 @@ private:
                 return true;
             }
             needsRollback = true;
+            const int manual=adopted::indexOf("training_manual");
+            if (pet.adoptedStock.count(manual) && pet.evAt(chosenStat)<kTrainingEvMax) {
+                pet.addEv(chosenStat,1);
+                ++lastSummary.evAdded;
+                pet.adoptedStock.set(manual,0);
+            }
             dirty = true;
             message = "ENTRENO LISTO";
             state = State::Result;

@@ -107,6 +107,7 @@ from core.inventory import (
     inventory_window,
     visible_inventory_indexes,
 )
+from core.item_catalog import ITEM_BY_ID, effect_amount
 from core.status_card import (
     HELIX_HEIGHT,
     HELIX_RUNGS,
@@ -210,6 +211,11 @@ def _draw_call_corner(frame, build_dir, pet, now_ms):
 
 
 def _paste_ui_icon(frame, build_dir, name, x, y, size=20):
+    if name.startswith('Adopted:'):
+        icon = _load_image(build_dir / 'UIItems' / (name.split(':', 1)[1] + '.png')).convert('RGBA')
+        icon = icon.resize((size, size), Image.Resampling.NEAREST)
+        frame.paste(icon, (x, y), icon)
+        return
     icon = _load_image(device_path(build_dir, f"/UIIcons/{name}.bmp")).convert("RGB")
     if icon.size != (size, size):
         icon = icon.resize((size, size), Image.Resampling.NEAREST)
@@ -497,7 +503,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     spanish = getattr(pet, "language", "EN") == "ES"
     title = {
         "feeding": "ALIMENTAR" if spanish else "FEED",
-        "inventory": "INVENTORY",
+        "inventory": "MOCHILA" if spanish else "INVENTORY",
         "evolution": "EVOLUTION",
         "evolution_detail": "EVOLUTION",
         "options": "OPTIONS",
@@ -510,9 +516,26 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         current = clamp_visible_inventory_index(pet, panel_index)
         chip = _mix(ink, panel, 0.88)
         outline = _mix(ink, panel, 0.45)
-        _paste_ui_icon(frame, build_dir, inventory_icon(current), 30, 62, 40)
-        draw.text((50, 108), inventory_name(current, spanish), fill=ink, font=_status_font(12), anchor="mm")
-        draw.text((50, 122), inventory_blurb(current, spanish), fill=_mix(ink, panel, 0.28), font=_status_font(10), anchor="mm")
+        from scripts.exploration_renderer import fitted_text
+        if current >= 8:
+            _paste_ui_icon(frame, build_dir, inventory_icon(current), 30, 55, 40)
+            name = inventory_name(current, spanish)
+            words, lines, line = name.split(), [], ''
+            for word in words:
+                candidate = (line + ' ' + word).strip()
+                if _status_font(10).getlength(candidate) > 88 and line:
+                    lines.append(line)
+                    line = word
+                else:
+                    line = candidate
+            lines.append(line)
+            for i, line in enumerate(lines[:2]):
+                fitted_text(draw, (6, 99 + i * 11, 94, 110 + i * 11), line, _status_font(10), ink)
+            fitted_text(draw, (6, 123, 94, 134), inventory_blurb(current, spanish), _status_font(10), ink)
+        else:
+            _paste_ui_icon(frame, build_dir, inventory_icon(current), 30, 62, 40)
+            draw.text((50, 108), inventory_name(current, spanish), fill=ink, font=_status_font(12), anchor="mm")
+            draw.text((50, 122), inventory_blurb(current, spanish), fill=_mix(ink, panel, 0.28), font=_status_font(10), anchor="mm")
         x = STATUS_SPLIT_X + 4
         width = 232 - STATUS_SPLIT_X
         for slot, index in enumerate(inventory_window(visible, current)):
@@ -531,16 +554,25 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             elif index < len(INVENTORY_ITEMS):
                 _, key, _, _ = INVENTORY_ITEMS[index]
                 label = "%s x%d" % (inventory_name(index, spanish), pet.inventory.get(key, 0))
+            elif index >= 8:
+                from core.adopted_items import menu_item, short_name
+                adopted = menu_item(index)
+                count = 'x%d' % pet.adopted_inventory.get(adopted['id'], 0)
+                fitted_text(draw, (x + 24, y + 3, x + width - 26, y + 20),
+                            short_name(adopted, spanish), _status_font(10), ink)
+                fitted_text(draw, (x + width - 25, y + 3, x + width - 3, y + 20),
+                            count, _status_font(10), ink, right=True)
+                continue
             else:
                 label = inventory_name(index, spanish)
             draw.text((x + 24, y + 6), label, fill=ink, font=_status_font(12))
     elif panel_mode == "feeding":
         selected = int(panel_index or 0) % 3
-        options = (
-            ("ItemMeat", "CARNE" if spanish else "MEAT", "+20 HAM  +1 PESO" if spanish else "+20 HUN  +1 WT"),
-            ("ItemProtein", "PROTEINA" if spanish else "PROTEIN", "+20 ENE  +2 PESO" if spanish else "+20 ENE  +2 WT"),
-        )
-        for index, (icon, name, effect) in enumerate(options):
+        language = "ES" if spanish else "EN"
+        for index, item_id in enumerate(("meat", "protein")):
+            item = ITEM_BY_ID[item_id]
+            icon = item["icon"]
+            name, effect = item["names"][language], item["blurbs"][language]
             x = 7 + index * 115
             active = selected == index
             fill = yellow if active else _mix(ink, panel, 0.88)
@@ -553,7 +585,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             note = "EN DESCANSO" if spanish else "RESTING"
             unlimited = "ILIMITADO" if spanish else "UNLIMITED"
             if index == 1 and (getattr(pet, "protein_fed_this_cycle", False)
-                               or pet.get("e") > 80):
+                               or pet.get("e") > 100 - effect_amount("protein", "restore", "e")):
                 draw.text((x + 34, 96), note, fill=(113, 122, 126), font=_status_font(7))
             else:
                 draw.text((x + 34, 96), unlimited, fill=green, font=_status_font(7))
