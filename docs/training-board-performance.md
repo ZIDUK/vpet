@@ -38,3 +38,4 @@ FPS ni declarar resuelto el reporte antes de medirlo en placa.
 Validacion local final: 1078 pruebas Python aprobadas (7762 avisos), 191.20 s;
 firmware compilado con RAM estatica 56028/327680 y flash 1007657/4194304 bytes.
 La RAM estatica crecio 5840 bytes. No se flasheo esta optimizacion en esta entrega.
+Entrega publicada en origin/master: `bdcf027` (2026-10-16).

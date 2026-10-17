@@ -16,6 +16,9 @@ esta optimizacion y medir latencia/heap reales. Ver
 [rendimiento de Training](training-board-performance.md).
 Validacion local de la cache: 1078 pruebas Python aprobadas; compilacion
 T-Display correcta, RAM estatica 56028/327680, flash 1007657/4194304 bytes.
+Codigo, sprites, pruebas y roadmap publicados en origin/master: `bdcf027`.
+La optimizacion de E/S sigue sin desplegarse; el flash anterior contiene
+los sprites nuevos pero no esta cache.
 
 Los numeros de exploracion siguientes son su corte previo, no los de la
 ultima carga de sprites.

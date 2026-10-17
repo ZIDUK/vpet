@@ -78,9 +78,10 @@ enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
 - [x] Actualizar roadmap y estado; separar implementacion, flash y aceptacion.
 - [x] Conservar roadmap previo como historia, no backlog vivo.
-- [ ] Commit y push actuales: codigo, tests, PNG fuente, docs y build Pico
+- [x] Commit y push actuales: codigo, tests, PNG fuente, docs y build Pico
   regenerado. Excluir backups, partidas, logs locales y secretos.
-- [ ] Confirmar hash publicado y estado de origin/master.
+- [x] Entrega `bdcf027` publicada en origin/master el 2026-10-16. El cierre
+  documental posterior no cambia el firmware validado ni lo flashea.
 
 ## P2: ampliaciones separadas
 
