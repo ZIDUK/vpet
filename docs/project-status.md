@@ -2,6 +2,24 @@
 
 ## Estado vigente: 2026-10-16
 
+Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
+Flamemon y Dragfiremon tienen Guardia, dano y emociones propias desplegadas.
+La entrega de sprites paso 1077 pruebas Python; firmware/LittleFS coinciden
+por digest con placa. Heap libre 72504, minimo 72436; filesystem
+9404416/12451840; manifest 1. El ultimo arranque registro PAIRED/CONNECTED y
+VPET_READY, no una prueba completa de reconexion movil.
+
+El usuario reporta Training lento en placa: NO esta aceptado como fluido.
+La nueva cache de diez iconos estaticos y lecturas agrupadas del retrato
+reducen E/S en host, pero son posteriores al flash de sprites. Falta cargar
+esta optimizacion y medir latencia/heap reales. Ver
+[rendimiento de Training](training-board-performance.md).
+Validacion local de la cache: 1078 pruebas Python aprobadas; compilacion
+T-Display correcta, RAM estatica 56028/327680, flash 1007657/4194304 bytes.
+
+Los numeros de exploracion siguientes son su corte previo, no los de la
+ultima carga de sprites.
+
 Exploracion portada y cargada a T-Display: nueve iconos, Patio/Jornada/Noche,
 tablas ES/EN, retorno anticipado, cobro unico, recibo y Guia en entrenamiento.
 El registro expState v1 usa snapshots atomicos v2 compatibles con v1, sin
@@ -11,8 +29,9 @@ el calendario exige ajustar Fecha/Hora antes de enviar o reclamar un viaje.
 Evidencia final: 1067 pruebas Python, 172 nativas, 162 vectores numericos
 sim/C++, 127 casos de UI y regresiones de App/persistencia. Firmware y LittleFS
 verificados por digest en placa; heap libre 72644, minimo 72568, manifest 1.
-La aceptacion visual fisica y del viaje en uso real continua abierta. BLE
-conecto pero el ultimo arranque registro PAIR_FAILED; no se certifica pairing.
+La aceptacion visual fisica y del viaje en uso real continua abierta. Ese
+arranque registro PAIR_FAILED; el arranque de sprites citado arriba lo
+supera, sin cerrar la validacion prolongada de conectividad.
 Contrato: [Exploracion](exploration.md). Evidencia y hashes:
 [port de placa](superpowers/plans/2026-10-16-exploration-board.md).
 

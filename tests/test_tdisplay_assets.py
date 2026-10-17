@@ -52,7 +52,13 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
     assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
-    assert len(manifest["animations"]) == 33
+    assert len(manifest["animations"]) == 43
+    assert {item["action"] for item in manifest["animations"] if item["species"] == "ultimate"} >= {
+        "block", "hurt", "happy", "sad",
+    }
+    assert {item["action"] for item in manifest["animations"] if item["species"] == "champion"} >= {
+        "block", "hurt", "hit_react", "dodge", "happy", "sad",
+    }
     assert {item["action"] for item in manifest["animations"] if item["species"] == "rookie"} >= {
         "hit",
         "hurt",

@@ -45,15 +45,15 @@ const char* battleSpritePath(SpeciesId species, int action) {
         case SpeciesId::Champion:
             return action == 0 ? "/animations/champion/flamemon_punch.vpa" :
                 action == 1 ? "/animations/champion/flamemon_cast.vpa" :
-                action == 2 ? "/animations/champion/flamemon_cast.vpa" :
+                action == 2 ? "/animations/champion/flamemon_block.vpa" :
                 action == 3 ? "/animations/champion/flamemon_punch.vpa" :
-                action == 4 ? "/animations/champion/flamemon_punch.vpa" : "/animations/champion/flamemon_idle.vpa";
+                action == 4 ? "/animations/champion/flamemon_hurt.vpa" : "/animations/champion/flamemon_idle.vpa";
         case SpeciesId::Ultimate:
             return action == 0 ? "/animations/ultimate/dragfiremon_punch.vpa" :
                 action == 1 ? "/animations/ultimate/dragfiremon_cast.vpa" :
-                action == 2 ? "/animations/ultimate/dragfiremon_cast.vpa" :
+                action == 2 ? "/animations/ultimate/dragfiremon_block.vpa" :
                 action == 3 ? "/animations/ultimate/dragfiremon_punch.vpa" :
-                action == 4 ? "/animations/ultimate/dragfiremon_punch.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
+                action == 4 ? "/animations/ultimate/dragfiremon_hurt.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
     }
     return "/animations/rookie/firemon_idle.vpa";
 }
@@ -1021,10 +1021,15 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             display_.fillRect(0, 33, 240, 82, ink);
             display_.fillRect(10, 36, 220, 75, TFT_DARKGREY);
             display_.drawRect(10, 36, 220, 75, resultColor);
-            const bool emotion = pet.species() == SpeciesId::Rookie && s.battle.result != 3;
-            const char* reaction = emotion ? (s.battle.result == 1 ?
-                "/animations/rookie/firemon_happy.vpa" : "/animations/rookie/firemon_sad.vpa") :
-                battleSpritePath(pet.species(), -1);
+            const char* reaction = battleSpritePath(pet.species(), -1);
+            if (s.battle.result != 3) {
+                if (pet.species() == SpeciesId::Rookie)
+                    reaction = s.battle.result == 1 ? "/animations/rookie/firemon_happy.vpa" : "/animations/rookie/firemon_sad.vpa";
+                else if (pet.species() == SpeciesId::Champion)
+                    reaction = s.battle.result == 1 ? "/animations/champion/flamemon_happy.vpa" : "/animations/champion/flamemon_sad.vpa";
+                else if (pet.species() == SpeciesId::Ultimate)
+                    reaction = s.battle.result == 1 ? "/animations/ultimate/dragfiremon_happy.vpa" : "/animations/ultimate/dragfiremon_sad.vpa";
+            }
             assets_.drawFrameScaled(display_, reaction, nowMs / 100, 174, 57, 48, 48);
             display_.setTextColor(resultColor, TFT_DARKGREY);
             const bool es = languageIsSpanish(language);

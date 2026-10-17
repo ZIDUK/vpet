@@ -42,6 +42,16 @@ public:
     );
 
 private:
+    struct CachedIcon {
+        char path[32]{};
+        uint16_t colors[16 * 16]{};
+        uint8_t opaque[16 * 16 / 8]{};
+        uint8_t width = 0, height = 0;
+        uint32_t age = 0;
+    };
+    // Training draws ten static icons per frame. Keep their decoded pixels
+    // separate from animated palettes so the 68px portrait cannot evict them.
+    CachedIcon iconCache_[10]{};
     struct CachedPalette {
         char path[64]{};
         uint16_t width = 0;

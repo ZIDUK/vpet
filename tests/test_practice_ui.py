@@ -43,6 +43,12 @@ def practice_assets(tmp_path):
         (PET_HURT_IMAGE_PATH, (160, 60, 200)),     # magenta hurt
         (_species_atlas("rookie", "happy"), (20, 220, 60)),
         (_species_atlas("rookie", "sad"), (220, 30, 30)),
+        (_species_atlas("champion", "happy"), (20, 220, 60)),
+        (_species_atlas("champion", "sad"), (220, 30, 30)),
+        (_species_atlas("champion", "idle"), (210, 210, 210)),
+        ("/digimon1/Ultimate/dragfiremon_happy_atlas.bmp", (20, 220, 60)),
+        ("/digimon1/Ultimate/dragfiremon_sad_atlas.bmp", (220, 30, 30)),
+        (_species_atlas("ultimate", "idle"), (210, 210, 210)),
     )
     for path, colour in atlas_specs:
         atlas = Image.new("P", (64, 32))
@@ -1198,8 +1204,10 @@ def test_action_selector_shows_recupera_in_green(practice_assets):
     ("VICTORIA", (20, 220, 60)),
     ("DERROTA", (220, 30, 30)),
 ])
-def test_result_card_uses_matching_firemon_emotion(practice_assets, result, expected):
+@pytest.mark.parametrize("species", ["rookie", "champion", "ultimate"])
+def test_result_card_uses_matching_species_emotion(practice_assets, result, expected, species):
     s = session()
+    s.pet.species = species
     s.battle.result = result
     s.battle.round = 4
     s.last_order = -1

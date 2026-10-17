@@ -1,239 +1,113 @@
-# Plan de cierre y siguientes entregas
+# Roadmap vigente de vPet
 
-Actualizado: 2026-10-11. Este es el indice vigente; los planes del 5 y 7 de
-octubre conservan el historial, no una lista actualizada de entregas pendientes.
-Alcance de esta revision: documentacion. No se cambia codigo ni se flashea.
+Actualizado: 2026-10-16. Prioridad: cerrar calidad y aceptacion de T-Display
+antes de ampliar el juego. El [roadmap anterior](2026-10-11-delivery-roadmap-history-through-2026-10-16.md)
+se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 
-## Entregado con evidencia
+## Estado real de entrega
 
-- [x] Catalogo adoptado de 40 consumibles sin evolucion/mapas/pesca/venta:
-  JSON de desarrollo, header C++, fichas, sprites y funciones de efecto.
-- [x] Conectar objetos adoptados a stock persistente, Mochila y selector de
-  objetos de Arena en ambos runtimes; implementar adquisicion sin duplicados.
-- [x] Conectar Manual a la transaccion de entrenamiento sin acumular Guia.
-- [ ] Validar consumibles y journal fisicamente en placa tras autorizacion.
+| Bloque | Implementacion | Placa / aceptacion |
+| --- | --- | --- |
+| Status de cuatro paginas ES/EN | Sim y firmware | Desplegado; usuario confirmo las cuatro paginas. Regresiones de botones pendientes |
+| Alimentar y peso | Dos alimentos ilimitados, metabolismo, peso, combate y evolucion | Desplegado; balance actual del sim cerrado por el usuario. Persistencia fisica pendiente |
+| Training y Tecnicas | Sesion de 10 s, coste/recompensa unica, cancelacion y guardado | Desplegado; usuario reporta lentitud real. NO aceptado como fluido |
+| Arena | Ataques automaticos, Guardia, impactos de 1200 ms y resultados | Desplegado; falta comparacion visual completa de Panels.cpp |
+| Elementos | Nueve elementos, ventaja x3/2 antes de Guardia, minimo 1; sin Vaccine/Data/Virus | Python/C++ implementados; evidencia numerica no cierra la visual |
+| Mochila | 40 consumibles, sprites, efectos, stock, adquisicion y journal | Desplegado; falta consumo y cortes de energia observados en placa |
+| Exploracion | Patio/Jornada/Noche, vuelta anticipada, recibo, Guia, topes y snapshots | Portado y desplegado; falta prueba fisica de viajes/reinicios |
+| Sprites evolucionados | Flamemon y Dragfiremon: block/hurt/happy/sad propios | Desplegados por USB; falta aceptacion visual fisica |
 
-- [x] Status, entrenamiento temporizado y Tecnicas integrados en sim/firmware.
-- [x] Sesion de atributo: START, 10 segundos, aplicacion/guardado unico,
-  cancelacion sin cobro y reintento transaccional.
-- [x] Regreso por inactividad implementado y BACK prioritario en la entrada.
-- [x] Firmware y recursos cargados: `Deploy OK`, heap libre 109620 bytes,
-  minimo 55836, filesystem 5722112/12451840, manifest 1.
-- [x] Ultima suite completa: 511 pruebas Python. Comparacion ampliada posterior:
-  466 frames Training/Tecnicas ES/EN. Compilacion T-Display correcta.
+Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
+[exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
+[Dragfiremon/despliegue](../../dragfiremon-assets.md).
 
-Estas cifras corresponden a ejecuciones anteriores de esta conversacion;
-no se volvieron a ejecutar durante la actualizacion documental.
+## P0: Training fluido en placa
 
-## P0: cerrar aceptacion de la placa
+- [x] Registrar reporte de lentitud real. No confundir animacion del sim con hardware.
+- [x] Revisar ruta: refresco nominal de 33 ms, pero AssetStore reabre iconos
+  estaticos por frame y ocho paletas no cubren toda la pantalla de Training.
+- [x] Cache acotada de diez iconos Training hasta 16x16; menos de 6 KiB
+  estaticos adicionales, sin segunda pantalla ni cambios en NVS.
+- [x] Agrupar lecturas segun ancho real: bitmap 68x68 pasa de nueve a tres
+  bloques, mas la lectura del offset y paleta cuando corresponda.
+- [x] Regresion sobre AssetStore.cpp real: veinte refrescos calientes sin
+  E/S adicional de iconos; pixeles, transparencia, fondos, modos especiales,
+  clipping, eviction e invalidacion comprobados.
+- [ ] Desplegar esta optimizacion con autorizacion. El flash de sprites
+  anterior NO incluia la cache.
+- [ ] Medir duracion de dibujo, respuesta NEXT y heap libre/minimo en las
+  seis opciones y Tecnicas, ES/EN, tres especies de combate y BLE activo.
+- [ ] Aceptacion del usuario: movimiento natural, un cambio por pulsacion,
+  sin saltos residuales. No declarar FPS reales a partir del host.
 
-- [ ] Probar 20 pulsaciones cortas de NEXT en Status: un cambio por pulsacion.
-- [ ] Mantener NEXT durante 2 segundos: volver a Home, sin quedar recorriendo
-  paginas; comprobar que soltar el boton no produce una accion residual.
-- [ ] Revisar las cuatro paginas en ES/EN: datos legibles, DNA completo,
-  animaciones de pet/helice y ausencia de restos del frame anterior.
-- [ ] Probar inactividad: reiniciar cuenta con cada boton; volver a Home tras
-  10 segundos en menus/resultados. No interrumpir entrenamiento ni combate.
-- [ ] Completar, cancelar y repetir entrenamiento; comprobar coste y recompensa
-  una sola vez y persistencia tras reiniciar. Verificar tecnicas equipadas tras
-  reinicio sin perder el resto de la partida.
-- [ ] Guardar fotos/video, identificacion de build y log serial de estas pruebas.
-  Si hay fallos, reproducir y crear regresion antes de dar el bloque por cerrado.
+Contrato: [rendimiento de Training](../../training-board-performance.md).
+Reducir E/S no demuestra por si solo la fluidez deseada en hardware.
 
-Responsable de correcciones/verificacion: Codex. La inspeccion fisica requiere
-observacion real o evidencia del usuario; el arranque serial no basta.
+## P0: funcionalidad y persistencia fisica
 
-## P1: paridad del combate
+- [ ] NEXT: veinte pulsaciones cortas y pulsacion larga de 2 s; comprobar
+  respuesta, salida a Home y ausencia de accion al soltar.
+- [ ] Inactividad de 10 s: reinicia con botones; nunca interrumpe sesiones activas.
+- [ ] Training: completar/cancelar/repetir; coste y EV una sola vez,
+  tecnica equipada y partida conservadas tras reinicio.
+- [ ] Alimentar: exactamente Carne/Proteina ilimitadas; hambre/energia/peso
+  coherentes, sin descontar Mochila. No reabrir balance sin nueva instruccion.
+- [ ] Mochila/Arena: consumo, efecto, adquisicion, limites y guardado unico.
+- [ ] Explorar: tres rutas, retorno anticipado, cobro unico, recibo, Guia
+  consumida una sola vez y topes semanales tras reinicio.
+- [ ] Cortes controlados: journal, snapshots, swap/park y Pending sin
+  duplicaciones/perdidas. Guardar fotos/video, build y logs.
 
-Auditoria de firmware del 2026-10-15:
-[informe y reproducciones](../reviews/2026-10-15-board-audit.md).
-Los P1 de intercambio de respaldo/snapshots parciales y el P2 del borrado vacio
-tienen correcciones con pruebas de host. La confirmacion ambigua de commit
-usa estado Pending y barrera sync. Falta validacion fisica de cortes de energia.
-La optimizacion de placa exige mediciones reales de latencia, heap y BLE;
-compilar y pasar pruebas de host no la demuestra.
+Sin RTC respaldado: perder calendario exige ajustar Fecha/Hora antes de
+enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
-- [ ] Comparar `scripts/practice_renderer.py` con la rama Arena de
-  `firmware/t-display/src/Panels.cpp` para los estados esperando, ronda,
-  victoria, derrota y empate, con la misma partida y reloj.
-- [ ] Llevar feedback de orden/accion/motivo y dano bidireccional al firmware;
-  verificarlo visualmente con la misma partida y reloj. La ventana de impacto
-  ya es 1200 ms en sim y placa; la orden historica se conserva al mover cursor.
-- [ ] Incluir Guardia y frames hit/hurt derivados del resultado real; no
-  insinuar esquiva sin que exista una regla de evasion.
-- [ ] Ampliar harness nativo y comparaciones de imagen de Arena en ES/EN,
-  sin alterar formulas, progreso ni enums persistidos.
-- [ ] Compilar, desplegar con autorizacion y repetir combate con BLE activo;
-  medir heap minimo, estabilidad y restauracion NVS.
+## P1: paridad visual y estabilidad
 
-Salida: paridad demostrada de Arena, no solo del motor numerico.
+- [ ] Harness de imagen de Arena REAL de Panels.cpp, ES/EN, misma partida
+  y reloj: esperando, ronda, victoria, derrota y empate.
+- [ ] Comparar orden/accion/motivo y dano bidireccional sin superposiciones;
+  Guardia/hit/hurt salen del resultado. No inventar evasion.
+- [x] Multiplicador elemental portable y pruebas agua/fuego/planta.
+- [x] Happy/sad propios de Rookie/Champion/Ultimate conectados en ambos lados.
+  Flamemon usa punch para hit por aprobacion; Dragfiremon conserva punch como fallback.
+- [ ] Sesiones prolongadas Training/Arena con BLE: latencia, heap y estabilidad.
+- [ ] Telefono: ADVERTISING -> CONNECTED -> desconexion -> ADVERTISING.
+  Pairing en un arranque aislado no certifica el ciclo sostenido.
 
-Revision 2026-10-15: sigue pendiente el harness de imagen para Arena de
-`Panels.cpp` en ES/EN. El harness actual compara Training/Tecnicas, no Arena.
-Las reacciones de resultado (happy/sad frente a idle en firmware) tampoco
-son equivalentes; no marcar P1 cerrado por las pruebas numericas.
+## P1: versionado y documentacion
 
-## Despues de P1: elemento de la tecnica
+- [x] Actualizar roadmap y estado; separar implementacion, flash y aceptacion.
+- [x] Conservar roadmap previo como historia, no backlog vivo.
+- [ ] Commit y push actuales: codigo, tests, PNG fuente, docs y build Pico
+  regenerado. Excluir backups, partidas, logs locales y secretos.
+- [ ] Confirmar hash publicado y estado de origin/master.
 
-Estado: regla cerrada el 2026-10-14 en
-[estándar de técnicas](../specs/2026-10-14-technique-standard.md).
-Implementada en ambos motores; revisada el 2026-10-15. La evidencia numerica
-no cierra por si sola la paridad visual ni la validacion fisica de P1.
+## P2: ampliaciones separadas
 
-- [x] Implementar el elemento de Cyber Sleuth en el mismo cambio para el
-  simulador y para el firmware. Misma cuenta en Python y en C++:
-  si el elemento de la tecnica le gana al de quien recibe, dano por 3/2;
-  si no, el multiplicador queda en 1. Guardia parte despues, minimo 1.
-- [x] Firemon es `fire`. Golpe es `neutral`. Guardia no tiene elemento.
-  Llama es `fire`.
-- [x] Probar los dos lados con la misma partida: agua contra Firemon suma
-  la mitad, Llama contra planta suma la mitad, Llama contra agua no
-  resta, neutral no dispara el elemento.
-- [x] No implementar Vaccine, Data ni Virus en este bloque.
+- [ ] Especie planta y tecnica: alcance, nombre, potencia, assets y balance
+  independientes. Las pruebas elementales actuales usan combatientes de prueba.
+- [ ] Arte opcional: dodge de Dragfiremon y emociones Sparkmon; no necesita
+  combate mientras esa etapa no pueda pelear.
+- [ ] Verificar que MiniMax carga las skills instaladas por el usuario y
+  entrega un asset importable probado. No marcar instalacion como ausente
+  sin inspeccion; no delegar Training sin autorizacion.
+- [ ] Futuro botin por ruta: ficha, limites/capacidad, probabilidades y
+  reclamacion atomica antes de ampliar recompensas.
+- [ ] App movil, vpetpack y [negocio del mall](2026-10-13-mall-business-plan.md)
+  despues del cierre de placa.
 
-Evidencia: `tests/test_practice.py` y `tests/practice_elements.cpp` comparan
-810 combinaciones de elemento atacante/receptor, dano base y Guardia entre
-Python y C++; incluyen 27 -> 40 con ventaja, 27 -> 27 sin ventaja y
-3 -> 4 -> 2 con Guardia. Las sesiones asignan fuego a las tres etapas de
-Firemon y al rival Firemon. No se agregan tecnicas de agua ni una especie
-planta: los cruces se ejercitan con combatientes de prueba.
+Catalogo activo: 40 consumibles adoptados, no siete entradas legacy ni 128
+referencias de Digimon World. Excluye evolucion, llaves/misiones, pesca,
+mapas inexistentes y venta sin economia. No habilitar WiFi ni cambiar enums NVS.
 
-Salida: placa y simulador aplican el mismo multiplicador. Un solo lado
-no cuenta como hecho.
+## Evidencia y comandos
 
-## P1: skills y pipeline reproducible para MiniMax
-
-Estado: propuestas, NO creadas ni instaladas.
-
-- [ ] Inspeccionar como MiniMax descubre skills y que herramientas de imagen
-  tiene disponibles; no asumir que lee las skills globales de Codex.
-- [ ] Crear `vpet-ui-assets`: consultar assets existentes, contrato 240x135,
-  variantes ES/EN, estados/extremos, empaquetado y comparacion Python/C++.
-- [ ] Crear `vpet-pixel-art`: paleta, transparencia, dimensiones/atlas, pivotes
-  estables, fotogramas, nombres y conversion automatica; separar arte de
-  referencia de un sprite efectivamente importable.
-- [ ] Ubicarlas en una ruta versionable que MiniMax realmente cargue y
-  documentar dependencias. Probar con un asset pequeno de extremo a extremo.
-- [ ] Mantener decisiones visuales junto a los renderers/tests bajo Codex;
-  no delegar Training a MiniMax, conforme a la instruccion del usuario.
-
-Salida: skills leidas por MiniMax y una entrega de ejemplo validada, no solo
-archivos SKILL.md presentes. No se ha autorizado una delegacion nueva.
-
-## Alimentacion y peso: implementacion integrada; validacion parcial
-
-Actualizacion: 2026-10-14. Python pasa 555 pruebas, incluida navegacion real
-automatizada del simulador para Status, Alimentar, Mochila y persistencia de
-items; tambien se verificaron previews de Training/Battle. El core C++ de
-nutricion y persistencia pasa chequeo sintactico. El runner PlatformIO no inicia
-por permisos de `~/.platformio`, y la placa aun no se valida con el build final.
-Plan y pendientes en
-[alimentacion, peso, combate y evolucion](2026-10-14-feeding-weight-combat-evolution.md).
-
-- [ ] Cerrar aceptacion de balance: comida ilimitada sin EV, ciclo metabolico,
-  peso saludable por etapa y modificadores acotados de combate.
-- [x] Implementar reglas Python/C++, migracion compatible y consumo recuperable.
-- [x] Integrar Alimentar con exactamente carne/proteina ilimitadas, mochila,
-  stats efectivos y requisito de evolucion. Alimentar no descuenta inventario.
-- [ ] Definir en trabajo separado filete/champinon como mejoras de stats de
-  mochila: objetivo, magnitud, duracion, topes y origen. No entran en Alimentar.
-- [x] Verificar rutas de simulador, persistencia en mochila, paridad y
-  animaciones renderizadas; la aceptacion fisica sigue pendiente.
-
-El plan contiene tareas, archivos, contratos y criterios de terminado. Las
-cifras son propuestas para medir, no un balance ya validado. Los efectos de
-los objetos actuales siguen documentados como implementados hasta completar
-la migracion; esta entrada no cambia el estado de P0/P1.
-
-## P2: exploracion y recompensas
-
-Actualizacion 2026-10-16: port a firmware autorizado e implementado. Incluye
-barra de nueve iconos, motor portable, tablas ES/EN, Guia, recibo unico y
-snapshot NVS v2 compatible con v1. Ver [plan del port](2026-10-16-exploration-board.md)
-y [contrato de placa](../../exploration.md). Sin RTC respaldado, perder el
-calendario requiere ajuste manual; no se certifica progreso sin alimentacion.
-El texto inferior conserva el corte del simulador. La aceptacion fisica visual
-continua separada de build, pruebas de host y verificacion serial.
-
-Estado: ciclo completo implementado en Make Sim (2026-10-14), por autorizacion
-del usuario. La placa sigue pendiente. El contrato de guardado JSON, el flujo
-y las decisiones de balance estan en [Exploracion en Make Sim](../../exploration.md).
-La suite completa de esta entrega pasa 634 pruebas Python, incluido el flujo
-de teclas pygame Jornada -> reclamar -> Guia -> entrenamiento con +7 EV.
-Los requerimientos vivos están en
-[exploración](../specs/2026-10-11-exploration-design.md).
-El inventario actual, sus efectos y su adquisicion estan en
-[catalogo de objetos](../../items-and-rewards.md); el botin de exploracion
-sigue pendiente en firmware; Patio/Jornada/Noche y Guia ya funcionan en sim.
-Ya quedó el icono nuevo, la salida larga, el jugador de semana corta
-con combate el sábado, el piso **C**, el coste **A**, el retorno
-**B**, la etapa mínima, los relojes, el puesto del icono y las
-cantidades: Jornada +2 EV (tope 8/semana), Noche +2 de dominio
-(tope 4/semana) o el aprendizaje de Llama. El 2026-10-14 quedaron el
-Patio (+25 o +10 ENE, sin objeto), la Guía de la Jornada (+1 EV en la
-próxima sesión, una sola) y la especie siguiente de elemento planta.
-Siguen abiertos el formato en bytes del guardado, el nombre y el poder
-de la técnica de planta, y filete/champiñón. El formato NVS se implementara
-al portar a placa; el simulador usa guardado JSON atomico y versionado.
-
-- [x] Implementar en sim entrada del menu superior, destinos, duracion, coste, requisitos,
-  retorno anticipado, actividad offline y comportamiento ante reinicio.
-- [x] Presentar rutas de energia, EV y tecnica, con confirmacion, tiempo restante,
-  retorno anticipado, preview de recompensa y recibo guardado, en ES/EN.
-- [ ] Para el botin futuro, llenar la ficha ya documentada en
-  [estándar de catálogo](../specs/2026-10-14-item-catalog-standard.md):
-  ID estable, categoria, rareza, icono, ES/EN, stack maximo, efecto tipado,
-  objetivo, magnitud, duracion, limites y origen. El esquema está escrito;
-  falta el objeto concreto de cada ruta.
-- [ ] Proponer familias: alimento, recuperacion, material, manual de tecnica y
-  cosmetico. Distinguir recuperacion temporal de EV permanente; no cambiar IV
-  ni regalar stats ilimitados. Identificar usos reales antes de crear materiales.
-- [ ] Definir inventario lleno, recompensa duplicada, caps, probabilidades,
-  tablas por destino y guardado atomico de salida/regreso/reclamacion unica.
-- [ ] Aprobar alcance y balance; despues escribir plan implementable del motor
-  portable, persistencia compatible y pruebas deterministas Python/C++.
-
-Entregado en sim: topes semanales, reclamacion unica, migracion de partidas,
-fallo/reintento atomico y Guia consumida con el entrenamiento completado.
-La mochila actual no tiene capacidad general: se conserva el limite de una
-Guia sin inventar una bolsa de tres tipos (tres es la ventana visible).
-
-Pendientes reales de la fase: motor C++, reloj de placa, formato/transacciones
-NVS y pruebas de paridad y hardware. Filete, champinon, disco de pelea, especie
-planta y su tecnica siguen en trabajo separado. Exploracion no cierra P0/P1.
-
-## P2: entrega versionada
-
-Actualizacion de catalogo (2026-10-14): siete objetos oficiales con los doce
-campos, descripciones ES/EN y sprites PNG. La fuente `core.item_catalog`
-genera documentacion y metadata C++; el Amuleto conserva `ring`/`ItemRing`.
-Los objetos de evolucion estan excluidos. Filete, champinon y discos no se
-agregan al inventario activo hasta cerrar sus propias reglas.
-
-Validacion del catalogo: 642 pruebas Python, 161 casos nativos C++, compilacion
-T-Display correcta, verificacion de artefactos generados y 14 pantallas ES/EN
-inspeccionadas. El ultimo ajuste de etiquetas paso 68 regresiones enfocadas.
-No se flasheo la placa en esta entrega.
-
-- [ ] Revisar el diff y archivos nuevos, separando trabajo previo del usuario.
-- [ ] Seleccionar codigo, tests, assets fuente y documentos necesarios; no
-  incluir backups de placa, partidas ni secretos. Nunca borrar board-backups.
-- [ ] Preparar commits coherentes y publicar cuando se acuerde la entrega.
-  HEAD comprobado: `de63fd0`; cambios actuales aun sin commit.
-
-## Backlog previo a revalidar
-
-- Intro y tiempo de eclosion: confirmar divergencias historicas antes de corregir.
-- Paridad de descanso/guardado y resto de menus fuera de Training/Tecnicas.
-- Ciclo BLE telefono: ADVERTISING -> CONNECTED -> ADVERTISING con evidencia.
-- Nuevas especies/evoluciones, paquetes `.vpetpack`, catalogo y app movil.
-  El camino de negocio posterior a la placa (casa en el telefono, recibo,
-  modulo 3D y sabado patrocinado) esta en
-  [plan del negocio](2026-10-13-mall-business-plan.md). No adelanta P0 ni P1.
-- Provisionamiento WiFi/HTTPS y seguridad de produccion requieren alcance y
-  autorizacion separados. No habilitar WiFi como parte de estos pendientes.
-
-## Comandos de validacion al cambiar codigo
+Entrega de sprites: 1077 pruebas Python, firmware/LittleFS verificados en placa.
+Heap libre 72504, minimo 72436; filesystem 9404416/12451840; manifest 1.
+Arranque final con PAIRED/CONNECTED y VPET_READY, no prueba visual ni sostenida.
+La nueva cache es posterior a ese despliegue y requiere su propia carga/medicion.
+Validacion local posterior: 1078 pruebas Python aprobadas; firmware con RAM
+56028/327680 y flash 1007657/4194304 bytes. Cache aun sin flashear.
 
 ```sh
 .venv-platformio/bin/python -m pytest -q
@@ -243,6 +117,5 @@ make build-tdisplay
 git diff --check
 ```
 
-Usar pruebas nativas cuando cambie el core C++; regenerar assets, nunca editar
-build-tdisplay o LittleFS manualmente. El despliegue es una etapa separada de
-la aceptacion fisica y no convierte estos checks en prueba visual de la placa.
+Core nativo cuando cambie dominio. USB requiere autorizacion y verificacion
+separadas; su exito no cierra aceptacion visual.

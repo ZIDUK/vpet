@@ -42,6 +42,35 @@ def _prepare_project(tmp_path, monkeypatch):
     return project
 
 
+def test_evolved_imports_preserve_every_selected_frame_inside_their_viewports(tmp_path, monkeypatch):
+    original = build_script._build_firemon_atlas
+    checked = set()
+
+    def validate(source, rows, expected_frames, viewport, output_size, frame_indices=None,
+                 tile_size=64, **kwargs):
+        if source.stem in {
+            "flamemon_cast", "flamemon_punch", "flamemon_block", "flamemon_hurt",
+            "flamemon_hit_react", "flamemon_dodge", "flamemon_happy", "flamemon_sad",
+            "dragfiremon_block", "dragfiremon_hurt", "dragfiremon_happy", "dragfiremon_sad",
+        }:
+            with Image.open(source) as sheet:
+                assert sheet.size == (1280, 1280)
+                mask = sheet.point([0] + [255] * 255, mode="L")
+                for index in frame_indices:
+                    x, y = index % 5 * 256, index // 5 * 256
+                    bounds = mask.crop((x, y, x + 256, y + 256)).getbbox()
+                    assert bounds is not None
+                    assert viewport[0] <= bounds[0] and viewport[1] <= bounds[1]
+                    assert viewport[2] >= bounds[2] and viewport[3] >= bounds[3]
+            checked.add(source.stem)
+        return original(source, rows, expected_frames, viewport, output_size,
+                        frame_indices, tile_size, **kwargs)
+
+    monkeypatch.setattr(build_script, "_build_firemon_atlas", validate)
+    build_script.main(profile_name="tdisplay", output_dir=tmp_path / "sim")
+    assert len(checked) == 12
+
+
 def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
     project = _prepare_project(tmp_path, monkeypatch)
 
@@ -122,6 +151,12 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "digimon1/Champion/flamemon_punch_atlas.bmp",
         "digimon1/Champion/flamemon_sleep_atlas.bmp",
         "digimon1/Champion/flamemon_cast_atlas.bmp",
+        "digimon1/Champion/flamemon_block_atlas.bmp",
+        "digimon1/Champion/flamemon_hurt_atlas.bmp",
+        "digimon1/Champion/flamemon_hit_react_atlas.bmp",
+        "digimon1/Champion/flamemon_dodge_atlas.bmp",
+        "digimon1/Champion/flamemon_happy_atlas.bmp",
+        "digimon1/Champion/flamemon_sad_atlas.bmp",
         "digimon1/Champion/flamemon_evolution_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_idle_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_fly_atlas.bmp",
@@ -129,6 +164,10 @@ def test_build_produces_complete_modular_runtime(tmp_path, monkeypatch):
         "digimon1/Ultimate/dragfiremon_punch_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_sleep_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_cast_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_block_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_hurt_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_happy_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_sad_atlas.bmp",
         "settings.toml",
         ".vpet-manifest.json",
     }

@@ -6,6 +6,9 @@
 namespace vpet {
 
 AssetStatus AssetStore::begin() {
+    for (auto& entry : iconCache_) entry.path[0] = '\0';
+    for (auto& entry : paletteCache_) entry.path[0] = '\0';
+    cacheAge_ = 0;
     AssetStatus status;
     status.mounted = LittleFS.begin(false, "/littlefs", 10, "littlefs");
     if (!status.mounted) {
@@ -48,6 +51,30 @@ bool AssetStore::drawFrame(
     int32_t tint,
     uint8_t minLuma
 ) {
+    const bool plainIcon = !flipHorizontal && tint < 0 && minLuma == 0 &&
+        strncmp(path, "/training/", 10) == 0 && strlen(path) < sizeof(iconCache_[0].path);
+    if (plainIcon) {
+        for (auto& entry : iconCache_) {
+            if (!entry.path[0] || strcmp(entry.path, path) != 0) continue;
+            entry.age = ++cacheAge_;
+            for (uint16_t row = 0; row < entry.height; ++row) {
+                uint16_t col = 0;
+                while (col < entry.width) {
+                    auto visible = [&](uint16_t column) {
+                        const uint16_t index = row * entry.width + column;
+                        return (entry.opaque[index / 8] & (1u << (index % 8))) != 0;
+                    };
+                    while (col < entry.width && !visible(col)) ++col;
+                    const uint16_t start = col;
+                    while (col < entry.width && visible(col)) ++col;
+                    if (col > start)
+                        canvas.pushImage(x + start, y + row, col - start, 1,
+                                         entry.colors + row * entry.width + start);
+                }
+            }
+            return true;
+        }
+    }
     File file = LittleFS.open(path, "r");
     if (!file) {
         return false;
@@ -118,8 +145,21 @@ bool AssetStore::drawFrame(
         return false;
     }
 
+    CachedIcon* icon = nullptr;
+    if (plainIcon && frameCount == 1 && width <= 16 && height <= 16) {
+        icon = &iconCache_[0];
+        for (auto& entry : iconCache_) {
+            if (!entry.path[0]) { icon = &entry; break; }
+            if (entry.age < icon->age) icon = &entry;
+        }
+        icon->path[0] = '\0';
+        icon->width = width;
+        icon->height = height;
+        memset(icon->opaque, 0, sizeof(icon->opaque));
+    }
+
     uint16_t colors[240];
-    constexpr uint16_t rowsPerRead = sizeof(indexRows_) / 240;
+    const uint16_t rowsPerRead = sizeof(indexRows_) / width;
     for (uint16_t firstRow = 0; firstRow < height; firstRow += rowsPerRead) {
         const uint16_t rowCount = (height - firstRow < rowsPerRead)
             ? height - firstRow : rowsPerRead;
@@ -130,6 +170,15 @@ bool AssetStore::drawFrame(
         }
         for (uint16_t row = 0; row < rowCount; ++row) {
             const uint8_t* indices = indexRows_ + static_cast<size_t>(row) * width;
+            for (uint16_t col = 0; col < width; ++col) {
+                const uint8_t index = indices[col];
+                if (index >= paletteCount && index != transparent) return false;
+                if (icon && index != transparent) {
+                    const uint16_t offset = (firstRow + row) * width + col;
+                    icon->colors[offset] = palette[index];
+                    icon->opaque[offset / 8] |= 1u << (offset % 8);
+                }
+            }
             uint16_t column = 0;
             while (column < width) {
                 const uint16_t source = flipHorizontal ? width - column - 1 : column;
@@ -169,6 +218,10 @@ bool AssetStore::drawFrame(
         }
     }
     file.close();
+    if (icon) {
+        strcpy(icon->path, path);
+        icon->age = ++cacheAge_;
+    }
     return true;
 }
 

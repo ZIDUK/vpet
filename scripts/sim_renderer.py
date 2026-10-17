@@ -807,6 +807,16 @@ def render_frame(
         )
         sprite_x = (profile.width - sprite_size) // 2
         sprite_y = profile.menu_height
+    elif pet.species == EVOLVED_SPECIES and motion_state in (
+        "block", "hurt", "hit_react", "dodge", "happy", "sad", "hit",
+    ):
+        action = "punch" if motion_state == "hit" else motion_state
+        image_path = f"/digimon1/Champion/flamemon_{action}_atlas.bmp"
+        frame_count = 15
+    elif pet.species == ULTIMATE_SPECIES and motion_state in ("block", "hurt", "happy", "sad", "hit"):
+        action = "punch" if motion_state == "hit" else motion_state
+        image_path = f"/digimon1/Ultimate/dragfiremon_{action}_atlas.bmp"
+        frame_count = 15
     elif motion_state == "walk":
         if pet.species == ULTIMATE_SPECIES:
             image_path = DRAGFIREMON_FLY_IMAGE_PATH

@@ -16,6 +16,8 @@ import time
 
 from core.dna import SPECIES_ID, combat_stat, iv_at, mix_entropy
 from core.techniques import TechniqueProgress
+from core.exploration import Exploration
+from core.item_catalog import DEFAULT_STOCK, ITEM_BY_ID, effect_amount
 from core.nutrition import (apply_food, body_condition, complete_training_weight,
                             consume_hunger, effective_stat, migrate_legacy_weight)
 
@@ -70,7 +72,9 @@ class Pet:
         self.species = species      # current form: "sproutspore", "sprouto", "thornback", "hydravine"
         self.line = line            # evolution line: "sprout_line"
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
-        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1, "protein": 2, "medkit": 1}
+        self.inventory = dict(DEFAULT_STOCK)
+        from core.adopted_items import load_stock
+        self.adopted_inventory, self.item_reward_cursor = load_stock(None, missing=True)
         self.effort = 0
         self.language = "EN"
         self.sound_enabled = True
@@ -107,6 +111,7 @@ class Pet:
         self.dna = [0, 0, 0, 0]
         self.ev = {"hp": 0, "mp": 0, "off": 0, "def": 0, "spd": 0, "brn": 0}
         self.techniques = TechniqueProgress()
+        self.exploration = Exploration()
         # Lifecycle: starts as egg unless overridden (live = already hatched)
         self.state = state if state is not None else STATE_EGG
         self.hatch_started_at = time.monotonic() if self.state == STATE_EGG else None
@@ -171,7 +176,9 @@ class Pet:
         language = self.language
         sound = self.sound_enabled
         line = self.line
+        stock, cursor = dict(self.adopted_inventory), self.item_reward_cursor
         self.__init__(species=DEFAULT_SPECIES, line=line, state=STATE_EGG)
+        self.adopted_inventory, self.item_reward_cursor = stock, cursor
         self.language = language
         self.sound_enabled = sound
 
@@ -261,7 +268,7 @@ class Pet:
             return False
         self.injured = False
         self.injured_ms = 0
-        self.stats["hp"] = min(100, self.stats.get("hp", 0) + 20)
+        self.stats["hp"] = min(100, self.stats.get("hp", 0) + effect_amount("medkit", "restore", "hp"))
         return True
 
     def can_battle(self):
@@ -385,6 +392,8 @@ class Pet:
             "state": self.state,
             "stats": dict(self.stats),
             "inventory": dict(self.inventory),
+            "adopted_items": {"version": 1, "counts": dict(self.adopted_inventory),
+                              "reward_cursor": self.item_reward_cursor},
             "effort": self.effort,
             "language": self.language,
             "sound_enabled": self.sound_enabled,
@@ -411,19 +420,27 @@ class Pet:
             "dna": list(self.dna),
             "ev": dict(self.ev),
             "techniques": self.techniques.to_dict(),
+            "exploration": self.exploration.to_dict(),
         }
 
     def load_from_dict(self, d):
+        from core.adopted_items import load_stock
+        self.adopted_inventory, self.item_reward_cursor = load_stock(
+            d.get('adopted_items'), missing='adopted_items' not in d)
         self.techniques = TechniqueProgress(d.get("techniques"))
+        self.exploration = Exploration(d.get("exploration"))
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live
         self.stats = dict(d.get("stats", self.stats))
         loaded = dict(d.get("inventory", self.inventory))
-        self.inventory = {"meat": 3, "energy": 2, "exp": 1, "ring": 1, "protein": 2, "medkit": 1}
+        self.inventory = dict(DEFAULT_STOCK)
         for key in self.inventory:
             if key in loaded:
-                self.inventory[key] = loaded[key]
+                try:
+                    self.inventory[key] = max(0, min(ITEM_BY_ID[key]["stack_max"] or 99, int(loaded[key])))
+                except (TypeError, ValueError, OverflowError):
+                    self.inventory[key] = 0
         self.effort = int(d.get("effort", self.effort))
         self.language = d.get("language", self.language)
         self.sound_enabled = d.get("sound_enabled", self.sound_enabled)

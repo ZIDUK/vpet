@@ -584,6 +584,24 @@ def test_renderer_uses_flamemon_action_sprites_after_evolution():
         ).tobytes()
 
 
+def test_flamemon_home_reactions_do_not_fall_back_to_idle():
+    pet = Pet(species="champion", state=STATE_LIVE)
+    idle = render_frame(ROOT / "build", pet, sprite_frame=6)
+    area = (32, 46, 96, 110)
+    for action in ("block", "hurt", "dodge", "happy", "sad"):
+        image = render_frame(ROOT / "build", pet, sprite_frame=6, motion_state=action)
+        assert image.crop(area).tobytes() != idle.crop(area).tobytes(), action
+
+
+def test_dragfiremon_home_reactions_do_not_fall_back_to_idle():
+    pet = Pet(species="ultimate", state=STATE_LIVE)
+    area = (32, 46, 96, 110)
+    idle = render_frame(ROOT / "build", pet, sprite_frame=6).crop(area).tobytes()
+    for action in ("block", "hurt", "happy", "sad"):
+        image = render_frame(ROOT / "build", pet, sprite_frame=6, motion_state=action)
+        assert image.crop(area).tobytes() != idle, action
+
+
 def test_renderer_uses_dragfiremon_fly_for_movement_and_action_sprites():
     dragfiremon = Pet(species="ultimate", state=STATE_LIVE)
     idle = render_frame(ROOT / "build", dragfiremon, sprite_frame=8, motion_state="idle")

@@ -74,8 +74,8 @@ def test_training_select_uses_each_evolutions_animation_atlas(tmp_path):
 
     expected = {
         0: ["firemon_punch", "firemon_block", "firemon_walk", "firemon_walk", "firemon_cast", "firemon_idle"],
-        1: ["flamemon_punch", "flamemon_cast", "flamemon_walk", "flamemon_walk", "flamemon_cast", "flamemon_idle"],
-        2: ["dragfiremon_punch", "dragfiremon_cast", "dragfiremon_walk", "dragfiremon_walk",
+        1: ["flamemon_punch", "flamemon_block", "flamemon_walk", "flamemon_walk", "flamemon_cast", "flamemon_idle"],
+        2: ["dragfiremon_punch", "dragfiremon_block", "dragfiremon_walk", "dragfiremon_walk",
             "dragfiremon_cast", "dragfiremon_idle"],
         3: ["egg_idle"] * 6,
         4: ["sparkmon_idle", "sparkmon_idle", "sparkmon_walk", "sparkmon_walk", "sparkmon_idle", "sparkmon_idle"],

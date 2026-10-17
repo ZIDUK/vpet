@@ -193,17 +193,14 @@ def draw_inventory(target, pet, selected_index=0):
     """Draw the selectable consumables list and its current quantities."""
     from core.inventory import (
         INVENTORY_ITEMS,
+        INVENTORY_GUIDE_INDEX,
+        inventory_name,
         clamp_visible_inventory_index,
         visible_inventory_indexes,
     )
 
     spanish = pet.language == "ES"
     _panel(target, "INVENTARIO" if spanish else "INVENTORY")
-    names = (
-        ("CARNE", "ENERGIA", "EXP", "ANILLO", "PROTEINA", "BOTIQUIN")
-        if spanish
-        else ("MEAT", "ENERGY", "EXP", "RING", "PROTEIN", "MEDKIT")
-    )
     visible = visible_inventory_indexes(pet)
     current = clamp_visible_inventory_index(pet, selected_index)
     selected_slot = visible.index(current) if current in visible else 0
@@ -215,8 +212,11 @@ def draw_inventory(target, pet, selected_index=0):
         _fill(target, 10, y + 2, 108, 12, 2)
         if index < len(INVENTORY_ITEMS):
             _, key, _, _ = INVENTORY_ITEMS[index]
-            _text(target, 15, y + 5, names[index], 7)
+            _text(target, 15, y + 5, inventory_name(index, spanish), 7)
             _text(target, 96, y + 5, "X%02d" % min(99, pet.inventory.get(key, 0)), 7)
+        elif index == INVENTORY_GUIDE_INDEX:
+            _text(target, 15, y + 5, inventory_name(index, spanish), 7)
+            _text(target, 96, y + 5, "X01", 7)
         else:
             _text(target, 15, y + 5, "VOLVER" if spanish else "BACK", 7)
 

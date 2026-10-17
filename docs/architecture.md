@@ -376,3 +376,16 @@ Contrato detallado y pruebas: [exploration.md](exploration.md).
 8. Reinicia y exige telemetria `VPET_READY` valida.
 
 La placa no se considera desplegada solo porque `esptool` termino sin error.
+
+## Cache de iconos Training (2026-10-16)
+
+AssetStore conserva diez iconos estaticos Training de hasta 16x16 en RGB565
+con mascara de opacidad, menos de 6 KiB estaticos adicionales. La cache LRU
+es independiente de las ocho paletas existentes, no crece con las especies
+y se invalida al montar assets. No reserva otra pantalla ni cachea atlas
+animados completos. Las lecturas usan el ancho del bitmap para aprovechar
+el scratch de 1920 bytes: tres bloques para un cuadro 68x68 en vez de nueve.
+
+Las regresiones ejecutan el adaptador real AssetStore.cpp sobre LittleFS/TFT
+de host, contando E/S y comparando pixeles. La carga y medicion fisica de
+latencia/heap siguen pendientes: [rendimiento de Training](training-board-performance.md).

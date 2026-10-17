@@ -87,11 +87,9 @@ template<class Canvas> class View {
             case SpeciesId::Rookie: break;
             case SpeciesId::Champion:
                 name="flamemon";
-                if (strcmp(action,"block")==0) resolved="cast";
                 break;
             case SpeciesId::Ultimate:
                 name="dragfiremon";
-                if (strcmp(action,"block")==0) resolved="cast";
                 break;
         }
         char path[64];

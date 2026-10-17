@@ -451,6 +451,36 @@ def collect_pet_images():
             (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24), 64,
         ),
         (
+            "Champion", "block", champion_dir / "flamemon_block.png", 5, 25,
+            (48, 48, 196, 224), (54, 64),
+            (0, 3, 4, 5, 6, 7, 9, 11, 13, 15, 16, 17, 18, 20, 24), 64,
+        ),
+        (
+            "Champion", "hurt", champion_dir / "flamemon_hurt.png", 5, 25,
+            (40, 32, 224, 224), (61, 64),
+            (0, 3, 4, 5, 6, 8, 10, 12, 14, 15, 16, 17, 18, 20, 24), 64,
+        ),
+        (
+            "Champion", "hit_react", champion_dir / "flamemon_hit_react.png", 5, 25,
+            (32, 24, 256, 232), (64, 59),
+            (0, 1, 2, 3, 5, 7, 9, 11, 13, 14, 15, 16, 18, 21, 24), 64,
+        ),
+        (
+            "Champion", "dodge", champion_dir / "flamemon_dodge.png", 5, 25,
+            (64, 72, 192, 208), (60, 64),
+            (0, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24), 64,
+        ),
+        (
+            "Champion", "happy", champion_dir / "flamemon_happy.png", 5, 25,
+            (40, 40, 192, 216), (55, 64),
+            (0, 3, 4, 5, 7, 9, 11, 12, 13, 15, 16, 18, 20, 22, 24), 64,
+        ),
+        (
+            "Champion", "sad", champion_dir / "flamemon_sad.png", 5, 25,
+            (32, 40, 200, 232), (56, 64),
+            (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 21, 24), 64,
+        ),
+        (
             "Champion", "evolution", champion_dir / "flamemon_evolution.png", 5, 25,
             (32, 24, 208, 232), (112, 112),
             (0, 4, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24), 112,
@@ -480,6 +510,26 @@ def collect_pet_images():
             "Ultimate", "cast", ultimate_dir / "dragfiremon_cast.png", 5, 25,
             (20, 30, 256, 224), (64, 53),
             (0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 24), 64,
+        ),
+        (
+            "Ultimate", "block", ultimate_dir / "dragfiremon_block.png", 5, 25,
+            (32, 24, 212, 228), (56, 64),
+            (0, 4, 5, 6, 7, 8, 10, 12, 14, 16, 17, 18, 19, 21, 24), 64,
+        ),
+        (
+            "Ultimate", "hurt", ultimate_dir / "dragfiremon_hurt.png", 5, 25,
+            (24, 16, 256, 228), (64, 58),
+            (0, 3, 4, 5, 6, 7, 9, 11, 13, 15, 16, 17, 18, 21, 24), 64,
+        ),
+        (
+            "Ultimate", "happy", ultimate_dir / "dragfiremon_happy.png", 5, 25,
+            (12, 8, 224, 232), (61, 64),
+            (0, 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15, 18, 24), 64,
+        ),
+        (
+            "Ultimate", "sad", ultimate_dir / "dragfiremon_sad.png", 5, 25,
+            (32, 24, 216, 232), (57, 64),
+            (0, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 21, 23, 24), 64,
         ),
     )
     for spec in animations:
@@ -695,6 +745,12 @@ def validate_runtime_assets():
         "digimon1/Champion/flamemon_punch_atlas.bmp",
         "digimon1/Champion/flamemon_sleep_atlas.bmp",
         "digimon1/Champion/flamemon_cast_atlas.bmp",
+        "digimon1/Champion/flamemon_block_atlas.bmp",
+        "digimon1/Champion/flamemon_hurt_atlas.bmp",
+        "digimon1/Champion/flamemon_hit_react_atlas.bmp",
+        "digimon1/Champion/flamemon_dodge_atlas.bmp",
+        "digimon1/Champion/flamemon_happy_atlas.bmp",
+        "digimon1/Champion/flamemon_sad_atlas.bmp",
         "digimon1/Champion/flamemon_evolution_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_idle_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_fly_atlas.bmp",
@@ -702,6 +758,10 @@ def validate_runtime_assets():
         "digimon1/Ultimate/dragfiremon_punch_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_sleep_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_cast_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_block_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_hurt_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_happy_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_sad_atlas.bmp",
         "UIEvolution/Egg.bmp",
         "UIEvolution/Sparkmon.bmp",
         "UIEvolution/Firemon.bmp",

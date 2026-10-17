@@ -19,8 +19,8 @@ def package_training(sim_build, data_dir, include_dir):
         "egg": ("Egg", "egg", {"idle": "idle"}),
         "sparkmon": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
         "firemon": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "walk", "cast": "cast"}),
-        "flamemon": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "block": "cast", "walk": "walk", "cast": "cast"}),
-        "dragfiremon": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "block": "cast", "walk": "fly", "cast": "cast"}),
+        "flamemon": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "walk", "cast": "cast"}),
+        "dragfiremon": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "fly", "cast": "cast"}),
     }
     for pet_name, (stage, filename, actions) in sprite_sets.items():
         for action, source_action in actions.items():

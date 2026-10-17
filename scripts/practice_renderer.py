@@ -159,8 +159,8 @@ def _species_atlas(species, action):
         "egg": ("Egg", "egg", {"idle": "idle"}),
         "baby": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
         "rookie": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hit": "hit", "hurt": "hurt", "happy": "happy", "sad": "sad"}),
-        "champion": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "walk"}),
-        "ultimate": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "cast", "walk": "fly"}),
+        "champion": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hurt": "hurt", "hit_react": "hit_react", "dodge": "dodge", "happy": "happy", "sad": "sad"}),
+        "ultimate": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "fly", "hurt": "hurt", "happy": "happy", "sad": "sad"}),
     }
     stage, name, available = sprites.get(species, sprites["rookie"])
     requested = action if action in available else ("punch" if action in ("hit", "hurt") and "punch" in available else "idle")
@@ -449,7 +449,7 @@ def _draw_resource_row(frame, draw, x, y, icon_name, label, value, maximum, colo
 
 
 def _draw_result_banner(frame, draw, build_dir, session, now_ms):
-    """Show a compact result card with a Firemon-specific reaction."""
+    """Show the result card with the current species' available reaction."""
     draw.rectangle((0, 33, 239, 114), fill=INK)
     banner_color = {"VICTORIA": GREEN, "DERROTA": HP, "EMPATE": YELLOW}.get(
         session.battle.result, YELLOW)
@@ -479,8 +479,8 @@ def _draw_result_banner(frame, draw, build_dir, session, now_ms):
         reward = 'ITEM +1 ' + short_name(BY_ID[session.reward_item], not english)
         text(draw, (16, 84), reward, GREEN, small=True)
     action = {"VICTORIA": "happy", "DERROTA": "sad"}.get(session.battle.result)
-    if action and session.pet.species == "rookie":
-        _draw_atlas(frame, build_dir, _species_atlas("rookie", action),
+    if action and session.pet.species in ("rookie", "champion", "ultimate"):
+        _draw_atlas(frame, build_dir, _species_atlas(session.pet.species, action),
                     174, 57, 48, now_ms, frame_interval_ms=100)
     else:
         pet_sprite(frame, build_dir, 174, 57, 48, None, now_ms,

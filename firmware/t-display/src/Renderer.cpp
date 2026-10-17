@@ -81,7 +81,13 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         case MotionState::Hatch: break;
         case MotionState::Idle: break;
     }
-    if (model.pet.species() != SpeciesId::Rookie &&
+    if ((model.pet.species() == SpeciesId::Champion || model.pet.species() == SpeciesId::Ultimate) &&
+        strcmp(action, "hit") == 0)
+        action = "punch";
+    if (model.pet.species() == SpeciesId::Ultimate && strcmp(action, "dodge") == 0)
+        action = "cast";
+    if (model.pet.species() != SpeciesId::Rookie && model.pet.species() != SpeciesId::Champion &&
+        model.pet.species() != SpeciesId::Ultimate &&
         (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0 ||
          strcmp(action, "dodge") == 0 || strcmp(action, "block") == 0)) {
         action = (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0) ? "punch" : "cast";
