@@ -2,9 +2,11 @@
 #include <fstream>
 #include <string>
 #include <cstdint>
+#include <map>
 
 inline size_t assetOpens = 0, assetReads = 0;
 inline std::string assetRoot;
+inline std::map<std::string,size_t> assetPathOpens;
 class File {
     std::ifstream file;
 public:
@@ -33,7 +35,7 @@ public:
 struct LittleFSMock {
     bool begin(bool, const char*, int, const char*) { return true; }
     File open(const char* path, const char*) {
-        ++assetOpens; return File(assetRoot + path);
+        ++assetOpens; ++assetPathOpens[path]; return File(assetRoot + path);
     }
 };
 inline LittleFSMock LittleFS;

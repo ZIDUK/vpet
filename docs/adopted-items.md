@@ -6,6 +6,7 @@ Esta lista sustituye la propuesta de importar los 81 objetos sin filtrar.
 ## Reglas
 
 - Carne y Proteina siguen ilimitadas exclusivamente en Alimentar.
+- Nombres visibles completos y abreviados en MAYUSCULAS en ES/EN, tanto en Mochila como en Arena y recompensas. Las referencias originales conservan su escritura documental.
 - HP/MP porcentuales se calculan sobre el maximo del luchador, no sobre salud de cuidado.
 - Recuperacion: 20/50/90/100%; redondeo hacia abajo, minimo 1, sin superar el maximo.
 - No resucita, no consume con recurso lleno y no cura fuera de combate.

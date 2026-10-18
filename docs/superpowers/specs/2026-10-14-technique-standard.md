@@ -3,6 +3,11 @@
 Fecha: 2026-10-14. Referencia de diseño. No autoriza técnicas nuevas,
 cambios de combate, persistencia ni firmware.
 
+Actualizacion 2026-10-18: el usuario aprobo ampliar a 2/3/4 espacios y cinco
+tecnicas en la linea de fuego. El contrato vigente esta en
+[Tecnicas y espacios](../../techniques.md); las menciones posteriores a tres
+tecnicas y dos espacios describen el estado inicial, no el limite vigente.
+
 Las tres técnicas que sí existen están en `src/core/techniques.py`:
 Golpe, Llama y Guardia. El daño de práctica usa poder, ataque, dominio
 y defensa (`src/core/practice.py`). La Noche de exploración avanza

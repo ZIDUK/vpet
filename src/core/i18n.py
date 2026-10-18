@@ -130,6 +130,8 @@ TRAINING_STRINGS = {
     "status.vital.feed.value":     {"ES": "%d",              "EN": "%d"},
     "status.vital.energy.label":   {"ES": "ENE",             "EN": "ENE"},
     "status.vital.energy.value":   {"ES": "%d",              "EN": "%d"},
+    "status.vital.mood.label":     {"ES": "ANIMO",           "EN": "MOOD"},
+    "status.vital.mood.value":     {"ES": "%d",              "EN": "%d"},
     # 2/4 care: edad legible, sobrealimentos, errores de cuidado,
     # esfuerzo, batallas. Sin siglas tipo OF/CM.
     "status.care.age.label":       {"ES": "EDAD",            "EN": "AGE"},
@@ -143,6 +145,8 @@ TRAINING_STRINGS = {
     "status.care.effort.value":    {"ES": "%d/4",            "EN": "%d/4"},
     "status.care.battles.label":   {"ES": "BATALLAS",        "EN": "BATTLES"},
     "status.care.battles.value":   {"ES": "%d",              "EN": "%d"},
+    "status.care.injuries.label":  {"ES": "LESIONES",        "EN": "INJURIES"},
+    "status.care.injuries.value":  {"ES": "%d/15",           "EN": "%d/15"},
     # 3/4 battle: peso, DP (no renombrar), %victorias, proteina, V-D.
     "status.battle.weight.label":  {"ES": "PESO",            "EN": "WEIGHT"},
     "status.battle.weight.value":  {"ES": "%d",              "EN": "%d"},

@@ -65,7 +65,12 @@ public:
     void award(PetState& pet) {
         if (awarded || !battle.result) return;
         awarded=true;
-        for (int i = 0; i < 3; ++i) {
+        if (battle.result==1 || battle.result==2) {
+            if (pet.battles()<INT32_MAX) pet.setBattles(pet.battles()+1);
+            if (battle.result==1 && pet.wins()<255) pet.setWins(pet.wins()+1);
+            if (battle.result==2 && pet.losses()<255) pet.setLosses(pet.losses()+1);
+        }
+        for (int i = 0; i < techniques::kCount; ++i) {
             int value = pet.practice.mastery[i] + battle.uses[i];
             pet.practice.mastery[i] = value > 100 ? 100 : value;
         }
@@ -74,16 +79,15 @@ public:
         dirty = true;
     }
     void round(PetState& pet, int order, uint32_t now) {
-        if (battle.result || order < -1 || order > 2) return;
+        if (battle.result || order < -1 || order >= techniques::kCount) return;
         const int chosen = practice::choose(battle.player, order);
         reason = order < 0 ? "A SU CRITERIO" : chosen == order ? "SIGUE ORDEN" :
-            order == 1 && battle.player.mp < 8 ? "SIN MP" :
+            order >= 0 && battle.player.mp < techniques::kCatalog[order].mp ? "SIN MP" :
             battle.player.cooldown[order] ? "EN RECARGA" : chosen == 2 ? "PREFIERE DEFENDER" : "PREFIERE ATACAR";
         if (battle.step(order)) {
             lastOrder = order;
             updatedAt = now;
             nextRoundAt = now + 1450;
-            if (page != Page::Bag) cursor = 0;
             if (battle.result) { award(pet); page=Page::Arena; cursor=0; }
         }
     }
@@ -94,33 +98,32 @@ public:
         round(pet, requestedOrder(pet), now);
     }
     static const char* name(int i) {
-        return i == 0 ? "GOLPE" : i == 1 ? "LLAMA" : "GUARDIA";
+        return i >= 0 && i < techniques::kCount ? techniques::kCatalog[i].es : "";
     }
     int equippedAt(const PetState& pet, int slot) const {
-        for (int i = 0; i < 3; ++i) if (pet.practice.isEquipped(i) && slot-- == 0) return i;
+        for (int i = 0; i < techniques::kCount; ++i) if (pet.practice.isEquipped(i) && slot-- == 0) return i;
         return -1;
     }
     int count(const PetState& pet) const {
         if (page == Page::Bag) return bagCount(pet);
         if (page == Page::Menu || page == Page::Detail) return 3;
-        if (page == Page::Tech) return 4;
+        if (page == Page::Tech) return techniques::kCount+1;
         if (battle.result) return 1;
         int n = 3;
-        for (int i = 0; i < 3; ++i) if (pet.practice.isEquipped(i)) ++n;
+        for (int i = 0; i < techniques::kCount; ++i) if (pet.practice.isEquipped(i)) ++n;
         return n;
     }
     const char* actionIcon(const PetState& pet, int i) const {
         if (battle.result || i==count(pet)-1) return "/ui/icons/back.vpa";
         if (i==0) return "/ui/icons/brain.vpa";
         if (i==count(pet)-2) return "/ui/icons/backpack.vpa";
-        const char* techniques[]={"/training/tech_punch.vpa","/training/tech_flame.vpa","/training/tech_guard.vpa"};
         const int technique=equippedAt(pet,i-1);
-        return technique>=0 && technique<3 ? techniques[technique] : "/ui/icons/back.vpa";
+        return techniques::icon(technique);
     }
     const char* label(const PetState& pet, int i) const {
         if (page == Page::Menu) return i == 0 ? "TECNICAS" : i == 1 ? "BATALLA DE PRACTICA" : "VOLVER";
         if (page == Page::Detail) return i == 0 ? "ENTRENAR" : i == 1 ? "EQUIPAR" : "VOLVER";
-        if (page == Page::Tech) return i == 3 ? "VOLVER" : pet.practice.learned(i) ? name(i) : "???";
+        if (page == Page::Tech) return i == techniques::kCount ? "VOLVER" : pet.practice.learned(i,pet.techniqueStage()) ? name(i) : "???";
         if (battle.result) return pendingAward ? "REINTENTAR" : "VOLVER";
         return i == 0 ? "AUTO" : i == count(pet)-1 ? "RETIRARSE" :
             i == count(pet)-2 ? "MOCHILA" : name(equippedAt(pet, i-1));
@@ -167,19 +170,19 @@ public:
                 battle.player.equipped = pet.practice.equipped;
                 battle.player.personality = pet.dna()[3] % 3;
                 battle.player.bond = pet.practice.bond;
-                for (int i = 0; i < 3; ++i) battle.player.mastery[i] = pet.practice.mastery[i];
+                for (int i = 0; i < techniques::kCount; ++i) battle.player.mastery[i] = pet.practice.mastery[i];
                 page = Page::Arena; reason = "COMBATE AUTOMATICO"; nextRoundAt = now + 500;
             }
             cursor = 0; message = ""; return true;
         }
         if (page == Page::Tech) {
             technique = cursor;
-            page = cursor == 3 ? Page::Menu : Page::Detail;
+            page = cursor == techniques::kCount ? Page::Menu : Page::Detail;
             cursor = 0; message = ""; return true;
         }
         if (page == Page::Detail) {
             if (cursor == 2) { page = Page::Tech; cursor = technique; return true; }
-            const bool ok = cursor == 0 ? pet.trainTechnique(technique) : pet.practice.toggle(technique);
+            const bool ok = cursor == 0 ? pet.trainTechnique(technique) : pet.practice.toggle(technique,pet.techniqueStage());
             dirty |= ok; message = ok ? "LISTO" : "NO DISPONIBLE"; return true;
         }
         if (battle.result || cursor == count(pet)-1) { page = Page::Menu; cursor = 1; return true; }

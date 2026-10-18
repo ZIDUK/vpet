@@ -122,7 +122,7 @@ def test_firemon_evolutions_enter_arena_as_fire(species):
     assert session.battle.player.element == "fire"
     assert session.battle.rival.element == "fire"
     from core.techniques import TECHNIQUES
-    assert [tech["element"] for tech in TECHNIQUES] == ["neutral", "fire", None]
+    assert [tech["element"] for tech in TECHNIQUES] == ["neutral", "fire", None, "fire", "fire"]
 
 
 def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause():
@@ -139,6 +139,25 @@ def test_battle_ticks_attack_automatically_and_selected_retreat_does_not_pause()
     assert s.battle.round == 1
     s.tick(2050)
     assert s.battle.round == 2
+
+
+@pytest.mark.parametrize("command", ["GOLPE", "GUARDIA", "MOCHILA", "RETIRARSE"])
+def test_round_does_not_reset_command_being_selected(command):
+    s = PracticeSession(firemon(), lambda _: True)
+    s.battle.player.hp = s.battle.rival.hp = 10000
+    s.index = s.choices().index(command)
+    selected = s.index
+    s.tick(0)
+    s.tick(500)
+    assert s.battle.round == 1
+    assert s.index == selected
+    s.tick(1950)
+    assert s.battle.round == 2
+    assert s.index == selected
+    if command in ("GOLPE", "GUARDIA"):
+        assert s.last_order == s.pet.techniques.equipped[selected - 1]
+        s.input("action", 2000)
+        assert s.index == selected
 
 
 def test_battle_lunge_moves_toward_center_then_returns():
@@ -238,16 +257,19 @@ def test_personality_and_bond_change_choice_reproducibly():
     assert choose(cautious)[0] == 0
 
 
-def test_practice_rewards_once_and_does_not_change_care_or_official_counters():
+def test_practice_rewards_once_and_counts_result_without_changing_care():
     pet = firemon()
     saves = []
     s = PracticeSession(pet, lambda p: saves.append(p.to_dict()) or True)
-    initial = (pet.dp, pet.battles_won, pet.battles_lost, dict(pet.stats))
+    initial = (pet.dp, dict(pet.stats))
     while not s.battle.result:
         s.index = 1
         s.input("action", 0)
     assert len(saves) == 1
-    assert initial == (pet.dp, pet.battles_won, pet.battles_lost, pet.stats)
+    assert initial == (pet.dp, pet.stats)
+    assert pet.battles_this_form == (s.battle.result != "EMPATE")
+    assert pet.battles_won == (s.battle.result == "VICTORIA")
+    assert pet.battles_lost == (s.battle.result == "DERROTA")
     assert not s.input("action", 1)
     assert len(saves) == 1
 
@@ -261,7 +283,8 @@ def test_retreat_and_held_back_do_not_award_progress():
     assert s.page == "battle"
     s.index = len(s.choices()) - 1
     assert not s.input("action", 0)
-    assert pet.techniques.mastery == [0, 0, 0]
+    assert pet.techniques.mastery == [0, 0, 0, 0, 0]
+    assert (pet.battles_this_form, pet.battles_won, pet.battles_lost) == (0, 0, 0)
 
 
 def test_python_cpp_round_traces_match(tmp_path):
@@ -541,7 +564,7 @@ def test_legacy_save_without_progress_loads_with_safe_defaults():
     restored.load_from_dict(serialized)
     assert restored.techniques.equipped == [0, 2]
     assert restored.techniques.bond == 50
-    assert restored.techniques.mastery == [0, 0, 0]
+    assert restored.techniques.mastery == [0, 0, 0, 0, 0]
     # The Firemon can still win a round without spending anything.
     battle = PracticeBattle(Fighter([restored.combat_stat(s) for s in COMBAT_STATS],
                                     restored.techniques.equipped, restored.techniques.mastery,

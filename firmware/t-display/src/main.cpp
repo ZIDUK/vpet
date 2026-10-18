@@ -18,7 +18,7 @@ TFT_eSprite staticScene(&display);
 vpet::AssetStore assets;
 vpet::BoardInput buttons;
 vpet::Renderer renderer(display, framebuffer, staticScene, assets);
-vpet::Panels panels(display, framebuffer, assets);
+vpet::Panels panels(display, framebuffer, assets, &staticScene);
 vpet::NvsKeyValueStore stateStore("vpet_state");
 vpet::NvsKeyValueStore backupStore("vpet_bak");
 vpet::SettingsStore settingsStore(stateStore, &backupStore);

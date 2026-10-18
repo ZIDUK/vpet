@@ -1,24 +1,83 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-16
+## Estado vigente: 2026-10-18
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
+
+Tecnicas ampliadas en Python y C++: Firemon equipa 2, Flamemon 3,
+Dragfiremon 4. Rafaga (30 poder/12 MP, Champion+, 4 lecciones) e Inferno
+(38 poder/18 MP, Ultimate, 6 lecciones) completan el catalogo de cinco.
+Aprender/evolucionar no equipa; se conservan IDs y schema NVS 3. Snapshot
+interno v3 admite v1/v2; equipo/dominio nuevos sobreviven a reinicios y
+recuperacion transaccional. [Contrato vigente](techniques.md).
+
+Validacion final: 1132 pruebas Python y 175 nativas aprobadas, Make Sim
+headless de 90 frames y build T-Display correctos. Comparacion pixel a pixel
+de TrainingUi/Tecnicas ES/EN con equipo 2/3/4, trazas numericas y recuperacion
+de partidas antiguas/nuevas. RAM estatica 56044/327680, flash 1009965/4194304;
+204 assets, 10497880 bytes. [Plan y evidencia](superpowers/plans/2026-10-18-technique-expansion.md).
+
+Cargado firmware y LittleFS el 2026-10-18; verificacion USB independiente
+con digest matched en ambas particiones, sin borrar NVS. Deploy OK y
+VPET_READY: heap libre 66640/minimo 66564, filesystem 11309056/12451840,
+manifest 1; BLE ADVERTISING. Falta aceptacion fisica de aprender/equipar
+3/4 y usar los nuevos ataques. No se forzo evolucion ni progreso en la placa.
+
+## Entregas anteriores del 2026-10-18
+
+Arena y evolucion automatica conectadas en Python/C++: victorias/derrotas
+aportan a batallas de etapa y W/L, sin contar empates ni retiradas. Guardado
+atomico de contadores/premios y evolucion al volver a Home; no hay progreso
+retroactivo de peleas anteriores. [Plan y validacion](superpowers/plans/2026-10-18-arena-evolution.md).
+Validado con 1120 pruebas Python y 174 nativas; Make Sim y build correctos.
+Firmware cargado/verificado por USB, VPET_READY con heap 66644/minimo 66576,
+sin fatal durante 18s. Aceptacion fisica de evolucion mediante Arena pendiente.
+Seguimiento IMG_4004: color RGB565 del escalador corregido; Arena reutiliza
+fondo/selector y Exploracion su barra de iconos, sin otro framebuffer.
+El usuario acepta la distribucion de Arena; colores y fluidez de esta nueva
+correccion requieren comprobacion fisica. Ver el seguimiento en
+[Arena](arena-presentation-fixes.md#seguimiento-img_4004-color-y-latencia).
+Cargado y verificado por USB: firmware/FS coinciden por digest; arranque
+VPET_READY, heap 66512/minimo 66440, BLE conectado, sin fatal en 18s.
+Arena corregida en Python/C++: celebracion completa, texto de feedback
+retirado, escala propia de combate y cursor persistente entre rondas.
+El harness host ejecuta Panels.cpp/AssetStore.cpp reales en 24 escenarios.
+[Alcance y pruebas](arena-presentation-fixes.md): 1096 pruebas Python y 173
+nativas aprobadas. Cargado el 2026-10-18; firmware/LittleFS coinciden por
+digest. Deploy OK, heap libre 66656, minimo 66580; filesystem
+11292672/12451840, manifest 1. Aceptacion visual fisica pendiente.
+
+Status ampliado en simulador y firmware: cuarta barra de animo, lesiones
+acumuladas /15, rotulos HERIDO/MUERTO y EV por atributo junto a la barra
+de combate. [Contrato y verificacion](status-vitals-care-ev.md).
+1081 pruebas Python y 172 nativas aprobadas. Cargado el 2026-10-17 con
+`Deploy OK`: heap libre 66660, minimo 66616, filesystem 9404416/12451840,
+manifest 1. Verificacion USB del 2026-10-18: firmware y LittleFS coinciden
+por digest. Arranque VPET_READY, heap libre 66652, minimo 66576;
+BLE ADVERTISING/PAIRED/CONNECTED, sin fallo fatal en 18 segundos observados.
+La aceptacion fisica anterior no cubre estas nuevas filas.
+
 Flamemon y Dragfiremon tienen Guardia, dano y emociones propias desplegadas.
 La entrega de sprites paso 1077 pruebas Python; firmware/LittleFS coinciden
 por digest con placa. Heap libre 72504, minimo 72436; filesystem
 9404416/12451840; manifest 1. El ultimo arranque registro PAIRED/CONNECTED y
 VPET_READY, no una prueba completa de reconexion movil.
 
-El usuario reporta Training lento en placa: NO esta aceptado como fluido.
+El usuario confirmo Training fluido en placa el 2026-10-18; aceptacion
+visual de la pantalla probada registrada. Se cierra ese reporte de lentitud.
 La nueva cache de diez iconos estaticos y lecturas agrupadas del retrato
-reducen E/S en host, pero son posteriores al flash de sprites. Falta cargar
-esta optimizacion y medir latencia/heap reales. Ver
+reducen E/S en host y se cargaron el 2026-10-17. Falta medir latencia y heap
+durante Training real, no solo en el arranque. Ver
 [rendimiento de Training](training-board-performance.md).
 Validacion local de la cache: 1078 pruebas Python aprobadas; compilacion
 T-Display correcta, RAM estatica 56028/327680, flash 1007657/4194304 bytes.
 Codigo, sprites, pruebas y roadmap publicados en origin/master: `bdcf027`.
-La optimizacion de E/S sigue sin desplegarse; el flash anterior contiene
-los sprites nuevos pero no esta cache.
+La optimizacion de E/S esta desplegada: firmware y LittleFS coinciden por
+digest. Arranque final VPET_READY, heap libre 66660, minimo 66584, filesystem
+9404416/12451840 y manifest 1. BLE registro CONNECTED/PAIRED; no certifica
+estabilidad prolongada; la fluidez visual se acepta por el reporte del
+usuario posterior. Evidencia local en
+`out/training-cache-board-deploy/`; respaldo nuevo conservado sin borrar NVS.
 
 Los numeros de exploracion siguientes son su corte previo, no los de la
 ultima carga de sprites.

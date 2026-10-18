@@ -112,7 +112,7 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
         );
         migratedDna_ = true;
     }
-    loadPractice(pet.practice);
+    loadPractice(pet.practice,pet.techniqueStage());
     settings.language = store_.getString("language", "ES");
     settings.soundEnabled = store_.getInt("sound", 1) != 0;
     settings.bluetoothEnabled = store_.getInt("bluetooth", 0) != 0;
@@ -220,7 +220,7 @@ bool SettingsStore::writeSnapshot(const PetState& pet, const Settings& settings)
     ok = store_.putString("language", settings.language.c_str()) && ok;
     ok = store_.putInt("sound", settings.soundEnabled ? 1 : 0) && ok;
     ok = store_.putInt("bluetooth", settings.bluetoothEnabled ? 1 : 0) && ok;
-    ok = savePractice(pet.practice) && ok;
+    ok = savePractice(pet.practice,pet.techniqueStage()) && ok;
     if (ok) ok = store_.putString("adoptBag", pet.adoptedStock.encode().c_str());
     if (ok) ok = store_.putString("expState", pet.exploration.encode().c_str());
     return ok;
@@ -256,7 +256,7 @@ bool SettingsStore::recoverConsumableTransaction() {
     if (bag.empty() || !stock.decode(bag)) return false;
     int32_t values[kItemTxCount];
     std::string key;
-    const int maxima[] = {100,100,100,100,100,99,1,2147483647,3,252,252,252,252,252,252,255,100,100,100,100,7,
+    const int maxima[] = {100,100,100,100,100,99,1,2147483647,3,252,252,252,252,252,252,255,100,100,100,100,31,
         1,19,1,99};
     for (size_t i=0; i<kItemTxCount; ++i) {
         if (!(in>>key>>values[i]) || key!=kItemTxKeys[i] || values[i]<0 || values[i]>maxima[i]) return false;
@@ -318,7 +318,7 @@ bool SettingsStore::recoverFoodTransaction() {
     return store_.putString("foodTx", "");
 }
 
-bool SettingsStore::loadPractice(PracticeProgress& progress) const {
+bool SettingsStore::loadPractice(PracticeProgress& progress, int stage) const {
     progress = PracticeProgress();
     if (store_.getInt("techVer", 1) != 1) return false;
     const auto byte = [this](const char* key, int fallback, int maximum) {
@@ -331,20 +331,24 @@ bool SettingsStore::loadPractice(PracticeProgress& progress) const {
     progress.mastery[0] = byte("techM0", 0, 100);
     progress.mastery[1] = byte("techM1", 0, 100);
     progress.mastery[2] = byte("techM2", 0, 100);
-    progress.equipped = byte("techEquip", 0b101, 7);
-    progress.sanitize();
+    progress.mastery[3] = byte("techM3", 0, 100);
+    progress.mastery[4] = byte("techM4", 0, 100);
+    progress.equipped = byte("techEquip", 0b101, 31);
+    progress.sanitize(stage);
     return progress.version == 1;
 }
 
-bool SettingsStore::savePractice(const PracticeProgress& input) {
+bool SettingsStore::savePractice(const PracticeProgress& input, int stage) {
     PracticeProgress progress = input;
-    progress.sanitize();
+    progress.sanitize(stage);
     bool ok = store_.putInt("techVer", progress.version);
     ok = store_.putInt("techTrain", progress.training) && ok;
     ok = store_.putInt("techBond", progress.bond) && ok;
     ok = store_.putInt("techM0", progress.mastery[0]) && ok;
     ok = store_.putInt("techM1", progress.mastery[1]) && ok;
     ok = store_.putInt("techM2", progress.mastery[2]) && ok;
+    ok = store_.putInt("techM3", progress.mastery[3]) && ok;
+    ok = store_.putInt("techM4", progress.mastery[4]) && ok;
     ok = store_.putInt("techEquip", progress.equipped) && ok;
     return ok;
 }

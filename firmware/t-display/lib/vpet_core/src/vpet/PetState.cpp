@@ -38,10 +38,11 @@ CareEvent PetState::careEventAt(uint8_t index) const {
 }
 
 bool PetState::trainTechnique(uint8_t technique) {
-    if (technique >= 3 || species_ != SpeciesId::Rookie || dead_ || injured_ || cold_ || energy_ < 4) return false;
+    if (technique >= techniques::kCount || techniqueStage() < techniques::kCatalog[technique].stage ||
+        exploration.away() || dead_ || injured_ || cold_ || energy_ < 4) return false;
     energy_ -= 4;
     if (practice.training < 255) ++practice.training;
-    if (practice.learned(technique)) {
+    if (practice.learned(technique,techniqueStage())) {
         const int value = practice.mastery[technique] + 5;
         practice.mastery[technique] = value > 100 ? 100 : value;
     }

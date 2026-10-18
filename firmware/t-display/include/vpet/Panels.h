@@ -15,7 +15,7 @@ namespace vpet {
 
 class Panels {
 public:
-    Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets);
+    Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene = nullptr);
     void draw(
         const Navigation& navigation,
         const PetState& pet,
@@ -80,12 +80,17 @@ private:
         int16_t width = 64,
         const char* extra = nullptr
     );
-    void drawStatusPet(const PetState& pet, uint32_t nowMs);
+    void drawStatusPet(const PetState& pet, uint32_t nowMs, bool spanish);
     void drawLabel(const char* text, int16_t x, int16_t y, int16_t width, uint8_t font = 1);
 
     TFT_eSPI& output_;
     TFT_eSprite& display_;
     AssetStore& assets_;
+    // Borrow Home's existing framebuffer; App invalidates its owner before use.
+    TFT_eSprite* scene_;
+    enum class Scene : uint8_t { None, Arena, Exploration };
+    Scene sceneKind_ = Scene::None;
+    uint16_t arenaFooterKey_ = 0xFFFF;
     PanelId lastPanel_ = PanelId::Home;
     bool lastSpanish_ = true;
     uint8_t lastStatusPage_ = 255;

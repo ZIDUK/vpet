@@ -37,25 +37,25 @@ const char* battleSpritePath(SpeciesId species, int action) {
         case SpeciesId::Egg: return "/animations/egg/egg_idle.vpa";
         case SpeciesId::Baby: return "/animations/baby/sparkmon_idle.vpa";
         case SpeciesId::Rookie:
-            return action == 0 ? "/animations/rookie/firemon_punch.vpa" :
-                action == 1 ? "/animations/rookie/firemon_cast.vpa" :
-                action == 2 ? "/animations/rookie/firemon_block.vpa" :
-                action == 3 ? "/animations/rookie/firemon_hit.vpa" :
-                action == 4 ? "/animations/rookie/firemon_hurt.vpa" : "/animations/rookie/firemon_idle.vpa";
+            return action == 0 ? "/battle/rookie_punch.vpa" :
+                action == 1 ? "/battle/rookie_cast.vpa" :
+                action == 2 ? "/battle/rookie_block.vpa" :
+                action == 3 ? "/battle/rookie_hit.vpa" :
+                action == 4 ? "/battle/rookie_hurt.vpa" : "/battle/rookie_idle.vpa";
         case SpeciesId::Champion:
-            return action == 0 ? "/animations/champion/flamemon_punch.vpa" :
-                action == 1 ? "/animations/champion/flamemon_cast.vpa" :
-                action == 2 ? "/animations/champion/flamemon_block.vpa" :
-                action == 3 ? "/animations/champion/flamemon_punch.vpa" :
-                action == 4 ? "/animations/champion/flamemon_hurt.vpa" : "/animations/champion/flamemon_idle.vpa";
+            return action == 0 ? "/battle/champion_punch.vpa" :
+                action == 1 ? "/battle/champion_cast.vpa" :
+                action == 2 ? "/battle/champion_block.vpa" :
+                action == 3 ? "/battle/champion_punch.vpa" :
+                action == 4 ? "/battle/champion_hurt.vpa" : "/battle/champion_idle.vpa";
         case SpeciesId::Ultimate:
-            return action == 0 ? "/animations/ultimate/dragfiremon_punch.vpa" :
-                action == 1 ? "/animations/ultimate/dragfiremon_cast.vpa" :
-                action == 2 ? "/animations/ultimate/dragfiremon_block.vpa" :
-                action == 3 ? "/animations/ultimate/dragfiremon_punch.vpa" :
-                action == 4 ? "/animations/ultimate/dragfiremon_hurt.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
+            return action == 0 ? "/battle/ultimate_punch.vpa" :
+                action == 1 ? "/battle/ultimate_cast.vpa" :
+                action == 2 ? "/battle/ultimate_block.vpa" :
+                action == 3 ? "/battle/ultimate_punch.vpa" :
+                action == 4 ? "/battle/ultimate_hurt.vpa" : "/battle/ultimate_idle.vpa";
     }
-    return "/animations/rookie/firemon_idle.vpa";
+    return "/battle/rookie_idle.vpa";
 }
 
 const char* battleSpeciesLabel(SpeciesId species) {
@@ -69,31 +69,22 @@ const char* battleSpeciesLabel(SpeciesId species) {
     return "VPET";
 }
 
-const char* practiceTechniqueLabel(int action, bool spanish) {
-    if (action == 0) return spanish ? "GOLPE" : "PUNCH";
-    if (action == 1) return spanish ? "LLAMA" : "FLAME";
-    if (action == 2) return spanish ? "GUARDIA" : "GUARD";
-    return spanish ? "NO ACTUO" : "NO ACTION";
 }
 
-const char* practiceReasonLabel(const char* reason, bool spanish) {
-    if (strcmp(reason, "ELIGE ORDEN") == 0) return spanish ? "ESPERANDO ORDEN" : "AWAITING ORDER";
-    if (strcmp(reason, "A SU CRITERIO") == 0) return spanish ? "DECIDE EL PET" : "PET DECIDES";
-    if (strcmp(reason, "SIGUE ORDEN") == 0) return spanish ? "SIGUIO TU ORDEN" : "FOLLOWED ORDER";
-    if (strcmp(reason, "PREFIERE DEFENDER") == 0) return spanish ? "PREFIRIO DEFENDER" : "CHOSE TO GUARD";
-    if (strcmp(reason, "PREFIERE ATACAR") == 0) return spanish ? "PREFIRIO ATACAR" : "CHOSE TO ATTACK";
-    if (strcmp(reason, "SIN MP") == 0) return spanish ? "SIN MP" : "NOT ENOUGH MP";
-    if (strcmp(reason, "EN RECARGA") == 0) return spanish ? "EN RECARGA" : "ON COOLDOWN";
-    if (strcmp(reason, "RECUPERA") == 0) return spanish ? "RECUPERA MP" : "RESTORES MP";
-    return reason;
-}
-}
-
-Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets)
-    : output_(display), display_(canvas), assets_(assets) {}
+Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene)
+    : output_(display), display_(canvas), assets_(assets), scene_(scene) {}
 
 void Panels::drawExploration(const ExplorationSession& session,const PetState& pet,
                             uint64_t wall,uint32_t nowMs,const char* language,bool home,uint8_t menu) {
+    if (scene_) {
+        if (sceneKind_ != Scene::Exploration) {
+            scene_->fillSprite(exploration_ui::ink);
+            for (uint8_t i=0;i<menu_bar::count;++i)
+                assets_.drawFrame(*scene_,menu_bar::icons[i],0,menu_bar::iconX(i),2);
+            sceneKind_ = Scene::Exploration;
+        }
+        memcpy(display_.getPointer(),scene_->getPointer(),240*24*2);
+    }
     struct Canvas {
         TFT_eSprite& pixels;
         AssetStore& assets;
@@ -101,7 +92,7 @@ void Panels::drawExploration(const ExplorationSession& session,const PetState& p
         void drawPixel(int x,int y,uint16_t color) { pixels.drawPixel(x,y,color); }
         void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
     } canvas{display_,assets_};
-    exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language)).draw(home,menu);
+    exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language)).draw(home,menu,scene_==nullptr);
     display_.pushSprite(0,0);
 }
 
@@ -118,6 +109,7 @@ void Panels::drawStorageError(const char* language) {
 }
 
 void Panels::invalidate() {
+    sceneKind_ = Scene::None;
     lastPanel_ = PanelId::Home;
     lastSpanish_ = true;
     lastStatusPage_ = 255;
@@ -177,11 +169,17 @@ void Panels::beginPanel(bool panelChanged, uint8_t selected, const char* title, 
     display_.setTextColor(kInk, kPanel);
 }
 
-void Panels::drawStatusPet(const PetState& pet, uint32_t nowMs) {
+void Panels::drawStatusPet(const PetState& pet, uint32_t nowMs, bool spanish) {
     const int16_t x = statusPetX(88);
     const int16_t y = 47;
-    if (pet.dead()) {
-        assets_.drawFrame(display_, "/ui/fx/grave.vpa", 0, x + 6, 50);
+    if (pet.dead() || pet.injured()) {
+        display_.setTextDatum(TC_DATUM);
+        display_.setTextColor(pet.dead() ? kInk : 0xB800, kPanel);
+        drawLabel(pet.dead() ? (spanish ? "MUERTO" : "DEAD") : (spanish ? "HERIDO" : "HURT"), 50, 49, 96, 1);
+        display_.setTextDatum(TL_DATUM);
+        display_.setTextColor(kInk, kPanel);
+        assets_.drawFrameScaled(display_, pet.dead() ? "/ui/fx/grave.vpa" : portraitPath(pet.species(), false),
+                                pet.dead() ? 0 : nowMs / 80, 12, 59, 76, 76, false, -1, 0, 88);
         return;
     }
     assets_.drawFrame(display_, portraitPath(pet.species(), false), nowMs / 80, x, y);
@@ -337,14 +335,8 @@ void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
     };
     // Compact row stride (13 px) so all six stats fit under the helix
     // without overlapping the code strip (y=29..46) or the panel border.
-    // The column-safe layout matches sim_renderer.py (Codex):
-    //   helix        x=102..142  (kStatusSplitX+2 + kHelixWidth=40)
-    //   card         x=145..237  (rowX=145, rowW=92, 3 px gap from helix)
-    //   icon         rowX+2..rowX+11  (10 px slot, asset scaled from 20x20)
-    //   label        rowX+14 (=159), 18 px wide, font 1
-    //   value        rowX+34 (=179), 16 px wide, ends at 195 (bar start)
-    //   bar          rowX+50 (=195), barW=34, ends at 229 (8 px margin)
-    //   bar fill     0..99 → 0..32 px (scale = barW-2)
+    // Keep combat value/bar and accumulated EV in separate columns.
+    drawLabel("EV", kStatusDnaRowX + kStatusDnaEvOffset, 47, 18, 1);
     for (uint8_t i = 0; i < 6; ++i) {
         const int16_t y = 55 + i * 13;
         char num[4];
@@ -365,12 +357,16 @@ void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
         );
         display_.setTextColor(kInk, kChip);
         drawLabel(names[i], rowX + 14, y + 1, 18, 1);
-        drawLabel(num, rowX + 34, y + 1, 16, 1);
+        drawLabel(num, rowX + 34, y + 1, 12, 1);
+        snprintf(num, sizeof(num), "%u", pet.evAt(stats[i]));
+        display_.setTextDatum(TR_DATUM);
+        drawLabel(num, rowX + kStatusDnaEvOffset + 18, y + 1, 18, 1);
+        display_.setTextDatum(TL_DATUM);
         // Bar border: 7 px tall so the 5 px fill leaves 1 px padding
         // top and bottom.
-        display_.drawRect(rowX + 50, y + 2, barW, 7, kInk);
+        display_.drawRect(rowX + kStatusDnaBarOffset, y + 2, barW, 7, kInk);
         const int16_t filled = static_cast<int16_t>((pet.combatStat(stats[i]) * (barW - 2)) / 99);
-        if (filled > 0) display_.fillRect(rowX + 51, y + 3, filled, 5, 0x94BF);
+        if (filled > 0) display_.fillRect(rowX + kStatusDnaBarOffset + 1, y + 3, filled, 5, 0x94BF);
     }
     display_.setTextColor(kInk, kPanel);
 }
@@ -384,18 +380,23 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
         drawVital("/ui/icons/heart.vpa", copy::hp(spanish), pet.health(), kStatusVitalY, 0xF800);
         drawVital("/ui/icons/feed.vpa", copy::hunger(spanish), pet.hunger(), kStatusVitalY + kStatusVitalRow, 0xFD20);
         drawVital("/ui/icons/energy.vpa", copy::energy(spanish), pet.energy(), kStatusVitalY + kStatusVitalRow * 2, 0x07FF);
+        drawVital("/ui/icons/brain.vpa", spanish ? "ANIMO" : "MOOD", pet.happiness(), kStatusVitalY + kStatusVitalRow * 3, 0x56D1);
         return;
     }
     const int16_t x = kStatusListX;
+    const bool carePage = (page % Navigation::kStatusPages) == 1;
     auto drawStatusRow = [&](const char* icon, const char* label, const char* value, uint8_t row) {
-        const int16_t y = kStatusListY + row * kStatusListRow;
-        display_.fillRoundRect(x, y, kStatusListW, kStatusListH, 3, kChip);
-        display_.drawRoundRect(x, y, kStatusListW, kStatusListH, 3, kInk);
-        assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 2, 12, 12, false, -1, 65);
+        const int16_t y = kStatusListY + row * (carePage ? kStatusCareRow : kStatusListRow);
+        const int16_t height = carePage ? kStatusCareH : kStatusListH;
+        const int16_t textY = y + (carePage ? 2 : 4);
+        const int16_t iconSize = carePage ? 10 : 12;
+        display_.fillRoundRect(x, y, kStatusListW, height, 3, kChip);
+        display_.drawRoundRect(x, y, kStatusListW, height, 3, kInk);
+        assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 1, iconSize, iconSize, false, -1, 65);
         display_.setTextColor(kInk, kChip);
-        drawLabel(label, x + 15, y + 4, 82, 1);
+        drawLabel(label, x + 15, textY, carePage ? 78 : 82, 1);
         display_.setTextDatum(TR_DATUM);
-        drawLabel(value, x + kStatusListW - 3, y + 4, 27, 1);
+        drawLabel(value, x + kStatusListW - 3, textY, carePage ? 30 : 27, 1);
         display_.setTextDatum(TL_DATUM);
     };
     char value[16];
@@ -444,6 +445,8 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
     drawStatusRow("/ui/icons/training.vpa", spanish ? "ESFUERZO" : "EFFORT", value, 3);
     snprintf(value, sizeof(value), "%d", pet.battles());
     drawStatusRow("/ui/icons/battle.vpa", spanish ? "BATALLAS" : "BATTLES", value, 4);
+    snprintf(value, sizeof(value), "%u/15", pet.injuries());
+    drawStatusRow("/ui/icons/medkit.vpa", spanish ? "LESIONES" : "INJURIES", value, 5);
 }
 
 void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) {
@@ -820,7 +823,7 @@ void Panels::draw(
             const bool statusPageChanged = panelChanged || lastStatusPage_ != page;
             if (!statusPageChanged && nowMs - lastStatusDataMs_ < 1000) {
                 display_.fillRect(0, 48, kStatusSplitX, 87, kPanel);
-                drawStatusPet(pet, nowMs);
+                drawStatusPet(pet, nowMs, spanish);
                 constexpr uint32_t kHelixFrameIntervalMs = 100;
                 if (page % Navigation::kStatusPages == 3 && nowMs - lastDnaHelixMs_ >= kHelixFrameIntervalMs) {
                     drawHelix(
@@ -843,7 +846,7 @@ void Panels::draw(
             beginPanel(statusPageChanged, navigation.menuIndex(), title, calling);
             lastStatusPage_ = page;
             lastStatusDataMs_ = nowMs;
-            drawStatusPet(pet, nowMs);
+            drawStatusPet(pet, nowMs, spanish);
             drawStatus(pet, spanish, page, nowMs);
             if ((page % Navigation::kStatusPages) == 3) lastDnaHelixMs_ = nowMs;
             break;
@@ -986,7 +989,15 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
     display_.setTextDatum(TL_DATUM);
     display_.setTextColor(TFT_WHITE, ink);
     if (s.page == PracticeSession::Page::Arena) {
-        assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
+        if (scene_) {
+            if (sceneKind_ != Scene::Arena) {
+                scene_->fillSprite(ink);
+                assets_.drawFrame(*scene_,"/backgrounds/background.vpa",0,0,0);
+                sceneKind_ = Scene::Arena;
+                arenaFooterKey_ = 0xFFFF;
+            }
+            memcpy(display_.getPointer(),scene_->getPointer(),240*135*2);
+        } else assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
         const uint32_t roundElapsed = nowMs - s.updatedAt;
         const bool active = s.battle.round > 0 && roundElapsed < practice::kImpactMs;
         int lunge = 0;
@@ -995,13 +1006,15 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         else if (active && roundElapsed >= 650 && roundElapsed < 950) lunge = 18 - (roundElapsed - 650) * 18 / 300;
         for (int i = 0; i < 2; ++i) {
             const auto& fighter = i == 0 ? s.battle.player : s.battle.rival;
-            const int action = active ? practice::presentationAction(s.battle, i) : -1;
+            int action = active ? practice::presentationAction(s.battle, i) : -1;
+            if (action == 3 && s.battle.actions[i] >= 0 && techniques::kCatalog[s.battle.actions[i]].mp) action = 1;
             const SpeciesId species = i == 0 ? pet.species() : SpeciesId::Rookie;
             const char* path = battleSpritePath(species, action);
             const uint32_t elapsed = active ? roundElapsed : nowMs;
-            const int homeX = i == 0 ? 12 : 140;
-            assets_.drawFrame(display_, path, (elapsed / 80) % (action < 0 || action == 2 ? 19 : 15),
-                              homeX + (i == 0 ? lunge : -lunge), 22, i == 1);
+            const int homeX = i == 0 ? 4 : 140;
+            if (!s.battle.result)
+                assets_.drawFrame(display_, path, elapsed / 80,
+                                  homeX + (i == 0 ? lunge : -lunge), 38, i == 1);
             display_.fillRect(i * 120, 0, 120, 34, ink);
             display_.setTextColor(TFT_WHITE, ink);
             display_.drawString(i == 0 ? battleSpeciesLabel(species) : (languageIsSpanish(language) ? "PRACTICA" : "PRACTICE"), i * 120 + 4, 1, 1);
@@ -1021,7 +1034,7 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             display_.fillRect(0, 33, 240, 82, ink);
             display_.fillRect(10, 36, 220, 75, TFT_DARKGREY);
             display_.drawRect(10, 36, 220, 75, resultColor);
-            const char* reaction = battleSpritePath(pet.species(), -1);
+            const char* reaction = portraitPath(pet.species(), false);
             if (s.battle.result != 3) {
                 if (pet.species() == SpeciesId::Rookie)
                     reaction = s.battle.result == 1 ? "/animations/rookie/firemon_happy.vpa" : "/animations/rookie/firemon_sad.vpa";
@@ -1030,7 +1043,8 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
                 else if (pet.species() == SpeciesId::Ultimate)
                     reaction = s.battle.result == 1 ? "/animations/ultimate/dragfiremon_happy.vpa" : "/animations/ultimate/dragfiremon_sad.vpa";
             }
-            assets_.drawFrameScaled(display_, reaction, nowMs / 100, 174, 57, 48, 48);
+            assets_.drawFrameScaled(display_, reaction, (nowMs - s.updatedAt) / 100,
+                                    164, 44, 64, 64, false, -1, 0, 88);
             display_.setTextColor(resultColor, TFT_DARKGREY);
             const bool es = languageIsSpanish(language);
             display_.drawString(s.battle.result == 1 ? (es ? "VICTORIA" : "VICTORY") :
@@ -1063,46 +1077,27 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             }
         }
         const bool es = languageIsSpanish(language);
-        if (!s.battle.result) {
-        display_.fillRect(0, 92, 240, 23, ink);
-        display_.setTextColor(TFT_WHITE, ink);
-        char actionLine[48];
-        if (s.battle.round == 0) {
-            snprintf(actionLine, sizeof(actionLine), "%s", es ? "ESPERANDO ORDEN" : "AWAITING ORDER");
-        } else {
-            const int playerAction = s.battle.actions[0];
-            const int requested = s.lastOrder;
-            snprintf(actionLine, sizeof(actionLine), "%s %s > %s %s  R%d",
-                     es ? "PEDISTE" : "ORDER", practiceTechniqueLabel(requested, es),
-                     es ? "HIZO" : "DID", practiceTechniqueLabel(playerAction, es), s.battle.round);
+        const uint16_t footerKey = s.cursor | (pet.practice.equipped << 4) | (s.battle.result ? 0x400 : 0);
+        const bool compact=s.count(pet)>6;
+        if (!scene_ || arenaFooterKey_ != footerKey) {
+            TFT_eSprite& footer = scene_ ? *scene_ : display_;
+            footer.fillRect(0,116,240,19,ink);
+            for (int i=0;i<s.count(pet);++i) {
+                const int x=2+i*(compact ? 18 : 20), size=compact ? 16 : 18;
+                if (i==s.cursor) footer.fillRect(x,116,size,19,TFT_DARKGREY);
+                const char* icon = s.actionIcon(pet,i);
+                assets_.drawFrameScaled(footer,icon,0,x,116,size,size,false,-1,0,
+                                        strncmp(icon,"/training/",10)==0 ? 16 : 20);
+                if (i==s.cursor) footer.drawRect(x,116,size,19,accent);
+            }
+            arenaFooterKey_ = footerKey;
         }
-        display_.drawString(actionLine, 4, 93, 1);
-        display_.setTextColor(TFT_LIGHTGREY, ink);
-        char detailLine[54];
-        if (s.battle.result) {
-            snprintf(detailLine, sizeof(detailLine), "%s", es ? "RESULTADO" : "BATTLE RESULT");
-        } else if (s.battle.round == 0) {
-            snprintf(detailLine, sizeof(detailLine), "%s", es ? "AUTO: DECIDE EL PET" : "AUTO: PET DECIDES");
-        } else {
-            const int dealt = s.battle.damage[0];
-            const int received = s.battle.damage[1];
-            snprintf(detailLine, sizeof(detailLine), "%s %s  %s -%d | %s -%d",
-                     es ? "MOTIVO:" : "WHY:", practiceReasonLabel(s.reason, es),
-                     es ? "RIVAL" : "RIVAL", dealt, es ? "PET" : "PET", received);
-        }
-        display_.drawString(*s.message ? s.message : detailLine, 4, 104, 1);
-        }
-        display_.fillRect(0, 116, 240, 19, ink);
+        if (scene_) memcpy(static_cast<uint16_t*>(display_.getPointer())+240*116,
+                           static_cast<uint16_t*>(scene_->getPointer())+240*116,240*19*2);
         display_.setTextColor(accent, ink);
-        for (int i=0;i<s.count(pet);++i) {
-            const int x=2+i*20;
-            if (i==s.cursor) display_.fillRect(x,116,18,19,TFT_DARKGREY);
-            assets_.drawFrameScaled(display_,s.actionIcon(pet,i),0,x,116,18,18);
-            if (i==s.cursor) display_.drawRect(x,116,18,19,accent);
-        }
         if (!s.battle.result && s.cursor > 0 && s.cursor < s.count(pet) - 2 &&
             s.equippedAt(pet, s.cursor - 1) == 2) {
-            drawLabel(es ? "GUARDIA -50% +4MP" : "GUARD -50% +4MP", 128, 121, 108, 1);
+            drawLabel(es ? "GUARDIA -50% +4MP" : "GUARD -50% +4MP", compact ? 132 : 128, 121, compact ? 104 : 108, 1);
         } else {
             const char* label = s.label(pet, s.cursor);
             if (!es) {
@@ -1113,9 +1108,10 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
                 else if (strcmp(label, "GUARDIA") == 0) label = "GUARD";
                 else if (strcmp(label, "GOLPE") == 0) label = "PUNCH";
                 else if (strcmp(label, "LLAMA") == 0) label = "FLAME";
+                else if (strcmp(label, "RAFAGA") == 0) label = "FLARE";
                 else if (strcmp(label, "AUTO") == 0) label = "AUTO";
             }
-            drawLabel(label, 128, 121, 108, 1);
+            drawLabel(label, compact ? 132 : 128, 121, compact ? 104 : 108, 1);
         }
     } else {
         char title[36];

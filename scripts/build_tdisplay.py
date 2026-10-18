@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.tdisplay_assets import write_asset, write_catalog_header, write_manifest
 from scripts.training_assets import package_training
+from scripts.battle_assets import ACTIONS as BATTLE_ACTIONS, normalize_frames
 
 
 SPECIES = {
@@ -79,6 +80,10 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
             relative = Path("animations") / species / f"{source.stem.removesuffix('_atlas')}.vpa"
             record = write_asset(data_dir / relative, frames, frames[0].size)
             records.append(record)
+            if species in ("rookie", "champion", "ultimate") and action in BATTLE_ACTIONS:
+                battle_frames = normalize_frames(frames)
+                battle_path = Path("battle") / (species + "_" + action + ".vpa")
+                records.append(write_asset(data_dir / battle_path, battle_frames, battle_frames[0].size))
             animations.append({
                 "species": species,
                 "action": action,

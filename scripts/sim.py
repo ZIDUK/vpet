@@ -373,7 +373,7 @@ def main():
         if pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
             pet.complete_hatch("baby")
             motion = PetMotion(now, **motion_kwargs)
-        if not pet.exploration.away and motion.state == MOTION_IDLE and evolution.evolve(pet):
+        if not pet.exploration.away and motion.state == MOTION_IDLE and services.evolve_and_save(pet, evolution):
             motion.start_evolution(
                 now,
                 SPARKMON_EVOLUTION_FRAME_COUNT

@@ -1,5 +1,5 @@
 """Layout checks use synthetic assets; preview_practice renders the real artwork."""
-from itertools import combinations
+from itertools import combinations, product
 from types import SimpleNamespace
 
 import pytest
@@ -14,8 +14,7 @@ from core.pet import Pet
 from scripts.practice_icons import INFO_ICONS, PATTERNS, PALETTE, info_icon, technique_icon
 from scripts.practice_renderer import (GREEN, HP, INK, MP, MUTED, PRACTICE_IMPACT_MS, WHITE,
                                         YELLOW, _draw_atlas, _draw_combatant, _species_atlas, bar,
-                                        battle_feedback, impact_sprite, render_practice,
-                                        BAND_TOP, BAND_BOTTOM)
+                                        battle_feedback, impact_sprite, render_practice)
 from scripts.practice_session import PracticeSession
 from scripts.sim_renderer import _load_image, device_path
 from scripts.training_renderer import render_training
@@ -136,7 +135,9 @@ def test_arena_round_and_result_copy_matches_language(practice_assets, monkeypat
     s.battle.reason = "SIGUE ORDEN"
     round_image = renderer.render_practice(practice_assets, s, 400)
     assert round_image.size == (240, 135)
-    assert all(label in painted for label in expected[:3])
+    assert not any(label.startswith(("ORDER ", "DID ", "WHY:", "PEDISTE ",
+                                     "HIZO ", "MOTIVO:")) for label in painted)
+    assert round_image.getpixel((120, 100)) == (75, 125, 90)
 
     painted.clear()
     s.battle.result = "VICTORIA"
@@ -474,27 +475,17 @@ def test_simulator_feeding_and_backpack_route_commit_items(monkeypatch):
 # at these (x, y) coordinates, giving a small but robust fingerprint that
 # survives resize and background blending. Each key pixel is chosen inside
 # the cell-0 rectangle (frame index 0) so the impact tests are deterministic.
-SIGNATURE_KEY_PIXELS = (
-    (25, 30),  # inside cell 0 rectangle → opaque with action colour
-    (30, 20),  # inside cell 0 rectangle → opaque
-    (30, 30),  # inside cell 0 rectangle → opaque
-    (5, 5),    # outside both rectangles → transparent in frame 0
-    (55, 5),   # outside both rectangles → transparent in frame 0
-)
 
 
-def _signature(practice_assets, kind, flip=False):
+def _signature(practice_assets, kind, flip=False, now_ms=0):
     """Return the rendered RGBA image of ``kind`` (hit / hurt / block / idle)
     pasted on a transparent canvas. The alpha channel lets the comparison
     logic tell sprite pixels from empty canvas pixels."""
-    canvas = Image.new("RGBA", (60, 60), (0, 0, 0, 0))
-    if kind in ("hit", "hurt"):
-        impact_sprite(canvas, practice_assets, 0, 0, 60, kind, 0, flip)
-    else:
-        from scripts.practice_renderer import pet_sprite as _pet
-        action = 2 if kind == "block" else None
-        _pet(canvas, practice_assets, 0, 0, 60, action, 0, flip)
-    return canvas
+    from scripts.battle_assets import atlas_frames
+    atlas = _load_image(device_path(practice_assets, _species_atlas("rookie", kind)))
+    frames = atlas_frames(atlas)
+    sprite = frames[(now_ms // 80) % len(frames)]
+    return sprite.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else sprite
 
 
 def _composite(practice_assets, session, now_ms):
@@ -502,8 +493,8 @@ def _composite(practice_assets, session, now_ms):
     RGB PIL images."""
     frame = render_practice(practice_assets, session, now_ms)
     return (
-        frame.crop((24, 33, 84, 93)).copy(),
-        frame.crop((154, 33, 214, 93)).copy(),
+        frame.crop((4, 38, 100, 114)).copy(),
+        frame.crop((140, 38, 236, 114)).copy(),
     )
 
 
@@ -518,13 +509,13 @@ def _slot_matches_signature(slot_rgb, signature_rgba, practice_assets,
     """
     bg_path = device_path(practice_assets, BACKGROUND_PATH)
     bg = _load_image(bg_path).convert("RGB")
-    slot_x = (154 if flipped else 24)
+    slot_x = (140 if flipped else 4)
     sig_label = "unknown"
     if isinstance(signature_rgba, Image.Image):
         # Identify which signature by sampling the centre pixel.
         sig_label = "centre=" + repr(signature_rgba.getpixel((30, 30))[:3])
-    for (x, y), exp in zip(SIGNATURE_KEY_PIXELS,
-                          [signature_rgba.getpixel(p) for p in SIGNATURE_KEY_PIXELS]):
+    for x, y in product(range(96), range(76)):
+        exp = signature_rgba.getpixel((x, y))
         actual = slot_rgb.getpixel((x, y))
         if exp[3] > 100:  # signature pixel is opaque
             assert max(abs(exp[i] - actual[i]) for i in range(3)) <= sprite_tolerance, (
@@ -532,7 +523,7 @@ def _slot_matches_signature(slot_rgb, signature_rgba, practice_assets,
                 f"(sig {sig_label})"
             )
         else:  # sprite transparent → slot must show the meadow background
-            bg_color = bg.getpixel((slot_x + x, 33 + y))
+            bg_color = bg.getpixel((slot_x + x, 38 + y))
             assert max(abs(bg_color[i] - actual[i]) for i in range(3)) <= bg_tolerance, (
                 f"transparent signature pixel ({x}, {y}) should match meadow "
                 f"({bg_color}); got {actual}"
@@ -556,8 +547,8 @@ def _composite(practice_assets, session, now_ms):
     PIL images."""
     frame = render_practice(practice_assets, session, now_ms)
     return (
-        frame.crop((24, 33, 84, 93)).copy(),
-        frame.crop((154, 33, 214, 93)).copy(),
+        frame.crop((4, 38, 100, 114)).copy(),
+        frame.crop((140, 38, 236, 114)).copy(),
     )
 
 
@@ -654,7 +645,7 @@ def test_simultaneous_attack_differentiates_first_and_second_actor(practice_asse
     shows hit; the second actor (who took the first hit before retaliating)
     shows hurt. Flipping the speed order swaps which side gets hit."""
     hit_sig = _signature(practice_assets, "hit")
-    hit_sig_flip = _signature(practice_assets, "hit", flip=True)
+    cast_sig_flip = _signature(practice_assets, "cast", flip=True)
     hurt_sig = _signature(practice_assets, "hurt")
     hurt_sig_flip = _signature(practice_assets, "hurt", flip=True)
     # Player faster → player is first actor → player shows hit.
@@ -669,14 +660,14 @@ def test_simultaneous_attack_differentiates_first_and_second_actor(practice_asse
     s.battle.rival.stats[4] = 50
     player_slot, rival_slot = _composite(practice_assets, s, _now_ms())
     _slot_matches_signature(player_slot, hurt_sig, practice_assets)
-    _slot_matches_signature(rival_slot, hit_sig_flip, practice_assets, flipped=True)
+    _slot_matches_signature(rival_slot, cast_sig_flip, practice_assets, flipped=True)
     # Equal speed on an even round: rival is the first actor (round % 2 == 0).
     s.battle.player.stats[4] = 40
     s.battle.rival.stats[4] = 40
     s.battle.round = 2
     player_slot, rival_slot = _composite(practice_assets, s, _now_ms())
     _slot_matches_signature(player_slot, hurt_sig, practice_assets)
-    _slot_matches_signature(rival_slot, hit_sig_flip, practice_assets, flipped=True)
+    _slot_matches_signature(rival_slot, cast_sig_flip, practice_assets, flipped=True)
 
 
 def test_ko_before_acting_shows_hurt_on_defender(practice_assets):
@@ -696,7 +687,7 @@ def test_impact_window_uses_configured_duration(practice_assets):
     at PRACTICE_IMPACT_MS exactly it must be idle."""
     s = _seed_session(actions=(0, 2), damage=(7, 0))
     hit_sig = _signature(practice_assets, "hit")
-    idle_sig = _signature(practice_assets, "idle")
+    idle_sig = _signature(practice_assets, "idle", now_ms=1000 + PRACTICE_IMPACT_MS)
     inside_player, _ = _composite(practice_assets, s, PRACTICE_IMPACT_MS - 1)
     outside_player, _ = _composite(practice_assets, s, 1000 + PRACTICE_IMPACT_MS)
     _slot_matches_signature(inside_player, hit_sig, practice_assets)
@@ -790,10 +781,10 @@ def test_renderer_idle_outside_impact_window(practice_assets):
     """When the impact window is closed, _draw_combatant must fall back to
     the idle sprite regardless of what ``own_action`` says."""
     s = _seed_session(actions=(0, 2), damage=(7, 0))
-    idle_sig = _signature(practice_assets, "idle")
+    idle_sig = _signature(practice_assets, "idle", now_ms=PRACTICE_IMPACT_MS + 50)
     hit_sig = _signature(practice_assets, "hit")
     frame = render_practice(practice_assets, s, PRACTICE_IMPACT_MS + 50)
-    slot = frame.crop((24, 33, 84, 93)).copy()
+    slot = frame.crop((4, 38, 100, 114)).copy()
     _slot_matches_signature(slot, idle_sig, practice_assets)
     assert not _matches(slot, hit_sig, practice_assets)
 
@@ -808,11 +799,7 @@ def test_renderer_idle_outside_impact_window(practice_assets):
 
 
 # Y-ranges for the bands, mirrored from practice_renderer.
-FEEDBACK_BAND = (92, 114)
-SELECTOR_BAND = (115, 134)
-HEADER_BAND = (0, 32)
 # Column boundaries for the dual-pane header (FIREMON | PRACTICA).
-HEADER_COLS = (4, 119, 125, 238)
 
 
 def _seed_feedback(reason, order=0, action=0, damage=(0, 0), round=1,
@@ -864,277 +851,6 @@ def _has_text_color(frame, expected, y_start, y_end, x_start=0, x_end=240,
                     and abs(b - expected[2]) <= tolerance):
                 return True
     return False
-
-
-def _text_row_color(frame, y, x_start, x_end):
-    """Return the dominant non-background colour on a 1-pixel-tall row.
-    Used to identify the colour of the painted glyph (the band background
-    is INK so a different RGB must come from text)."""
-    px = frame.load()
-    counts = {}
-    for x in range(x_start, x_end):
-        c = px[x, y]
-        if c == INK:
-            continue
-        counts[c] = counts.get(c, 0) + 1
-    if not counts:
-        return None
-    return max(counts, key=counts.get)
-
-
-def test_feedback_band_pediste_hizo_line_on_obedience(practice_assets):
-    """When the pet obeys the order, the ``HIZO`` portion of line 1 must be
-    painted in green (not the red used for substitution)."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(5, 0))
-    frame = _render_band(practice_assets, s)
-    # Line 1 occupies y=92..102 (BAND_TOP..BAND_TOP+10) under the new layout.
-    line1_color = _text_row_color(frame, 96, 0, 240)
-    assert line1_color is not None, "expected some text on line 1"
-    # Green must be present somewhere on line 1 to mark obedience.
-    assert _has_text_color(frame, GREEN, 93, 102, 0, 240, tolerance=60), (
-        "expected GREEN pixels on line 1 to mark HIZO obeyed; "
-        f"dominant={line1_color}"
-    )
-
-
-def test_feedback_band_hizo_in_red_on_substitution(practice_assets):
-    """When the pet ignores the requested technique the ``HIZO`` portion
-    must be painted in HP (red) so the substitution is obvious. The line
-    must not be green-dominant for that section."""
-    s = _seed_feedback("SIN MP", order=1, action=0, damage=(0, 5))
-    frame = _render_band(practice_assets, s)
-    # HP-red must appear on line 1 to mark the substitution.
-    assert _has_text_color(frame, HP, 93, 102, 0, 240, tolerance=60), (
-        "expected HP (red) pixels on line 1 to mark HIZO substitution"
-    )
-
-
-def test_feedback_band_motivo_red_on_sin_mp(practice_assets):
-    """The second line of the band (``MOTIVO:``) must use the red category
-    colour for the ``SIN MP`` reason."""
-    s = _seed_feedback("SIN MP", order=1, action=0, damage=(0, 5))
-    frame = _render_band(practice_assets, s)
-    # Line 2 occupies y=BAND_TOP+13..BAND_BOTTOM = 105..114.
-    assert _has_text_color(frame, HP, 105, 114, 0, 120, tolerance=60), (
-        "expected HP (red) MOTIVO line for SIN MP"
-    )
-
-
-def test_feedback_band_motivo_red_on_en_recarga(practice_assets):
-    """The cooldown reason must also be painted in red so the player
-    knows the action was blocked, not preferred."""
-    s = _seed_feedback("EN RECARGA", order=1, action=0, damage=(0, 5))
-    frame = _render_band(practice_assets, s)
-    assert _has_text_color(frame, HP, 105, 114, 0, 120, tolerance=60), (
-        "expected HP (red) MOTIVO line for EN RECARGA"
-    )
-
-
-def test_feedback_band_motivo_yellow_on_prefiere(practice_assets):
-    """The personality-preference reason (warn category) must paint the
-    reason in yellow so the player can tell ``I chose this on purpose``
-    apart from a hard block."""
-    s = _seed_feedback("PREFIERE DEFENDER", order=0, action=2, damage=(0, 0))
-    frame = _render_band(practice_assets, s)
-    assert _has_text_color(frame, YELLOW, 105, 114, 0, 200, tolerance=60), (
-        "expected YELLOW MOTIVO line for PREFIERE DEFENDER"
-    )
-
-
-def test_feedback_band_motivo_green_on_sigue_orden(practice_assets):
-    """When the pet follows the order, the reason line must be green to
-    confirm the successful obedience."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(3, 0))
-    frame = _render_band(practice_assets, s)
-    assert _has_text_color(frame, GREEN, 105, 114, 0, 200, tolerance=60), (
-        "expected GREEN MOTIVO line for SIGUE ORDEN"
-    )
-
-
-def test_feedback_band_never_uses_generic_substitution_message(practice_assets):
-    """The previous generic ``PET SUSTITUYO ORDEN`` label must never
-    appear, regardless of which reason triggered the substitution. The
-    renderer instead must surface the real reason text on line 2 in the
-    appropriate category colour. We assert that for every substitute
-    reason the line-2 reason is painted in either the bad (red) or warn
-    (yellow) category colour and is never just a plain yellow on its
-    own — that would be the colour of the old generic label."""
-    for reason in ("SIN MP", "EN RECARGA", "PREFIERE DEFENDER", "PREFIERE ATACAR",
-                   "A SU CRITERIO", "SIGUE ORDEN"):
-        s = _seed_feedback(reason, order=0 if reason != "A SU CRITERIO" else -1,
-                           action=2 if "DEFENDER" in reason else 0, damage=(0, 0))
-        frame = _render_band(practice_assets, s)
-        # The line-2 reason must always be visible: either red (bad),
-        # yellow (warn) or green/white (obedient/neutral). At minimum,
-        # the row must contain coloured pixels (proving the reason text
-        # was drawn instead of the old generic label, which used the
-        # same default yellow and would be ambiguous to remove).
-        dominant = _text_row_color(frame, 108, 0, 240)
-        assert dominant is not None, (
-            f"reason={reason} did not render any text on the reason line"
-        )
-    # Strong guarantee: the renderer source must not contain the string
-    # anywhere. If the label is reintroduced in a future refactor the
-    # tests will flag it via this direct text search.
-    from pathlib import Path
-    src = Path("scripts/practice_renderer.py").read_text()
-    assert "PET SUSTITUYO ORDEN" not in src, (
-        "the generic 'PET SUSTITUYO ORDEN' label must not appear in the renderer"
-    )
-
-
-def _capture_text(practice_assets, s, monkeypatch, y_start=BAND_TOP, y_end=BAND_BOTTOM):
-    """Render the battle frame with a monkey-patched ``ImageDraw.text`` and
-    return a list of ``(text, x, y)`` tuples in the order they were drawn,
-    filtered to the band rows ``y_start..y_end``. The x/y are the
-    top-left of the rendered text; values are not redrawn but only
-    captured for inspection. The returned order matches the order the
-    renderer painted the strings, which is the natural reading order
-    left-to-right inside a single y row."""
-    records = []
-    real_text = ImageDraw.ImageDraw.text
-
-    def checked_text(draw, xy, value, *args, **kwargs):
-        records.append((str(value), int(xy[0]), int(xy[1])))
-        return real_text(draw, xy, value, *args, **kwargs)
-
-    monkeypatch.setattr(ImageDraw.ImageDraw, "text", checked_text)
-    _render_band(practice_assets, s)
-    return [(t, x, y) for (t, x, y) in records
-            if y_start <= y < y_end]
-
-
-def _line2_texts(records):
-    """Return only the text fragments painted on band line 2 (the MOTIVO
-    line, y=BAND_TOP+13). The renderer writes left-aligned then
-    right-aligned text on this row, so the leftmost entry is the reason
-    and the rightmost is the damage counter."""
-    return [(t, x) for (t, x, y) in records if y == BAND_TOP + 13]
-
-
-def _line1_texts(records):
-    """Return only the text fragments painted on band line 1 (the
-    PEDISTE / HIZO line, y=BAND_TOP+1)."""
-    return [(t, x) for (t, x, y) in records if y == BAND_TOP + 1]
-
-
-def test_feedback_band_damage_order_player_attacks(practice_assets, monkeypatch):
-    """When the player attacks, ``damage[0]`` is the damage Firemon dealt
-    to Practica (PRACT's HP loss) and ``damage[1]`` is what Practica
-    dealt back. The right-anchored counter must read
-    ``PRACT -<damage[0]> | FIRE -<damage[1]>`` so the player can read
-    the actual values, not just the colour of the glyphs."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(7, 0))
-    records = _capture_text(practice_assets, s, monkeypatch)
-    line2 = sorted(_line2_texts(records), key=lambda r: r[1])
-    # Rightmost text on the MOTIVO line is the damage counter.
-    damage_text = line2[-1][0]
-    assert damage_text == "PRACT -7 | FIRE -0", (
-        f"expected 'PRACT -7 | FIRE -0' (PRACT took 7, FIRE took 0); "
-        f"got {damage_text!r}; line2={line2}"
-    )
-
-
-def test_feedback_band_damage_order_rival_attacks(practice_assets, monkeypatch):
-    """When the rival attacks, ``damage[1]`` is what Firemon absorbed.
-    The counter must read ``PRACT -0 | FIRE -5`` so the player sees
-    their own HP loss as the FIRE column."""
-    s = _seed_feedback("SIN MP", order=1, action=2, damage=(0, 5))
-    records = _capture_text(practice_assets, s, monkeypatch)
-    line2 = sorted(_line2_texts(records), key=lambda r: r[1])
-    damage_text = line2[-1][0]
-    assert damage_text == "PRACT -0 | FIRE -5", (
-        f"expected 'PRACT -0 | FIRE -5' (PRACT took 0, FIRE took 5); "
-        f"got {damage_text!r}; line2={line2}"
-    )
-
-
-def test_feedback_band_damage_order_trade(practice_assets, monkeypatch):
-    """Both combatants attack. damage = (6, 4) means Firemon dealt 6 to
-    Practica and Practica dealt 4 to Firemon. The counter must read
-    ``PRACT -6 | FIRE -4``."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(6, 4))
-    records = _capture_text(practice_assets, s, monkeypatch)
-    line2 = sorted(_line2_texts(records), key=lambda r: r[1])
-    damage_text = line2[-1][0]
-    assert damage_text == "PRACT -6 | FIRE -4", (
-        f"expected 'PRACT -6 | FIRE -4' (PRACT took 6, FIRE took 4); "
-        f"got {damage_text!r}; line2={line2}"
-    )
-
-
-def test_feedback_band_damage_text_is_red(practice_assets, monkeypatch):
-    """The damage counter must be painted in the HP (red) colour so the
-    player can read the round result at a glance. The other test
-    verifies the text; this one verifies the colour to guard against
-    a refactor that changes the colour while keeping the labels."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(6, 4))
-    # Use the colour-based assertion as a smoke test that the damage
-    # block actually paints on line 2 and uses the HP palette.
-    frame = _render_band(practice_assets, s)
-    assert _has_text_color(frame, HP, 105, 114, 160, 240, tolerance=60), (
-        "expected HP (red) damage counter on the right of line 2"
-    )
-
-
-def test_feedback_band_line1_paints_pediste_hizo_in_order(practice_assets, monkeypatch):
-    """Line 1 must read ``PEDISTE <order>`` first (left) and then
-    ``HIZO <action>`` to the right of the arrow. The order label must
-    match the request; the action label must match what the pet did."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(3, 0))
-    records = _capture_text(practice_assets, s, monkeypatch)
-    line1 = sorted(_line1_texts(records), key=lambda r: r[1])
-    fragments = [t for (t, _) in line1]
-    # The first text is the order label, the action is reached after
-    # the order and the arrow.
-    assert fragments[0] == "PEDISTE GOLPE", fragments
-    assert any("HIZO GOLPE" == f for f in fragments), fragments
-    assert any("R1" == f for f in fragments), fragments
-
-
-def test_feedback_band_round_counter_anchored_right(practice_assets):
-    """The round label ``R#X`` must be right-anchored on line 1; the
-    MOTIVO text must not overlap with it."""
-    s = _seed_feedback("SIGUE ORDEN", order=0, action=0, damage=(0, 0), round=7)
-    frame = _render_band(practice_assets, s)
-    # R#7 sits in the right 30 px of line 1. The MOTIVO line is below.
-    assert _has_text_color(frame, MUTED, 93, 102, 210, 240, tolerance=60), (
-        "expected MUTED round label near the right edge of line 1"
-    )
-
-
-def test_feedback_band_auto_order_and_a_su_criterio(practice_assets):
-    """When the player picks AUTO, the order label must read ``AUTO`` and
-    the reason must be ``A SU CRITERIO`` painted in white (neutral)."""
-    s = _seed_feedback("A SU CRITERIO", order=-1, action=0, damage=(0, 4))
-    frame = _render_band(practice_assets, s)
-    info = battle_feedback(s)
-    assert info.order_is_auto and info.order_label == "AUTO"
-    assert info.reason_key == "A SU CRITERIO"
-    assert _has_text_color(frame, WHITE, 105, 114, 0, 200, tolerance=60), (
-        "expected WHITE MOTIVO for A SU CRITERIO"
-    )
-
-
-def test_feedback_band_awaiting_state_uses_elige_orden(practice_assets):
-    """Pre-round 1 the band must not show a damage counter and the
-    reason must be the muted ``ESPERANDO ORDEN``."""
-    s = _seed_feedback("ELIGE ORDEN", awaiting=True)
-    frame = _render_band(practice_assets, s)
-    info = battle_feedback(s)
-    assert info.awaiting
-    # The damage counter would use HP; in the awaiting state no damage
-    # pixels should appear on the right of line 2.
-    px = frame.load()
-    damage_pixels = 0
-    for y in range(105, 114):
-        for x in range(180, 240):
-            c = px[x, y]
-            if (abs(c[0] - HP[0]) <= 40
-                    and abs(c[1] - HP[1]) <= 40
-                    and abs(c[2] - HP[2]) <= 40):
-                damage_pixels += 1
-    assert damage_pixels == 0, "no damage counter before round 1"
 
 
 def test_action_selector_shows_pet_decide_for_auto(practice_assets):

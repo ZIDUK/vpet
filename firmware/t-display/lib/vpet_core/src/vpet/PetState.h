@@ -59,6 +59,11 @@ public:
     Exploration exploration;
     AdoptedInventory adoptedStock;
     bool trainTechnique(uint8_t technique);
+    int techniqueStage() const {
+        return species_ == SpeciesId::Rookie ? 1 : species_ == SpeciesId::Champion ? 2 :
+            species_ == SpeciesId::Ultimate ? 3 : 0;
+    }
+    int techniqueCapacity() const { return techniqueStage() ? techniqueStage()+1 : 0; }
     void tick(uint32_t elapsedMs);
     bool beginAction(Action action);
     bool completeAction();

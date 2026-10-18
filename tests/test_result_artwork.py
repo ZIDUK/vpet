@@ -41,7 +41,7 @@ def test_emotion_viewports_keep_every_selected_frame(monkeypatch, tmp_path):
             for index in range(15):
                 ms = index * 100
                 image = render_practice(tmp_path / "build", session, ms)
-                expected = Image.new("RGB", (48, 48), PANEL)
+                expected = Image.new("RGB", (64, 64), PANEL)
                 _draw_atlas(expected, tmp_path / "build", _species_atlas("rookie", action),
-                            0, 0, 48, ms)
-                assert image.crop((174, 57, 222, 105)).tobytes() == expected.tobytes()
+                            0, 0, 64, ms, frame_interval_ms=100)
+                assert image.crop((164, 44, 228, 108)).tobytes() == expected.tobytes()

@@ -31,7 +31,7 @@ def pin_pet_x(pet_size, split_x=STATUS_SPLIT_X):
 
 # ---------------------------------------------------------------------------
 # Page 1/4: vital. HP de crianza (current HP, not the combat pool),
-# alimentacion (ham/hambre), energia. The HP value lives on ``stats["hp"]``
+# alimentacion (ham/hambre), energia y animo. HP lives on ``stats["hp"]``
 # in the pet; the combat-stat HP (``combat_stat("hp") * 2 + 40``) is
 # shown on the DNA page next to the other five stats so the two never
 # share the same screen.
@@ -39,9 +39,9 @@ def pin_pet_x(pet_size, split_x=STATUS_SPLIT_X):
 
 
 def vital_rows(pet, spanish):
-    """Return the three vital rows. The shape is 4-tuple
+    """Return the four vital rows. The shape is 4-tuple
     (icon, label, value_str, kind) where ``kind`` is a stable key the
-    renderer uses to pick the bar color (red/orange/cyan)."""
+    renderer uses to pick the bar color (red/orange/cyan/green)."""
     from core.i18n import tr
     return (
         ("Heart", tr(pet, "status.vital.hp_care.label"),
@@ -53,18 +53,21 @@ def vital_rows(pet, spanish):
         ("Energy", tr(pet, "status.vital.energy.label"),
             tr(pet, "status.vital.energy.value", int(pet.stats["e"])),
             "energy"),
+        ("Brain", tr(pet, "status.vital.mood.label"),
+            tr(pet, "status.vital.mood.value", int(pet.stats["p"])),
+            "mood"),
     )
 
 
 # ---------------------------------------------------------------------------
-# Page 2/4: care. Five rows that replace the old "OF / CM" acronyms.
+# Page 2/4: care. Six rows including cumulative injuries.
 # The age is adapted to the most readable unit without changing the
 # underlying ``stage_age_seconds`` value.
 # ---------------------------------------------------------------------------
 
 
 def care_rows(pet, spanish, clock_text, call_text):
-    """Return the five care rows. The shape is 4-tuple
+    """Return the six care rows. The shape is 4-tuple
     (icon, label, value, extra). ``extra`` is the clock or call-reason
     string for the first row only; the rest are empty. The age is
     formatted as a short string with the most readable unit."""
@@ -87,6 +90,8 @@ def care_rows(pet, spanish, clock_text, call_text):
             tr(pet, "status.care.battles.value",
                int(getattr(pet, "battles_this_form", pet.battles_won))),
             ""),
+        ("Medkit", tr(pet, "status.care.injuries.label"),
+            tr(pet, "status.care.injuries.value", int(pet.injuries)), ""),
     )
 
 
@@ -137,8 +142,8 @@ def battle_rows(pet, spanish):
 
 # ---------------------------------------------------------------------------
 # Page 4/4: DNA. The full code XX-XX-XX-XX is rendered alongside the
-# rotating helix; six stat rows (combat-stat, not EV) are shown with
-# bars on a 0..99 scale. The renderer draws this page; the helper
+# rotating helix; six combat stats have bars on a 0..99 scale and a
+# separate accumulated EV column. The renderer draws this page; the helper
 # here only returns the data.
 # ---------------------------------------------------------------------------
 

@@ -431,7 +431,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (!practice_.battle.result || beforeSession.battle.result)
             practicing_ = practice_.input(pet_, event, nowMs);
         if (practice_.dirty) {
-            const bool committed=settingsStore_.commitConsumables(pet_);
+            const bool committed=settingsStore_.save(pet_,settings_);
             practice_.finishSave(pet_,beforePet,beforeSession,committed);
             if (!committed) practicing_=true;
             else if (!settleStorage()) return;
@@ -439,6 +439,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (!practicing_) { panels_.invalidate(); motion_.alignClock(nowMs); }
         else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 50) {
             lastRenderMs_ = nowMs;
+            renderer_.invalidate();
             panels_.drawPractice(practice_, pet_, nowMs,settings_.language.c_str());
         }
         return;
@@ -564,6 +565,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     const PanelId panel = navigation_.panel();
     uint32_t intervalMs = 33;
+    if (panel == PanelId::Exploration) {
+        const auto page = exploration_.page;
+        intervalMs = page == ExplorationSession::Page::Routes || page == ExplorationSession::Page::Stats ? 1000 : 70;
+    } else if (panel == PanelId::Home && pet_.exploration.away()) intervalMs = 70;
     if (panel == PanelId::Status || panel == PanelId::Inventory || panel == PanelId::Feeding || panel == PanelId::EvolutionTree ||
         panel == PanelId::EvolutionDetail || panel == PanelId::Rest ||
         panel == PanelId::Options) {
@@ -572,8 +577,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {
         lastRenderMs_ = nowMs;
         if (navigation_.panel() == PanelId::Exploration) {
+            renderer_.invalidate();
             panels_.drawExploration(exploration_,pet_,calendarNow(),nowMs,settings_.language.c_str());
         } else if (navigation_.panel() == PanelId::Home && pet_.exploration.away()) {
+            renderer_.invalidate();
             ExplorationSession home;
             home.open(pet_,explorationClock_.trusted(calendarNow()));
             panels_.drawExploration(home,pet_,calendarNow(),nowMs,settings_.language.c_str(),true,navigation_.menuIndex());

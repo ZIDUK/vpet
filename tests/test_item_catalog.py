@@ -97,3 +97,27 @@ def test_backpack_blurbs_fit_the_firmware_preview_width():
             continue
         for language in ("ES", "EN"):
             assert len(item["blurbs"][language]) * 6 <= 88
+
+
+@pytest.mark.parametrize("spanish", [False, True])
+def test_all_inventory_item_names_use_uppercase(spanish):
+    from core.adopted_items import ITEMS as adopted, short_name
+    from core.inventory import INVENTORY_ENTRY_COUNT
+    for index in range(INVENTORY_ENTRY_COUNT):
+        name = inventory_name(index, spanish)
+        assert name and name == name.upper(), (index, name)
+    for item in adopted:
+        name = short_name(item, spanish)
+        assert name and name == name.upper(), (item["id"], name)
+
+
+def test_board_item_names_match_uppercase_simulator_names(tmp_path):
+    from core.inventory import INVENTORY_ENTRY_COUNT
+    binary = tmp_path / "item-names"
+    subprocess.run(["c++", "-std=c++11", "-I", str(ROOT / "firmware/t-display/lib/vpet_core/src"),
+                    str(ROOT / "tests/item_names_trace.cpp"), "-o", str(binary)], check=True)
+    actual = subprocess.check_output([str(binary)], text=True).splitlines()
+    expected = [inventory_name(index, spanish)
+                for index in range(INVENTORY_ENTRY_COUNT) for spanish in (True, False)]
+    assert actual == expected
+    assert all(name == name.upper() for name in actual)

@@ -427,7 +427,7 @@ class Pet:
         from core.adopted_items import load_stock
         self.adopted_inventory, self.item_reward_cursor = load_stock(
             d.get('adopted_items'), missing='adopted_items' not in d)
-        self.techniques = TechniqueProgress(d.get("techniques"))
+        self.techniques = TechniqueProgress(d.get("techniques"), d.get("species", self.species))
         self.exploration = Exploration(d.get("exploration"))
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)

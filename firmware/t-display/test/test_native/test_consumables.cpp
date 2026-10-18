@@ -386,7 +386,7 @@ void test_practice_last_order_survives_cursor_changes() {
     session.cursor=2;
     session.input(pet,InputEvent::Action,0);
     TEST_ASSERT_EQUAL(1,session.lastOrder);
-    TEST_ASSERT_EQUAL(0,session.cursor);
+    TEST_ASSERT_EQUAL(2,session.cursor);
     session.input(pet,InputEvent::Next,1);
     TEST_ASSERT_EQUAL(1,session.lastOrder);
     session.cursor=session.count(pet)-2;

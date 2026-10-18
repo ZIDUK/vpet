@@ -123,9 +123,9 @@ public:
     static void formatTime(uint32_t seconds,char* out,size_t size) {
         snprintf(out,size,"%02u:%02u:%02u",seconds/3600,(seconds%3600)/60,seconds%60);
     }
-    void draw(bool home=false,uint8_t menu=3) {
-        rect(0,0,240,135,ink);
-        for(uint8_t i=0;i<menu_bar::count;++i) icon(menu_bar::icons[i],menu_bar::iconX(i),2);
+    void draw(bool home=false,uint8_t menu=3,bool chrome=true) {
+        rect(0,chrome ? 0 : 24,240,chrome ? 135 : 111,ink);
+        if(chrome) for(uint8_t i=0;i<menu_bar::count;++i) icon(menu_bar::icons[i],menu_bar::iconX(i),2);
         outline(menu_bar::left(menu),0,menu_bar::width(menu),24,yellow);
         outline(menu_bar::left(menu)+1,1,menu_bar::width(menu)-2,22,yellow);
         if(!ExplorationSession::eligible(pet)) {

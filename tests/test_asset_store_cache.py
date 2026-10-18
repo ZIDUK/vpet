@@ -18,6 +18,10 @@ def test_real_asset_store_reuses_static_training_icons_without_io(tmp_path):
         (data / f"icon{index}.vpa").write_bytes(encode_vpa([image], 16, 16))
     frames = [Image.new("RGBA", (68, 68), color) for color in ("red", "blue")]
     (data / "pet.vpa").write_bytes(encode_vpa(frames, 68, 68))
+    portrait = Image.new("RGBA", (88, 88))
+    for x, y, color in ((0, 0, "red"), (70, 70, "blue"), (0, 80, "green"), (80, 0, "yellow")):
+        portrait.paste(color, (x, y, min(x + 8, 88), min(y + 8, 88)))
+    (data / "portrait.vpa").write_bytes(encode_vpa([portrait], 88, 88))
     binary = tmp_path / "asset-cache"
     subprocess.run([
         "c++", "-std=c++17", "-I" + str(ROOT / "tests/asset_stubs"),

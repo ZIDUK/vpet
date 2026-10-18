@@ -15,13 +15,13 @@ class Fighter:
         self.max_mp = 10 + self.stats[1]
         self.hp, self.mp = self.max_hp, self.max_mp
         self.equipped = tuple(equipped)
-        self.mastery = tuple(mastery)
+        self.mastery = tuple(mastery) + (0,) * max(0, len(TECHNIQUES) - len(mastery))
         self.personality, self.bond = personality % 3, max(0, min(100, bond))
         self.element = element if element in ELEMENTS else "neutral"
-        self.cooldowns = [0, 0, 0]
+        self.cooldowns = [0] * len(TECHNIQUES)
 
     def valid(self, action):
-        return (action in self.equipped and self.cooldowns[action] == 0
+        return (0 <= action < len(TECHNIQUES) and action in self.equipped and self.cooldowns[action] == 0
                 and self.mp >= TECHNIQUES[action]["mp"])
 
 
@@ -37,8 +37,8 @@ def choose(fighter, requested=AUTO):
         else:
             score = tech["power"] + fighter.mastery[i] // 20
             score += 12 if fighter.personality == 0 else 0
-            score += 12 if fighter.personality == 2 and i == 1 else 0
-            score += fighter.stats[5] // 10 if i == 1 else 0
+            score += 12 if fighter.personality == 2 and tech['mp'] else 0
+            score += fighter.stats[5] // 10 if tech['mp'] else 0
         score += 10 + fighter.bond // 2 if requested == i else 0
         scores.append((score, -i))
     if not scores:
@@ -66,7 +66,7 @@ class PracticeBattle:
         self.reason = "ELIGE ORDEN"
         self.actions = (None, None)
         self.damage = (0, 0)
-        self.uses = [0, 0, 0]
+        self.uses = [0] * len(TECHNIQUES)
 
     def use_item(self, stock, item_id):
         from core.adopted_items import use_combat_item

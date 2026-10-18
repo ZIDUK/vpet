@@ -31,11 +31,36 @@ durante veinte refrescos, pixeles identicos, transparencia/fondos, modos
 especiales, clipping, eviction, invalidacion y AssetStore menor a 13000 bytes.
 El cuadro animado caliente necesita cuatro lecturas de offset y tres bloques.
 
-Pendiente: carga autorizada, tiempo por draw, latencia NEXT, heap libre/minimo
-y prueba sostenida con BLE, ES/EN y las tres especies de combate. No publicar
-FPS ni declarar resuelto el reporte antes de medirlo en placa.
+Pendiente: tiempo por draw, latencia NEXT, heap libre/minimo durante Training
+y prueba sostenida con BLE, ES/EN y las tres especies de combate. La
+aceptacion visual del usuario queda registrada abajo; no se publican FPS
+ni latencias instrumentadas a partir de esa observacion.
 
 Validacion local final: 1078 pruebas Python aprobadas (7762 avisos), 191.20 s;
 firmware compilado con RAM estatica 56028/327680 y flash 1007657/4194304 bytes.
 La RAM estatica crecio 5840 bytes. No se flasheo esta optimizacion en esta entrega.
 Entrega publicada en origin/master: `bdcf027` (2026-10-16).
+
+## Despliegue USB (2026-10-17)
+
+Optimizacion cargada por autorizacion explicita del usuario. Compilacion
+actual correcta antes de escribir, con Status sin cambios. Respaldo nuevo
+de particiones/NVS en `out/board-backups/20261017-training-cache/`.
+No se borro NVS ni se reinicio/provisiono deliberadamente la mascota.
+
+Firmware en 0x10000 (1014240 bytes) y LittleFS en 0x410000 (12451840 bytes)
+coinciden por digest con sus imagenes locales. Arranque final VPET_READY:
+heap libre 66660, minimo 66584; filesystem 9404416/12451840; manifest 1.
+BLE emitio CONNECTED y PAIRED. Logs de deploy, verify y boot conservados en
+`out/training-cache-board-deploy/`, con marcador TRAINING_CACHE_BOOT_OK.
+
+Ese despliegue confirma carga y arranque. FPS, latencia NEXT y heap de
+sesion larga siguen pendientes de medicion.
+
+## Aceptacion visual del usuario (2026-10-18)
+
+Tras verificar la ultima carga de firmware y assets por USB, el usuario
+confirmo que Training esta perfecto y el vpet se mueve fluido en la placa.
+Se cierra el reporte de lentitud visual en la pantalla probada. La
+confirmacion no especifica especie ni idioma, ni valida por separado
+Tecnicas, todas las opciones, latencia NEXT o sesiones prolongadas.

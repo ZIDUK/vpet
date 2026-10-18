@@ -233,15 +233,16 @@ bool AssetStore::drawFrameScaled(
     int16_t w, int16_t h,
     bool flipHorizontal,
     int32_t tint,
-    uint8_t minLuma
+    uint8_t minLuma,
+    uint16_t sourceSize
 ) {
-    if (w <= 0 || h <= 0 || w > 240 || h > 240 ||
+    if (sourceSize == 0 || sourceSize > 88 || w <= 0 || h <= 0 || w > 240 || h > 240 ||
         static_cast<int32_t>(w) * h > 240 * 240) {
         return false;
     }
     // 20 px is the native icon size; if the caller asks for the same
     // size we can skip the scratch sprite and scaling.
-    if (w == 20 && h == 20) {
+    if (w == sourceSize && h == sourceSize) {
         return drawFrame(canvas, path, frame, x, y, flipHorizontal, tint, minLuma);
     }
     // Sample the destination pixel at (x, y) to use as the sprite
@@ -250,7 +251,8 @@ bool AssetStore::drawFrameScaled(
     const uint16_t bg = canvas.readPixel(x, y);
     TFT_eSprite tmp(&canvas);
     tmp.setColorDepth(16);
-    if (!tmp.createSprite(20, 20)) {
+    tmp.setSwapBytes(true);
+    if (!tmp.createSprite(sourceSize, sourceSize)) {
         return false;
     }
     tmp.fillSprite(bg);
@@ -258,26 +260,17 @@ bool AssetStore::drawFrameScaled(
         tmp.deleteSprite();
         return false;
     }
-    // Read the rendered icon into a 20x20 RGB565 buffer, then scale
-    // it with nearest-neighbor sampling into the destination size.
-    // This TFT_eSPI build does not expose a scaled pushSprite, so we
-    // do the scaling ourselves before pushImage.
-    uint16_t src[20 * 20];
-    for (uint16_t row = 0; row < 20; ++row) {
-        for (uint16_t col = 0; col < 20; ++col) {
-            src[row * 20 + col] = tmp.readPixel(col, row);
-        }
-    }
-    tmp.deleteSprite();
+    // Read directly from scratch to avoid a second portrait-sized buffer.
     uint16_t rowBuffer[240];
     for (int16_t dy = 0; dy < h; ++dy) {
-        const int16_t sy = static_cast<int16_t>(static_cast<int32_t>(dy) * 20 / h);
+        const int16_t sy = static_cast<int16_t>(static_cast<int32_t>(dy) * sourceSize / h);
         for (int16_t dx = 0; dx < w; ++dx) {
-            const int16_t sx = static_cast<int16_t>(static_cast<int32_t>(dx) * 20 / w);
-            rowBuffer[dx] = src[sy * 20 + sx];
+            const int16_t sx = static_cast<int16_t>(static_cast<int32_t>(dx) * sourceSize / w);
+            rowBuffer[dx] = tmp.readPixel(sx, sy);
         }
         canvas.pushImage(x, y + dy, w, 1, rowBuffer);
     }
+    tmp.deleteSprite();
     return true;
 }
 

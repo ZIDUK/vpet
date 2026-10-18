@@ -49,7 +49,7 @@ inline bool validSnapshotValue(const char* key, int32_t value) {
     if (!strcmp(key,"age") || !strcmp(key,"stageAge") || !strcmp(key,"training") || !strcmp(key,"battles")) return true;
     if (!strcmp(key,"call") || !strcmp(key,"nutTrainRem")) return value <= 3;
     if (!strcmp(key,"nutHunRem")) return value <= 19;
-    if (!strcmp(key,"techEquip")) return value <= 7;
+    if (!strcmp(key,"techEquip")) return value <= 31;
     if (!strcmp(key,"nutProtein") || !strcmp(key,"overfed") || !strcmp(key,"injured") ||
         !strcmp(key,"dead") || !strcmp(key,"cold") || !strcmp(key,"sound") || !strcmp(key,"bluetooth")) return value <= 1;
     if (!strncmp(key,"ev",2)) return value <= 252;
@@ -61,10 +61,15 @@ inline bool validSnapshotValue(const char* key, int32_t value) {
 
 inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
     std::ostringstream out;
-    out << "2\n";
+    out << "3\n";
     for (const auto key : kSnapshotKeys) {
         const auto found = snapshot.ints.find(key);
         if (found == snapshot.ints.end() || !validSnapshotValue(key, found->second)) return "";
+        out << key << ' ' << found->second << '\n';
+    }
+    for (const auto key : {"techM3", "techM4"}) {
+        const auto found = snapshot.ints.find(key);
+        if (found == snapshot.ints.end() || !validSnapshotValue(key,found->second)) return "";
         out << key << ' ' << found->second << '\n';
     }
     for (const auto key : {"language", "adoptBag", "expState"}) {
@@ -80,8 +85,9 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     if (record.size() > 3800) return false;
     std::istringstream in(record);
     std::string line, key;
-    if (!std::getline(in, line) || (line != "1" && line != "2")) return false;
-    const bool explorationPresent = line == "2";
+    if (!std::getline(in, line) || (line != "1" && line != "2" && line != "3")) return false;
+    const bool explorationPresent = line != "1";
+    const bool expandedTechniques = line == "3";
     SnapshotStore next;
     for (const auto expected : kSnapshotKeys) {
         if (!std::getline(in, line)) return false;
@@ -89,6 +95,13 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
         int32_t value;
         if (!(field >> key >> value) || key != expected || !validSnapshotValue(expected, value) || field >> key) return false;
         next.ints[expected] = value;
+    }
+    if (expandedTechniques) for (const auto expected : {"techM3", "techM4"}) {
+        if (!std::getline(in,line)) return false;
+        std::istringstream field(line);
+        int32_t value;
+        if (!(field>>key>>value) || key!=expected || !validSnapshotValue(expected,value) || field>>key) return false;
+        next.ints[expected]=value;
     }
     if (!std::getline(in, line) || (line != "ES" && line != "EN")) return false;
     next.strings["language"] = line;
@@ -110,6 +123,11 @@ inline bool replaySnapshot(KeyValueStore& destination, const SnapshotStore& snap
     for (const auto key : kSnapshotKeys)
         if (destination.getInt(key, std::numeric_limits<int32_t>::min()) != snapshot.ints.at(key) &&
             !destination.putInt(key, snapshot.ints.at(key))) return false;
+    for (const auto key : {"techM3", "techM4"}) {
+        const auto found=snapshot.ints.find(key);
+        if (found!=snapshot.ints.end() && destination.getInt(key,-1)!=found->second &&
+            !destination.putInt(key,found->second)) return false;
+    }
     for (const auto key : {"language", "adoptBag"})
         if (destination.getString(key, "") != snapshot.strings.at(key) &&
             !destination.putString(key, snapshot.strings.at(key).c_str())) return false;

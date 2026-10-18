@@ -6,6 +6,22 @@ descritas debajo son el contrato legacy de partidas y runtime existentes.
 No se adopta SQLite. La disponibilidad de los nuevos objetos en menus y
 guardado extendido se valida separadamente de sus datos y sprites.
 
+Presentacion actualizada el 2026-10-18: todos los nombres visibles de objetos,
+completos y abreviados, usan MAYUSCULAS en ES/EN. Aplica a Mochila, Arena,
+Alimentar y premios; las referencias originales del catalogo conservan su
+escritura documental. Python normaliza en `item_name` y el exportador genera
+los mismos nombres C++ sin conversiones ni buffers en tiempo de ejecucion.
+
+Validacion 2026-10-18: 1099 pruebas Python y 173 nativas aprobadas; Make Sim
+headless (90 frames), capturas ES/EN y compilacion T-Display correctas.
+Firmware cargado y verificado por digest, LittleFS conservado y verificado.
+Arranque `ITEM_CASE_BOARD_OK`/`VPET_READY`, heap libre 66648/minimo 66572,
+BLE conectado, sin fatal observado durante 18s. No cambian stock, efectos,
+IDs ni NVS. Logs en `out/item-case-board-deploy/`, capturas en
+`out/item-case-review/` y respaldo nuevo en `out/board-backups/20261018-item-case/`.
+SHA-256 firmware: `1adf0b085880fad1dfbe005a6453b03c5c142b69cd478e82b6eb156f268cc957`.
+La revision visual en placa por el usuario queda pendiente.
+
 Fecha: 2026-10-14. Estandar oficial para los siete objetos vigentes, por
 autorizacion del usuario. Fuente unica: `src/core/item_catalog.py`.
 Nombres, efectos, limites, origen, sprites y metadata C++ se exportan con

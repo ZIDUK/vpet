@@ -326,6 +326,8 @@ def _vital_raw(pet, kind):
         return int(pet.stats.get("h", 0))
     if kind == "energy":
         return int(pet.stats.get("e", 0))
+    if kind == "mood":
+        return int(pet.stats.get("p", 0))
     return 0
 
 
@@ -351,21 +353,18 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
     width = 232 - STATUS_SPLIT_X
 
     if page == 0:
-        # 1/4 vital: HP de crianza, alimentacion, energia. Bar colors
-        # are differentiated (red / orange / cyan) so the three meters
-        # never look like the same value. The HP shown here is the
-        # current HP (``stats["hp"]``); the combat-stat HP lives on
-        # the DNA page next to the other five stats.
+        # Four care meters; combat HP remains on the DNA page.
         bar_colors = {
             "hp_care": (241, 93, 112),    # red
             "feed":    (255, 174, 35),    # orange
             "energy":  (71, 191, 230),    # cyan
+            "mood":    (82, 218, 140),    # green
         }
         for index, (icon, label, value_str, kind) in enumerate(vital_rows(pet, spanish)):
             x = STATUS_SPLIT_X + 1
             width = 131
-            y = 56 + index * 24
-            card_h = 21
+            y = 49 + index * 21
+            card_h = 19
             draw.rounded_rectangle(
                 (x, y, x + width, y + card_h),
                 radius=5,
@@ -412,9 +411,8 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
             "def": "Battle", "spd": "Back", "brn": "Brain",
         }
         bar_color = (144, 91, 220)
-        draw.text((237, 46), "0-99", fill=muted,
-                  font=_status_font(7), anchor="ra")
-        for index, (key, value, _ev) in enumerate(rows):
+        draw.text((215, 47), "EV", fill=muted, font=_status_font(8))
+        for index, (key, value, ev) in enumerate(rows):
             y = 55 + index * 13
             label = tr_status_dna_label(pet, key)[:3]
             card_x = 145
@@ -424,15 +422,20 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
                                    outline=ink)
             _paste_ui_icon(frame, build_dir, stat_icons[key], card_x + 2,
                            y + 1, 10)
+            label_font = _status_font(8)
+            if label_font.getlength(label) > 18:
+                label_font = _status_font(7)
             draw.text((card_x + 14, y + 1), label, fill=muted,
-                      font=_status_font(8))
+                      font=label_font)
             draw.text((card_x + 34, y + 1), "%02d" % value, fill=ink,
                       font=_status_font(8))
-            _draw_meter(draw, card_x + 50, y + 2, 34, value, 99,
+            _draw_meter(draw, card_x + 48, y + 2, 18, value, 99,
                         bar_color, ink)
+            draw.text((card_x + 88, y + 1), str(ev), fill=ink,
+                      font=_status_font(8), anchor="ra")
         return
 
-    # Pages 2/4 and 3/4 share the same five-row list geometry.
+    # Battle retains five rows; care uses six shorter rows.
     if page == 2:
         rows = battle_rows(pet, spanish)
         # Five rows fill the content column while preserving a small
@@ -455,7 +458,7 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
     # through the pet state elsewhere in the interface.
     wide_x = STATUS_SPLIT_X + 1
     wide_w = 131
-    wide_h = 16
+    wide_h = 13
     wide_gap = 1
     for index, row_data in enumerate(rows):
         wide_y = 48 + index * (wide_h + wide_gap)
@@ -915,7 +918,18 @@ def render_frame(
                 current_datetime, now_ms, exploration_menu,
             )
             if status_split:
-                frame.paste(rookie.convert("RGB"), (sprite_x, sprite_y), transparency_mask)
+                if pet.dead or pet.injured:
+                    if pet.dead:
+                        rookie = _load_image(build_dir / "UIFx" / "grave.bmp")
+                    rookie = rookie.resize((76, 76), Image.Resampling.NEAREST)
+                    transparency_mask = rookie.point([0] + [255] * 255, mode="L")
+                    frame.paste(rookie.convert("RGB"), (12, 59), transparency_mask)
+                    draw = ImageDraw.Draw(frame)
+                    draw.text((50, 49), _call_label(pet, pet.language == "ES"),
+                              font=_status_font(8), anchor="ma",
+                              fill=(48, 42, 55) if pet.dead else (184, 0, 0))
+                else:
+                    frame.paste(rookie.convert("RGB"), (sprite_x, sprite_y), transparency_mask)
             return frame
         status = Image.new("P", (STATUS_WIDTH, STATUS_HEIGHT))
         palette = []

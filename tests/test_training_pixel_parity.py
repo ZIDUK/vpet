@@ -27,8 +27,8 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
         pet.techniques.bond = 55
         pet.techniques.mastery = [12, 20, 30]
         for state in (7, 8):
-            for technique in range(3):
-                for cursor in range(4 if state == 7 else 3):
+            for technique in range(5):
+                for cursor in range(6 if state == 7 else 3):
                     session = PracticeSession(pet, lambda _: True, training=True)
                     session.page = "tech" if state == 7 else "detail"
                     session.tech, session.index = technique, cursor
@@ -40,7 +40,7 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
         for training, equipped in ((0, [0, 2]), (3, [0, 1]), (3, [2])):
             pet.techniques.training = training
             pet.techniques.equipped = equipped
-            for cursor in range(4):
+            for cursor in range(6):
                 for ms in (0, 700, 1600):
                     session = PracticeSession(pet, lambda _: True, training=True)
                     session.index = cursor
@@ -50,6 +50,25 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
                     actual = Image.open(io.BytesIO(raw)).convert("RGB")
                     expected = quantized(render_practice(sim, session, ms))
                     assert ImageChops.difference(actual, expected).getbbox() is None
+    for species_id, species, equipment in ((0, 'rookie', [0, 1]),
+                                           (1, 'champion', [0, 1, 3]),
+                                           (2, 'ultimate', [0, 1, 3, 4])):
+        for lang in ('ES', 'EN'):
+            pet = Pet(species=species, state='live')
+            pet.language = lang
+            pet.techniques.training = 6
+            pet.techniques.mastery = [12, 20, 30, 0, 0]
+            pet.techniques.equipped = equipment
+            for cursor in range(6):
+                session = PracticeSession(pet, lambda _: True, training=True)
+                session.index = cursor
+                raw = subprocess.check_output([str(binary), str(data), '7', lang,
+                                               '0', str(cursor), '0', '1600', '80', '30',
+                                               '6', str(sum(1 << i for i in equipment)),
+                                               str(species_id), 'pixels'])
+                actual = Image.open(io.BytesIO(raw)).convert('RGB')
+                expected = quantized(render_practice(sim, session, 1600))
+                assert ImageChops.difference(actual, expected).getbbox() is None
     for language in ("ES", "EN"):
         active = sim_frame(sim, 2, language, 0, 0, 1, 5000, 80, 30)
         # Only the main timer bar remains; the old under-pet bar is gone.

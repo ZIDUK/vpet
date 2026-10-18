@@ -8,6 +8,7 @@ int main(int argc, char** argv) {
     assert(argc==2); assetRoot=argv[1];
     vpet::AssetStore store;
     TFT_eSprite canvas;
+    canvas.setSwapBytes(true);
     assert(store.begin().mounted);
     for(int i=0;i<10;++i) {
         char path[32]; snprintf(path,sizeof(path),"/training/icon%d.vpa",i);
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
     // Cached transparency preserves the current background, not the old one.
     vpet::AssetStore cold;
     TFT_eSprite reference;
+    reference.setSwapBytes(true);
     for(uint16_t background : {uint16_t(0),uint16_t(0xFFFF),uint16_t(0x284B)}) {
         canvas.fillSprite(background); reference.fillSprite(background);
         assert(store.drawFrame(canvas,"/training/icon0.vpa",0,3,4));
@@ -58,4 +60,15 @@ int main(int argc, char** argv) {
     const size_t beforeReset=assetOpens;
     assert(store.drawFrame(canvas,"/training/icon1.vpa",0,0,0));
     assert(assetOpens==beforeReset+1);
+    // Status portraits must sample all 88px, including feet, not an icon crop.
+    canvas.fillSprite(0x284B); reference.fillSprite(0x284B);
+    assert(store.drawFrame(reference,"/training/portrait.vpa",0,0,0));
+    assert(reference.readPixel(0,0)==TFT_RED);
+    assert(store.drawFrameScaled(canvas,"/training/portrait.vpa",0,12,59,76,76,false,-1,0,88));
+    for(int y=0;y<76;++y) for(int x=0;x<76;++x)
+        assert(canvas.readPixel(12+x,59+y)==reference.readPixel(x*88/76,y*88/76));
+    assert(canvas.readPixel(12,58)==0x284B);
+    assert(canvas.readPixel(88,134)==0x284B);
+    assert(!store.drawFrameScaled(canvas,"/training/portrait.vpa",0,0,0,76,76,false,-1,0,0));
+    assert(!store.drawFrameScaled(canvas,"/training/portrait.vpa",0,0,0,76,76,false,-1,0,240));
 }

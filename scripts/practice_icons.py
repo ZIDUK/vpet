@@ -43,6 +43,18 @@ def _scale_8(rows):
     return tuple("".join(pixel * 2 for pixel in row) for row in rows for _ in (0, 1))
 
 
+PATTERNS.update({
+    "flare": _scale_8((
+        "....r...", "...ry...", "r.ryyr..", "rryylrr.",
+        ".rylllyr", "rryylrr.", "r.ryyr..", "...rr...",
+    )),
+    "inferno": _scale_8((
+        ".r.r.r..", "rrryrrr.", ".rylyr..", "rryllyrr",
+        "ryllllyr", ".rylllyr", "..rylyr.", "...rrr..",
+    )),
+})
+
+
 INFO_PATTERNS = {
     "heart": _scale_8((
         ".rr.rr..", "rrrrrrrr", "rrrrrrrr", ".rrrrrr.", "..rrrr..",

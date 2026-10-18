@@ -42,8 +42,8 @@ public:
     bool commitFood(const PetState& pet);
     // False means rejected. True includes accepted intents awaiting sync/replay.
     bool commitConsumables(const PetState& pet);
-    bool loadPractice(PracticeProgress& progress) const;
-    bool savePractice(const PracticeProgress& progress);
+    bool loadPractice(PracticeProgress& progress, int stage=1) const;
+    bool savePractice(const PracticeProgress& progress, int stage=1);
     bool restartLifeIfNeeded(PetState& pet, Settings& settings);
     bool needsLifeRestart() const { return store_.getInt("life", 0) == 0; }
     bool hasBackup() const;

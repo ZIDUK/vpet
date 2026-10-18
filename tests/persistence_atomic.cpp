@@ -35,6 +35,11 @@ PetState pet(SpeciesId species, int hunger) {
     PetState p;
     p.evolveTo(species); p.rollDna(hunger); p.setHunger(hunger);
     p.practice.bond = hunger;
+    p.practice.training = 6;
+    p.practice.mastery[3] = hunger;
+    p.practice.mastery[4] = 100-hunger;
+    if (species==SpeciesId::Champion) p.practice.equipped=0b01011;
+    if (species==SpeciesId::Ultimate) p.practice.equipped=0b11011;
     p.adoptedStock.seed();
     p.adoptedStock.set(2, hunger);
     return p;
@@ -43,6 +48,8 @@ void identity(const PetState& p, const PetState& expected) {
     assert(p.species() == expected.species());
     assert(p.hunger() == expected.hunger());
     assert(p.practice.bond == expected.practice.bond);
+    assert(p.practice.equipped == expected.practice.equipped);
+    for (int i=0;i<techniques::kCount;++i) assert(p.practice.mastery[i]==expected.practice.mastery[i]);
     assert(p.adoptedStock.encode() == expected.adoptedStock.encode());
     for (int i = 0; i < 4; ++i) assert(p.dna()[i] == expected.dna()[i]);
 }

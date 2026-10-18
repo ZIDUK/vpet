@@ -26,6 +26,7 @@ public:
         AssetStore& assets
     );
     void draw(const AppViewModel& model, int16_t statusSplitX = 0, bool present = true);
+    void invalidate() { staticSceneReady_ = false; }
 
 private:
     const char* animationPath(const AppViewModel& model) const;

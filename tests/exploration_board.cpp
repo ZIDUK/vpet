@@ -116,7 +116,13 @@ void persistence() {
     assert(db.swapOrPark(p,s) && !p.exploration.hasReceipt());
     assert(db.swapOrPark(p,s) && p.exploration.encode()==receipt);
     storage::SnapshotStore snapshot; snapshot.ints=kv.ints; snapshot.strings=kv.strings;
-    auto v2=storage::encodeSnapshot(snapshot); assert(v2.substr(0,2)=="2\n");
+    auto v2=storage::encodeSnapshot(snapshot); assert(v2.substr(0,2)=="3\n");
+    v2.replace(0,1,"2");
+    for (const auto key : {"techM3", "techM4"}) {
+        const auto start=v2.find(std::string(key)+" ");
+        assert(start!=std::string::npos);
+        v2.erase(start,v2.find('\n',start)-start+1);
+    }
     const auto pos=v2.rfind(receipt+"\nEND\n"); assert(pos!=std::string::npos);
     auto v1=v2; v1.replace(0,1,"1"); v1.erase(pos,receipt.size()+1);
     kv.strings["saveTx"]=v1;

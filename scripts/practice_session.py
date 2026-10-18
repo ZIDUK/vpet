@@ -1,13 +1,15 @@
-"""Two-button controller; practice never mutates official battle counters."""
+"""Two-button Arena controller with durable, once-only result progress."""
 from core.dna import COMBAT_STATS
 from core.practice import Fighter, PracticeBattle
 from core.adopted_items import ITEMS, COMBAT_CATEGORIES, award_victory_item
+from core.techniques import TECHNIQUES, REQUIRED_TRAINING
 import copy
 
 
 class PracticeSession:
     def __init__(self, pet, save, training=False):
         self.pet, self.save = pet, save
+        pet.techniques.mastery += [0] * max(0, len(TECHNIQUES) - len(pet.techniques.mastery))
         self.training = training
         self.page, self.index, self.tech = "tech" if training else "battle", 0, 0
         self.battle = None if training else PracticeBattle(Fighter(
@@ -36,6 +38,11 @@ class PracticeSession:
         if self.awarded:
             return True
         snapshot = copy.deepcopy(self.pet.__dict__)
+        if self.battle.result in ('VICTORIA', 'DERROTA'):
+            self.pet.battles_this_form = min(2147483647, self.pet.battles_this_form + 1)
+            counter = 'battles_won' if self.battle.result == 'VICTORIA' else 'battles_lost'
+            if getattr(self.pet, counter) < 255:
+                setattr(self.pet, counter, getattr(self.pet, counter) + 1)
         progress = self.pet.techniques
         for i, count in enumerate(self.battle.uses):
             progress.mastery[i] = min(100, progress.mastery[i] + count)
@@ -59,8 +66,6 @@ class PracticeSession:
         self.last_order = order
         self.updated_at = now_ms
         self.next_round_at = now_ms + 1450
-        if self.page != 'items':
-            self.index = 0
         if self.battle.result and not self.awarded:
             self.page, self.index = 'battle', 0
             self._award_result()
@@ -81,14 +86,13 @@ class PracticeSession:
         if self.page == 'items':
             return self.combat_items() + ['VOLVER']
         if self.page == "tech":
-            return ["GOLPE", "LLAMA", "GUARDIA", "VOLVER"]
+            return [t['name'] for t in TECHNIQUES] + ["VOLVER"]
         if self.page == "detail":
             equipped = self.tech in self.pet.techniques.equipped
             equip = "QUITAR" if equipped else "EQUIPAR"
             return (["ENTRENAR"] if self.training else []) + [equip, "VOLVER"]
         if self.battle.result:
             return ['VOLVER'] if self.awarded else ['REINTENTAR', 'VOLVER']
-        from core.techniques import TECHNIQUES
         return ["AUTO"] + [TECHNIQUES[i]["name"] for i in self.pet.techniques.equipped] + ['MOCHILA', "RETIRARSE"]
 
     def input(self, event, now_ms):
@@ -134,7 +138,7 @@ class PracticeSession:
             self.index = min(self.index, len(self.choices()) - 1)
             return True
         if self.page == "tech":
-            if self.index == 3:
+            if self.index == len(TECHNIQUES):
                 return False
             else:
                 self.tech = self.index
@@ -146,22 +150,27 @@ class PracticeSession:
                 self.page, self.index = "tech", self.tech
                 return True
             progress = self.pet.techniques
-            learned = progress.learned(self.tech)
+            snapshot = copy.deepcopy(self.pet.__dict__)
+            learned = progress.learned(self.tech, self.pet.species)
             if self.training and self.index == 0:
                 ok = progress.train(self.pet, self.tech)
                 if not ok:
                     self.message = "FALTA ENERGIA" if self.pet.get("e") < 4 else "PET NO APTO"
                 elif not learned:
-                    self.message = "LLAMA APRENDIDA" if progress.learned(self.tech) else "ENTRENAMIENTO 1/2"
+                    self.message = (("LLAMA APRENDIDA" if self.tech == 1 else "TECNICA APRENDIDA")
+                                    if progress.learned(self.tech, self.pet.species) else
+                                    "ENTRENAMIENTO %d/%d" % (progress.training, REQUIRED_TRAINING[self.tech]))
                 else:
                     self.message = "ENTRENAMIENTO COMPLETO"
             else:
-                ok = progress.equip(self.tech)
+                ok = progress.equip(self.tech, self.pet.species)
                 if ok:
                     self.message = "EQUIPADA" if self.tech in progress.equipped else "EN RESERVA"
                 else:
                     self.message = "TECNICA BLOQUEADA" if not learned else "MINIMO UNA EQUIPADA"
             if ok and not self.save(self.pet):
+                self.pet.__dict__.clear()
+                self.pet.__dict__.update(snapshot)
                 self.message = "ERROR AL GUARDAR"
             return True
         if self.battle.result:

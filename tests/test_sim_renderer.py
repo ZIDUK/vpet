@@ -361,19 +361,13 @@ def test_tdisplay_status_keeps_pet_left_and_pages_the_card(tmp_path):
         profile=profile,
         pet_x=140,
     )
-    for page, icon_x, icon_y in (
-        (page0, STATUS_SPLIT_X + 6, 57),
-        (page0, STATUS_SPLIT_X + 6, 84),
-        (page0, STATUS_SPLIT_X + 6, 111),
-        (page2, STATUS_SPLIT_X + 3, 50),
-    ):
-        pixel = page.getpixel((icon_x, icon_y))
-        assert pixel != ink
-        assert sum(pixel) > 220
+    for y in (51, 72, 93, 114):
+        pixels = set(page0.crop((103, y, 119, y + 16)).getdata())
+        assert len(pixels) > 3, "missing vital icon"
     assert page0.getpixel((STATUS_SPLIT_X + 20, 48)) == parchment
     assert page2.getpixel((STATUS_SPLIT_X - 1, 48)) == parchment
     assert page2.getpixel((STATUS_SPLIT_X + 5, 52)) != parchment
-    gap_y = STATUS_CARD_Y + STATUS_CARD_H + 1
+    gap_y = 69
     assert page0.getpixel((STATUS_SPLIT_X + 20, gap_y)) == parchment
     assert page0.crop(left).tobytes() == page1.crop(left).tobytes()
     assert page0.crop(right).tobytes() != page1.crop(right).tobytes()

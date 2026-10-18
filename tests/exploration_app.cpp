@@ -38,6 +38,13 @@ int main() {
     auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
     for(int i=0;i<3;++i) key(InputEvent::Next);
     key(InputEvent::Action); assert(panels.explorePage==ExplorationSession::Page::Routes);
+    const int frames=panels.explorationFrames;
+    const int invalidations=renderer.invalidations;
+    for(int i=0;i<10;++i) { ms+=20; app.tick(ms,InputEvent::None); }
+    assert(panels.explorationFrames==frames); // Static lists leave time for button polling.
+    assert(renderer.invalidations==invalidations);
+    key(InputEvent::Next); assert(panels.explorationFrames==frames+1);
+    key(InputEvent::Back); key(InputEvent::Action); // Reopen Patio before transaction checks.
     key(InputEvent::Action); assert(panels.explorePage==ExplorationSession::Page::Confirm);
     kv.fail=true; key(InputEvent::Action); assert(app.ready());
     assert(storage.load(p,settings)==LoadResult::Loaded && !p.exploration.away());

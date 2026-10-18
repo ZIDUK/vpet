@@ -1,5 +1,6 @@
 """Safe desktop services for the simulator options menu."""
 
+import copy
 import json
 import math
 import os
@@ -32,6 +33,18 @@ class SimulatorServices:
         self._clock_offset = 0
         self.connected_ssid = None
         self.wifi_status = "OFF"
+
+    def evolve_and_save(self, pet, evolution):
+        if not evolution.check(pet)[0]:
+            return False
+        before = copy.deepcopy(pet.__dict__)
+        if not evolution.evolve(pet):
+            return False
+        if self.save(pet):
+            return True
+        pet.__dict__.clear()
+        pet.__dict__.update(before)
+        return False
 
     def save(self, pet):
         temporary = None

@@ -40,10 +40,10 @@ struct Canvas {
 };
 
 int main(int argc,char** argv) {
-    if(argc!=10 && argc!=12 && argc!=13) return 2;
+    if(argc!=10 && argc!=12 && argc!=13 && argc!=14) return 2;
     Canvas c; c.root=argv[1];
     vpet::PetState pet;
-    const int speciesArg=argc==13 ? std::stoi(argv[12]) : 0;
+    const int speciesArg=argc>=13 ? std::stoi(argv[12]) : 0;
     const auto species=static_cast<vpet::SpeciesId>(speciesArg);
     pet.restore(species,50,std::stoi(argv[8]),80,0,80,3600);
     const uint8_t dna[]={0xab,0xcd,0xef,0x12}; pet.restoreDna(dna);
@@ -53,7 +53,7 @@ int main(int argc,char** argv) {
         p.page=std::stoi(argv[2])==7 ? vpet::PracticeSession::Page::Tech : vpet::PracticeSession::Page::Detail;
         p.technique=std::stoi(argv[4]); p.cursor=std::stoi(argv[5]);
         pet.practice.training=3; pet.practice.bond=55;
-        if(argc==12 || argc==13) {
+        if(argc>=12) {
             pet.practice.training=std::stoi(argv[10]);
             pet.practice.equipped=std::stoi(argv[11]);
         }

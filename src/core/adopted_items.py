@@ -157,7 +157,8 @@ def consume_training_bonus(pet, stat):
 
 
 def item_name(item, spanish=False):
-    return item['name'] if spanish else item['reference'].replace('vPet ', '')
+    name = item['name'] if spanish else item['reference'].replace('vPet ', '')
+    return name.upper()
 
 
 def short_name(item, spanish=False):

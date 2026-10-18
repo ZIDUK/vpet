@@ -354,40 +354,42 @@ public:
     void techniques(const PracticeSession& p) {
         rect(0,0,240,135,ink);
         header(es ? "TECNICAS" : "TECHNIQUES","",teal);
-        const char* symbols[] = {"tech_punch","tech_flame","tech_guard"};
-        const char* names[] = {es ? "GOLPE" : "PUNCH",es ? "LLAMA" : "FLAME",es ? "GUARDIA" : "GUARD"};
+        const char* symbols[] = {"tech_punch","tech_flame","tech_guard","tech_flare","tech_inferno"};
+        const char* names[techniques::kCount];
+        for (int i=0;i<techniques::kCount;++i) names[i]=es ? techniques::kCatalog[i].es : techniques::kCatalog[i].en;
         char line[32];
         if (p.page == PracticeSession::Page::Tech) {
             text(6,27,es ? "EQUIPADAS" : "EQUIPPED",muted,true);
-            int equipped[2]={-1,-1}, count=0;
-            for(int j=0;j<3 && count<2;++j) if(pet.practice.isEquipped(j)) equipped[count++]=j;
-            for(int slot=0;slot<2;++slot) {
-                const int x=83+slot*77;
-                rect(x,21,74,20,panel);
+            int equipped[4]={-1,-1,-1,-1}, count=0;
+            const int capacity=pet.techniqueCapacity();
+            for(int j=0;j<techniques::kCount && count<capacity;++j) if(pet.practice.isEquipped(j)) equipped[count++]=j;
+            snprintf(line,sizeof(line),"%d/%d",count,capacity); text(62,27,line,muted,true);
+            for(int slot=0;slot<capacity;++slot) {
+                const int x=115+slot*30;
+                rect(x,21,26,20,panel);
                 if(equipped[slot]>=0) {
-                    asset(symbols[equipped[slot]],x+2,23);
-                    text(x+22,27,names[equipped[slot]],white,true);
-                } else text(x+14,27,es ? "VACIO" : "EMPTY",muted,true);
+                    asset(symbols[equipped[slot]],x+5,23);
+                } else text(x+10,27,"-",muted,true);
             }
             rect(5,45,230,1,teal);
             const int i=p.cursor;
-            const bool learned=i<3 && pet.practice.learned(i);
-            petAsset(learned ? (i==0 ? "punch" : i==1 ? "cast" : "block") : "idle",10,40,now/50);
-            for(int j=0;j<4;++j) {
-                const int x=4+j*28;
-                rect(x,107,24,24,i==j ? teal : panel);
-                outline(x,107,24,24,i==j ? yellow : panel);
-                asset(j<3 ? symbols[j] : "back",x+4,111);
+            const bool learned=i<techniques::kCount && pet.practice.learned(i,pet.techniqueStage());
+            petAsset(learned ? (i==0 ? "punch" : i==2 ? "block" : "cast") : "idle",10,40,now/50);
+            for(int j=0;j<techniques::kCount+1;++j) {
+                const int x=4+j*20;
+                rect(x,107,18,24,i==j ? teal : panel);
+                outline(x,107,18,24,i==j ? yellow : panel);
+                asset(j<techniques::kCount ? symbols[j] : "back",x+1,111);
             }
-            if(i==3) { text(126,52,es ? "VOLVER" : "BACK",yellow); return; }
+            if(i==techniques::kCount) { text(126,52,es ? "VOLVER" : "BACK",yellow); return; }
             text(126,52,learned ? names[i] : "???",yellow);
             text(126,67,learned ? (pet.practice.isEquipped(i) ? (es ? "EQUIPADA" : "EQUIPPED") : (es ? "EN RESERVA" : "IN RESERVE")) : (es ? "BLOQUEADA" : "LOCKED"),learned ? green : muted,true);
             if(learned) {
                 asset(i==2 ? "defense10" : "power10",126,82);
-                snprintf(line,sizeof(line),"%s %d",es ? "POTENCIA" : "POWER",i==0 ? 12 : 24);
+                snprintf(line,sizeof(line),"%s %d",es ? "POTENCIA" : "POWER",techniques::kCatalog[i].power);
                 text(140,82,i==2 ? (es ? "DANO /2" : "DAMAGE /2") : line,white,true);
                 asset("cost10",126,96);
-                snprintf(line,sizeof(line),"%s %d MP",es ? "COSTE" : "COST",i==1 ? 8 : 0);
+                snprintf(line,sizeof(line),"%s %d MP",es ? "COSTE" : "COST",techniques::kCatalog[i].mp);
                 text(140,96,i==2 ? (es ? "RECUPERA 4 MP" : "RESTORE 4 MP") : line,mp,true);
                 asset("mastery10",126,110);
                 snprintf(line,sizeof(line),"%s %u/100",es ? "DOMINIO" : "MASTERY",pet.practice.mastery[i]);
@@ -395,10 +397,15 @@ public:
             } else {
                 asset("training10",126,82); text(140,82,es ? "ENTRENAR" : "TRAIN",muted,true);
                 asset("lock10",126,96);
-                snprintf(line,sizeof(line),"%u / 2",pet.practice.training); text(140,96,line,yellow,true);
+                if (pet.techniqueStage() < techniques::kCatalog[i].stage)
+                    snprintf(line,sizeof(line),"%s",techniques::kCatalog[i].stage==2 ? "FLAMEMON" : "DRAGFIREMON");
+                else snprintf(line,sizeof(line),"%u / %d",pet.practice.training,techniques::kCatalog[i].training);
+                text(140,96,line,yellow,true);
             }
             rect(126,125,107,4,panel);
-            int width=learned ? pet.practice.mastery[i]*107/100 : pet.practice.training*107/2;
+            const int needed=techniques::kCatalog[i].training;
+            int width=learned ? pet.practice.mastery[i]*107/100 :
+                pet.techniqueStage() < techniques::kCatalog[i].stage ? 0 : pet.practice.training*107/(needed ? needed : 1);
             if(width>107) width=107;
             rect(126,125,width,4,learned ? green : yellow);
             return;
@@ -406,10 +413,10 @@ public:
         const int i=p.technique;
         asset(symbols[i],8,25);
         text(32,25,names[i],yellow);
-        petAsset(i==0 ? "punch" : i==1 ? "cast" : "block",0,42,now/50);
-        snprintf(line,sizeof(line),"%d",i==0 ? 12 : i==1 ? 24 : 0);
+        petAsset(i==0 ? "punch" : i==2 ? "block" : "cast",0,42,now/50);
+        snprintf(line,sizeof(line),"%d",techniques::kCatalog[i].power);
         metric(43,es ? "POTENCIA" : "POWER",i==2 ? "DANO /2" : line,yellow);
-        snprintf(line,sizeof(line),"%d MP",i==1 ? 8 : 0);
+        snprintf(line,sizeof(line),"%d MP",techniques::kCatalog[i].mp);
         metric(57,es ? "USAR" : "USE",i==2 ? "+4 MP" : line,mp);
         snprintf(line,sizeof(line),"%u/100",pet.practice.mastery[i]);
         metric(71,es ? "DOMINIO" : "MASTERY",line,green);

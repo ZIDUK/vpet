@@ -18,13 +18,14 @@ def test_vital_rows_use_small_font_above_meter():
 
 def test_list_icons_fit_inside_rows():
     source = section("drawStatus(", "drawInventory")
-    assert "drawFrameScaled(display_, icon, 0, x + 2, y + 2, 12, 12" in source
+    assert "const int16_t iconSize = carePage ? 10 : 12" in source
+    assert "drawFrameScaled(display_, icon, 0, x + 2, y + 1, iconSize, iconSize" in source
 
 
 def test_dna_refresh_includes_pet_and_clears_transparent_background():
     source = (ROOT / "firmware/t-display/src/Panels.cpp").read_text()
     branch = source.split("if (!statusPageChanged", 1)[1].split("char title[20]", 1)[0]
-    assert "drawStatusPet(pet, nowMs)" in branch
+    assert "drawStatusPet(pet, nowMs, spanish)" in branch
     assert "fillRect(0, 48, kStatusSplitX, 87, kPanel)" in branch
 
 

@@ -65,7 +65,7 @@ def package_training(sim_build, data_dir, include_dir):
             frame = icon.convert("RGBA").resize((10, 10), Image.Resampling.NEAREST)
             records.append(write_asset(data_dir / "exploration" / (name.lower() + "10.vpa"),
                                        [frame], (10, 10)))
-    for name in ("punch", "flame", "guard"):
+    for name in ("punch", "flame", "guard", "flare", "inferno"):
         asset("tech_" + name, [technique_icon(name)])
     for name in ("power", "cost", "mastery", "training", "lock"):
         asset(name + "10", [info_icon(name, 10)])

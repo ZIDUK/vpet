@@ -49,12 +49,74 @@ def _render_status(build_dir, pet, page, now_ms=0, language="EN"):
     )
 
 
-@pytest.fixture
-def build_dir(tmp_path):
-    out = tmp_path / "build-tdisplay"
+@pytest.fixture(scope="module")
+def build_dir(tmp_path_factory):
+    out = tmp_path_factory.mktemp("status") / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=out)
     return out
+
+
+@pytest.mark.parametrize("language", ["ES", "EN"])
+def test_new_status_values_fit_and_do_not_mutate_pet(build_dir, monkeypatch, language):
+    from PIL import ImageDraw
+    from core.status_card import care_rows
+    from scripts.sim_renderer import _call_label
+    _patch_monotonic(monkeypatch)
+    pet = _rookie()
+    pet.language = language
+    pet.restore_dna((0xAB, 0xCD, 0xEF, 0x12))
+    pet.restore_ev(dict.fromkeys(("hp", "mp", "off", "def", "spd", "brn"), 252))
+    pet.injuries = 2
+    assert care_rows(pet, language == "ES", "", "")[-1][2] == "2/15"
+    calls = []
+    original = ImageDraw.ImageDraw.text
+
+    def capture(draw, xy, text, *args, **kwargs):
+        calls.append((str(text), draw.textbbox(xy, str(text), font=kwargs.get("font"),
+                                             anchor=kwargs.get("anchor"))))
+        return original(draw, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    for dead, injured in ((False, False), (False, True), (True, True)):
+        pet.dead, pet.injured = dead, injured
+        for mood in (0, 100):
+            pet.stats["p"] = mood
+            snapshot = pet.to_dict()
+            for page in range(4):
+                calls.clear()
+                _render_status(build_dir, pet, page, language=language)
+                assert pet.to_dict() == snapshot
+                if page == 0:
+                    assert any(text == ("ANIMO" if language == "ES" else "MOOD") for text, _ in calls)
+                if page == 1:
+                    assert any(text == "2/15" for text, _ in calls)
+                if page == 3:
+                    ev_bounds = [box for text, box in calls if text == "252"]
+                    assert len(ev_bounds) == 6
+                    assert all(213 <= box[0] < box[2] <= 234 for box in ev_bounds)
+                    assert any(text == "EV" for text, _ in calls)
+                if dead or injured:
+                    label = _call_label(pet, language == "ES")
+                    assert label == (("MUERTO" if language == "ES" else "DEAD") if dead
+                                     else ("HERIDO" if language == "ES" else "HURT"))
+                    boxes = [box for text, box in calls if text == label]
+                    assert len(boxes) == 1
+                    assert boxes[0][3] <= 59  # portrait starts below the badge
+                assert all(0 <= box[0] < box[2] <= 240 and 24 <= box[1] < box[3] <= 135
+                           for _, box in calls)
+
+
+def test_mood_changes_only_its_meter(build_dir, monkeypatch):
+    _patch_monotonic(monkeypatch)
+    pet = _rookie()
+    pet.stats["p"] = 0
+    empty = _render_status(build_dir, pet, 0)
+    pet.stats["p"] = 100
+    full = _render_status(build_dir, pet, 0)
+    assert empty.crop((0, 0, 240, 112)).tobytes() == full.crop((0, 0, 240, 112)).tobytes()
+    assert full.getpixel((220, 125)) == (82, 218, 140)
+    assert empty.getpixel((220, 125)) != (82, 218, 140)
 
 
 def _patch_monotonic(monkeypatch):
@@ -67,18 +129,20 @@ def _patch_monotonic(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_vital_page_paints_three_distinct_bar_colors(build_dir, monkeypatch):
+def test_vital_page_paints_four_distinct_bar_colors(build_dir, monkeypatch):
     _patch_monotonic(monkeypatch)
     pet = _rookie()
     pet.stats["hp"] = 80
     pet.stats["h"] = 60
     pet.stats["e"] = 40
+    pet.stats["p"] = 75
     frame = _render_status(build_dir, pet, page=0)
-    # Vital cards follow the approved three-row layout: y=56, 80, 104.
+    # Four rows at y=49,70,91,112, with bars below their labels.
     bar_samples = {
-        "hp_care":  (140, 69),   # red
-        "feed":     (140, 93),   # orange
-        "energy":   (140, 117),  # cyan
+        "hp_care":  (140, 62),
+        "feed":     (140, 83),
+        "energy":   (140, 104),
+        "mood":     (140, 125),
     }
     seen = {}
     for kind, (x, y) in bar_samples.items():
@@ -92,9 +156,8 @@ def test_vital_page_paints_three_distinct_bar_colors(build_dir, monkeypatch):
     assert "hp_care" in seen, "HP bar has no fill"
     assert "feed" in seen, "Feed bar has no fill"
     assert "energy" in seen, "Energy bar has no fill"
-    # The three fills must be three different colors.
-    distinct = {seen["hp_care"], seen["feed"], seen["energy"]}
-    assert len(distinct) == 3, seen
+    assert "mood" in seen
+    assert len(set(seen.values())) == 4, seen
 
 
 def test_vital_page_values_match_pet_stats(build_dir, monkeypatch):
@@ -105,7 +168,7 @@ def test_vital_page_values_match_pet_stats(build_dir, monkeypatch):
     pet.stats["e"] = 17
     frame = _render_status(build_dir, pet, page=0)
     # Values are plain numbers aligned to the right of the wider cards.
-    for value, y in ((85, 58), (42, 82), (17, 106)):
+    for value, y in ((85, 51), (42, 72), (17, 93), (pet.stats["p"], 114)):
         # The text region must contain at least one non-parchment
         # pixel that is not the icon background.
         region = [frame.getpixel((x, y)) for x in range(200, 229)]
@@ -133,7 +196,7 @@ def test_vital_page_handles_zero_and_100(build_dir, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_care_page_has_five_full_labels_no_acronyms(build_dir, monkeypatch):
+def test_care_page_has_six_full_labels_no_acronyms(build_dir, monkeypatch):
     """The care page must not use OF/CM acronyms. The five labels are
     the localised strings from the i18n catalog."""
     from core.status_card import care_rows
@@ -146,7 +209,7 @@ def test_care_page_has_five_full_labels_no_acronyms(build_dir, monkeypatch):
     rows = care_rows(pet, spanish=False, clock_text="", call_text="")
     labels = [row[1] for row in rows]
     # All five labels must be present and non-empty.
-    assert len(labels) == 5
+    assert len(labels) == 6
     for label in labels:
         assert label, "empty label in care page"
         assert label not in ("OF", "CM", "BAT", "ESF"), (

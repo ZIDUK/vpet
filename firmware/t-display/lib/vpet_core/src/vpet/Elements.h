@@ -22,7 +22,7 @@ inline bool elementBeats(Element attack, Element target) {
 
 inline Element techniqueElement(int action) {
     return action == 0 ? Element::Neutral :
-           action == 1 ? Element::Fire : Element::None;
+           action == 1 || action == 3 || action == 4 ? Element::Fire : Element::None;
 }
 
 inline int elementalDamage(int baseDamage, Element attack, Element target, bool guarding) {

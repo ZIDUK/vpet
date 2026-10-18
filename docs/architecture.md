@@ -86,12 +86,22 @@ La intro dura aproximadamente 2.2 segundos antes de cargar el estado. Las rutas
 de arranque de firmware y simulador siguen separadas; la paridad visual completa
 de la intro queda como tarea de firmware.
 
-La pantalla trabaja en RGB565. Se mantienen dos sprites TFT de 240x135:
+La pantalla trabaja en RGB565. Los lienzos que reciben paletas nativas
+por `pushImage`, incluido el temporal del escalador, usan `setSwapBytes(true)`.
+Se mantienen dos sprites TFT de 240x135:
 
 1. `staticScene` conserva fondo y menu sin elementos animados.
 2. `framebuffer` recibe una copia completa de la escena estatica.
 3. El selector y el frame actual de la mascota se dibujan en memoria.
 4. `pushSprite()` presenta el frame completo en una sola transaccion SPI.
+
+Arena y Exploracion toman prestado `staticScene`: fondo y selector de pelea,
+o cabecera de nueve iconos, respectivamente. App invalida la cache de Home
+antes de prestarla; `Panels::invalidate()` descarta la cache del panel cuando
+Home vuelve a usarla. No se reserva un tercer framebuffer. El selector de
+Arena se recompone al cambiar cursor, equipamiento o estado terminal.
+Exploracion refresca listas estaticas cada 1000ms en reposo y paginas animadas
+cada 70ms; los eventos de boton siempre fuerzan el dibujo sin esperar ese plazo.
 
 Este doble buffer evita limpiar directamente la pantalla y elimina el parpadeo
 visible. Las animaciones normales usan frames de 88x88. Las evoluciones usan
@@ -155,9 +165,12 @@ El estado `Sleep` se acuesta una vez y luego buclea los frames 12-14 (acostado).
 Solo volver a activar el icono del foco ejecuta `wake`; navegar o abrir otro
 panel no despierta a la mascota.
 
-Status pagina 1 muestra barras HP / HAM / ENE. `NEXT` cicla a la pagina 2
-(edad de etapa, esfuerzo, batallas de forma, CM, call y reloj). Un Call
-activo pinta `*` en el selector. `ACTION` o `BACK` vuelven a Home.
+Status conserva cuatro paginas. Vital muestra HP / HAM / ENE / ANIMO;
+Cuidado muestra edad, exceso, errores, esfuerzo, batallas y lesiones /15.
+Combate conserva sus cinco filas. ADN muestra valor de combate, barra y EV
+acumulado en columnas separadas. HERIDO/MUERTO tienen espacio sobre el
+retrato, con prioridad de muerte. Ver [contrato Status](status-vitals-care-ev.md).
+Un Call activo pinta `*` en el selector. `ACTION` o `BACK` vuelven a Home.
 
 Alimentar ofrece carne y proteina ilimitadas; no consulta ni descuenta el
 stock legado. La mochila conserva Energia, EXP, Anillo, botiquin y ATRAS.
@@ -195,13 +208,31 @@ confirma y BACK vuelve; una sesion de atributo muestra su resultado durante
 
 `make sim-training` y `make sim-practice` abren estos flujos con un guardado
 aislado compartido, `out/sim_practice_save.json`. Al entrar desde `make sim`,
-guardan la partida normal. La practica no modifica victorias oficiales.
+guardan la partida normal. Desde 2026-10-18, los resultados decisivos de Arena
+suman al contador de batallas de la forma actual y a W/L acumulados: victoria
+suma batalla y victoria; derrota suma batalla y derrota. Empate, retirada y
+pelea inconclusa no suman. No se ejecuta la accion legacy de combate aleatorio
+ni se cobran DP, energia, lesiones o EV adicionales por registrar el resultado.
 
-La nueva pesa y el rediseno visual estan pendientes de traslado a C++.
-El firmware conecta el flujo anterior mediante `PracticeSession`, `App`
-y `Panels::drawPractice`. `PetState` posee el progreso y SettingsStore lo
+El contador, premio, dominio y vinculo se confirman juntos. App usa el journal
+completo `saveTx` para el flujo de Arena; `itemTx` antiguo mantiene su formato
+y recuperacion para los otros consumidores. Un rechazo restaura el pet y
+permite Reintentar; una confirmacion pendiente bloquea entrada hasta recuperar
+el snapshot aceptado. Repetir ticks, reintentar o reiniciar no reaplica el premio.
+
+La evolucion permanece automatica al regresar a Home, sin interrumpir el
+resultado de Arena. Champion->Ultimate mantiene 36 horas de edad de etapa,
+15 batallas en esa forma y 60% de victorias entre W/L acumulados de la vida
+actual (no un ratio nuevo por etapa). La edad y contador de etapa se reinician
+al evolucionar; W/L, tecnicas, dominio y stock conservan las reglas anteriores.
+En Make Sim, `SimulatorServices.evolve_and_save` confirma el JSON atomico
+antes de iniciar la animacion; si falla, restaura el pet y no muestra una
+evolucion no guardada. Las peleas historicas de Arena no se reconstruyen.
+
+La pesa y Tecnicas se dibujan en C++ mediante TrainingUi. El firmware conecta
+`PracticeSession`, `App` y `Panels::drawPractice`. `PetState` posee el progreso y SettingsStore lo
 guarda con la mascota, incluido su respaldo; una nueva vida lo reinicia.
-Las claves `techVer`, `techTrain`, `techBond`, `techM0..2`, `techEquip` son
+Las claves `techVer`, `techTrain`, `techBond`, `techM0..4`, `techEquip` son
 opcionales dentro del schema 3. Versiones de progreso desconocidas usan defaults.
 La validacion de pantalla fisica y heap con BLE sigue pendiente.
 
@@ -301,9 +332,24 @@ El schema NVS principal permanece en 3. Registros incompatibles no se
 sobrescriben con una mascota nueva. No cambia ningun enum antiguo.
 Ver [adquisicion y limites](adopted-items.md). Validacion fisica pendiente.
 
+## Tecnicas por etapa
+
+El catalogo portable mantiene los indices 0 Golpe, 1 Llama y 2 Guardia;
+agrega 3 Rafaga (Champion+, 4 lecciones) y 4 Inferno (Ultimate, 6 lecciones).
+Firemon/Flamemon/Dragfiremon equipan 2/3/4. Aprender no equipa y evolucionar
+no rellena espacios nuevos. Python y C++ usan el mismo poder, MP, recarga,
+elemento y umbral. El rival Firemon conserva su catalogo inicial.
+[Contrato y tablas](techniques.md).
+
+NVS conserva schema 3 y techVer 1; agrega techM3/4 y extiende los bits de
+techEquip. Los snapshots internos v3 leen v1/v2, conservando la recuperacion
+atomica de partidas e intercambios. Dominio, recarga y usos de combate son
+bytes acotados; Battle sigue por debajo del presupuesto de 256 bytes.
+
 ## Recuperacion de snapshots e intercambio
 
-El guardado general usa `saveTx`, snapshot interno v1 con campos conocidos,
+El guardado general usa `saveTx`, snapshot interno v3 con campos conocidos
+(lector compatible con v1/v2),
 rangos y terminador obligatorio. Primero registra el estado absoluto; despues
 reproduce las claves legacy del schema 3. Omite escrituras de valores iguales.
 `swapLive` y `swapBack` preparan snapshots separados (cada uno menor de 3800
@@ -347,7 +393,7 @@ Port de placa del 2026-10-16: `Exploration` es un dominio C++ portable,
 `ExplorationSession` controla opciones, `ExplorationUi` dibuja tablas en
 Panels.cpp y App aplica transacciones completas. Navigation y MenuBar usan
 nueve entradas; Exploration se agrega al final de PanelId sin renumerar.
-La clave `expState` v1 se captura en snapshots `saveTx` v2 compatibles con v1.
+La clave `expState` v1 se captura en snapshots `saveTx` v3 compatibles con v1/v2.
 La hora fiable se valida separadamente del reloj de animacion; sin calendario
 tras un corte de alimentacion se requiere ajuste manual. Durante viaje se pausan
 cuidado/evolucion y las acciones no disponibles abren la expedicion.
@@ -387,5 +433,6 @@ animados completos. Las lecturas usan el ancho del bitmap para aprovechar
 el scratch de 1920 bytes: tres bloques para un cuadro 68x68 en vez de nueve.
 
 Las regresiones ejecutan el adaptador real AssetStore.cpp sobre LittleFS/TFT
-de host, contando E/S y comparando pixeles. La carga y medicion fisica de
-latencia/heap siguen pendientes: [rendimiento de Training](training-board-performance.md).
+de host, contando E/S y comparando pixeles. La carga USB se verifico el
+2026-10-17; medicion fisica de latencia/heap durante Training sigue pendiente:
+[rendimiento de Training](training-board-performance.md).
