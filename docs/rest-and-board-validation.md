@@ -8,7 +8,9 @@ El usuario confirmo fisicamente los nuevos comandos en Rest y Opciones.
 Reporto despues que apagar la luz acostaba al pet pero dejaba el escenario
 claro: la seleccion dia/noche solo dependia del reloj. El seguimiento separa
 el ciclo horario de la luz apagada, sin modificar las reglas de descanso.
-La nueva comprobacion visual de oscuridad se registra aparte de los menus.
+El usuario confirmo despues que apagar la luz oscurece y encenderla restaura
+el brillo. Queda aceptada fisicamente esa correccion; no equivale a validar
+una noche completa ni el ciclo de pausa/reanudacion.
 
 ## Pausa y reserva
 

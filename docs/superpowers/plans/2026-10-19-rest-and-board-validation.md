@@ -108,7 +108,8 @@ at 0x10000 and preserved LittleFS at 0x410000. SHA256 of installed artifacts:
 Normal startup: VPET_READY, manifest 1, free heap 66128/minimum 66108;
 FS 11943936/12451840, BLE PAIRED/CONNECTED. Local upload, independent
 verify and startup logs are under `out/rest-board-deploy/darkness-*`;
-not included in Git. Visual acceptance of darkness remains separate.
+not included in Git. The user subsequently confirmed that lights off darkens
+and lights on restores brightness; darkness is now visually accepted.
 The 90s normal boot observation ended successfully: eight runtime samples,
 free heap 66128 throughout, watermark 60988, BLE connected, zero input
 events, no fatal or uptime regression. First interval max was 933565us;

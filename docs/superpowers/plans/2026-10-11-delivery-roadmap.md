@@ -19,7 +19,8 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | Sprites evolucionados | Flamemon y Dragfiremon: block/hurt/happy/sad propios | Desplegados por USB; falta aceptacion visual fisica |
 | Noche y personalidad de descanso | Fondo 18:00-06:00, tired en cuatro etapas, habito gradual y guardado v4 compatible | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY. Falta aceptacion visual y noche real |
 | Globos y caras de animo | Comida/descanso/lesion/tristeza/enojo en Home; cuatro caras en el slot vital de Status, sin nuevos Calls ni persistencia | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY y BLE conectado. Aceptacion visual fisica pendiente |
-| Rest y pausa | Rest solo luz/volver; Pausar crianza en Opciones; reserva conservada. Pausa detiene sueno y margen Call. Luz apagada oscurece Home sin alterar dia/noche | Menus aceptados por el usuario; seguimiento de oscuridad: 1324 Python/183 nativas aprobadas. Evidencia USB y aceptacion de luz en plan |
+| Rest y pausa | Rest solo luz/volver; Pausar crianza en Opciones; reserva conservada. Pausa detiene sueno y margen Call. Luz apagada oscurece Home sin alterar dia/noche | Menus y apagar/encender luz aceptados por el usuario. Falta noche real y ciclo de pausa/reanudacion; evidencia USB en plan |
+| Cuerpo Angry | Cuatro hojas originales de 25 frames, seleccion por las reglas de animo vigentes y globos conservados | 1376 Python/183 nativas aprobadas; cargado, ambos digests y arranque verificados. Falta verlo activarse naturalmente en la partida. [Evidencia](2026-10-19-angry-sprites.md) |
 
 Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
 [exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
@@ -53,8 +54,8 @@ de hardware mantienen su alcance pendiente.
 ## P0: funcionalidad y persistencia fisica
 
 - [x] El usuario confirma Rest simplificado y Pausar crianza en Opciones.
-- [ ] Aceptar visualmente la correccion de luz apagada y el ciclo completo
-  de pausa/reanudacion, sin tocar la reserva. El observador
+- [x] El usuario confirma que apagar luz oscurece y encender luz restaura brillo.
+- [ ] Aceptar el ciclo completo de pausa/reanudacion, sin tocar la reserva. El observador
   USB solo lee memoria/ciclos/eventos; no prueba FPS ni una noche real.
   [Contrato](../../rest-and-board-validation.md), [matriz](2026-10-19-rest-and-board-validation.md).
 

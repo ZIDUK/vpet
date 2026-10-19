@@ -10,6 +10,13 @@
 namespace vpet {
 namespace {
 
+bool angryIdle(const AppViewModel& model) {
+    if (model.tired || (model.motion.state() != MotionState::Idle && model.motion.state() != MotionState::Walk))
+        return false;
+    const auto value = cue::forPet(model.pet);
+    return value.need != cue::Need::None && value.face == cue::Face::Angry;
+}
+
 const char* speciesName(SpeciesId species) {
     switch (species) {
         case SpeciesId::Egg: return "egg";
@@ -94,7 +101,8 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
         action = (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0) ? "punch" : "cast";
     }
     if (model.tired && (state == MotionState::Idle || state == MotionState::Walk)) action = "tired";
-    if (model.pet.species() == SpeciesId::Baby && strcmp(action, "tired") != 0 &&
+    else if (angryIdle(model)) action = "angry";
+    if (model.pet.species() == SpeciesId::Baby && strcmp(action, "tired") != 0 && strcmp(action, "angry") != 0 &&
         strcmp(action, "idle") != 0 && strcmp(action, "walk") != 0 &&
         strcmp(action, "eat") != 0 && strcmp(action, "sleep") != 0) {
         action = "idle";
@@ -193,16 +201,17 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
             bagDrawY(y, spriteSize, 135)
         );
     }
+    const bool emotion = angryIdle(model) || (model.tired &&
+        (model.motion.state() == MotionState::Idle || model.motion.state() == MotionState::Walk));
     assets_.drawFrame(
         canvas_,
         animationPath(model),
-        model.tired && (model.motion.state() == MotionState::Idle || model.motion.state() == MotionState::Walk)
-            ? (model.nowMs / 90) % 25 : model.motion.frame(),
+        emotion ? (model.nowMs / 90) % 25 : model.motion.frame(),
         x,
         y,
         model.motion.direction() < 0 && !evolution,
         -1, 0,
-        model.tired && (model.motion.state() == MotionState::Idle || model.motion.state() == MotionState::Walk) ? 88 : 0
+        evolution ? 0 : 88
     );
     if (model.pet.injured()) {
         canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);

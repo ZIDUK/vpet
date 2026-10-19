@@ -296,6 +296,14 @@ def collect_pet_images():
     champion_dir = ASSETS / "digimon" / "digimon1" / "champion" / "idle"
     ultimate_dir = ASSETS / "digimon" / "digimon1" / "ultimate" / "idle"
     animations = (
+        ("Baby", "angry", baby_dir / "sparkmon_angry.png", 5, 25,
+         (46, 38, 207, 220), (57, 64), None, 64),
+        ("Rookie", "angry", rookie_dir / "firemon_angry.png", 5, 25,
+         (36, 30, 211, 220), (59, 64), None, 64),
+        ("Champion", "angry", champion_dir / "flamemon_angry.png", 5, 25,
+         (20, 18, 217, 227), (60, 64), None, 64),
+        ("Ultimate", "angry", ultimate_dir / "dragfiremon_angry.png", 5, 25,
+         (30, 26, 212, 224), (59, 64), None, 64),
         ("Baby", "tired", baby_dir / "sparkmon_tired.png", 5, 25,
          (46, 38, 207, 220), (57, 64), None, 64),
         ("Rookie", "tired", rookie_dir / "firemon_tired.png", 5, 25,
@@ -731,6 +739,10 @@ def validate_runtime_assets():
         "digimon1/Rookie/firemon_tired_atlas.bmp",
         "digimon1/Champion/flamemon_tired_atlas.bmp",
         "digimon1/Ultimate/dragfiremon_tired_atlas.bmp",
+        "digimon1/Baby/sparkmon_angry_atlas.bmp",
+        "digimon1/Rookie/firemon_angry_atlas.bmp",
+        "digimon1/Champion/flamemon_angry_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_angry_atlas.bmp",
         "digimon1/Egg/egg_idle_atlas.bmp",
         "digimon1/Egg/egg_hatch_atlas.bmp",
         "digimon1/Baby/sparkmon_idle_atlas.bmp",

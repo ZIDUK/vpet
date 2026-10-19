@@ -22,6 +22,40 @@ def lights_off(image):
     ]) for channel, shift, maximum in zip(channels, (3, 2, 3), (31, 63, 31))))
 
 
+@pytest.mark.parametrize('species,stage,name',SPECIES)
+@pytest.mark.parametrize('mode', ['angry','food-angry','angry-walk','angry-tired','angry-eat',
+                                  'angry-sleep','angry-hurt','angry-cold','calm','sad'])
+def test_real_renderer_angry_selection_and_priorities(sleep_pixels,species,stage,name,mode):
+    root,binary=sleep_pixels
+    subprocess.run([str(binary),str(root/'data'),str(species),mode,'720','0','1'],check=True)
+
+
+@pytest.mark.parametrize('species,stage,name',SPECIES)
+@pytest.mark.parametrize('index',[0,8,24])
+def test_angry_frames_match_board_pixels_and_simulator_source(sleep_pixels,species,stage,name,index):
+    root,binary=sleep_pixels
+    raw=subprocess.check_output([str(binary),str(root/'data'),str(species),'angry-pixels','720',str(index),'1'])
+    actual=Image.open(io.BytesIO(raw)).convert('RGB')
+    expected=decode_vpa((root/'data/backgrounds/background.vpa').read_bytes()).frames[0].convert('RGB')
+    sprite=decode_vpa((root/'data/animations'/stage/(name+'_angry.vpa')).read_bytes()).frames[index]
+    expected.paste(sprite,(76+(88-sprite.width)//2,43+88-sprite.height),sprite)
+    bubble=decode_vpa((root/'data/ui/mood/angry.vpa').read_bytes()).frames[0]
+    expected.paste(bubble,(144,27),bubble)
+    assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
+    pet=Pet(species=stage,state='live'); pet.stats.update(p=10,h=80,e=80)
+    before=pet.to_dict()
+    simulated=render_frame(root/'sim',pet,pet_x=76,now_ms=index*90,
+                           current_datetime=(2026,10,19,12,0),profile=get_display_profile('tdisplay'))
+    atlas=Image.open(root/'sim/digimon1'/stage.title()/(name+'_angry_atlas.bmp'))
+    tile=atlas.crop((index*88,0,(index+1)*88,88))
+    expected=Image.open(root/'sim/Background/background.bmp').convert('RGB')
+    expected.paste(tile.convert('RGB'),(76,43),tile.point([0]+[255]*255,mode='L'))
+    cue=Image.open(root/'sim/UIMood/angry.bmp')
+    expected.paste(cue.convert('RGB'),(144,27),cue.point([0]+[255]*255,mode='L'))
+    assert simulated.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
+    assert pet.to_dict()==before
+
+
 @pytest.fixture(scope='module')
 def sleep_pixels(tmp_path_factory):
     root = tmp_path_factory.mktemp('sleep-pixels')

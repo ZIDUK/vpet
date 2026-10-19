@@ -5,16 +5,36 @@
 int main(int argc,char** argv) {
     assert(argc==7); assetRoot=argv[1];
     vpet::PetState pet; pet.evolveTo(static_cast<vpet::SpeciesId>(atoi(argv[2])));
+    const std::string mode=argv[3];
+    if(mode.find("angry")!=std::string::npos) pet.setHappiness(10);
+    if(mode=="food-angry") { pet.setHappiness(30); pet.setHunger(10); }
+    if(mode=="calm") pet.setHappiness(50);
+    if(mode=="sad") pet.setHappiness(30);
+    if(mode=="angry-cold") pet.setCold(true);
+    if(mode=="angry-hurt") pet.restoreInjury(true,1,false);
     vpet::Motion motion(240,135,24,88); motion.setSpecies(pet.species());
-    const bool sleeping=std::string(argv[3])=="sleep";
+    const bool sleeping=mode=="sleep" || mode=="angry-sleep";
     if (sleeping) motion.startAction(vpet::Action::Rest,0);
+    if(mode=="angry-sleep") pet.sleep.asleep=true;
+    if(mode=="angry-eat") motion.startAction(vpet::Action::Feed,0);
+    if(mode=="angry-walk") motion.startWalking(0);
     TFT_eSPI display; TFT_eSprite canvas,scene; canvas.setSwapBytes(true); scene.setSwapBytes(true);
     vpet::AssetStore assets; assert(assets.begin().mounted);
     vpet::Renderer renderer(display,canvas,scene,assets);
     const int minute=atoi(argv[4]), frame=atoi(argv[5]);
     if (sleeping) motion.tick(frame*105);
-    const bool tired=std::string(argv[3])=="tired";
+    const bool tired=mode=="tired" || mode=="angry-tired";
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),atoi(argv[6])!=0,minute,tired});
+    if(mode!="sleep" && mode!="tired" && mode!="angry-pixels") {
+        const char* action=tired?"tired":sleeping?"sleep":mode=="angry-eat"?"eat":
+            mode=="angry" || mode=="food-angry" || mode=="angry-walk" ? "angry" : "idle";
+        const char* stages[]={"rookie","champion","ultimate","egg","baby"};
+        const char* names[]={"firemon","flamemon","dragfiremon","egg","sparkmon"};
+        const int species=atoi(argv[2]);
+        const std::string path=std::string("/animations/")+stages[species]+"/"+names[species]+"_"+action+".vpa";
+        assert(assetPathOpens[path]>0);
+        return 0;
+    }
     const auto expected=canvas.pixels;
     const auto first=assetPathOpens["/backgrounds/background_night.vpa"]+assetPathOpens["/backgrounds/background.vpa"];
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),false,minute,tired});

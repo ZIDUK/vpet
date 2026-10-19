@@ -67,12 +67,27 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
     assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
-    assert len(manifest["animations"]) == 47
+    assert len(manifest["animations"]) == 51
     for stage, name in (("baby", "sparkmon"), ("rookie", "firemon"),
                         ("champion", "flamemon"), ("ultimate", "dragfiremon")):
         tired = decode_vpa((data_dir / "animations" / stage / (name + "_tired.vpa")).read_bytes())
         assert tired.width <= 88 and tired.height <= 88 and tired.frame_count == 25
         assert all(frame.getbbox() for frame in tired.frames)
+        angry = decode_vpa((data_dir / "animations" / stage / (name + "_angry.vpa")).read_bytes())
+        assert angry.width <= 88 and angry.height <= 88 and angry.frame_count == 25
+        assert all(frame.getbbox() for frame in angry.frames)
+    for item in manifest['animations']:
+        if item['action'] not in ('angry','tired','eat','walk','fly','sleep',
+                                  'punch','cast','hurt','block','dodge','hit','hit_react'):
+            continue
+        source = sim_build/'digimon1'/item['species'].title()/(Path(item['path']).stem+'_atlas.bmp')
+        frames = build_tdisplay._atlas_frames(source)
+        original = decode_vpa(encode_vpa(frames, *frames[0].size))
+        compact = decode_vpa((data_dir/item['path']).read_bytes())
+        for expected, frame in zip(original.frames, compact.frames):
+            anchored = Image.new('RGBA', expected.size)
+            anchored.paste(frame, ((expected.width-frame.width)//2, expected.height-frame.height))
+            assert anchored.tobytes() == expected.tobytes()
     assert {item["action"] for item in manifest["animations"] if item["species"] == "ultimate"} >= {
         "block", "hurt", "happy", "sad",
     }

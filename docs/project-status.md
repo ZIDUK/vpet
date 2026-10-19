@@ -4,6 +4,27 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Angry en las cuatro etapas
+
+Las hojas aportadas de Sparkmon, Firemon, Flamemon y Dragfiremon completan
+el cuerpo enojado en Home: 25 frames a 90ms, sin reemplazar los globos ni
+cambiar reglas de animo, guardado o enums. Cansancio y acciones tienen
+prioridad; estados suprimidos no muestran enojo corporal. Status conserva
+su retrato y su icono actual. [Contrato](mood-cues.md).
+
+Verificacion local: 1376 pruebas Python, 183 nativas, 163 casos enfocados,
+Pico/T-Display regenerados y simulador 90 frames correctos. RAM estatica
+56108/327680, app 1014393/4194304; 223 assets, 10786603 bytes de payload.
+Recorte lossless de padding en acciones de Home, sin formato nuevo ni
+reducir frames/colores, mantiene 12.91% de margen de presupuesto con
+manifiesto. Aceptacion visual de Angry en placa separada de estas pruebas.
+Cargado el 2026-10-19: firmware y LittleFS coinciden por digest independiente.
+Deploy OK y arranque VPET_READY: heap libre 66148/minimo 66088, FS
+11677696/12451840, manifest 1, BLE PAIRED/CONNECTED. No se borro NVS;
+respaldo nuevo verificado. El espacio usado real baja 266240 bytes frente
+a la entrega anterior, aun con los cuatro sprites adicionales.
+[Plan y evidencia](superpowers/plans/2026-10-19-angry-sprites.md).
+
 ## Rest, pausa y luz apagada
 
 Rest ofrece solo APAGAR/ENCENDER LUZ y VOLVER. Cold se presenta como PAUSAR
@@ -17,8 +38,9 @@ independientemente del ciclo 18:00-06:00; despertar restaura el brillo.
 Menu superior y paneles conservan legibilidad. Sin nuevos assets/framebuffer
 ni cambios de cadencia, Training o Status. Pruebas finales: 1324 Python,
 183 nativas, simulador headless 90 frames y compilacion ESP32 correctos;
-RAM estatica 56108/327680, app 1014233/4194304. La verificacion fisica de
-oscuridad se registra por separado de la aceptacion anterior de los menus.
+RAM estatica 56108/327680, app 1014233/4194304. El usuario acepta la
+correccion de oscuridad en placa: confirma que apagar
+oscurece y encender restaura brillo. Noche completa y pausa siguen pendientes.
 Cargado el 2026-10-19 sin recargar LittleFS: firmware y FS conservado
 coinciden por digest independiente. Arranque VPET_READY, manifest 1,
 heap libre 66128/minimo 66108; FS 11943936/12451840, BLE PAIRED/CONNECTED.

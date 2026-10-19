@@ -810,6 +810,9 @@ def render_frame(
              motion_state in ("idle", "walk") and not pet.dead and not pet.injured and
              not getattr(pet, "cold", False) and
              pet.sleep.tired(pet.stats["e"], pet.dna[3], minute))
+    angry = (profile.name == "tdisplay" and panel_mode is None and not status_visible and
+             motion_state in ("idle", "walk") and not tired and
+             pet_cue(pet)[0] is not None and pet_cue(pet)[1] == "angry")
     if pet.species == EGG_SPECIES:
         if motion_state == "hatch":
             image_path = EGG_HATCH_IMAGE_PATH
@@ -818,10 +821,10 @@ def render_frame(
             image_path = EGG_IDLE_IMAGE_PATH
             frame_count = EGG_IDLE_FRAME_COUNT
         sprite_x = (profile.width - sprite_size) // 2
-    elif tired:
+    elif tired or angry:
         stage, name = {"baby": ("Baby", "sparkmon"), "rookie": ("Rookie", "firemon"),
                        "champion": ("Champion", "flamemon"), "ultimate": ("Ultimate", "dragfiremon")}[pet.species]
-        image_path = "/digimon1/%s/%s_tired_atlas.bmp" % (stage,name)
+        image_path = "/digimon1/%s/%s_%s_atlas.bmp" % (stage,name,"tired" if tired else "angry")
         frame_count = 25
         sprite_frame = now_ms // 90
     elif pet.species == BABY_SPECIES:

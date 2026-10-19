@@ -26,8 +26,44 @@ Call y su parpadeo; solo se retira el antiguo icono inferior derecho de
 Home en T-Display. Las ventanas de atencion y penalidades no cambian.
 
 No se implementan preferencias de ambiente, riesgo extra de enfermedad,
-longevidad ni reglas de regano de otro juego. Tampoco se inventa una nueva
-animacion corporal Angry: la expresion actual usa los iconos aprobados.
+longevidad ni reglas de regano de otro juego.
+
+## Cuerpo Angry: seguimiento 2026-10-19
+
+Los cuatro originales aportados por el usuario completan la expresion
+corporal de Sparkmon, Firemon, Flamemon y Dragfiremon. Se muestran en Home
+durante idle/walk cuando la cara existente es Angry y hay una senal no
+suprimida: animo <20, o comida/descanso pendientes con animo <50.
+Cansancio y acciones explicitas tienen prioridad. Lesion, pausa, viaje,
+sueno, huevo o muerte no seleccionan Angry. Recuperar animo o resolver la
+necesidad recalcula la expresion, sin un estado nuevo ni otra penalidad.
+El globo sigue indicando la causa, no se sustituye por el cuerpo.
+
+Cada hoja conserva sus 25 frames, a 90ms, y usa viewport fijo/anclaje
+inferior de 88px; no se agregan enums Motion ni claves de guardado. Status
+conserva su retrato anterior y el icono de cara; Pico conserva su flujo
+legado aunque empaqueta los originales para reproducibilidad.
+
+Los originales se copian sin repintar a `assets/digimon/digimon1/`, en
+`baby/idle/sparkmon_angry.png`, `rookie/idle/firemon_angry.png`,
+`champion/idle/flamemon_angry.png` y `ultimate/idle/dragfiremon_angry.png`.
+Fuente: sparkmon-angry.png y los tres archivos *-angry-v1.png adjuntos.
+
+Para conservar margen LittleFS se reutiliza el recorte de padding alfa
+despues de cuantizar, tambien en animaciones de acciones de Home. Se
+mantiene VPA1, su tabla de offsets, paleta, frames y anclaje; no hay
+compresion nueva ni reduccion de colores o frames. Idle, happy/sad de
+resultados, Training, battle y Status quedan sin recortar. Las pruebas
+reconstruyen cada frame recortado a su canvas original y comparan todos
+sus bytes RGBA; el renderer real comprueba posiciones y colores.
+
+Paquete final local: 223 assets, 10786603 bytes de payload y 10843912
+con manifiesto; margen de presupuesto 12.91% sobre 12451840. El umbral
+de preflight sigue en 10%; el overhead real de LittleFS se reporta aparte
+en el arranque, no se confunde con bytes de payload.
+Preview aislado: `scripts/preview_angry.py`, `out/angry-preview/overview.png`.
+La [evidencia de entrega](superpowers/plans/2026-10-19-angry-sprites.md)
+separa host, carga USB y aceptacion visual, sin bajar el animo de la partida real.
 
 ## Assets y limites
 
