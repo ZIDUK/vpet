@@ -60,6 +60,7 @@ FoodResult applyFood(PetState& pet, FoodId food) {
     if (pet.species() == SpeciesId::Egg) return FoodResult::Egg;
     if (pet.dead()) return FoodResult::Dead;
     if (pet.cold()) return FoodResult::Frozen;
+    if (pet.sleep.asleep) return FoodResult::Asleep;
     if (food == FoodId::Meat) {
         if (pet.hunger() >= 100 && pet.overfedThisCycle()) return FoodResult::Cycle;
         const int hungerGain = pet.hunger() >= 100 ? 0 : (pet.hunger() + items::kMeatHunger > 100 ? 100 - pet.hunger() : items::kMeatHunger);

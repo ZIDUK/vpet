@@ -46,6 +46,7 @@ void App::begin(uint32_t nowMs) {
     if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
     motion_.setSpecies(pet_.species());
     motion_.alignClock(nowMs);
+    if (pet_.sleep.asleep && !pet_.dead() && !pet_.exploration.away()) motion_.startAction(Action::Rest,nowMs);
     eggStartedMs_ = nowMs;
 }
 
@@ -153,6 +154,8 @@ void App::applyDateTime() {
 
 void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
+    if (pet_.sleep.asleep && event==InputEvent::Action &&
+        (panel==PanelId::Inventory || panel==PanelId::Feeding || panel==PanelId::Exploration)) return;
     if (panel == PanelId::Exploration) { explorationInput(event); return; }
     if (panel == PanelId::Options) {
         if (event == InputEvent::Next || event == InputEvent::Back) {
@@ -185,6 +188,9 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                     return;
                 }
                 motion_.setSpecies(pet_.species());
+                motion_.alignClock(nowMs);
+                motion_.wake(nowMs);
+                if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
                 bluetooth_.setEnabled(settings_.bluetoothEnabled);
                 explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
                 if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
@@ -192,6 +198,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
             case 5: beginDateTime(true); break;
             case 6: beginDateTime(false); break;
             case 7: {
+                if (pet_.sleep.asleep) return;
                 if(pet_.exploration.away()) { openExploration(); return; }
                 const bool fromEgg = pet_.species() == SpeciesId::Egg;
                 if (evolution_.force(pet_)) {
@@ -286,10 +293,8 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         if (event != InputEvent::Action) return;
         switch (navigation_.panelIndex()) {
             case 0:
-                if (pet_.beginAction(Action::Rest)) {
-                    motion_.startAction(Action::Rest, nowMs);
-                    navigation_.setPanel(PanelId::Home);
-                }
+                toggleSleep(nowMs);
+                navigation_.setPanel(PanelId::Home);
                 break;
             case 1:
                 pet_.setCold(!pet_.cold());
@@ -301,6 +306,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                     if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
                     motion_.setSpecies(pet_.species());
                     motion_.alignClock(nowMs);
+                    if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
                     if (pet_.species() == SpeciesId::Egg) eggStartedMs_ = nowMs;
                     navigation_.setPanel(PanelId::Home);
                     settleStorage();
@@ -337,16 +343,29 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
 }
 
 uint8_t App::clockHour() const {
-    uint8_t hour = 12;
-    const time_t wall = time(nullptr);
-    struct tm local {};
-    if (localtime_r(&wall, &local) != nullptr && local.tm_year + 1900 >= 2024) {
-        hour = static_cast<uint8_t>(local.tm_hour);
-    }
-    return hour;
+    return minuteOfDay()/60;
+}
+
+int App::minuteOfDay() const {
+    return explorationClock_.trusted(calendarNow()) ? calendarNow()%86400/60 : 720;
+}
+
+void App::toggleSleep(uint32_t nowMs) {
+    if (pet_.dead() || pet_.species()==SpeciesId::Egg || pet_.cold() || pet_.exploration.away()) return;
+    const PetState before=pet_;
+    if (pet_.sleep.asleep) pet_.sleep.stop();
+    else pet_.sleep.start(explorationClock_.trusted(calendarNow()) ? calendarNow() : 0,pet_.dna()[3]);
+    if (!settingsStore_.save(pet_,settings_)) { pet_=before; return; }
+    if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
+    else motion_.wake(nowMs);
+    settleStorage();
 }
 
 void App::activate(uint32_t nowMs) {
+    if (pet_.sleep.asleep) {
+        if (navigation_.menuIndex()==5) toggleSleep(nowMs);
+        return;
+    }
     if(navigation_.menuIndex()==3 || pet_.exploration.away()) {
         openExploration();
         return;
@@ -357,14 +376,6 @@ void App::activate(uint32_t nowMs) {
         motion_.alignClock(nowMs);
         eggStartedMs_ = nowMs;
         saveState();
-        return;
-    }
-    if (motion_.state() == MotionState::Sleep) {
-        if (navigation_.menuIndex() == 5) {
-            motion_.wake(nowMs);
-            pet_.noteWake(clockHour());
-            saveState();
-        }
         return;
     }
     Action action = Action::None;
@@ -401,7 +412,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         return;
     }
     if (savePending_) {
-        if(pet_.exploration.away()) pet_.pauseCareClock(nowMs-lastTickMs_);
+        if(pet_.exploration.away() || pet_.sleep.asleep) pet_.pauseCareClock(nowMs-lastTickMs_);
         lastTickMs_ = nowMs;
         motion_.alignClock(nowMs);
         if (nowMs - lastSaveAttemptMs_ >= 1000) saveState();
@@ -480,17 +491,32 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         }
     } else {
     const bool wasDead = pet_.dead();
-    pet_.tick(elapsed);
+    const bool sleeping=pet_.sleep.asleep;
+    pet_.tick(elapsed,sleeping);
+    if (sleeping) {
+        pet_.pauseCareClock(elapsed);
+        if (pet_.dead()) { pet_.sleep.stop(); motion_.wake(nowMs); }
+        else {
+            const int checkpoint=pet_.sleep.elapsed/300;
+            int energy=pet_.energy(); bool reward=false;
+            const bool complete=pet_.sleep.advanceMs(elapsed,energy,reward);
+            pet_.setEnergy(energy);
+            if (reward) pet_.finishSleepNight();
+            if (complete) motion_.wake(nowMs);
+            if ((complete || pet_.sleep.elapsed/300!=checkpoint) && !saveState()) return;
+        }
+    }
     if (pet_.dead() != wasDead || (pet_.injured() && !pet_.cold() && nowMs - lastInjuryCheckpointMs_ >= 60000)) {
         lastInjuryCheckpointMs_ = nowMs;
         if (!saveState()) return;
     }
     const uint8_t hour = clockHour();
-    const CallUpdate call = pet_.updateCall(
+    const CallUpdate call = pet_.sleep.asleep ? CallUpdate::None : pet_.updateCall(
         nowMs,
         kCareTimeScale,
         hour,
-        motion_.state() == MotionState::Sleep
+        motion_.state() == MotionState::Sleep,
+        false
     );
     if (call == CallUpdate::Started && settings_.soundEnabled) {
         const char* reason = "HUNGER";
@@ -514,11 +540,13 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             motion_.alignClock(nowMs);
             if (!saveState()) return;
         }
-    } else if (!pet_.cold() && !pet_.dead() && motion_.state() != MotionState::Evolution && evolution_.evolve(pet_, kCareTimeScale)) {
+    } else if (!pet_.sleep.asleep && !pet_.cold() && !pet_.dead() && motion_.state() != MotionState::Evolution && evolution_.evolve(pet_, kCareTimeScale)) {
         motion_.setSpecies(pet_.species());
         motion_.startEvolution(nowMs);
         if (!saveState()) return;
     }
+    motion_.setTired(!pet_.dead() && !pet_.injured() && !pet_.cold() &&
+        pet_.sleep.tired(pet_.energy(),pet_.dna()[3],explorationClock_.trusted(calendarNow()) ? minuteOfDay() : -1),nowMs);
     motion_.tick(nowMs);
     if (motion_.consumeActionCompleted()) {
         const Action finished = pet_.pendingAction();
@@ -591,7 +619,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
                 motion_,
                 navigation_.menuIndex(),
                 nowMs,
-                languageIsSpanish(settings_.language.c_str())
+                languageIsSpanish(settings_.language.c_str()),
+                minuteOfDay(),
+                !pet_.dead() && !pet_.injured() && !pet_.cold() && pet_.sleep.tired(pet_.energy(),pet_.dna()[3],
+                    explorationClock_.trusted(calendarNow()) ? minuteOfDay() : -1)
             });
         } else {
             panels_.draw(

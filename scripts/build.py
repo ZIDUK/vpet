@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageOps
 
 
 ROOT = Path(__file__).parent.parent
@@ -67,6 +67,7 @@ def copy_runtime_sources():
             "options.py",
             "pet.py",
             "save.py",
+            "sleep.py",
             "status_card.py",
             "techniques.py",
         ),
@@ -202,20 +203,15 @@ def collect_background():
     save_runtime_bmp(source, target, expected_size=target_size, transform=fit_background)
     print(f"  background: {source.name} -> {target.relative_to(BUILD)}")
 
-    def make_night(image):
-        fitted = fit_background(image)
-        dark = ImageEnhance.Brightness(fitted).enhance(0.34)
-        blue = Image.new("RGB", dark.size, (8, 22, 52))
-        return Image.blend(dark, blue, 0.28)
-
+    night_source = source_dir / "concepts" / "night-v1.png"
     night_target = BUILD / "Background" / "background_night.bmp"
     save_runtime_bmp(
-        source,
+        night_source,
         night_target,
         expected_size=target_size,
-        transform=make_night,
+        transform=fit_background,
     )
-    print(f"  background: {source.name} -> {night_target.relative_to(BUILD)}")
+    print(f"  background: {night_source.name} -> {night_target.relative_to(BUILD)}")
 
 
 def _build_firemon_atlas(
@@ -299,6 +295,14 @@ def collect_pet_images():
     champion_dir = ASSETS / "digimon" / "digimon1" / "champion" / "idle"
     ultimate_dir = ASSETS / "digimon" / "digimon1" / "ultimate" / "idle"
     animations = (
+        ("Baby", "tired", baby_dir / "sparkmon_tired.png", 5, 25,
+         (46, 38, 207, 220), (57, 64), None, 64),
+        ("Rookie", "tired", rookie_dir / "firemon_tired.png", 5, 25,
+         (44, 52, 184, 216), (55, 64), None, 64),
+        ("Champion", "tired", champion_dir / "flamemon_tired.png", 5, 25,
+         (35, 30, 203, 222), (56, 64), None, 64),
+        ("Ultimate", "tired", ultimate_dir / "dragfiremon_tired.png", 5, 25,
+         (30, 26, 212, 224), (59, 64), None, 64),
         (
             "Egg", "idle", egg_dir / "egg_hatch.png", 4, 16,
             (60, 30, 200, 208), (50, 64), None, 64,
@@ -721,6 +725,10 @@ def validate_runtime_assets():
     required = [
         "Background/background.bmp",
         "Background/background_night.bmp",
+        "digimon1/Baby/sparkmon_tired_atlas.bmp",
+        "digimon1/Rookie/firemon_tired_atlas.bmp",
+        "digimon1/Champion/flamemon_tired_atlas.bmp",
+        "digimon1/Ultimate/dragfiremon_tired_atlas.bmp",
         "digimon1/Egg/egg_idle_atlas.bmp",
         "digimon1/Egg/egg_hatch_atlas.bmp",
         "digimon1/Baby/sparkmon_idle_atlas.bmp",

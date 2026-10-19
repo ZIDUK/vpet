@@ -1,5 +1,6 @@
 """Deterministic renderer shared by simulator tests and pygame."""
 from pathlib import Path
+from core.sleep import is_night
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
@@ -746,7 +747,10 @@ def render_frame(
     build_dir = Path(build_dir)
     if panel_index is None and panel_mode != "evolution":
         panel_index = 0
-    background_path = BACKGROUND_NIGHT_PATH if motion_state == "sleep" else BACKGROUND_PATH
+    minute = (current_datetime[3]*60+current_datetime[4]
+              if current_datetime and current_datetime[0]>=2024 else None)
+    night = (minute is not None and is_night(minute)) if profile.name == "tdisplay" else motion_state == "sleep"
+    background_path = BACKGROUND_NIGHT_PATH if night else BACKGROUND_PATH
     frame = _load_image(device_path(build_dir, background_path)).convert("RGB")
     if frame.size != (profile.width, profile.height):
         raise ValueError(f"Background must be {profile.width}x{profile.height}")
@@ -786,6 +790,14 @@ def render_frame(
             image_path = EGG_IDLE_IMAGE_PATH
             frame_count = EGG_IDLE_FRAME_COUNT
         sprite_x = (profile.width - sprite_size) // 2
+    elif (profile.name == "tdisplay" and motion_state in ("idle", "walk") and
+          not pet.dead and not pet.injured and not getattr(pet,'cold',False) and
+          pet.sleep.tired(pet.stats["e"],pet.dna[3],minute)):
+        stage, name = {"baby": ("Baby", "sparkmon"), "rookie": ("Rookie", "firemon"),
+                       "champion": ("Champion", "flamemon"), "ultimate": ("Ultimate", "dragfiremon")}[pet.species]
+        image_path = "/digimon1/%s/%s_tired_atlas.bmp" % (stage,name)
+        frame_count = 25
+        sprite_frame = now_ms // 90
     elif pet.species == BABY_SPECIES:
         image_path = {
             "walk": SPARKMON_WALK_IMAGE_PATH,

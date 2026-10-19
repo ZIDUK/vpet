@@ -4,6 +4,21 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+Nueva entrega local: noche 18:00-06:00, cuatro sprites cansados y rutina de
+descanso moldeada por ADN/habitos. Amanecer independiente de despertar;
+minimo ocho horas nocturnas, recuperacion progresiva y premio unico.
+JSON/sleepState v1, snapshots v4 compatibles con v1/v2/v3, schema NVS 3
+intacto. 1237 pruebas Python y 180 nativas aprobadas; Make Sim 90 frames,
+Pico regenerado y build T-Display correctos. Cargado firmware/LittleFS y
+verificados por digest independiente en ambas particiones el 2026-10-18.
+Deploy OK: heap libre 66592/minimo 66516; FS 11890688/12451840, manifest 1.
+Reinicio observado 18s sin fatal: BLE ADVERTISING/PAIRED/CONNECTED,
+VPET_READY. Sin borrar NVS; respaldo nuevo conservado. Falta aceptacion
+visual y una noche real; ajustar Fecha/Hora si se perdio el calendario.
+[Contrato](sleep-routine.md), [evidencia](superpowers/plans/2026-10-18-sleep-routine.md).
+
+## Entrega de tecnicas anterior a noche/descanso
+
 Tecnicas ampliadas en Python y C++: Firemon equipa 2, Flamemon 3,
 Dragfiremon 4. Rafaga (30 poder/12 MP, Champion+, 4 lecciones) e Inferno
 (38 poder/18 MP, Ultimate, 6 lecciones) completan el catalogo de cinco.

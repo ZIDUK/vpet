@@ -10,6 +10,7 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
+from core.sleep import SleepRoutine
 
 def clock_hour(clock, default=12):
     """Read hour from the shared get_datetime() 5-tuple."""
@@ -67,6 +68,48 @@ class SimulatorServices:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
             return False
+
+    def toggle_sleep(self, pet):
+        if pet.is_egg or pet.dead or getattr(pet,'cold',False) or pet.exploration.away:
+            return False
+        before = copy.deepcopy(pet.__dict__)
+        if pet.sleep.asleep:
+            pet.sleep.stop()
+        else:
+            pet.sleep.start(self.exploration_time(), pet.dna[3])
+        pet.answer_lights()
+        if self.save(pet):
+            return True
+        pet.__dict__.clear()
+        pet.__dict__.update(before)
+        return False
+
+    def advance_sleep(self, pet, elapsed_ms):
+        if not pet.sleep.asleep or getattr(pet,'cold',False) or pet.exploration.away:
+            return False
+        before = pet.sleep.to_dict()
+        stats, ev, dp = dict(pet.stats), dict(pet.ev), pet.dp
+        injured_ms, dead = pet.injured_ms, pet.dead
+        if pet.injured:
+            pet.injured_ms = min(21600000, pet.injured_ms + elapsed_ms)
+            pet._check_death()
+        if pet.dead:
+            pet.sleep.stop()
+            complete = True
+        else:
+            pet.stats['e'], complete, reward = pet.sleep.advance_ms(elapsed_ms, pet.stats['e'])
+            if reward:
+                pet.stats['hp'] = min(100, pet.stats['hp'] + 5)
+                pet.restore_dp()
+                pet.gain_ev('mp', 2)
+                pet.gain_ev('def', 1)
+        checkpoint = before['elapsed']//300 != pet.sleep.elapsed//300
+        if (complete or checkpoint) and not self.save(pet):
+            pet.sleep = SleepRoutine(before)
+            pet.stats, pet.ev, pet.dp = stats, ev, dp
+            pet.injured_ms, pet.dead = injured_ms, dead
+            return False
+        return complete
 
     def load(self, pet):
         try:

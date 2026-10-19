@@ -78,7 +78,8 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
             action = source.stem.split("_", 1)[1].removesuffix("_atlas")
             frames = _atlas_frames(source)
             relative = Path("animations") / species / f"{source.stem.removesuffix('_atlas')}.vpa"
-            record = write_asset(data_dir / relative, frames, frames[0].size)
+            record = write_asset(data_dir / relative, frames, frames[0].size,
+                                 trim_transparent=action == "tired")
             records.append(record)
             if species in ("rookie", "champion", "ultimate") and action in BATTLE_ACTIONS:
                 battle_frames = normalize_frames(frames)

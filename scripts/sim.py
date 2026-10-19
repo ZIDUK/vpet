@@ -145,7 +145,13 @@ def main():
     running = True
     practice_keys = set()
     last_interaction_ms = pygame.time.get_ticks()
+    last_sleep_tick_ms = last_interaction_ms
+    if profile.name == "tdisplay" and pet.sleep.asleep:
+        motion.start_sleep(last_sleep_tick_ms / 1000)
     while running:
+        sleep_now_ms = pygame.time.get_ticks()
+        sleep_elapsed_ms = sleep_now_ms - last_sleep_tick_ms
+        last_sleep_tick_ms = sleep_now_ms
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -188,6 +194,12 @@ def main():
                         panel_mode = None
                         menu_index = (menu_index + 1) % len(menu_icons)
                 elif event.key == pygame.K_a and pet.is_live:
+                    if profile.name == "tdisplay" and pet.sleep.asleep and panel_mode is None and menu_index == rest_index:
+                        if services.toggle_sleep(pet):
+                            motion.wake(pygame.time.get_ticks() / 1000)
+                        continue
+                    if profile.name == "tdisplay" and pet.sleep.asleep and menu_index not in (MENU_STATUS_INDEX, options_index, pedia_index):
+                        continue
                     if pet.exploration.away and panel_mode not in ("explore", "status") and menu_index not in (explore_index, MENU_STATUS_INDEX):
                         exploration_menu = ExplorationSession(pet, services.save, services.exploration_time)
                         menu_index = explore_index
@@ -265,6 +277,9 @@ def main():
                     elif menu_index == options_index:
                         options_session = OptionsSession()
                         panel_mode = "options"
+                    elif menu_index == rest_index and profile.name == "tdisplay":
+                        if services.toggle_sleep(pet):
+                            motion.start_sleep(pygame.time.get_ticks() / 1000)
                     elif menu_index == explore_index and profile.name == "tdisplay":
                         exploration_menu = ExplorationSession(pet, services.save, services.exploration_time)
                         panel_mode = "explore"
@@ -283,7 +298,7 @@ def main():
                             pygame.time.get_ticks() / 1000,
                             hour=clock_hour(services.get_datetime()),
                         )
-                elif event.key == pygame.K_e and pet.is_live and not pet.exploration.away:
+                elif event.key == pygame.K_e and pet.is_live and not pet.exploration.away and not pet.sleep.asleep:
                     if evolution.force(pet):
                         motion.start_evolution(
                             pygame.time.get_ticks() / 1000,
@@ -357,18 +372,28 @@ def main():
             clock.tick(20)
             continue
 
-        if not pet.exploration.away:
+        if profile.name == "tdisplay" and pet.sleep.asleep:
+            if motion.state != MOTION_SLEEP:
+                motion.start_sleep(now_ms / 1000)
+            if pet.call_reason:
+                pet.call_started_ms += sleep_elapsed_ms
+            if services.advance_sleep(pet, sleep_elapsed_ms):
+                motion.wake(now_ms / 1000)
+        elif profile.name == "tdisplay" and motion.state == MOTION_SLEEP:
+            motion.wake(now_ms / 1000)
+        if not pet.exploration.away and not pet.sleep.asleep:
             pet.decay_if_due()
         else:
             pet.last_decay = time.monotonic()
         now = pygame.time.get_ticks() / 1000
-        if pet.is_live and not pet.exploration.away:
+        if pet.is_live and not pet.exploration.away and not pet.sleep.asleep:
             hour = clock_hour(services.get_datetime())
             pet.update_call(
                 int(now * 1000),
                 CARE_TIME_SCALE,
                 hour,
                 motion.state == MOTION_SLEEP,
+                lights_enabled=profile.name != "tdisplay",
             )
         if pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
             pet.complete_hatch("baby")
@@ -380,6 +405,11 @@ def main():
                 if pet.species == ROOKIE_SPECIES
                 else None,
             )
+        if profile.name == "tdisplay":
+            dt = services.get_datetime()
+            minute = dt[3]*60+dt[4] if dt and dt[0]>=2024 else None
+            motion.set_tired(not pet.dead and not pet.injured and not getattr(pet,'cold',False) and
+                             pet.sleep.tired(pet.stats['e'], pet.dna[3], minute), now)
         motion.update(now)
         sprite_frame = motion.frame
         egg_motion = motion.state

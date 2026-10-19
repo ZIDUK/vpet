@@ -42,6 +42,10 @@ PetState pet(SpeciesId species, int hunger) {
     if (species==SpeciesId::Ultimate) p.practice.equipped=0b11011;
     p.adoptedStock.seed();
     p.adoptedStock.set(2, hunger);
+    p.sleep.start(20000ULL*86400+22*3600,hunger%3);
+    int energy=p.energy(); bool reward=false;
+    p.sleep.advance(hunger,energy,reward);
+    p.setEnergy(energy);
     return p;
 }
 void identity(const PetState& p, const PetState& expected) {
@@ -51,12 +55,19 @@ void identity(const PetState& p, const PetState& expected) {
     assert(p.practice.equipped == expected.practice.equipped);
     for (int i=0;i<techniques::kCount;++i) assert(p.practice.mastery[i]==expected.practice.mastery[i]);
     assert(p.adoptedStock.encode() == expected.adoptedStock.encode());
+    assert(p.sleep.encode() == expected.sleep.encode());
+    assert(p.energy() == expected.energy());
+    assert(p.health() == expected.health() && p.dp() == expected.dp());
+    for(int i=0;i<6;++i) assert(p.evAt(static_cast<CombatStat>(i))==expected.evAt(static_cast<CombatStat>(i)));
     for (int i = 0; i < 4; ++i) assert(p.dna()[i] == expected.dna()[i]);
 }
 
 void save_cuts() {
     Fault f; Store initial(f); Settings settings;
     auto old = pet(SpeciesId::Rookie, 20), next = pet(SpeciesId::Champion, 90);
+    int recoveredEnergy=next.energy(); bool nightReward=false;
+    next.sleep.advance(43200,recoveredEnergy,nightReward);
+    assert(nightReward); next.setEnergy(recoveredEnergy); next.finishSleepNight();
     assert(SettingsStore(initial).save(old, settings));
     Store expected = initial; f.writes = 0;
     assert(SettingsStore(expected).save(next, settings));
@@ -73,6 +84,10 @@ void save_cuts() {
         PetState again;
         assert(persistence.load(again, settings) == LoadResult::Loaded);
         identity(again, restored);
+        if(cut>0) {
+            int energy=again.energy(); bool reward=false;
+            assert(!again.sleep.advance(43200,energy,reward) && !reward);
+        }
     }
     std::cout << "save: " << writes + 1 << " interruption points\n";
 }

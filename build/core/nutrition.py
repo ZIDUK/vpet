@@ -60,7 +60,7 @@ def food_preview(pet, food_id, available=True, asleep=False, busy=False):
         result["reason"] = "egg"
     elif getattr(pet, "dead", False):
         result["reason"] = "dead"
-    elif asleep:
+    elif asleep or getattr(getattr(pet, 'sleep', None), 'asleep', False):
         result["reason"] = "asleep"
     elif busy:
         result["reason"] = "busy"

@@ -21,7 +21,7 @@ uint8_t evolvedWeight(SpeciesId from, SpeciesId to, uint8_t weight);
 uint8_t migrateLegacyWeight(SpeciesId species, uint8_t weight);
 
 enum class FoodId : uint8_t { Meat = 0, Protein = 1 };
-enum class FoodResult : uint8_t { Applied, Invalid, Egg, Dead, Frozen, Full, Cycle };
+enum class FoodResult : uint8_t { Applied, Invalid, Egg, Dead, Frozen, Full, Cycle, Asleep };
 FoodResult applyFood(PetState& pet, FoodId food);
 
 }  // namespace vpet

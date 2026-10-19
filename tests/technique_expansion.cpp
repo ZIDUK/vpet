@@ -62,9 +62,12 @@ int main() {
     assert(SettingsStore(captured).save(old,settings));
     storage::SnapshotStore snapshot;
     std::string record=storage::encodeSnapshot(captured);
-    assert(record.rfind("3\n",0)==0);
+    assert(record.rfind("4\n",0)==0);
     for (const auto version : {"1", "2"}) {
         auto historical=record;
+        auto endSleep=historical.rfind("END\n");
+        auto startSleep=historical.rfind('\n',endSleep-2)+1;
+        historical.erase(startSleep,endSleep-startSleep);
         historical.replace(0,1,version);
         for (const auto key : {"techM3", "techM4"}) {
             auto start=historical.find(std::string(key)+" ");

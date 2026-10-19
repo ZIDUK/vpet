@@ -239,8 +239,18 @@ void test_adopted_manual_preview_matches_commit();
 void test_adopted_journal_finishes_legacy_nutrition_migration();
 void test_practice_last_order_survives_cursor_changes();
 int main(int, char**) {
+    extern void test_sleep_night_boundaries_and_dna_thresholds();
+    extern void test_sleep_learns_only_completed_consistent_nights();
+    extern void test_sleep_codec_resumes_without_offline_credit();
+    extern void test_sleep_pauses_metabolism_not_injury_and_keeps_routine_on_evolution();
+    extern void test_tired_motion_stays_idle_but_does_not_interrupt_actions();
     extern void test_adopted_care_items_cap_and_consume();
     UNITY_BEGIN();
+    RUN_TEST(test_sleep_night_boundaries_and_dna_thresholds);
+    RUN_TEST(test_sleep_learns_only_completed_consistent_nights);
+    RUN_TEST(test_sleep_codec_resumes_without_offline_credit);
+    RUN_TEST(test_sleep_pauses_metabolism_not_injury_and_keeps_routine_on_evolution);
+    RUN_TEST(test_tired_motion_stays_idle_but_does_not_interrupt_actions);
     RUN_TEST(test_adopted_runtime);
     RUN_TEST(test_adopted_battle_and_rewards);
     RUN_TEST(test_adopted_manual_rollback);

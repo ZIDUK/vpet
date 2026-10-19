@@ -15,6 +15,12 @@ struct AppViewModel {
     uint8_t menuIndex;
     uint32_t nowMs;
     bool spanish;
+    int minuteOfDay;
+    bool tired;
+    AppViewModel(const PetState& p, const Motion& m, uint8_t menu, uint32_t ms,
+                 bool es, int minute = 720, bool sleepy = false)
+        : pet(p), motion(m), menuIndex(menu), nowMs(ms), spanish(es),
+          minuteOfDay(minute), tired(sleepy) {}
 };
 
 class Renderer {

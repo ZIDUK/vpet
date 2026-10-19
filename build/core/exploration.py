@@ -74,6 +74,8 @@ class Exploration:
         return max(0, DURATIONS[self.trip["route"]] - elapsed)
 
     def start(self, pet, route, stat, now):
+        if getattr(getattr(pet, 'sleep', None), 'asleep', False):
+            return False
         if self.away or not pet.is_live or pet.species in ("egg", "baby") or pet.dead:
             return False
         if route not in DURATIONS or (route == "jornada" and stat not in STATS):

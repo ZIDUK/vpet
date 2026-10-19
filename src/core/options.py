@@ -132,7 +132,7 @@ class OptionsSession:
             self.field = 0
             self.mode = "time"
         elif self.index == OPTION_EVOLVE:
-            self.message = "EVOLVED" if force_next_form(pet) else "NO EVO"
+            self.message = "EVOLVED" if not getattr(getattr(pet,'sleep',None),'asleep',False) and force_next_form(pet) else "NO EVO"
         elif self.index == OPTION_BACK:
             return False
         return True

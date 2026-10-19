@@ -350,7 +350,11 @@ void PetState::refreshCallAfterCare() {
     }
 }
 
-CallUpdate PetState::updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour, bool asleep) {
+CallUpdate PetState::updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour, bool asleep, bool lightsEnabled) {
+    if (!lightsEnabled && callReason_ == CallReason::Lights) {
+        callReason_ = CallReason::None;
+        callStartedMs_ = 0;
+    }
     if (cold_ || species_ == SpeciesId::Egg || scale == 0) return CallUpdate::None;
     refreshCallAfterCare();
     const bool night = hour >= 21 || hour < 8;
@@ -371,7 +375,7 @@ CallUpdate PetState::updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour, bo
     if (callReason_ != CallReason::None) return CallUpdate::None;
     if (hunger_ == 0) return startCall(CallReason::Hunger, nowMs);
     if (energy_ == 0) return startCall(CallReason::Strength, nowMs);
-    if (night && !asleep && !lightsHandledTonight_) {
+    if (lightsEnabled && night && !asleep && !lightsHandledTonight_) {
         lightsHandledTonight_ = true;
         return startCall(CallReason::Lights, nowMs);
     }
@@ -418,7 +422,15 @@ CareSnapshot PetState::snapshot() const {
     return snap;
 }
 
-void PetState::tick(uint32_t elapsedMs) {
+void PetState::finishSleepNight() {
+    health_ = clampStat(health_ + 5);
+    if (dp_ < 3) ++dp_;
+    gainEv(CombatStat::Mp, 2);
+    gainEv(CombatStat::Def, 1);
+    refreshCallAfterCare();
+}
+
+void PetState::tick(uint32_t elapsedMs, bool sleeping) {
     if (cold_) return;
     ageMs_ += elapsedMs;
     if (species_ == SpeciesId::Egg) return;
@@ -427,7 +439,7 @@ void PetState::tick(uint32_t elapsedMs) {
         injuredMs_ = elapsedMs >= 21600000U - injuredMs_ ? 21600000U : injuredMs_ + elapsedMs;
         checkDeath();
     }
-    if (dead_) return;
+    if (dead_ || sleeping) return;
     decayMs_ += elapsedMs;
     while (decayMs_ >= 30000) {
         decayMs_ -= 30000;
@@ -452,6 +464,7 @@ void PetState::tick(uint32_t elapsedMs) {
 }
 
 bool PetState::beginAction(Action action) {
+    if (sleep.asleep) return false;
     if (action == Action::None || pendingAction_ != Action::None) {
         return false;
     }
@@ -614,6 +627,7 @@ uint8_t PetState::itemCount(uint8_t index) const {
 }
 
 ItemUseResult PetState::useItem(uint8_t index) {
+    if (sleep.asleep && index != 6) return ItemUseResult::Blocked;
     if (index >= 8) {
         if (cold() || dead()) return ItemUseResult::Blocked;
         uint8_t stock = adoptedStock.count(index-8);
@@ -662,6 +676,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
 }
 
 bool PetState::canOpenTrainingManual(uint8_t menuIndex) const {
+    if (sleep.asleep) return false;
     if (menuIndex == 7) return exploration.guide && !exploration.away() &&
         !cold() && !dead() && species()!=SpeciesId::Egg && species()!=SpeciesId::Baby;
     return menuIndex>=8 && menuIndex<8+adopted::kCount &&

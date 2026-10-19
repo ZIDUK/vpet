@@ -37,7 +37,7 @@ def _rgb888(color):
     return red, green, blue
 
 
-def encode_vpa(frames, width, height):
+def encode_vpa(frames, width, height, trim_transparent=False):
     """Encode RGBA frames with one shared RGB565 palette and index-zero alpha."""
     frames = [frame.convert("RGBA") for frame in frames]
     if not frames:
@@ -73,6 +73,22 @@ def encode_vpa(frames, width, height):
         offset = index * 3
         palette.append(_rgb565(*palette_source[offset:offset + 3]))
 
+    if trim_transparent:
+        # Quantize first: removing alpha padding must not change the palette.
+        frame_bytes = width*height
+        bounds = [Image.frombytes('L',(width,height),indexed[i:i+frame_bytes]).getbbox()
+                  for i in range(0,len(indexed),frame_bytes)]
+        bounds = [box for box in bounds if box]
+        if bounds:
+            margin = min(min(box[0] for box in bounds), width-max(box[2] for box in bounds))
+            top = min(box[1] for box in bounds)
+            cropped = bytearray()
+            for index in range(len(frames)):
+                for row in range(top,height):
+                    start = (index*height+row)*width+margin
+                    cropped.extend(indexed[start:start+width-2*margin])
+            indexed = bytes(cropped)
+            width, height = width-2*margin, height-top
     frame_bytes = width * height
     prefix_size = HEADER.size + len(palette) * 2 + len(frames) * 4
     offsets = [prefix_size + index * frame_bytes for index in range(len(frames))]
@@ -116,17 +132,17 @@ def decode_vpa(payload):
     return DecodedAsset(width, height, frame_count, transparent, palette, tuple(frames))
 
 
-def write_asset(path, frames, size):
+def write_asset(path, frames, size, trim_transparent=False):
     path = Path(path)
-    payload = encode_vpa(frames, *size)
+    payload = encode_vpa(frames, *size, trim_transparent=trim_transparent)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(payload)
     return {
         "path": path.as_posix(),
         "bytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
-        "width": size[0],
-        "height": size[1],
+        "width": HEADER.unpack_from(payload)[1],
+        "height": HEADER.unpack_from(payload)[2],
         "frames": len(frames),
     }
 

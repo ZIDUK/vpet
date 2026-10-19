@@ -23,7 +23,8 @@ public:
         int16_t y,
         bool flipHorizontal = false,
         int32_t tint = -1,
-        uint8_t minLuma = 0
+        uint8_t minLuma = 0,
+        uint16_t anchorSize = 0
     );
     // Like drawFrame but renders into a square scratch sprite and pushes
     // the sprite scaled to (w, h) at (x, y). Used by Status 4/4 stat

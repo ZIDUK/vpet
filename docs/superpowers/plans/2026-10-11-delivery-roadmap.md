@@ -17,6 +17,7 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | Mochila | 40 consumibles, sprites, efectos, stock, adquisicion y journal | Desplegado; falta consumo y cortes de energia observados en placa |
 | Exploracion | Patio/Jornada/Noche, vuelta anticipada, recibo, Guia, topes y snapshots | Portado y desplegado; falta prueba fisica de viajes/reinicios |
 | Sprites evolucionados | Flamemon y Dragfiremon: block/hurt/happy/sad propios | Desplegados por USB; falta aceptacion visual fisica |
+| Noche y personalidad de descanso | Fondo 18:00-06:00, tired en cuatro etapas, habito gradual y guardado v4 compatible | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY. Falta aceptacion visual y noche real |
 
 Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
 [exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
@@ -49,6 +50,11 @@ de hardware mantienen su alcance pendiente.
 
 ## P0: funcionalidad y persistencia fisica
 
+- [ ] Aceptar noche/descanso en placa: limites 18:00/06:00, cuatro sprites,
+  acostarse temprano/tarde, interrupcion, reinicio, energia y premio unico.
+  El amanecer no despierta antes de completar la sesion. Sin credito apagado.
+  [Contrato](../../sleep-routine.md).
+
 - [ ] Observar Status ampliado en placa: cuatro barras, seis filas de cuidado,
   HERIDO/MUERTO y columna EV sin recortes, ES/EN. La aprobacion anterior
   cubria la distribucion previa. [Contrato](../../status-vitals-care-ev.md).
@@ -71,6 +77,10 @@ Sin RTC respaldado: perder calendario exige ajustar Fecha/Hora antes de
 enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
 ## P1: paridad visual y estabilidad
+
+- [x] Rutina de descanso portable Python/C++, aprendizaje gradual por ADN y
+  habitos, cansancio suave sin faltas por Lights y guardado atomico v4 que
+  lee v1/v2/v3. Cuatro originales tired y fondo nocturno aprobados.
 
 - [x] Espacios 2/3/4 por evolucion; catalogo de cinco, Rafaga/Inferno de fuego,
   iconos propios, seleccion manual y requisitos por etapa/lecciones. Guardado

@@ -72,6 +72,12 @@ class PetMotion:
         self.last_frame = now
         self.state_until = now + self._duration(MOTION_IDLE)
         self.action_frame_count = None
+        self.tired = False
+
+    def set_tired(self, tired, now):
+        self.tired = tired
+        if tired and self.state == MOTION_WALK:
+            self._enter(MOTION_IDLE, now)
 
     def _duration(self, state):
         bounds = PET_IDLE_DURATION_MS if state == MOTION_IDLE else PET_WALK_DURATION_MS
@@ -150,7 +156,7 @@ class PetMotion:
                 self.last_frame += elapsed_frames * interval
             return
 
-        if now >= self.state_until:
+        if not self.tired and now >= self.state_until:
             next_state = MOTION_WALK if self.state == MOTION_IDLE else MOTION_IDLE
             self._enter(next_state, now)
             return

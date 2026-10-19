@@ -36,6 +36,21 @@ def test_vpa_round_trip_preserves_transparency_and_dimensions():
     assert decoded.frames[1].getbbox() == source[1].getbbox()
 
 
+def test_trim_tired_padding_preserves_every_pixel_and_frame():
+    frames = _rgba_test_frames()
+    source = [frames[0], frames[1], frames[0], frames[1], frames[0]]
+    ordinary = encode_vpa(source,24,24)
+    compact = encode_vpa(source,24,24,trim_transparent=True)
+    assert len(ordinary)>len(compact)
+    decoded = decode_vpa(compact)
+    assert decoded.frame_count == 5
+    original = decode_vpa(ordinary)
+    for frame, expected in zip(decoded.frames,original.frames):
+        anchored = Image.new('RGBA',(24,24))
+        anchored.paste(frame,((24-frame.width)//2,24-frame.height))
+        assert anchored.tobytes() == expected.tobytes()
+
+
 def test_native_manifest_covers_every_registered_animation(tmp_path):
     sim_build = tmp_path / "sim"
     data_dir = tmp_path / "data"
@@ -52,7 +67,12 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
     assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
-    assert len(manifest["animations"]) == 43
+    assert len(manifest["animations"]) == 47
+    for stage, name in (("baby", "sparkmon"), ("rookie", "firemon"),
+                        ("champion", "flamemon"), ("ultimate", "dragfiremon")):
+        tired = decode_vpa((data_dir / "animations" / stage / (name + "_tired.vpa")).read_bytes())
+        assert tired.width <= 88 and tired.height <= 88 and tired.frame_count == 25
+        assert all(frame.getbbox() for frame in tired.frames)
     assert {item["action"] for item in manifest["animations"] if item["species"] == "ultimate"} >= {
         "block", "hurt", "happy", "sad",
     }

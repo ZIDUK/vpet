@@ -49,7 +49,8 @@ bool AssetStore::drawFrame(
     int16_t y,
     bool flipHorizontal,
     int32_t tint,
-    uint8_t minLuma
+    uint8_t minLuma,
+    uint16_t anchorSize
 ) {
     const bool plainIcon = !flipHorizontal && tint < 0 && minLuma == 0 &&
         strncmp(path, "/training/", 10) == 0 && strlen(path) < sizeof(iconCache_[0].path);
@@ -133,6 +134,10 @@ bool AssetStore::drawFrame(
     const uint16_t frameCount = cached->frameCount;
     const uint16_t paletteCount = cached->paletteCount;
     const uint8_t transparent = cached->transparent;
+    if (anchorSize) {
+        x += (static_cast<int>(anchorSize)-width)/2;
+        y += static_cast<int>(anchorSize)-height;
+    }
     const uint16_t* palette = cached->colors;
     frame %= frameCount;
     if (!file.seek(13 + paletteCount * 2 + frame * 4) || file.available() < 4) {

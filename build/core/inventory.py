@@ -96,6 +96,8 @@ def use_inventory_item(pet, index):
     """Use one selected item; return 'used', 'empty', 'blocked', or 'back'."""
     if index == INVENTORY_BACK_INDEX:
         return "back"
+    if getattr(getattr(pet, 'sleep', None), 'asleep', False):
+        return "blocked"
     if index == INVENTORY_GUIDE_INDEX:
         return "train" if pet.exploration.guide and not pet.exploration.away else "blocked"
     if pet.exploration.away:

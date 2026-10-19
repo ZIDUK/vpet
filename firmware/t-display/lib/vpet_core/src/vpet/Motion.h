@@ -46,6 +46,10 @@ public:
     void startHatch(uint32_t nowMs);
     void wake(uint32_t nowMs);
     void tick(uint32_t nowMs);
+    void setTired(bool tired, uint32_t nowMs) {
+        tired_ = tired;
+        if (tired && state_ == MotionState::Walk) enterIdle(nowMs);
+    }
     bool consumeActionCompleted();
 
     MotionState state() const { return state_; }
@@ -74,6 +78,7 @@ private:
     uint32_t lastFrameMs_ = 0;
     uint32_t stateUntilMs_ = 0;
     bool actionCompleted_ = false;
+    bool tired_ = false;
 };
 
 }  // namespace vpet

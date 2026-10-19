@@ -70,6 +70,7 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
 | `PetState` | Estadisticas, inventario gastable, acciones, descubrimientos y evolucion |
 | `Motion` | Idle, caminar/volar, acciones y sueno en bucle acostado (frames 12-14) |
+| `SleepRoutine` | Cansancio por ADN/energia, habito gradual, sesiones y premio nocturno unico |
 | `Navigation` | Menu superior, paneles, paginas de Status e inventario |
 | `DateTimeMenu` | Filas +/- de fecha u hora; SAVE escribe el reloj ESP32 |
 | `Strings.h` | Copy EN/ES de paneles |
@@ -342,14 +343,19 @@ elemento y umbral. El rival Firemon conserva su catalogo inicial.
 [Contrato y tablas](techniques.md).
 
 NVS conserva schema 3 y techVer 1; agrega techM3/4 y extiende los bits de
-techEquip. Los snapshots internos v3 leen v1/v2, conservando la recuperacion
+techEquip. Los snapshots internos v4 leen v1/v2/v3, conservando la recuperacion
 atomica de partidas e intercambios. Dominio, recarga y usos de combate son
 bytes acotados; Battle sigue por debajo del presupuesto de 256 bytes.
 
 ## Recuperacion de snapshots e intercambio
 
-El guardado general usa `saveTx`, snapshot interno v3 con campos conocidos
-(lector compatible con v1/v2),
+`sleepState` v1 agrega rutina y sesion de descanso sin cambiar schema NVS 3.
+Se guarda junto con energia y premios; restaurar no acredita tiempo apagado.
+Home usa calendario para dia/noche, no el estado de Motion. El sprite cansado
+no inicia sueno ni interrumpe actividades. [Contrato completo](sleep-routine.md).
+
+El guardado general usa `saveTx`, snapshot interno v4 con campos conocidos
+(lector compatible con v1/v2/v3),
 rangos y terminador obligatorio. Primero registra el estado absoluto; despues
 reproduce las claves legacy del schema 3. Omite escrituras de valores iguales.
 `swapLive` y `swapBack` preparan snapshots separados (cada uno menor de 3800
@@ -393,7 +399,7 @@ Port de placa del 2026-10-16: `Exploration` es un dominio C++ portable,
 `ExplorationSession` controla opciones, `ExplorationUi` dibuja tablas en
 Panels.cpp y App aplica transacciones completas. Navigation y MenuBar usan
 nueve entradas; Exploration se agrega al final de PanelId sin renumerar.
-La clave `expState` v1 se captura en snapshots `saveTx` v3 compatibles con v1/v2.
+La clave `expState` v1 se captura en snapshots `saveTx` v4 compatibles con v1/v2/v3.
 La hora fiable se valida separadamente del reloj de animacion; sin calendario
 tras un corte de alimentacion se requiere ajuste manual. Durante viaje se pausan
 cuidado/evolucion y las acciones no disponibles abren la expedicion.

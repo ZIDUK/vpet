@@ -17,6 +17,7 @@ import time
 from core.dna import SPECIES_ID, combat_stat, iv_at, mix_entropy
 from core.techniques import TechniqueProgress
 from core.exploration import Exploration
+from core.sleep import SleepRoutine
 from core.item_catalog import DEFAULT_STOCK, ITEM_BY_ID, effect_amount
 from core.nutrition import (apply_food, body_condition, complete_training_weight,
                             consume_hunger, effective_stat, migrate_legacy_weight)
@@ -112,6 +113,7 @@ class Pet:
         self.ev = {"hp": 0, "mp": 0, "off": 0, "def": 0, "spd": 0, "brn": 0}
         self.techniques = TechniqueProgress()
         self.exploration = Exploration()
+        self.sleep = SleepRoutine()
         # Lifecycle: starts as egg unless overridden (live = already hatched)
         self.state = state if state is not None else STATE_EGG
         self.hatch_started_at = time.monotonic() if self.state == STATE_EGG else None
@@ -328,8 +330,11 @@ class Pet:
             self.call_started_ms = 0
         self.lights_handled_tonight = True
 
-    def update_call(self, now_ms, scale, hour=12, asleep=False):
+    def update_call(self, now_ms, scale, hour=12, asleep=False, lights_enabled=True):
         """Return 'started', 'missed', or 'none'. Scale 1 = COLOR, 600 = sim."""
+        if not lights_enabled and self.call_reason == "lights":
+            self.call_reason = None
+            self.call_started_ms = 0
         if self.state == STATE_EGG or scale <= 0:
             return "none"
         if self.call_reason == "hunger" and self.stats.get("h", 0) > 0:
@@ -363,7 +368,7 @@ class Pet:
             self.call_reason = "strength"
             self.call_started_ms = now_ms
             return "started"
-        if night and not asleep and not self.lights_handled_tonight:
+        if lights_enabled and night and not asleep and not self.lights_handled_tonight:
             self.lights_handled_tonight = True
             self.call_reason = "lights"
             self.call_started_ms = now_ms
@@ -421,14 +426,16 @@ class Pet:
             "ev": dict(self.ev),
             "techniques": self.techniques.to_dict(),
             "exploration": self.exploration.to_dict(),
+            "sleep": self.sleep.to_dict(),
         }
 
     def load_from_dict(self, d):
         from core.adopted_items import load_stock
         self.adopted_inventory, self.item_reward_cursor = load_stock(
             d.get('adopted_items'), missing='adopted_items' not in d)
-        self.techniques = TechniqueProgress(d.get("techniques"))
+        self.techniques = TechniqueProgress(d.get("techniques"), d.get("species", self.species))
         self.exploration = Exploration(d.get("exploration"))
+        self.sleep = SleepRoutine(d.get("sleep"))
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live

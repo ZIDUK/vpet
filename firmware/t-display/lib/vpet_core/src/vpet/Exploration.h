@@ -50,7 +50,7 @@ struct Exploration {
     template<class Pet>
     bool start(Pet& pet, ExploreRoute nextRoute, CombatStat nextStat, uint64_t now) {
         // Species numeric values are the persisted, stable domain contract.
-        if (away_ || static_cast<uint8_t>(pet.species()) >= 3 || pet.dead() ||
+        if (away_ || pet.sleep.asleep || static_cast<uint8_t>(pet.species()) >= 3 || pet.dead() ||
             !duration(nextRoute) || (nextRoute == ExploreRoute::Jornada && static_cast<uint8_t>(nextStat) >= 6)) return false;
         route = nextRoute;
         stat = route == ExploreRoute::Jornada ? nextStat : static_cast<CombatStat>(0);

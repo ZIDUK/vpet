@@ -32,6 +32,8 @@ private:
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
+    int minuteOfDay() const;
+    void toggleSleep(uint32_t nowMs);
     bool saveState();
     bool settleStorage();
     uint64_t calendarNow() const;

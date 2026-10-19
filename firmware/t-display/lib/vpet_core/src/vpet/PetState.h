@@ -1,4 +1,5 @@
 #pragma once
+#include "vpet/SleepRoutine.h"
 
 #include <stdint.h>
 #include "vpet/PracticeProgress.h"
@@ -64,7 +65,9 @@ public:
             species_ == SpeciesId::Ultimate ? 3 : 0;
     }
     int techniqueCapacity() const { return techniqueStage() ? techniqueStage()+1 : 0; }
-    void tick(uint32_t elapsedMs);
+    void tick(uint32_t elapsedMs, bool sleeping = false);
+    void finishSleepNight();
+    SleepRoutine sleep;
     bool beginAction(Action action);
     bool completeAction();
     void evolveTo(SpeciesId species);
@@ -102,7 +105,7 @@ public:
     uint8_t nextVisibleInventoryIndex(uint8_t index) const;
     uint8_t clampVisibleInventoryIndex(uint8_t index) const;
     bool hasDiscovered(SpeciesId species) const;
-    CallUpdate updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour = 12, bool asleep = false);
+    CallUpdate updateCall(uint32_t nowMs, uint32_t scale, uint8_t hour = 12, bool asleep = false, bool lightsEnabled = true);
     void pauseCareClock(uint32_t elapsedMs) {
         if (callReason_ != CallReason::None) callStartedMs_ += elapsedMs;
     }

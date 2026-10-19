@@ -195,7 +195,7 @@ void Motion::tick(uint32_t nowMs) {
         frame_ = next % frameCount();
     }
 
-    if (species_ == SpeciesId::Egg) return;
+    if (species_ == SpeciesId::Egg || tired_) return;
 
     if ((state_ == MotionState::Idle || state_ == MotionState::Walk) && nowMs >= stateUntilMs_) {
         if (state_ == MotionState::Idle) {
