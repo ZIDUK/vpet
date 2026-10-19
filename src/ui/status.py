@@ -1,6 +1,7 @@
 """Small pixel-art status panel shared by CircuitPython and Pillow."""
 from config import EVOLUTION_REGISTRY
 from core.evolution import format_requirements
+from core.options import OPTION_ORDER
 
 STATUS_WIDTH = 128
 STATUS_HEIGHT = 112
@@ -261,9 +262,9 @@ def draw_options(target, pet, session, current_datetime):
     """Draw the main options list."""
     spanish = pet.language == "ES"
     labels = (
-        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER")
+        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER", "PAUSAR CRIANZA")
         if spanish
-        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK")
+        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK", "PAUSE PET")
     )
     _panel(target, "OPTIONS")
     year, month, day, hour, minute = current_datetime
@@ -277,9 +278,11 @@ def draw_options(target, pet, session, current_datetime):
         "%02d:%02d" % (hour, minute),
         "",
         "",
+        ("SI" if pet.cold else "NO") if spanish else ("ON" if pet.cold else "OFF"),
     )
-    for index, label in enumerate(labels):
-        y = 16 + index * 9
+    for position,index in enumerate(OPTION_ORDER):
+        label=labels[index]
+        y = 16 + position * 9
         if index == session.index:
             _fill(target, 6, y, 116, 9, 8)
             _fill(target, 8, y + 1, 112, 7, 2)
@@ -289,7 +292,7 @@ def draw_options(target, pet, session, current_datetime):
             _text(target, 116 - _text_width(value), y + 2, value, 7)
     if session.message:
         message = session.message[:24]
-        _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 102, message, 7)
+        _text(target, (STATUS_WIDTH - _text_width(message)) // 2, 106, message, 7)
 
 
 def draw_datetime_editor(target, pet, session):

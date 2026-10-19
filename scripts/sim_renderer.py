@@ -99,7 +99,7 @@ from core.evolution import (
     evolution_window,
     split_requirement_lines,
 )
-from core.options import OPTION_COUNT, OPTION_ICONS, OPTION_WINDOW, option_window_start
+from core.options import OPTION_COUNT, OPTION_ICONS, OPTION_ORDER, OPTION_WINDOW, option_window_start
 from core.inventory import (
     INVENTORY_ITEMS,
     clamp_visible_inventory_index,
@@ -484,6 +484,7 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
 
 
 def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0, exploration_menu=None):
+    from core.i18n import tr
     if panel_mode == "explore" and hasattr(exploration_menu, "choices"):
         from scripts.exploration_renderer import draw_exploration
         draw_exploration(frame, build_dir, pet, exploration_menu, exploration_menu.now(), now_ms)
@@ -494,7 +495,6 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
     yellow = (255, 210, 74)
     green = (66, 190, 140)
     if panel_mode == "status":
-        from core.i18n import tr
         draw.rectangle((0, 24, 239, 134), fill=panel)
         draw.rectangle((3, 27, 236, 47), fill=ink)
         # Left-aligned header text inside the dark band. The approved
@@ -526,10 +526,18 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         "evolution_detail": "EVOLUTION",
         "options": "OPTIONS",
         "explore": "EXPLORE",
+        "rest": tr(pet, "rest.title"),
     }.get(panel_mode, "VPET")
     draw.text((120, 37), title, fill=(255, 255, 255), anchor="mm")
 
-    if panel_mode == "inventory":
+    if panel_mode == "rest":
+        labels=(tr(pet,"rest.on" if pet.sleep.asleep else "rest.off"),tr(pet,"rest.back"))
+        for index,label in enumerate(labels):
+            y=52+index*20
+            if panel_index%2==index:
+                draw.rectangle((5,y-2,234,y+16),fill=yellow)
+            draw.text((10,y),label,fill=ink,font=_status_font(12))
+    elif panel_mode == "inventory":
         visible = visible_inventory_indexes(pet)
         current = clamp_visible_inventory_index(pet, panel_index)
         chip = _mix(ink, panel, 0.88)
@@ -712,18 +720,20 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 ("TIME", ""),
                 ("EVO", ""),
                 ("BACK", ""),
+                (tr(pet,"options.pause"), tr(pet,"options.on" if getattr(pet,"cold",False) else "options.off")),
             )
             current = options_session.index % OPTION_COUNT
-            start = option_window_start(current)
+            start = option_window_start(OPTION_ORDER.index(current))
             chip = _mix(ink, panel, 0.88)
             outline = _mix(ink, panel, 0.45)
             selector = (255, 215, 0)
             x = 8
             width = 224
             for slot in range(OPTION_WINDOW):
-                index = start + slot
-                if index >= OPTION_COUNT:
+                position = start + slot
+                if position >= OPTION_COUNT:
                     break
+                index = OPTION_ORDER[position]
                 label, extra = labels[index]
                 y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
                 border = selector if index == current else outline
@@ -993,4 +1003,11 @@ def render_frame(
                 frame.paste(portrait.convert("RGB"), (x, EVOLUTION_THUMB_Y), mask)
     if profile.name == "tdisplay" and panel_mode is None and not status_visible:
         _draw_pet_cue(frame, build_dir, pet, sprite_x, sprite_y, facing, motion_state, tired)
+        if pet.sleep.asleep or motion_state == "sleep":
+            world = frame.crop((0, profile.menu_height, profile.width, profile.height))
+            channels = world.split()
+            dimmed = Image.merge("RGB", tuple(channel.point([
+                ((value >> shift) >> 2) * 255 // maximum for value in range(256)
+            ]) for channel, shift, maximum in zip(channels, (3, 2, 3), (31, 63, 31))))
+            frame.paste(dimmed, (0, profile.menu_height))
     return frame

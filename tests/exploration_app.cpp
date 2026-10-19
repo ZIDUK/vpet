@@ -118,12 +118,11 @@ int main() {
     a.exploration.clockCheckpoint=wall; assert(swapping.save(a,settings));
     PetState b=a; b.exploration.clockCheckpoint=wall+100000;
     assert(parked.save(b,settings));
+    // Legacy reserves still restore safely; Rest no longer exposes swapping.
+    assert(swapping.swapOrPark(a,settings));
     App swapped(renderer,panels,swapping,ble,clockNow); swapped.begin(0); ms=0;
     auto swapKey=[&](InputEvent e) { ms+=50; swapped.tick(ms,e); };
-    for(int i=0;i<5;++i) swapKey(InputEvent::Next);
-    swapKey(InputEvent::Action); swapKey(InputEvent::Next); swapKey(InputEvent::Next);
-    swapKey(InputEvent::Action);
-    for(int i=0;i<7;++i) swapKey(InputEvent::Next);
+    for(int i=0;i<3;++i) swapKey(InputEvent::Next);
     swapKey(InputEvent::Action); swapKey(InputEvent::Action); swapKey(InputEvent::Action);
     assert(panels.explorePage==ExplorationSession::Page::Clock);
 }

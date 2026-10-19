@@ -15,6 +15,13 @@ CORE = ROOT/'firmware/t-display/lib/vpet_core/src'
 SPECIES = [(4,'baby','sparkmon'),(0,'rookie','firemon'),(1,'champion','flamemon'),(2,'ultimate','dragfiremon')]
 
 
+def lights_off(image):
+    channels = image.convert('RGB').split()
+    return Image.merge('RGB', tuple(channel.point([
+        ((value >> shift) >> 2) * 255 // maximum for value in range(256)
+    ]) for channel, shift, maximum in zip(channels, (3, 2, 3), (31, 63, 31))))
+
+
 @pytest.fixture(scope='module')
 def sleep_pixels(tmp_path_factory):
     root = tmp_path_factory.mktemp('sleep-pixels')
@@ -31,7 +38,7 @@ def sleep_pixels(tmp_path_factory):
 
 
 @pytest.mark.parametrize('species,stage,name',SPECIES)
-@pytest.mark.parametrize('mode,minute', [('tired',1080),('tired',720),('sleep',360),('sleep',1080)])
+@pytest.mark.parametrize('mode,minute', [('tired',1080),('tired',720),('sleep',360),('sleep',720),('sleep',1080)])
 @pytest.mark.parametrize('index',[0,8,24])
 def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixels,species,stage,name,mode,minute,index):
     root,binary=sleep_pixels
@@ -46,6 +53,8 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
     if mode=='tired':
         bubble=decode_vpa((root/'data/ui/mood/rest.vpa').read_bytes()).frames[0]
         expected.paste(bubble,(144,27),bubble)
+    else:
+        expected=lights_off(expected)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
     assert actual.getpixel((76,132))==expected.getpixel((76,132))
 
@@ -58,5 +67,17 @@ def test_simulator_dawn_does_not_wake_and_rendering_does_not_change_saved_routin
     dawn=render_frame(root/'sim',pet,motion_state='sleep',current_datetime=(2026,10,18,6,0),
                       profile=get_display_profile('tdisplay'))
     day=Image.open(root/'sim/Background/background.bmp').convert('RGB')
-    assert dawn.getpixel((4,30))==day.getpixel((4,30))
+    assert dawn.getpixel((4,30))==lights_off(day).getpixel((4,30))
+    awake=Pet(species='rookie',state='live')
+    for panel in (None, 'rest', 'status', 'options'):
+        kwargs=dict(profile=get_display_profile('tdisplay'),panel_mode=panel,
+                    current_datetime=(2026,10,18,12,0))
+        sleeping=render_frame(root/'sim',pet,motion_state='sleep',**kwargs)
+        normal=render_frame(root/'sim',awake,**kwargs)
+        assert sleeping.crop((0,0,240,24)).tobytes()==normal.crop((0,0,240,24)).tobytes()
+        if panel is None:
+            assert sleeping.getpixel((4,30))==lights_off(day).getpixel((4,30))
+            assert normal.getpixel((4,30))==day.getpixel((4,30))
+        elif panel in ('status','options'):
+            assert sleeping.getpixel((4,30))==normal.getpixel((4,30))
     assert pet.sleep.asleep and pet.sleep.encode()==before

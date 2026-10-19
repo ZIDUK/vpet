@@ -12,6 +12,7 @@ from core.options import (
     OPTION_BLUETOOTH,
     OPTION_COUNT,
     OPTION_EVOLVE,
+    OPTION_ORDER,
     OptionsSession,
     option_window_start,
 )
@@ -82,12 +83,12 @@ def test_option_window_keeps_three_single_lines():
     assert option_window_start(0) == 0
     assert option_window_start(1) == 0
     assert option_window_start(2) == 1
-    assert option_window_start(8) == 6
+    assert option_window_start(8) == 7
 
 
 def test_next_wraps_around_all_options():
     session = OptionsSession()
-    for expected in range(OPTION_COUNT):
+    for expected in OPTION_ORDER:
         assert session.index == expected
         session.next()
     assert session.index == OPTION_BLUETOOTH
@@ -185,4 +186,5 @@ def test_option_icons_match_each_setting():
         "Clock",
         "Evolve",
         "Back",
+        "Rest",
     )

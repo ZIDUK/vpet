@@ -25,6 +25,14 @@ def test_actual_app_sleep_reboot_rewards_and_legacy_storage(sleep_board):
     subprocess.run([str(sleep_board)], check=True)
 
 
+def test_actual_app_pause_freezes_sleep_checkpoints(sleep_board):
+    subprocess.run([str(sleep_board),'paused'], check=True)
+
+
+def test_actual_app_rest_and_pause_menu_preserve_saved_pet_and_reserve(sleep_board):
+    subprocess.run([str(sleep_board),'menus'], check=True)
+
+
 @pytest.mark.parametrize('hour', [0, 6, 12, 18, 22, 23])
 @pytest.mark.parametrize('trait', [0, 1, 2])
 @pytest.mark.parametrize('milliseconds', [300001, 43200000])

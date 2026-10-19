@@ -79,6 +79,7 @@ class Pet:
         self.effort = 0
         self.language = "EN"
         self.sound_enabled = True
+        self.cold = False
         self.born_at = time.monotonic()
         self.last_decay = time.monotonic()
         self.battles_won = 0
@@ -148,7 +149,7 @@ class Pet:
 
         Only decays in LIVE state. Eggs don't decay.
         """
-        if self.state != STATE_LIVE:
+        if self.state != STATE_LIVE or self.cold:
             return False
         now = time.monotonic()
         if now - self.last_decay > DECAY_PERIOD_SECONDS:
@@ -402,6 +403,7 @@ class Pet:
             "effort": self.effort,
             "language": self.language,
             "sound_enabled": self.sound_enabled,
+            "cold": self.cold,
             "battles_won": self.battles_won,
             "battles_lost": self.battles_lost,
             "battles_this_form": self.battles_this_form,
@@ -436,6 +438,7 @@ class Pet:
         self.techniques = TechniqueProgress(d.get("techniques"), d.get("species", self.species))
         self.exploration = Exploration(d.get("exploration"))
         self.sleep = SleepRoutine(d.get("sleep"))
+        self.cold = d.get("cold",False) is True
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)
         self.state = d.get("state", STATE_LIVE)  # backward compat: if no state, assume live

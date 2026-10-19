@@ -34,7 +34,11 @@ conserva al evolucionar y cambiar de mascota; una vida nueva lo reinicia.
 ## Luz y recuperacion
 
 El usuario inicia descanso con la opcion de luz/sueno del menu Rest.
-En Home, la misma opcion despierta e interrumpe sin premio de noche.
+Rest ofrece APAGAR LUZ / ENCENDER LUZ y VOLVER. Abrirlo no altera el sueno;
+elegir ENCENDER LUZ despierta e interrumpe sin premio de noche.
+La pausa de crianza vive en Opciones y detiene tambien el avance del sueno.
+Reserva/Backup se retiro de Rest sin borrar sus datos.
+[Menus y validacion fisica](rest-and-board-validation.md).
 No se anaden faltas de cuidado por acostarse tarde ni por despertar antes.
 Las APIs legadas de Lights/noteWake conservan su contrato para Pico.
 

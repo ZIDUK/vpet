@@ -216,6 +216,13 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 break;
             }
             case 8: navigation_.setPanel(PanelId::Home); break;
+            case option_menu::pause: {
+                const PetState before=pet_;
+                pet_.setCold(!pet_.cold());
+                if(!settingsStore_.save(pet_,settings_)) pet_=before;
+                else settleStorage();
+                break;
+            }
         }
         return;
     }
@@ -297,22 +304,6 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 navigation_.setPanel(PanelId::Home);
                 break;
             case 1:
-                pet_.setCold(!pet_.cold());
-                saveState();
-                break;
-            case 2:
-                if (settingsStore_.swapOrPark(pet_, settings_)) {
-                    explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
-                    if(pet_.exploration.away()) pet_.rebaseCareClock(nowMs);
-                    motion_.setSpecies(pet_.species());
-                    motion_.alignClock(nowMs);
-                    if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
-                    if (pet_.species() == SpeciesId::Egg) eggStartedMs_ = nowMs;
-                    navigation_.setPanel(PanelId::Home);
-                    settleStorage();
-                }
-                break;
-            case 3:
                 navigation_.setPanel(PanelId::Home);
                 break;
         }
@@ -363,7 +354,7 @@ void App::toggleSleep(uint32_t nowMs) {
 
 void App::activate(uint32_t nowMs) {
     if (pet_.sleep.asleep) {
-        if (navigation_.menuIndex()==5) toggleSleep(nowMs);
+        if (navigation_.menuIndex()==5) navigation_.setPanel(PanelId::Rest);
         return;
     }
     if(navigation_.menuIndex()==3 || pet_.exploration.away()) {
@@ -489,6 +480,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             lastExplorationCheckpointMs_=nowMs;
             if(!saveState()) return;
         }
+    } else if (pet_.cold()) {
+        pet_.pauseCareClock(elapsed);
+        motion_.alignClock(nowMs);
+        eggStartedMs_ += elapsed;
     } else {
     const bool wasDead = pet_.dead();
     const bool sleeping=pet_.sleep.asleep;

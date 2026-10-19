@@ -12,8 +12,6 @@ void test_rest_icon_opens_rest_panel() {
     navigation.dispatch(vpet::InputEvent::Next);
     TEST_ASSERT_EQUAL(1, navigation.panelIndex());
     navigation.dispatch(vpet::InputEvent::Next);
-    navigation.dispatch(vpet::InputEvent::Next);
-    navigation.dispatch(vpet::InputEvent::Next);
     TEST_ASSERT_EQUAL(0, navigation.panelIndex());
     navigation.dispatch(vpet::InputEvent::Back);
     TEST_ASSERT_EQUAL(vpet::PanelId::Home, navigation.panel());
@@ -99,8 +97,8 @@ void test_options_next_wraps_like_header_menu() {
     navigation.setMenuIndex(8);
     navigation.dispatch(vpet::InputEvent::Action);
 
-    for (uint8_t step = 0; step < 9; ++step) {
-        TEST_ASSERT_EQUAL(step, navigation.panelIndex());
+    for (uint8_t step = 0; step < vpet::Navigation::kOptionCount; ++step) {
+        TEST_ASSERT_EQUAL(vpet::option_menu::at(step), navigation.panelIndex());
         navigation.dispatch(vpet::InputEvent::Next);
     }
 

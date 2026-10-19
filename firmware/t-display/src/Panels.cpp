@@ -666,7 +666,8 @@ void Panels::drawOptionsChip(
     BleStatus bluetoothStatus,
     bool spanish,
     const char* language,
-    bool soundEnabled
+    bool soundEnabled,
+    bool cold
 ) {
     const char* bluetooth = "OFF";
     switch (bluetoothStatus) {
@@ -675,7 +676,7 @@ void Panels::drawOptionsChip(
         case BleStatus::Error: bluetooth = "ERR"; break;
         case BleStatus::Off: break;
     }
-    const char* shortLabels[] = {"BT", "LANG", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK"};
+    const char* shortLabels[] = {"BT", "LANG", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK", copy::pausePet(spanish)};
     const char* extras[] = {
         bluetooth,
         language,
@@ -686,6 +687,7 @@ void Panels::drawOptionsChip(
         "",
         "",
         "",
+        cold ? copy::on(spanish) : copy::off(spanish),
     };
     const char* icons[] = {
         "/ui/icons/bluetooth.vpa",
@@ -697,12 +699,14 @@ void Panels::drawOptionsChip(
         "/ui/icons/clock.vpa",
         "/ui/icons/evolve.vpa",
         "/ui/icons/back.vpa",
+        "/ui/icons/rest.vpa",
     };
     const uint8_t chip = index % Navigation::kOptionCount;
     const uint8_t current = selected % Navigation::kOptionCount;
-    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, current);
-    if (chip < start || chip >= start + kInventoryWindow) return;
-    const uint8_t slot = static_cast<uint8_t>(chip - start);
+    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, option_menu::slot(current));
+    const uint8_t position = option_menu::slot(chip);
+    if (position < start || position >= start + kInventoryWindow) return;
+    const uint8_t slot = static_cast<uint8_t>(position - start);
     const int16_t x = 8;
     const int16_t y = kStatusCardY + slot * kStatusCardRow;
     const int16_t width = 224;
@@ -713,7 +717,7 @@ void Panels::drawOptionsChip(
     assets_.drawFrame(display_, icons[chip], 0, x + 2, y + 2, false, -1, 72);
     display_.setTextColor(kInk, fill);
     if (extras[chip][0] != '\0') {
-        char line[16];
+        char line[32];
         snprintf(line, sizeof(line), "%s  %s", shortLabels[chip], extras[chip]);
         drawLabel(line, x + 28, y + 5, 188, 2);
     } else {
@@ -727,22 +731,24 @@ void Panels::drawOptions(
     bool spanish,
     const char* language,
     bool soundEnabled,
+    bool cold,
     uint8_t onlyIndex
 ) {
     if (onlyIndex != 255) {
-        drawOptionsChip(onlyIndex, selected, bluetoothStatus, spanish, language, soundEnabled);
+        drawOptionsChip(onlyIndex, selected, bluetoothStatus, spanish, language, soundEnabled, cold);
         return;
     }
     const uint8_t current = selected % Navigation::kOptionCount;
-    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, current);
+    const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, option_menu::slot(current));
     for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
         drawOptionsChip(
-            static_cast<uint8_t>(start + slot),
+            option_menu::at(start + slot),
             selected,
             bluetoothStatus,
             spanish,
             language,
-            soundEnabled
+            soundEnabled,
+            cold
         );
     }
 }
@@ -750,29 +756,11 @@ void Panels::drawOptions(
 void Panels::drawRest(
     uint8_t selected,
     bool spanish,
-    bool cold,
-    bool hasBackup,
-    SpeciesId backupSpecies
+    bool asleep
 ) {
-    const char* parked = copy::emptySlot(spanish);
-    if (hasBackup) {
-        switch (backupSpecies) {
-            case SpeciesId::Baby: parked = "SPARKMON"; break;
-            case SpeciesId::Rookie: parked = "FIREMON"; break;
-            case SpeciesId::Champion: parked = "FLAMEMON"; break;
-            case SpeciesId::Ultimate: parked = "DRAGFIREMON"; break;
-            case SpeciesId::Egg: parked = "EGG"; break;
-        }
-    }
-    char coldLine[24];
-    char backupLine[28];
-    snprintf(coldLine, sizeof(coldLine), "%s: %s", copy::cold(spanish), cold ? copy::on(spanish) : copy::off(spanish));
-    snprintf(backupLine, sizeof(backupLine), "%s: %s", copy::backup(spanish), parked);
     const char* rows[] = {
-        copy::sleep(spanish),
-        coldLine,
-        backupLine,
-        copy::back(spanish),
+        copy::restLight(spanish,asleep),
+        copy::restBack(spanish),
     };
     const uint8_t current = selected % Navigation::kRestCount;
     for (uint8_t index = 0; index < Navigation::kRestCount; ++index) {
@@ -892,26 +880,28 @@ void Panels::draw(
         }
         case PanelId::Options: {
             const uint8_t selected = navigation.panelIndex();
-            const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, selected);
-            const uint8_t lastStart = inventoryWindowStart(Navigation::kOptionCount, lastOptionsIndex_);
+            const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, option_menu::slot(selected));
+            const uint8_t lastStart = inventoryWindowStart(Navigation::kOptionCount, option_menu::slot(lastOptionsIndex_));
             const bool extrasChanged =
                 bluetoothStatus != lastBluetoothStatus_ ||
                 soundEnabled != lastSoundEnabled_ ||
+                pet.cold() != lastCold_ ||
                 language == nullptr ||
                 strcmp(language, lastLanguage_) != 0 ||
                 (lastOptionsIndex_ != 255 && start != lastStart);
             if (cursorRedrawOnly(lastOptionsIndex_, selected, extrasChanged, panelChanged)) {
                 drawOptionsChip(
-                    lastOptionsIndex_, selected, bluetoothStatus, spanish, language, soundEnabled
+                    lastOptionsIndex_, selected, bluetoothStatus, spanish, language, soundEnabled, pet.cold()
                 );
-                drawOptionsChip(selected, selected, bluetoothStatus, spanish, language, soundEnabled);
+                drawOptionsChip(selected, selected, bluetoothStatus, spanish, language, soundEnabled, pet.cold());
             } else {
                 beginPanel(panelChanged, navigation.menuIndex(), copy::optionsTitle(spanish), calling);
-                drawOptions(selected, bluetoothStatus, spanish, language, soundEnabled);
+                drawOptions(selected, bluetoothStatus, spanish, language, soundEnabled, pet.cold());
             }
             lastOptionsIndex_ = selected;
             lastBluetoothStatus_ = bluetoothStatus;
             lastSoundEnabled_ = soundEnabled;
+            lastCold_ = pet.cold();
             if (language != nullptr) {
                 strncpy(lastLanguage_, language, sizeof(lastLanguage_) - 1);
                 lastLanguage_[sizeof(lastLanguage_) - 1] = '\0';
@@ -920,7 +910,7 @@ void Panels::draw(
         }
         case PanelId::Rest:
             beginPanel(panelChanged, navigation.menuIndex(), copy::restTitle(spanish), calling);
-            drawRest(navigation.panelIndex(), spanish, pet.cold(), hasBackup, backupSpecies);
+            drawRest(navigation.panelIndex(), spanish, pet.sleep.asleep);
             break;
         case PanelId::DateTime:
             beginPanel(

@@ -59,6 +59,7 @@ private:
         bool spanish,
         const char* language,
         bool soundEnabled,
+        bool cold,
         uint8_t onlyIndex = 255
     );
     void drawOptionsChip(
@@ -67,9 +68,10 @@ private:
         BleStatus bluetoothStatus,
         bool spanish,
         const char* language,
-        bool soundEnabled
+        bool soundEnabled,
+        bool cold
     );
-    void drawRest(uint8_t selected, bool spanish, bool cold, bool hasBackup, SpeciesId backupSpecies);
+    void drawRest(uint8_t selected, bool spanish, bool asleep);
     void drawDateTime(const DateTimeMenu& dateMenu);
     void drawStat(
         const char* icon,
@@ -101,6 +103,7 @@ private:
     uint8_t lastEvolutionIndex_ = 255;
     BleStatus lastBluetoothStatus_ = BleStatus::Off;
     bool lastSoundEnabled_ = true;
+    bool lastCold_ = false;
     char lastLanguage_[4] = "";
 };
 

@@ -109,7 +109,7 @@ void Navigation::dispatch(InputEvent event) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kEvolutionNodeCount);
             selectedSpecies_ = kEvolutionStages[evolutionNodeStage(panelIndex_)];
         } else if (panel_ == PanelId::Options) {
-            panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kOptionCount);
+            panelIndex_ = option_menu::next(panelIndex_);
         } else if (panel_ == PanelId::Inventory) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kInventoryCount);
         } else if (panel_ == PanelId::Feeding) {

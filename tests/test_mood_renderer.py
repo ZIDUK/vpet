@@ -35,9 +35,9 @@ def mood_pixels(tmp_path_factory):
     return root, binary
 
 
-def board(root, binary, mode, mood, x=76, panel="home"):
+def board(root, binary, mode, mood, x=76, panel="home",language="ES"):
     return Image.open(io.BytesIO(subprocess.check_output([
-        str(binary),str(root/"data"),mode,str(mood),str(x),panel]))).convert("RGB")
+        str(binary),str(root/"data"),mode,str(mood),str(x),panel,language]))).convert("RGB")
 
 
 @pytest.mark.parametrize("mode,mood,name", [
@@ -75,7 +75,11 @@ def test_real_board_does_not_show_bubbles_in_hidden_states(mood_pixels, mode):
     root,binary=mood_pixels
     actual=board(root,binary,mode,80)
     background=decode_vpa((root/"data/backgrounds/background.vpa").read_bytes()).frames[0]
-    assert actual.getpixel((155,30))==background.getpixel((155,30))[:3]
+    expected=background.getpixel((155,30))[:3]
+    if mode=="sleep":
+        expected=tuple(((value>>shift)>>2)*255//maximum
+                       for value,shift,maximum in zip(expected,(3,2,3),(31,63,31)))
+    assert actual.getpixel((155,30))==expected
 
 
 @pytest.mark.parametrize("mood,face", [(80,"happy"),(60,"neutral"),(30,"sad"),(10,"angry")])
@@ -106,3 +110,18 @@ def test_simulator_status_visible_alias_hides_home_bubble(mood_pixels):
     pet=Pet(species="rookie",state="live"); pet.stats.update(p=10,h=0)
     args=dict(build_dir=root/"sim",pet=pet,profile=get_display_profile("tdisplay"))
     assert render_frame(**args,status_visible=True).tobytes()==render_frame(**args,panel_mode="status").tobytes()
+
+
+@pytest.mark.parametrize('mode',['idle','sleep'])
+@pytest.mark.parametrize('selected',[0,1])
+@pytest.mark.parametrize('language',['ES','EN'])
+def test_rest_real_panel_has_only_light_and_back(mood_pixels,mode,selected,language):
+    root,binary=mood_pixels
+    board(root,binary,mode,80,x=selected,panel='restmenu',language=language)
+
+
+@pytest.mark.parametrize('mode',['idle','cold'])
+@pytest.mark.parametrize('language',['ES','EN'])
+def test_pause_real_panel_has_state_and_back_after_pause(mood_pixels,mode,language):
+    root,binary=mood_pixels
+    board(root,binary,mode,80,x=9,panel='options',language=language)

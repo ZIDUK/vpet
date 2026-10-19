@@ -26,6 +26,17 @@ vpet::BleService bluetooth;
 vpet::App app(renderer, panels, settingsStore, bluetooth);
 vpet::AssetStatus startupAssets;
 bool readyReported = false;
+uint32_t lastRuntimeMs=0;
+uint32_t maxLoopUs=0;
+
+void reportRuntime(uint32_t nowMs) {
+    if (!app.ready() || nowMs-lastRuntimeMs<10000) return;
+    lastRuntimeMs=nowMs;
+    Serial.printf("VPET_RUNTIME uptime_ms=%u heap_free=%u heap_min=%u loop_max_us=%u ble=%u\n",
+                  nowMs,ESP.getFreeHeap(),ESP.getMinFreeHeap(),maxLoopUs,
+                  static_cast<unsigned>(bluetooth.status()));
+    maxLoopUs=0;
+}
 
 void reportHeap(const char* stage) {
     Serial.printf("VPET_HEAP stage=%s heap_free=%u heap_min=%u\n",
@@ -142,11 +153,15 @@ void setup() {
 }
 
 void loop() {
+    const uint32_t startedUs=micros();
     const vpet::InputEvent event = buttons.poll(millis());
     if (event != vpet::InputEvent::None) {
         Serial.printf("VPET_INPUT event=%u\n", static_cast<unsigned>(event));
     }
     app.tick(millis(), event);
     reportReady();
+    const uint32_t loopUs=micros()-startedUs;
+    if (loopUs>maxLoopUs) maxLoopUs=loopUs;
+    reportRuntime(millis());
     delay(2);
 }

@@ -22,6 +22,9 @@ inline const char* evolutionTitle(bool spanish) { return pick(spanish, "EVOLUTIO
 inline const char* evolutionDetailTitle(bool spanish) { return pick(spanish, "EVOLUTION DETAIL", "DETALLE"); }
 inline const char* optionsTitle(bool spanish) { return pick(spanish, "OPTIONS", "OPCIONES"); }
 inline const char* restTitle(bool spanish) { return pick(spanish, "REST", "DESCANSO"); }
+inline const char* restLight(bool spanish, bool asleep) { return asleep ? pick(spanish,"LIGHTS ON","ENCENDER LUZ") : pick(spanish,"LIGHTS OFF","APAGAR LUZ"); }
+inline const char* restBack(bool spanish) { return pick(spanish,"BACK","VOLVER"); }
+inline const char* pausePet(bool spanish) { return pick(spanish,"PAUSE PET","PAUSAR CRIANZA"); }
 inline const char* sleep(bool spanish) { return pick(spanish, "SLEEP", "DORMIR"); }
 inline const char* cold(bool spanish) { return pick(spanish, "COLD", "FRIO"); }
 inline const char* backup(bool spanish) { return pick(spanish, "BACKUP", "RESERVA"); }

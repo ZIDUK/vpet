@@ -186,6 +186,13 @@ STAT_STRINGS = {
 }
 
 TRAINING_STRINGS.update({
+    "rest.title": {"ES": "DESCANSO", "EN": "REST"},
+    "rest.off": {"ES": "APAGAR LUZ", "EN": "LIGHTS OFF"},
+    "rest.on": {"ES": "ENCENDER LUZ", "EN": "LIGHTS ON"},
+    "rest.back": {"ES": "VOLVER", "EN": "BACK"},
+    "options.pause": {"ES": "PAUSAR CRIANZA", "EN": "PAUSE PET"},
+    "options.on": {"ES": "SI", "EN": "ON"},
+    "options.off": {"ES": "NO", "EN": "OFF"},
     "explore.title": {"ES": "EXPLORAR", "EN": "EXPLORE"},
     "explore.patio": {"ES": "PATIO", "EN": "PATIO"},
     "explore.jornada": {"ES": "JORNADA", "EN": "SHIFT"},

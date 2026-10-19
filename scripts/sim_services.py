@@ -36,6 +36,8 @@ class SimulatorServices:
         self.wifi_status = "OFF"
 
     def evolve_and_save(self, pet, evolution):
+        if getattr(pet,'cold',False):
+            return False
         if not evolution.check(pet)[0]:
             return False
         before = copy.deepcopy(pet.__dict__)

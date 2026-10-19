@@ -9,7 +9,9 @@ OPTION_DATE = 5
 OPTION_TIME = 6
 OPTION_EVOLVE = 7
 OPTION_BACK = 8
-OPTION_COUNT = 9
+OPTION_PAUSE = 9
+OPTION_ORDER = (0,1,2,3,4,5,6,7,9,8)
+OPTION_COUNT = len(OPTION_ORDER)
 OPTION_WINDOW = 3
 OPTION_ICONS = (
     "Bluetooth",
@@ -21,6 +23,7 @@ OPTION_ICONS = (
     "Clock",
     "Evolve",
     "Back",
+    "Rest",
 )
 
 def option_window_start(index, count=OPTION_COUNT, size=OPTION_WINDOW):
@@ -76,7 +79,7 @@ class OptionsSession:
     def next(self):
         self.message = ""
         if self.mode == "options":
-            self.index = (self.index + 1) % OPTION_COUNT
+            self.index = OPTION_ORDER[(OPTION_ORDER.index(self.index)+1) % OPTION_COUNT]
         elif self.mode == "date":
             year, month, day = self.values
             if self.field == 0:
@@ -132,7 +135,13 @@ class OptionsSession:
             self.field = 0
             self.mode = "time"
         elif self.index == OPTION_EVOLVE:
-            self.message = "EVOLVED" if not getattr(getattr(pet,'sleep',None),'asleep',False) and force_next_form(pet) else "NO EVO"
+            self.message = "EVOLVED" if not getattr(pet,'cold',False) and not getattr(getattr(pet,'sleep',None),'asleep',False) and force_next_form(pet) else "NO EVO"
+        elif self.index == OPTION_PAUSE:
+            before=getattr(pet,'cold',False)
+            pet.cold=not before
+            if not services.save(pet):
+                pet.cold=before
+                self.message="SAVE ERROR"
         elif self.index == OPTION_BACK:
             return False
         return True

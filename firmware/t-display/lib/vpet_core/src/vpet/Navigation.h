@@ -4,6 +4,7 @@
 
 #include "vpet/Input.h"
 #include "vpet/PetState.h"
+#include "vpet/OptionMenu.h"
 
 namespace vpet {
 
@@ -28,12 +29,12 @@ struct EvolutionNode {
 
 class Navigation {
 public:
-    static constexpr uint8_t kOptionCount = 9;
+    static constexpr uint8_t kOptionCount = option_menu::count;
     static constexpr uint8_t kMenuCount = 9;
     static constexpr uint8_t kInventoryCount = 7;
     static constexpr uint8_t kFeedingCount = 3;
     static constexpr uint8_t kStatusPages = 4;
-    static constexpr uint8_t kRestCount = 4;
+    static constexpr uint8_t kRestCount = 2;
     static constexpr uint8_t kEvolutionNodeCount = 5;
 
     static bool evolutionNodeDark(uint8_t) { return false; }

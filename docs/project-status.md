@@ -1,10 +1,39 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-18
+## Estado vigente: 2026-10-19
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
-## Globos de necesidades y caras de animo
+## Rest, pausa y luz apagada
+
+Rest ofrece solo APAGAR/ENCENDER LUZ y VOLVER. Cold se presenta como PAUSAR
+CRIANZA en Opciones; la reserva sale del menu sin borrar sus datos. Pausa
+congela tambien descanso y margen Call, con guardado/rollback y sin cambiar
+schema NVS 3 ni los IDs anteriores. El usuario confirmo fisicamente ambos
+menus y detecto que dormir aun dejaba el fondo claro.
+
+Seguimiento: luz apagada oscurece Home a un cuarto de cada canal RGB565,
+independientemente del ciclo 18:00-06:00; despertar restaura el brillo.
+Menu superior y paneles conservan legibilidad. Sin nuevos assets/framebuffer
+ni cambios de cadencia, Training o Status. Pruebas finales: 1324 Python,
+183 nativas, simulador headless 90 frames y compilacion ESP32 correctos;
+RAM estatica 56108/327680, app 1014233/4194304. La verificacion fisica de
+oscuridad se registra por separado de la aceptacion anterior de los menus.
+Cargado el 2026-10-19 sin recargar LittleFS: firmware y FS conservado
+coinciden por digest independiente. Arranque VPET_READY, manifest 1,
+heap libre 66128/minimo 66108; FS 11943936/12451840, BLE PAIRED/CONNECTED.
+Respaldo nuevo verificado; no se borro NVS ni la reserva.
+[Contrato y alcance](rest-and-board-validation.md),
+[evidencia](superpowers/plans/2026-10-19-rest-and-board-validation.md).
+
+Observacion USB previa al seguimiento de luz: cinco minutos, 29 muestras,
+7 entradas, heap libre 66060..66132, minimo historico 43876 bytes, BLE
+conectado y sin fatal/regresion de uptime entre muestras. Hubo ciclos de
+hasta 927 ms: no se declara FPS, ausencia de fugas ni reconexion BLE.
+Siguen pendientes la noche real, necesidades resueltas, equipo 3/4/Arena,
+evolucion ganada y stock/recompensas comparados tras reiniciar.
+
+## Entrega anterior: globos y caras de animo
 
 Home muestra comida, descanso/luz, lesion, tristeza o enojo junto al pet.
 La marca de enojo depende del animo, no solo del hambre. Status cambia

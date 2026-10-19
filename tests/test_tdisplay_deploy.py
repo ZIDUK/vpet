@@ -110,7 +110,7 @@ def test_tdisplay_options_render_all_actions_and_bluetooth_status():
     assert "/ui/icons/evolve.vpa" in source
     assert "/ui/icons/back.vpa" in source
     assert "copy::dateTitle(spanish)" in source
-    assert "copy::back(spanish)" in source
+    assert "copy::restBack(spanish)" in source
     assert "selected % Navigation::kOptionCount" in source
     assert "WIFI:" not in source
     assert "case 0:\n                settings_.bluetoothEnabled" in app

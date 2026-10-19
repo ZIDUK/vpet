@@ -20,6 +20,55 @@ struct Store : vpet::KeyValueStore {
 };
 int main(int argc,char** argv) {
     using namespace vpet;
+    if(argc==2 && std::string(argv[1])=="menus") {
+        Store kv,bak; SettingsStore storage(kv,&bak); Settings settings;
+        PetState p; p.restore(SpeciesId::Rookie,0,10,80,0,80,0);
+        assert(storage.save(p,settings));
+        PetState reserved; reserved.evolveTo(SpeciesId::Champion);
+        assert(SettingsStore(bak).save(reserved,settings));
+        const auto backupInts=bak.ints; const auto backupStrings=bak.strings;
+        Renderer renderer; Panels panels; BleService ble;
+        App app(renderer,panels,storage,ble,clockNow); app.begin(0);
+        uint32_t ms=0;
+        auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
+        for(int i=0;i<8;++i) key(InputEvent::Next);
+        key(InputEvent::Action);
+        for(int i=0;i<8;++i) key(InputEvent::Next);
+        kv.fail=true; key(InputEvent::Action); kv.fail=false;
+        assert(storage.load(p,settings)==LoadResult::Loaded && !p.cold());
+        key(InputEvent::Action);
+        assert(storage.load(p,settings)==LoadResult::Loaded && p.cold());
+        ms+=3600000; app.tick(ms,InputEvent::Back);
+        key(InputEvent::Action);
+        assert(storage.load(p,settings)==LoadResult::Loaded && !p.cold());
+        assert(p.careMistakes()==0 && p.callReason()==CallReason::Hunger);
+        key(InputEvent::Next); key(InputEvent::Action); // Back after Pause.
+        for(int i=0;i<6;++i) key(InputEvent::Next);
+        key(InputEvent::Action); key(InputEvent::Next); key(InputEvent::Action);
+        assert(storage.load(p,settings)==LoadResult::Loaded && p.species()==SpeciesId::Rookie && !p.sleep.asleep);
+        assert(bak.ints==backupInts && bak.strings==backupStrings);
+        key(InputEvent::Action); key(InputEvent::Action);
+        assert(storage.load(p,settings)==LoadResult::Loaded && p.sleep.asleep);
+        key(InputEvent::Action);
+        assert(panels.lastPanel==PanelId::Rest);
+        assert(storage.load(p,settings)==LoadResult::Loaded && p.sleep.asleep);
+        key(InputEvent::Action);
+        assert(storage.load(p,settings)==LoadResult::Loaded && !p.sleep.asleep);
+        return 0;
+    }
+    if(argc==2 && std::string(argv[1])=="paused") {
+        Store kv; SettingsStore storage(kv); Settings settings;
+        PetState p; p.restore(SpeciesId::Rookie,70,10,70,0,80,0);
+        p.sleep.start(wall,1); p.setCold(true);
+        assert(storage.save(p,settings));
+        Renderer renderer; Panels panels; BleService ble;
+        App app(renderer,panels,storage,ble,clockNow); app.begin(0);
+        app.tick(600000,InputEvent::None);
+        // Checkpoints must not credit ten minutes of frozen sleep.
+        assert(storage.load(p,settings)==LoadResult::Loaded);
+        assert(p.sleep.elapsed==0 && p.energy()==10 && p.sleep.asleep);
+        return 0;
+    }
     if (argc>1) {
         SleepRoutine r; int energy=0;
         for(int day=0;day<5;++day) {

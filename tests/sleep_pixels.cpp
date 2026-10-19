@@ -15,11 +15,23 @@ int main(int argc,char** argv) {
     if (sleeping) motion.tick(frame*105);
     const bool tired=std::string(argv[3])=="tired";
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),atoi(argv[6])!=0,minute,tired});
+    const auto expected=canvas.pixels;
     const auto first=assetPathOpens["/backgrounds/background_night.vpa"]+assetPathOpens["/backgrounds/background.vpa"];
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),false,minute,tired});
+    assert(expected==canvas.pixels); // Darkness must not accumulate across frames.
+    if(sleeping) {
+        motion.wake(0);
+        renderer.draw({pet,motion,5,0,false,minute,false});
+        for(int y=0;y<24;++y) for(int x=0;x<240;++x)
+            assert(canvas.readPixel(x,y)==expected[y*240+x]);
+        assert(canvas.readPixel(4,30)==scene.readPixel(4,30));
+        assert(canvas.readPixel(4,30)!=expected[30*240+4]);
+        motion.startAction(vpet::Action::Rest,0);
+        motion.tick(frame*105);
+        renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),false,minute,tired});
+    }
     assert(first==assetPathOpens["/backgrounds/background_night.vpa"]+assetPathOpens["/backgrounds/background.vpa"]);
     const bool night=vpet::SleepRoutine::isNight(minute);
-    const auto expected=canvas.pixels;
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),false,night?720:1080,tired});
     assert(first+1==assetPathOpens["/backgrounds/background_night.vpa"]+assetPathOpens["/backgrounds/background.vpa"]);
     assert(expected!=canvas.pixels);

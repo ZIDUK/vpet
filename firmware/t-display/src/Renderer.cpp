@@ -209,6 +209,15 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
         canvas_.drawString("*", x + spriteSize - 10, y + 4, 2);
     }
     if (statusSplitX <= 0) drawNeedBubble(model);
+    if (statusSplitX <= 0 && (model.pet.sleep.asleep || model.motion.state() == MotionState::Sleep)) {
+        // Quarter each RGB565 channel without changing byte order or navigation.
+        for (int16_t py = 24; py < 135; ++py) {
+            for (int16_t px = 0; px < 240; ++px) {
+                const uint16_t color = canvas_.readPixel(px, py);
+                canvas_.drawPixel(px, py, ((color >> 2) & 0x39E7));
+            }
+        }
+    }
     if (present) {
         display_.startWrite();
         canvas_.pushSprite(0, 0);
