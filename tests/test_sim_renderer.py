@@ -31,20 +31,23 @@ def test_renderer_outputs_device_sized_frame_with_shared_background():
     assert frame.getpixel((0, 127)) == background.getpixel((0, 127))
 
 
-def test_tdisplay_call_uses_corner_icon_not_bottom_bar(tmp_path):
+def test_tdisplay_call_uses_pet_bubble_not_corner_icon_or_bottom_bar(tmp_path):
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=build_dir)
     pet = _rookie()
     pet.call_reason = "hunger"
     background = Image.open(build_dir / "Background" / "background.bmp").convert("RGB")
-    frame = render_frame(build_dir, pet, profile=profile, now_ms=0)
-    quiet = render_frame(build_dir, _rookie(), profile=profile, now_ms=0)
+    before = pet.to_dict()
+    frame = render_frame(build_dir, pet, pet_x=76, profile=profile, now_ms=0)
+    quiet = render_frame(build_dir, _rookie(), pet_x=76, profile=profile, now_ms=0)
 
-    assert frame.getpixel((120, 125)) == background.getpixel((120, 125))
-    assert frame.getpixel((120, 125)) != (255, 215, 0)
-    assert frame.getpixel((220, 115)) == (255, 215, 0)
+    assert frame.getpixel((180, 125)) == background.getpixel((180, 125))
+    assert frame.getpixel((180, 125)) != (255, 215, 0)
+    assert frame.getpixel((220, 115)) == background.getpixel((220, 115))
     assert quiet.getpixel((220, 115)) == background.getpixel((220, 115))
+    assert frame.crop((144,27,176,55)).tobytes() != quiet.crop((144,27,176,55)).tobytes()
+    assert pet.to_dict() == before and pet.call_reason == "hunger"
 
 
 def test_renderer_fits_nine_menu_icons_on_the_tdisplay_bar(tmp_path):

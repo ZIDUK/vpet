@@ -39,6 +39,7 @@ private:
     void rebuildStaticScene(bool night);
     void drawSelector(uint8_t selected, bool calling);
     void drawCallCue(const AppViewModel& model);
+    void drawNeedBubble(const AppViewModel& model);
 
     TFT_eSPI& display_;
     TFT_eSprite& canvas_;

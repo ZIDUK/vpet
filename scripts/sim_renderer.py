@@ -1,6 +1,7 @@
 """Deterministic renderer shared by simulator tests and pygame."""
 from pathlib import Path
 from core.sleep import is_night
+from core.cues import pet_cue, bubble_name, bubble_position
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
@@ -201,14 +202,24 @@ def _icon_glyph_mask(icon):
     return mask
 
 
-def _draw_call_corner(frame, build_dir, pet, now_ms):
-    reason = getattr(pet, "call_reason", None)
-    icon = {"hunger": "Feed", "strength": "Training", "lights": "Rest"}.get(reason)
-    if icon is None or (now_ms // 400) % 2:
+def _paste_mood(frame, build_dir, name, x, y, size=None, flip=False):
+    icon = _load_image(build_dir / "UIMood" / (name + ".bmp"))
+    if size is not None:
+        icon = icon.resize(size, Image.Resampling.NEAREST)
+    if flip:
+        icon = icon.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    mask = icon.point([0] + [255] * 255, mode="L")
+    frame.paste(icon.convert("RGB"), (x, y), mask)
+
+
+def _draw_pet_cue(frame, build_dir, pet, x, y, facing, motion_state, tired):
+    if motion_state not in ("idle", "walk"):
         return
-    draw = ImageDraw.Draw(frame)
-    draw.rounded_rectangle((214, 109, 237, 132), radius=4, fill=(255, 215, 0))
-    _paste_ui_icon(frame, build_dir, icon, 216, 111, 20)
+    need, _, angry = pet_cue(pet, tired)
+    name = bubble_name(need, angry)
+    if name is not None:
+        bx, by, flip = bubble_position(x, y, facing)
+        _paste_mood(frame, build_dir, name, bx, by, flip=flip)
 
 
 def _paste_ui_icon(frame, build_dir, name, x, y, size=20):
@@ -372,7 +383,10 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
                 fill=_mix(ink, (214, 180, 112), 0.88),
                 outline=ink,
             )
-            _paste_ui_icon(frame, build_dir, icon, x + 2, y + 2, 16)
+            if kind == "mood":
+                _paste_mood(frame, build_dir, "face_" + pet_cue(pet)[1], x + 2, y + 2, (16, 16))
+            else:
+                _paste_ui_icon(frame, build_dir, icon, x + 2, y + 2, 16)
             draw.text((x + 22, y + 2), label, fill=muted,
                       font=_status_font(8))
             draw.text((x + width - 4, y + 2), value_str, fill=ink,
@@ -782,6 +796,10 @@ def render_frame(
     sprite_size = profile.pet_size
     sprite_x = int(pet_x)
     sprite_y = PET_Y if profile.name == "pico" else profile.height - sprite_size - 4
+    tired = (profile.name == "tdisplay" and pet.species != EGG_SPECIES and
+             motion_state in ("idle", "walk") and not pet.dead and not pet.injured and
+             not getattr(pet, "cold", False) and
+             pet.sleep.tired(pet.stats["e"], pet.dna[3], minute))
     if pet.species == EGG_SPECIES:
         if motion_state == "hatch":
             image_path = EGG_HATCH_IMAGE_PATH
@@ -790,9 +808,7 @@ def render_frame(
             image_path = EGG_IDLE_IMAGE_PATH
             frame_count = EGG_IDLE_FRAME_COUNT
         sprite_x = (profile.width - sprite_size) // 2
-    elif (profile.name == "tdisplay" and motion_state in ("idle", "walk") and
-          not pet.dead and not pet.injured and not getattr(pet,'cold',False) and
-          pet.sleep.tired(pet.stats["e"],pet.dna[3],minute)):
+    elif tired:
         stage, name = {"baby": ("Baby", "sparkmon"), "rookie": ("Rookie", "firemon"),
                        "champion": ("Champion", "flamemon"), "ultimate": ("Ultimate", "dragfiremon")}[pet.species]
         image_path = "/digimon1/%s/%s_tired_atlas.bmp" % (stage,name)
@@ -975,6 +991,6 @@ def render_frame(
                 portrait = _load_image(device_path(build_dir, path))
                 mask = portrait.point([0] + [255] * 255, mode="L")
                 frame.paste(portrait.convert("RGB"), (x, EVOLUTION_THUMB_Y), mask)
-    if profile.name == "tdisplay" and panel_mode is None:
-        _draw_call_corner(frame, build_dir, pet, now_ms)
+    if profile.name == "tdisplay" and panel_mode is None and not status_visible:
+        _draw_pet_cue(frame, build_dir, pet, sprite_x, sprite_y, facing, motion_state, tired)
     return frame

@@ -5,6 +5,7 @@
 #include "vpet/Layout.h"
 #include "vpet/Strings.h"
 #include "vpet/MenuBar.h"
+#include "vpet/UiCue.h"
 
 namespace vpet {
 namespace {
@@ -146,10 +147,14 @@ void Renderer::drawCallCue(const AppViewModel& model) {
         canvas_.drawRect(x, 0, width, 24, TFT_RED);
         canvas_.drawRect(x + 1, 1, width - 2, 22, TFT_RED);
     }
-    const char* icon = callIconPath(reason);
-    if (icon == nullptr || !callBlinkOn(model.nowMs)) return;
-    canvas_.fillRoundRect(kCallIconX - 2, kCallIconY - 2, 24, 24, 4, TFT_YELLOW);
-    assets_.drawFrame(canvas_, icon, 0, kCallIconX, kCallIconY);
+}
+
+void Renderer::drawNeedBubble(const AppViewModel& model) {
+    if (model.motion.state() != MotionState::Idle && model.motion.state() != MotionState::Walk) return;
+    const char* path = cue::bubblePath(cue::forPet(model.pet, model.tired));
+    if (path == nullptr) return;
+    const auto position = cue::position(model.motion.x(), model.motion.y(), model.motion.direction());
+    assets_.drawFrame(canvas_, path, 0, position.x, position.y, position.flip);
 }
 
 void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {
@@ -203,6 +208,7 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
         canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);
         canvas_.drawString("*", x + spriteSize - 10, y + 4, 2);
     }
+    if (statusSplitX <= 0) drawNeedBubble(model);
     if (present) {
         display_.startWrite();
         canvas_.pushSprite(0, 0);

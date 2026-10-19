@@ -6,6 +6,10 @@ using vpet::ButtonSample;
 using vpet::Input;
 using vpet::InputEvent;
 
+void test_ui_cue_priority_and_faces();
+void test_ui_cues_are_read_only_and_hidden_asleep();
+void test_ui_bubbles_fit_below_header_at_both_edges();
+
 void test_feed_updates_stats_once_when_animation_completes();
 void test_nutrition_condition_and_unlimited_food_contract();
 void test_legacy_meat_and_protein_inventory_items_are_not_consumed();
@@ -426,5 +430,8 @@ int main(int, char**) {
     RUN_TEST(test_training_session_partial_ev_gain_and_block);
     RUN_TEST(test_training_session_no_overflow_under_stress);
     RUN_TEST(test_training_session_timer_wraps_safely);
+    RUN_TEST(test_ui_cue_priority_and_faces);
+    RUN_TEST(test_ui_cues_are_read_only_and_hidden_asleep);
+    RUN_TEST(test_ui_bubbles_fit_below_header_at_both_edges);
     return UNITY_END();
 }

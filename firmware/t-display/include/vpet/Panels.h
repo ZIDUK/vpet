@@ -48,7 +48,7 @@ private:
     void drawInventory(uint8_t selected, bool spanish, const PetState& pet);
     void drawFeeding(uint8_t selected, bool spanish, const PetState& pet);
     void drawBar(const char* label, int value, int16_t y);
-    void drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor);
+    void drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor, uint8_t minLuma = 60);
     void drawEvolution(const Navigation& navigation, bool spanish, const PetState& pet, bool detail);
     void drawEvolutionTree(const Navigation& navigation, bool spanish);
     void drawEvolutionNode(const Navigation& navigation, uint8_t index, bool spanish);

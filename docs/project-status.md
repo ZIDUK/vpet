@@ -4,7 +4,27 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
-Nueva entrega local: noche 18:00-06:00, cuatro sprites cansados y rutina de
+## Globos de necesidades y caras de animo
+
+Home muestra comida, descanso/luz, lesion, tristeza o enojo junto al pet.
+La marca de enojo depende del animo, no solo del hambre. Status cambia
+unicamente el icono de ANIMO por happy/neutral/sad/angry; conserva las
+cuatro paginas, barras y valores. Sin nuevos Calls, penalidades, campos
+guardados ni cambios de escala/cadencia, Training o Arena.
+
+Validacion local: 1292 pruebas Python y 183 nativas aprobadas; 1536 vectores
+Python/C++, harness de Renderer/Panels/AssetStore reales, previews ES/EN,
+Pico regenerado y Make Sim 90 frames. Build T-Display correcto: RAM estatica
+56100/327680, app 1014749/4194304; 219 assets, 11075765 bytes de payload.
+Firmware y LittleFS cargados y verificados por digest independiente el
+2026-10-18, sin borrar NVS. Reinicio de 18s: VPET_READY, manifest 1,
+heap libre 66572/minimo 66528, FS 11943936/12451840; BLE conectado y sin
+fatal. La aceptacion visual fisica de los iconos sigue abierta.
+[Contrato](mood-cues.md), [evidencia](superpowers/plans/2026-10-18-mood-bubbles.md).
+
+## Entrega anterior: noche y descanso
+
+Noche 18:00-06:00, cuatro sprites cansados y rutina de
 descanso moldeada por ADN/habitos. Amanecer independiente de despertar;
 minimo ocho horas nocturnas, recuperacion progresiva y premio unico.
 JSON/sleepState v1, snapshots v4 compatibles con v1/v2/v3, schema NVS 3

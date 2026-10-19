@@ -173,6 +173,11 @@ acumulado en columnas separadas. HERIDO/MUERTO tienen espacio sobre el
 retrato, con prioridad de muerte. Ver [contrato Status](status-vitals-care-ev.md).
 Un Call activo pinta `*` en el selector. `ACTION` o `BACK` vuelven a Home.
 
+Las necesidades de Home y caras de animo se calculan sin modificar el pet
+en `core/cues.py` / `vpet/UiCue.h`. Comparten prioridad lesion/comida/descanso
+y umbrales de animo; no crean Calls ni estado persistido nuevo.
+[Contrato y evidencia](mood-cues.md).
+
 Alimentar ofrece carne y proteina ilimitadas; no consulta ni descuenta el
 stock legado. La mochila conserva Energia, EXP, Anillo, botiquin y ATRAS.
 `ACTION` consume un item valido, guarda la partida y permanece en el menu; si

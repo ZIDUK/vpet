@@ -93,6 +93,7 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
             })
 
     singles = []
+    singles.extend((path, Path("ui/mood") / f"{path.stem}.vpa", True) for path in sorted((sim_build / "UIMood").glob("*.bmp")))
     singles.extend((path, Path("backgrounds") / f"{path.stem}.vpa", False) for path in sorted((sim_build / "Background").glob("*.bmp")))
     singles.extend((path, Path("ui/icons") / f"{path.stem.lower()}.vpa", False) for path in sorted((sim_build / "UIIcons").glob("*.bmp")))
     adopted_dir = Path(__file__).resolve().parents[1] / "assets/ui/items/adopted"

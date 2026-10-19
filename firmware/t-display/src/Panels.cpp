@@ -6,6 +6,7 @@
 #include "vpet/TrainingUi.h"
 #include "vpet/MenuBar.h"
 #include "vpet/ExplorationUi.h"
+#include "vpet/UiCue.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -213,14 +214,14 @@ void Panels::drawStat(
     display_.setTextColor(kInk, kPanel);
 }
 
-void Panels::drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor) {
+void Panels::drawVital(const char* icon, const char* label, int value, int16_t y, uint16_t barColor, uint8_t minLuma) {
     constexpr uint16_t kChip = 0xC52D;
     const int16_t x = kStatusVitalX;
     const int16_t width = kStatusVitalW;
     const int clamped = value < 0 ? 0 : (value > 100 ? 100 : value);
     display_.fillRoundRect(x, y, width, kStatusVitalH, 4, kChip);
     display_.drawRoundRect(x, y, width, kStatusVitalH, 4, kInk);
-    assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 2, 16, 16, false, -1, 60);
+    assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 2, 16, 16, false, -1, minLuma);
     display_.setTextColor(kInk, kChip);
     drawLabel(label, x + 22, y + 2, 44, 1);
     char num[8];
@@ -380,7 +381,7 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
         drawVital("/ui/icons/heart.vpa", copy::hp(spanish), pet.health(), kStatusVitalY, 0xF800);
         drawVital("/ui/icons/feed.vpa", copy::hunger(spanish), pet.hunger(), kStatusVitalY + kStatusVitalRow, 0xFD20);
         drawVital("/ui/icons/energy.vpa", copy::energy(spanish), pet.energy(), kStatusVitalY + kStatusVitalRow * 2, 0x07FF);
-        drawVital("/ui/icons/brain.vpa", spanish ? "ANIMO" : "MOOD", pet.happiness(), kStatusVitalY + kStatusVitalRow * 3, 0x56D1);
+        drawVital(cue::facePath(cue::forPet(pet).face), spanish ? "ANIMO" : "MOOD", pet.happiness(), kStatusVitalY + kStatusVitalRow * 3, 0x56D1, 0);
         return;
     }
     const int16_t x = kStatusListX;

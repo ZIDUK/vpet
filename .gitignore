@@ -76,6 +76,10 @@ assets/digimon/digimon1/ultimate/idle/*
 !assets/digimon/digimon1/ultimate/idle/*.png
 !assets/ui/
 assets/ui/*
+!assets/ui/mood/
+assets/ui/mood/*
+!assets/ui/mood/mood-atlas-v1.png
+!assets/ui/mood/food-angry-v1.png
 !assets/ui/icons/
 assets/ui/icons/*
 !assets/ui/icons/*.png

@@ -43,6 +43,9 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
     sleep_frame=index if index<=14 else 11+(index-15)%4
     frame=sprite.frames[index if mode=='tired' else sleep_frame]
     expected.paste(frame,(76+(88-frame.width)//2,43+88-frame.height),frame)
+    if mode=='tired':
+        bubble=decode_vpa((root/'data/ui/mood/rest.vpa').read_bytes()).frames[0]
+        expected.paste(bubble,(144,27),bubble)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
     assert actual.getpixel((76,132))==expected.getpixel((76,132))
 

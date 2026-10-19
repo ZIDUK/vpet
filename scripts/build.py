@@ -68,6 +68,7 @@ def copy_runtime_sources():
             "pet.py",
             "save.py",
             "sleep.py",
+            "cues.py",
             "status_card.py",
             "techniques.py",
         ),
@@ -722,6 +723,7 @@ def collect_evolution_thumbnails():
 
 
 def validate_runtime_assets():
+    from scripts.mood_assets import NAMES
     required = [
         "Background/background.bmp",
         "Background/background_night.bmp",
@@ -778,6 +780,7 @@ def validate_runtime_assets():
     ]
     required.extend(f"UIIcons/{name}.bmp" for name in dict.fromkeys((*MENU_ICONS, *STATUS_ICONS, *OPTION_ICONS)))
     required.extend(("UIFx/bag_atlas.bmp", "UIFx/grave.bmp"))
+    required.extend(f"UIMood/{name}.bmp" for name in NAMES)
     missing = [path for path in required if not (BUILD / path).is_file()]
     if missing:
         raise FileNotFoundError("Missing runtime asset(s): " + ", ".join(missing))
@@ -810,6 +813,8 @@ def main(profile_name="pico", output_dir=None):
         collect_pet_images()
         collect_evolution_thumbnails()
         collect_ui()
+        from scripts.mood_assets import build_mood_assets
+        build_mood_assets(ROOT, BUILD / "UIMood")
         collect_fx()
         validate_runtime_assets()
         write_manifest()
