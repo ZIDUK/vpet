@@ -1,4 +1,5 @@
 """Preview approved rest explanations without opening a saved pet."""
+import argparse
 from pathlib import Path
 import sys
 
@@ -12,7 +13,9 @@ from scripts.sim_renderer import render_frame
 
 
 def main():
-    output = ROOT / "out/rest-cue-clarity"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output',type=Path,default=ROOT/'out/rest-cue-clarity')
+    output = parser.parse_args().output
     output.mkdir(parents=True, exist_ok=True)
     cases = [
         ("ES", 0, 20, 12, 0), ("ES", 1, 20, 12, 76),

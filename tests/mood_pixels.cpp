@@ -75,9 +75,14 @@ int main(int argc,char** argv) {
         if(mode=="rest" || bedtime) {
             const auto pos=vpet::cue::position(x,43,1);
             const int left=vpet::cue::restLabelX(pos.x);
-            assert(std::find(canvas.labels.begin(),canvas.labels.end(),bedtime ?
-                (es?"HORA DE DORMIR":"BEDTIME") : (es?"POCA ENERGIA":"LOW ENERGY"))!=canvas.labels.end());
-            assert(std::find(canvas.labels.begin(),canvas.labels.end(),bedtime?"22:00":"20/30")!=canvas.labels.end());
+            if(bedtime) {
+                assert(canvas.labels.empty());
+                for(int yy=25;yy<43;++yy) for(int xx=left;xx<left+100;++xx)
+                    assert(canvas.readPixel(xx,yy)==scene.readPixel(xx,yy));
+            } else {
+                assert(std::find(canvas.labels.begin(),canvas.labels.end(),es?"POCA ENERGIA":"LOW ENERGY")!=canvas.labels.end());
+                assert(std::find(canvas.labels.begin(),canvas.labels.end(),"20/30")!=canvas.labels.end());
+            }
             if(!bedtime) for(int col=0;col<54;++col)
                 assert(canvas.readPixel(left+43+col,37)==(col<36?TFT_YELLOW:TFT_DARKGREY));
             canvas.labels.clear(); pet.setEnergy(80);

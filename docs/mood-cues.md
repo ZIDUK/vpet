@@ -32,10 +32,11 @@ longevidad ni reglas de regano de otro juego.
 
 Se separan las dos explicaciones aprobadas de la necesidad Rest existente:
 
-- POCA ENERGIA / LOW ENERGY: energia actual y meta de recuperacion 30/35/40,
+- POCA ENERGIA / LOW ENERGY: gotas de cansancio, energia actual y meta de recuperacion 30/35/40,
   segun el mismo rasgo ADN y la histeresis de cansancio ya vigentes.
-- HORA DE DORMIR / BEDTIME: hora preferida, incluyendo el horario aprendido.
-  Se elige desde esa hora hasta las 06:00 cuando hay una senal Rest activa.
+- Hora de dormir: solo globo con carita dormida, sin titulo, hora ni etiqueta
+  negra. Se elige desde la hora preferida/aprendida hasta las 06:00 cuando
+  hay una senal Rest activa.
   Si coincide con poca energia, tiene prioridad el horario de dormir.
 
 Sin calendario valido no se inventa un horario actual. La lectura del
@@ -45,12 +46,22 @@ Las prioridades de lesion/comida y las supresiones anteriores se conservan.
 No cambian hambre, alimentacion, consumibles, efectos, Calls, guardado,
 reglas de descanso ni Status. No se agregan contadores de comida ni toasts.
 
-El rayo reutiliza Energy.png en el globo existente, con variante de enojo.
-Los once assets anteriores conservan exactamente sus bytes; el paquete
-agrega solo energy/energy_angry. La etiqueta y barra son informativas,
+Revision visual solicitada tras la primera vista previa del 2026-10-22:
+se sustituyen rayo y bombilla por originales transparentes generados,
+`fatigue-drops-v1.png` y `sleepy-face-v1.png`, conservados en assets/ui/mood.
+El builder mantiene sus alfa y contornos oscuros; reutiliza el globo y su
+marca de enojo existentes. Solo cambian energy/energy_angry/rest/rest_angry;
+los otros nueve VPA son byte-identicos. Se mantienen trece iconos en total,
 sin framebuffer nuevo ni cambio de escala/cadencia del pet.
-Contrato, pruebas y alcance de carga en el
-[plan de esta entrega](superpowers/plans/2026-10-22-rest-cue-clarity.md).
+[Primera entrega](superpowers/plans/2026-10-22-rest-cue-clarity.md),
+[revision vigente](superpowers/plans/2026-10-22-rest-symbols.md).
+
+Para descansar, Rest -> APAGAR LUZ. La siesta diurna dura 30 minutos y
+recupera +1 energia cada cinco minutos encendido; pueden necesitarse varias
+para alcanzar la meta. De noche aplica la duracion nocturna existente, no
+una siesta. ENCENDER LUZ interrumpe; pausar crianza o apagar la placa no
+recupera energia. El globo se oculta mientras duerme y se recalcula al
+despertar. [Reglas de descanso sin cambios](sleep-routine.md).
 
 ## Cuerpo Angry: seguimiento 2026-10-19
 

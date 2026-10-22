@@ -80,6 +80,8 @@ assets/ui/*
 assets/ui/mood/*
 !assets/ui/mood/mood-atlas-v1.png
 !assets/ui/mood/food-angry-v1.png
+!assets/ui/mood/fatigue-drops-v1.png
+!assets/ui/mood/sleepy-face-v1.png
 !assets/ui/icons/
 assets/ui/icons/*
 !assets/ui/icons/*.png

@@ -45,16 +45,12 @@ def build_mood_assets(root, output_dir):
     blank = Image.new("RGBA", (32, 28))
     _center(blank, _fit(cells[4], (30, 26)), (1, 1, 30, 26))
     content = {"food": "assets/ui/items/meat.png",
-               "rest": "assets/ui/icons/Rest.png",
-               "energy": "assets/ui/icons/Energy.png",
+               "rest": "assets/ui/mood/sleepy-face-v1.png",
+               "energy": "assets/ui/mood/fatigue-drops-v1.png",
                "hurt": "assets/ui/items/adopted/bandage.png"}
     for name, path in content.items():
         with Image.open(root / path) as source:
             art = source.convert("RGBA")
-        if name in ("rest","energy"):
-            # Menu icons include a dark tile; keep only the lit glyph.
-            light = art.convert("L").point(lambda value: 255 if value >= 72 else 0)
-            art.putalpha(light)
         glyph = _fit(art, (16, 16))
         canvas = blank.copy()
         _center(canvas, glyph, (7, 2, 18, 19))

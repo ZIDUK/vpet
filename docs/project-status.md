@@ -4,7 +4,22 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
-## Claridad del descanso
+## Simbolos de descanso: revision vigente
+
+Por solicitud del usuario, POCA ENERGIA conserva nivel/meta y barra pero
+usa gotas de cansancio en lugar de rayo. Hora de dormir usa solo una carita
+dormida en el globo, sin titulo, hora ni fondo negro de etiqueta. Ambas
+variantes conservan el animo bajo y las supresiones existentes. No cambian
+recuperacion, horario aprendido, hambre, Status, guardado ni animaciones.
+
+1432 pruebas Python y 185 nativas aprobadas; compilacion ESP32 correcta.
+RAM estatica 56108/327680, app 1015085/4194304. Pico/T-Display regenerados:
+225 assets, 10789125 bytes de payload. Otros nueve iconos identicos.
+Vista previa inspeccionada; carga y aceptacion fisica pendientes por USB
+no detectado. [Contrato](mood-cues.md),
+[plan y evidencia](superpowers/plans/2026-10-22-rest-symbols.md).
+
+## Claridad del descanso: primera version
 
 Implementadas las explicaciones aprobadas POCA ENERGIA (nivel/meta y barra)
 y HORA DE DORMIR (horario preferido/aprendido) en Home, ES/EN. La segunda
@@ -19,7 +34,8 @@ RAM estatica 56108/327680, app 1015213/4194304. Pico/T-Display regenerados,
 Vista previa aislada inspeccionada. Carga y aceptacion visual en placa
 pendientes: no se detecto puerto USB durante esta entrega. El ultimo
 firmware confirmado en placa sigue siendo el de Angry, descrito abajo.
-[Contrato](mood-cues.md), [evidencia](superpowers/plans/2026-10-22-rest-cue-clarity.md).
+[Evidencia historica](superpowers/plans/2026-10-22-rest-cue-clarity.md).
+Rayo, bombilla y texto horario se sustituyen por la revision descrita arriba.
 
 ## Angry en las cuatro etapas
 

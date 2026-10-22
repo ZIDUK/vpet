@@ -88,9 +88,9 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
         bedtime=minute>=1080 or minute<360
         bubble=decode_vpa((root/'data/ui/mood'/('rest.vpa' if bedtime else 'energy.vpa')).read_bytes()).frames[0]
         expected.paste(bubble,(144,27),bubble)
-        draw=ImageDraw.Draw(expected)
-        draw.rectangle((42,25,141,42),fill=(0,0,0))
         if not bedtime:
+            draw=ImageDraw.Draw(expected)
+            draw.rectangle((42,25,141,42),fill=(0,0,0))
             draw.rectangle((85,37,138,40),fill=(123,125,123))
             draw.rectangle((85,37,111,40),fill=(255,255,0))
     else:
