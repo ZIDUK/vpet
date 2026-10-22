@@ -10,7 +10,7 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | --- | --- | --- |
 | Status de cuatro paginas ES/EN | Sim y firmware: animo, lesiones /15, HERIDO/MUERTO y EV junto a barras | Cargado el 2026-10-17; firmware/LittleFS y arranque verificados por USB el 2026-10-18. Aceptacion visual y botones pendiente |
 | Alimentar y peso | Dos alimentos ilimitados, metabolismo, peso, combate y evolucion | Desplegado; balance actual del sim cerrado por el usuario. Persistencia fisica pendiente |
-| Training y Tecnicas | Sesion de 10 s, coste/recompensa unica, cancelacion y guardado | Training aceptado visualmente como fluido por el usuario el 2026-10-18. Tecnicas y pruebas instrumentadas pendientes |
+| Training y Tecnicas | Sesion de 10 s, coste/recompensa unica, cancelacion y guardado; correccion de cadencia y footer de Select | Correccion cargada y verificada por digest el 2026-10-22. Usuario confirma que velocidad/NEXT mejoraron en Training/Tecnicas; matriz ampliada y mediciones pendientes |
 | Tecnicas por evolucion | Firemon 2, Flamemon 3, Dragfiremon 4; Rafaga e Inferno, aprendizaje/equipo manual y guardado compatible | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY, aceptacion fisica del equipo ampliado pendiente |
 | Arena | Ataques automaticos, Guardia, impactos de 1200 ms, celebracion completa, escala uniforme y cursor persistente | Correccion cargada el 2026-10-18 y verificada por digest; harness real de Panels.cpp. Falta paridad exacta y aceptacion visual fisica |
 | Elementos | Nueve elementos, ventaja x3/2 antes de Guardia, minimo 1; sin Vaccine/Data/Virus | Python/C++ implementados; evidencia numerica no cierra la visual |
@@ -48,9 +48,15 @@ Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-item
 - [ ] Validar NEXT sin saltos residuales y Tecnicas por separado; ampliar
   a especies e idiomas restantes. No declarar FPS a partir del host.
 
+- [x] Reproducir nuevo reporte 2026-10-22: doce iconos en cache de diez,
+  trece aperturas calientes en Select Tecnicas/Volver. Footer compartido
+  existente evita E/S de iconos repetida; cadencia 90/120 ms solo Training.
+- [x] Cargar solo firmware y verificar digest/arranque. Usuario confirma
+  mejora de nueva cadencia y NEXT al entrar/salir de Tecnicas (2026-10-22).
+
 Contrato: [rendimiento de Training](../../training-board-performance.md).
-El usuario acepta la fluidez observada. La matriz ampliada y las mediciones
-de hardware mantienen su alcance pendiente.
+La aceptacion renovada cierra la mejora visual observada de este reporte.
+La matriz ampliada y las mediciones de hardware mantienen su alcance pendiente.
 
 ## P0: funcionalidad y persistencia fisica
 

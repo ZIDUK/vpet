@@ -1161,7 +1161,19 @@ void Panels::drawTraining(
             assets.drawFrame(pixels,path,static_cast<uint16_t>(frame),x,y);
         }
     } canvas{display_, assets_};
-    training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language)).draw();
+    const bool cachedFooter = scene_ && s.state == TrainingSession::State::Select;
+    if (cachedFooter && (sceneKind_ != Scene::TrainingFooter || trainingFooterCursor_ != s.cursor)) {
+        Canvas footer{*scene_, assets_};
+        training_ui::View<Canvas>(footer,s,pet,nowMs,languageIsSpanish(language)).selectFooter();
+        trainingFooterCursor_ = s.cursor;
+        sceneKind_ = Scene::TrainingFooter;
+    }
+    training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language)).draw(!cachedFooter);
+    if (cachedFooter) {
+        // Reuse Home's scene buffer, as Arena does, without another allocation.
+        memcpy(static_cast<uint16_t*>(display_.getPointer())+240*115,
+               static_cast<uint16_t*>(scene_->getPointer())+240*115,240*20*2);
+    }
     display_.pushSprite(0, 0);
 }
 

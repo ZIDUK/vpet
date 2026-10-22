@@ -469,6 +469,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             motion_.alignClock(nowMs);
         } else if (event != InputEvent::None || nowMs - lastRenderMs_ >= 33) {
             lastRenderMs_ = nowMs;
+            renderer_.invalidate();
             panels_.drawTraining(training_, pet_, nowMs, settings_.language.c_str());
         }
         return;

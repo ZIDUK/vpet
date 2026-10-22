@@ -125,4 +125,16 @@ int main() {
     for(int i=0;i<3;++i) swapKey(InputEvent::Next);
     swapKey(InputEvent::Action); swapKey(InputEvent::Action); swapKey(InputEvent::Action);
     assert(panels.explorePage==ExplorationSession::Page::Clock);
+
+    // Training borrows Home's scene buffer; Home must rebuild after returning.
+    Store trainingKv; SettingsStore trainingStorage(trainingKv);
+    assert(trainingStorage.save(a,settings));
+    App training(renderer,panels,trainingStorage,ble,clockNow);
+    training.begin(0);
+    training.tick(50,InputEvent::Next);
+    training.tick(100,InputEvent::Next);
+    training.tick(150,InputEvent::Action);
+    const int beforeTraining=renderer.invalidations;
+    training.tick(200,InputEvent::None);
+    assert(renderer.invalidations==beforeTraining+1);
 }

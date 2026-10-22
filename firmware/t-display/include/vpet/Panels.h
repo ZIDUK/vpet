@@ -90,8 +90,9 @@ private:
     AssetStore& assets_;
     // Borrow Home's existing framebuffer; App invalidates its owner before use.
     TFT_eSprite* scene_;
-    enum class Scene : uint8_t { None, Arena, Exploration };
+    enum class Scene : uint8_t { None, Arena, Exploration, TrainingFooter };
     Scene sceneKind_ = Scene::None;
+    uint8_t trainingFooterCursor_ = 255;
     uint16_t arenaFooterKey_ = 0xFFFF;
     PanelId lastPanel_ = PanelId::Home;
     bool lastSpanish_ = true;

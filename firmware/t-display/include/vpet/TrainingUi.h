@@ -15,8 +15,8 @@ constexpr uint16_t ink = rgb(19,23,27), white = rgb(242,244,238);
 constexpr uint16_t yellow = rgb(255,220,70), muted = rgb(162,181,182);
 constexpr uint16_t panel = rgb(36,48,52), teal = rgb(40,74,75);
 constexpr uint16_t hp = rgb(241,93,112), mp = rgb(71,191,230), green = rgb(111,208,164);
-constexpr uint32_t kActionFrameIntervalMs = 40;
-constexpr uint32_t kIdleFrameIntervalMs = 85;
+constexpr uint32_t kActionFrameIntervalMs = 90;
+constexpr uint32_t kIdleFrameIntervalMs = 120;
 constexpr const char* icons[] = {"attack", "defense", "speed", "hp", "mp", "mind"};
 constexpr const char* stats[] = {"off", "def", "spd", "hp", "mp", "brn"};
 constexpr const char* actions[] = {"punch", "block", "walk", "walk", "cast", "idle"};
@@ -153,7 +153,7 @@ template<class Canvas> class View {
         if (!s.message || !*s.message) return;
         rect(0,99,240,12,ink); text(6,99,reason(s.message),hp,true);
     }
-    void select() {
+    void select(bool drawFooter) {
         char tag[12]; snprintf(tag,sizeof(tag),"%d/8",s.cursor+1);
         header(tr("training.title"),tag); portrait(s.cursor < 6);
         const char* selectBlocked = "";
@@ -206,6 +206,11 @@ template<class Canvas> class View {
             }
         }
         if (!*selectBlocked) feedback();
+        if (drawFooter) selectFooter();
+    }
+public:
+    void selectFooter() {
+        rect(0,115,240,20,ink);
         for (int i=0;i<8;++i) {
             const int x = 4+i*29;
             const bool selected = s.cursor == i;
@@ -218,6 +223,7 @@ template<class Canvas> class View {
             asset(icon,x+2,117);
         }
     }
+private:
     void metric(int y, const char* title, const char* value, uint16_t color) {
         outline(70,y,168,14,panel);
         rect(160,y,1,14,panel);
@@ -374,7 +380,8 @@ public:
             rect(5,45,230,1,teal);
             const int i=p.cursor;
             const bool learned=i<techniques::kCount && pet.practice.learned(i,pet.techniqueStage());
-            petAsset(learned ? (i==0 ? "punch" : i==2 ? "block" : "cast") : "idle",10,40,now/50);
+            petAsset(learned ? (i==0 ? "punch" : i==2 ? "block" : "cast") : "idle",10,40,
+                     now/(learned ? kActionFrameIntervalMs : kIdleFrameIntervalMs));
             for(int j=0;j<techniques::kCount+1;++j) {
                 const int x=4+j*20;
                 rect(x,107,18,24,i==j ? teal : panel);
@@ -413,7 +420,7 @@ public:
         const int i=p.technique;
         asset(symbols[i],8,25);
         text(32,25,names[i],yellow);
-        petAsset(i==0 ? "punch" : i==2 ? "block" : "cast",0,42,now/50);
+        petAsset(i==0 ? "punch" : i==2 ? "block" : "cast",0,42,now/kActionFrameIntervalMs);
         snprintf(line,sizeof(line),"%d",techniques::kCatalog[i].power);
         metric(43,es ? "POTENCIA" : "POWER",i==2 ? "DANO /2" : line,yellow);
         snprintf(line,sizeof(line),"%d MP",techniques::kCatalog[i].mp);
@@ -430,10 +437,10 @@ public:
     }
     View(Canvas& canvas, const TrainingSession& session, const PetState& p, uint32_t ms, bool spanish)
         : c(canvas), s(session), pet(p), now(ms), es(spanish) {}
-    void draw() {
+    void draw(bool drawSelectFooter = true) {
         rect(0,0,240,135,ink);
         switch(s.state) {
-            case State::Select: select(); break;
+            case State::Select: select(drawSelectFooter); break;
             case State::Prepare: prepare(); break;
             case State::Session: session(); break;
             case State::Confirm: confirm(); break;

@@ -182,7 +182,8 @@ def impact_sprite(frame, build_dir, x, y, size, kind, now_ms, flip=False, specie
 
 
 def render_technique_panel(frame, draw, build_dir, session, now_ms):
-    from scripts.training_renderer import _metric
+    from scripts.training_renderer import (_metric, TRAINING_ACTION_FRAME_INTERVAL_MS,
+                                          TRAINING_IDLE_FRAME_INTERVAL_MS)
     progress = session.pet.techniques
     es = session.pet.language == "ES"
     draw.rectangle((0, 0, 239, 134), fill=INK)
@@ -207,7 +208,8 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
         i = session.index
         learned = i < len(TECHNIQUES) and progress.learned(i, session.pet.species)
         pet_sprite(frame, build_dir, 10, 40, 68, i if learned else None, now_ms,
-                   species=session.pet.species, frame_interval_ms=50)
+                   species=session.pet.species, frame_interval_ms=(TRAINING_ACTION_FRAME_INTERVAL_MS
+                       if learned else TRAINING_IDLE_FRAME_INTERVAL_MS))
         for j in range(len(TECHNIQUES) + 1):
             x = 4 + j * 20
             draw.rectangle((x, 107, x + 17, 130), fill=TEAL if i == j else PANEL,
@@ -243,7 +245,7 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
     text(draw, (32, 25), names[i], YELLOW)
     # Technique actions: punch, cast, block.
     pet_sprite(frame, build_dir, 0, 42, 68, i, now_ms,
-               species=session.pet.species, frame_interval_ms=50)
+               species=session.pet.species, frame_interval_ms=TRAINING_ACTION_FRAME_INTERVAL_MS)
     _metric(draw, 43, "POTENCIA" if es else "POWER", "DANO /2" if i == 2 else str(tech["power"]), YELLOW)
     _metric(draw, 57, "USAR" if es else "USE", "+4 MP" if i == 2 else "%d MP" % tech["mp"], MP)
     _metric(draw, 71, "DOMINIO" if es else "MASTERY", "%d/100" % progress.mastery[i], GREEN)

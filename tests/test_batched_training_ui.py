@@ -90,7 +90,7 @@ def _session(energy=100, ev=None, **kwargs):
     return TrainingSession(pet, lambda _: True, **kwargs)
 
 
-def test_training_sprite_cadence_matches_home_motion(monkeypatch, practice_assets):
+def test_training_sprite_cadence_is_deliberate_and_independent_of_home(monkeypatch, practice_assets):
     seen = []
     monkeypatch.setattr(
         training_renderer, "pet_sprite",
@@ -98,12 +98,30 @@ def test_training_sprite_cadence_matches_home_motion(monkeypatch, practice_asset
     )
     session = _session()
 
-    render_training(practice_assets, session, 0)
-    assert seen[-1] == 40
+    for index in range(8):
+        session.index = index
+        render_training(practice_assets, session, 0)
+        assert seen[-1] == (90 if index < 6 else 120)
 
-    session.index = 6
-    render_training(practice_assets, session, 0)
-    assert seen[-1] == 85
+
+def test_technique_previews_use_training_cadence(monkeypatch, practice_assets):
+    from scripts import practice_renderer
+    from scripts.practice_session import PracticeSession
+
+    seen = []
+    monkeypatch.setattr(practice_renderer, "pet_sprite",
+                        lambda *args, **kwargs: seen.append(kwargs["frame_interval_ms"]))
+    session = PracticeSession(_session().pet, lambda _: True, training=True)
+    for index in range(6):
+        session.index = index
+        session.page = "tech"
+        practice_renderer.render_practice(practice_assets, session, 900)
+        learned = index < 5 and session.pet.techniques.learned(index, session.pet.species)
+        assert seen[-1] == (90 if learned else 120)
+    session.page = "detail"
+    session.tech = 0
+    practice_renderer.render_practice(practice_assets, session, 900)
+    assert seen[-1] == 90
 
 
 def _patch_monotonic(monkeypatch):

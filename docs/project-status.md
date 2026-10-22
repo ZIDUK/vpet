@@ -4,6 +4,20 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Training: velocidad y Tecnicas
+
+Reporte reabierto el 2026-10-22: vistas previas demasiado rapidas solo en
+Training y atasco al pasar por Tecnicas. Reproducidas trece aperturas de
+archivos por refresco en Select 7/8-8/8 por doce iconos en una LRU de diez.
+Correccion local: footer en buffer existente, una sola apertura caliente
+para el retrato y cadencia 90/120 ms solo Training/Tecnicas. Home, Arena,
+sesiones, balance, assets, Status y NVS sin cambios. Aceptacion fisica de
+la nueva cadencia/NEXT confirmada por el usuario: ambos mejoraron.
+1443 Python y 185 nativas aprobadas; RAM estatica sin aumento. Solo
+firmware cargado y verificado por digest; VPET_READY, heap libre 66132,
+BLE conectado y sin fatal/reinicio en 45 s. Persisten matriz ampliada y
+mediciones instrumentadas; [evidencia](training-board-performance.md).
+
 ## Simbolos de descanso: revision vigente
 
 Por solicitud del usuario, POCA ENERGIA conserva nivel/meta y barra pero
@@ -190,7 +204,8 @@ por digest con placa. Heap libre 72504, minimo 72436; filesystem
 VPET_READY, no una prueba completa de reconexion movil.
 
 El usuario confirmo Training fluido en placa el 2026-10-18; aceptacion
-visual de la pantalla probada registrada. Se cierra ese reporte de lentitud.
+visual de la pantalla probada registrada. El 2026-10-22 se reabre por
+cadencia excesiva y atasco especifico en Tecnicas; ver revision arriba.
 La nueva cache de diez iconos estaticos y lecturas agrupadas del retrato
 reducen E/S en host y se cargaron el 2026-10-17. Falta medir latencia y heap
 durante Training real, no solo en el arranque. Ver
