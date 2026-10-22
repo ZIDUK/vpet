@@ -21,7 +21,7 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | Globos y caras de animo | Comida/descanso/lesion/tristeza/enojo en Home; cuatro caras en el slot vital de Status, sin nuevos Calls ni persistencia | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY y BLE conectado. Aceptacion visual fisica pendiente |
 | Rest y pausa | Rest solo luz/volver; Pausar crianza en Opciones; reserva conservada. Pausa detiene sueno y margen Call. Luz apagada oscurece Home sin alterar dia/noche | Menus y apagar/encender luz aceptados por el usuario. Falta noche real y ciclo de pausa/reanudacion; evidencia USB en plan |
 | Cuerpo Angry | Cuatro hojas originales de 25 frames, seleccion por las reglas de animo vigentes y globos conservados | 1376 Python/183 nativas aprobadas; cargado, ambos digests y arranque verificados. Falta verlo activarse naturalmente en la partida. [Evidencia](2026-10-19-angry-sprites.md) |
-| Claridad de descanso | Gotas de cansancio con nivel/meta y barra; hora de dormir solo carita dormida, sin letras ni hora. Horario aprendido intacto; hambre sin cambios | 1432 Python/185 nativas. Cargado el 2026-10-22, ambos digests y arranque verificados; BLE conectado. Falta aceptar legibilidad fisica. [Evidencia vigente](2026-10-22-rest-symbols.md) |
+| Claridad de descanso | Ambos avisos solo con iconos: gotas de cansancio y carita dormida; sin texto, contador ni barra. Metas internas/horario aprendido intactos; hambre sin cambios | 1443 Python/185 nativas; firmware compilado. Falta reconectar USB para cargar correccion: primer intento sin escritura. [Evidencia vigente](2026-10-22-rest-icon-only.md) |
 
 Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
 [exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
@@ -75,8 +75,8 @@ La matriz ampliada y las mediciones de hardware mantienen su alcance pendiente.
   por digest y VPET_READY. Excepcion previa de Status autorizada por el usuario
   solo para esta carga; no cierra su aceptacion fisica.
 - [ ] Aceptar gotas de cansancio y carita dormida:
-  meta 30/35/40 y horario aprendido correctos, sin letras/hora en el aviso
-  de dormir ni tapar pet/menu al caminar,
+  ambos avisos sin texto, contador, barra ni etiqueta negra. Metas internas
+  30/35/40 y horario aprendido correctos, sin tapar pet/menu al caminar,
   desaparicion al recuperar energia y ocultacion al dormir. El hambre queda
   con su globo anterior; no hay contador nuevo de comidas. USB completado.
 

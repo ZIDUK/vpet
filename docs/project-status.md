@@ -18,7 +18,19 @@ firmware cargado y verificado por digest; VPET_READY, heap libre 66132,
 BLE conectado y sin fatal/reinicio en 45 s. Persisten matriz ampliada y
 mediciones instrumentadas; [evidencia](training-board-performance.md).
 
-## Simbolos de descanso: revision vigente
+## Descanso: solo iconos
+
+La foto del usuario muestra LOW ENERGY, contador y barra que no queria
+conservar. Se eliminan esas tres capas y el fondo negro en ambos renderers.
+Poca energia queda solo con gotas; hora de dormir sigue solo con carita.
+No cambian reglas de descanso, prioridad, ocultacion, metas internas,
+assets, Status, Training, Arena ni NVS.
+1443 Python y 185 nativas aprobadas; firmware compilado. Carga pendiente
+de reconectar USB: el primer intento no pudo abrir el puerto y no escribio
+la placa. No confundir la vista previa corregida con firmware instalado.
+[Correccion y evidencia](superpowers/plans/2026-10-22-rest-icon-only.md).
+
+## Simbolos de descanso: entrega anterior
 
 Por solicitud del usuario, POCA ENERGIA conserva nivel/meta y barra pero
 usa gotas de cansancio en lugar de rayo. Hora de dormir usa solo una carita

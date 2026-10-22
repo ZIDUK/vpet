@@ -74,7 +74,7 @@ def test_real_board_bubble_pixels_and_no_corner_badge(mood_pixels, mode, mood, n
 @pytest.mark.parametrize('x',[0,76,152])
 @pytest.mark.parametrize('language',['ES','EN'])
 @pytest.mark.parametrize('mood',[30,80])
-def test_energy_caption_and_captionless_bedtime_in_real_renderer_and_sim(mood_pixels,mode,x,language,mood):
+def test_rest_bubbles_have_no_text_counter_or_bar_in_real_renderer_and_sim(mood_pixels,mode,x,language,mood):
     root,binary=mood_pixels
     actual=board(root,binary,mode,mood,x,language=language)
     pet=Pet(species='rookie',state='live'); pet.dna=(1,2,3,0)
@@ -83,21 +83,15 @@ def test_energy_caption_and_captionless_bedtime_in_real_renderer_and_sim(mood_pi
     simulated=render_frame(root/'sim',pet,pet_x=x,current_datetime=(2026,10,22,22 if mode!='rest' else 12,0),
                            profile=get_display_profile('tdisplay'))
     bx,_,_=bubble_position(x,43,1); lx,ly=rest_label_position(bx)
-    if mode=='rest':
-        for col in range(54):
-            expected=(255,255,0) if col<36 else (123,125,123)
-            assert actual.getpixel((lx+43+col,ly+12))==expected
-            assert simulated.getpixel((lx+43+col,ly+12))==expected
-        assert actual.getpixel((lx,ly))==(0,0,0)
-        assert simulated.getpixel((lx,ly))==(0,0,0)
-    else:
-        box=(lx,ly,lx+100,ly+18)
-        background=decode_vpa((root/'data/backgrounds/background_night.vpa').read_bytes()).frames[0].convert('RGB')
-        assert actual.crop(box).tobytes()==background.crop(box).tobytes()
-        pet.stats['e']=80
-        before_bedtime=render_frame(root/'sim',pet,pet_x=x,current_datetime=(2026,10,22,21,59),
-                                   profile=get_display_profile('tdisplay'))
-        assert simulated.crop(box).tobytes()==before_bedtime.crop(box).tobytes()
+    box=(lx,ly,lx+100,ly+18)
+    background_name='background' if mode=='rest' else 'background_night'
+    background=decode_vpa((root/'data/backgrounds'/(background_name+'.vpa')).read_bytes()).frames[0].convert('RGB')
+    assert actual.crop(box).tobytes()==background.crop(box).tobytes()
+    pet.stats['e']=80
+    before_need=render_frame(root/'sim',pet,pet_x=x,
+                            current_datetime=(2026,10,22,12,0) if mode=='rest' else (2026,10,22,21,59),
+                            profile=get_display_profile('tdisplay'))
+    assert simulated.crop(box).tobytes()==before_need.crop(box).tobytes()
 
 
 @pytest.mark.parametrize("mode", ["egg","dead","cold","away","sleep","eat","panel","idle"])

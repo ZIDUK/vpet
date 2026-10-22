@@ -1,7 +1,7 @@
 """Deterministic renderer shared by simulator tests and pygame."""
 from pathlib import Path
 from core.sleep import is_night
-from core.cues import pet_cue, bubble_name, bubble_position, rest_detail, rest_label_position
+from core.cues import pet_cue, bubble_name, bubble_position, rest_detail
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
@@ -223,18 +223,6 @@ def _draw_pet_cue(frame, build_dir, pet, x, y, facing, motion_state, tired, minu
     if name is not None:
         bx, by, flip = bubble_position(x, y, facing)
         _paste_mood(frame, build_dir, name, bx, by, flip=flip)
-        if detail['kind']=='energy':
-            from core.i18n import tr
-            caption=Image.new('RGB',(100,18),(0,0,0))
-            draw=ImageDraw.Draw(caption)
-            font=_status_font(9)
-            draw.text((2,-1),tr(pet,'rest.cue.energy'),font=font,fill=(255,255,255))
-            number='%d/%d'%(detail['current'],detail['target'])
-            draw.rectangle((43,12,96,15),fill=(123,125,123))
-            width=min(54,54*detail['current']//detail['target'])
-            if width: draw.rectangle((43,12,42+width,15),fill=(255,255,0))
-            draw.text((2,8),number,font=font,fill=(255,255,255))
-            frame.paste(caption,rest_label_position(bx))
 
 
 def _paste_ui_icon(frame, build_dir, name, x, y, size=20):

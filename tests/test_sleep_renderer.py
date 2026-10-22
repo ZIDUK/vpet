@@ -1,9 +1,10 @@
 import io
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageDraw
+from PIL import Image
 from scripts import build, build_tdisplay
 from scripts.tdisplay_assets import decode_vpa
 from scripts.sim_renderer import render_frame
@@ -32,7 +33,7 @@ def test_real_renderer_angry_selection_and_priorities(sleep_pixels,species,stage
 
 @pytest.mark.parametrize('species,stage,name',SPECIES)
 @pytest.mark.parametrize('index',[0,8,24])
-def test_angry_frames_match_board_pixels_and_simulator_source(sleep_pixels,species,stage,name,index):
+def test_angry_frames_match_board_pixels_and_simulator_source(sleep_pixels,species,stage,name,index,monkeypatch):
     root,binary=sleep_pixels
     raw=subprocess.check_output([str(binary),str(root/'data'),str(species),'angry-pixels','720',str(index),'1'])
     actual=Image.open(io.BytesIO(raw)).convert('RGB')
@@ -42,6 +43,8 @@ def test_angry_frames_match_board_pixels_and_simulator_source(sleep_pixels,speci
     bubble=decode_vpa((root/'data/ui/mood/angry.vpa').read_bytes()).frames[0]
     expected.paste(bubble,(144,27),bubble)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
+    frozen=time.monotonic()
+    monkeypatch.setattr(time,'monotonic',lambda: frozen)
     pet=Pet(species=stage,state='live'); pet.stats.update(p=10,h=80,e=80)
     before=pet.to_dict()
     simulated=render_frame(root/'sim',pet,pet_x=76,now_ms=index*90,
@@ -88,11 +91,6 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
         bedtime=minute>=1080 or minute<360
         bubble=decode_vpa((root/'data/ui/mood'/('rest.vpa' if bedtime else 'energy.vpa')).read_bytes()).frames[0]
         expected.paste(bubble,(144,27),bubble)
-        if not bedtime:
-            draw=ImageDraw.Draw(expected)
-            draw.rectangle((42,25,141,42),fill=(0,0,0))
-            draw.rectangle((85,37,138,40),fill=(123,125,123))
-            draw.rectangle((85,37,111,40),fill=(255,255,0))
     else:
         expected=lights_off(expected)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()

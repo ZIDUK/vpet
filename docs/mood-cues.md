@@ -32,8 +32,9 @@ longevidad ni reglas de regano de otro juego.
 
 Se separan las dos explicaciones aprobadas de la necesidad Rest existente:
 
-- POCA ENERGIA / LOW ENERGY: gotas de cansancio, energia actual y meta de recuperacion 30/35/40,
-  segun el mismo rasgo ADN y la histeresis de cansancio ya vigentes.
+- Poca energia: solo globo con gotas de cansancio, sin titulo, numeros,
+  barra ni etiqueta negra. La meta de recuperacion 30/35/40 sigue siendo
+  interna, segun el mismo rasgo ADN y la histeresis ya vigentes.
 - Hora de dormir: solo globo con carita dormida, sin titulo, hora ni etiqueta
   negra. Se elige desde la hora preferida/aprendida hasta las 06:00 cuando
   hay una senal Rest activa.
@@ -54,7 +55,8 @@ marca de enojo existentes. Solo cambian energy/energy_angry/rest/rest_angry;
 los otros nueve VPA son byte-identicos. Se mantienen trece iconos en total,
 sin framebuffer nuevo ni cambio de escala/cadencia del pet.
 [Primera entrega](superpowers/plans/2026-10-22-rest-cue-clarity.md),
-[revision vigente](superpowers/plans/2026-10-22-rest-symbols.md).
+[entrega de simbolos](superpowers/plans/2026-10-22-rest-symbols.md),
+[correccion sin textos](superpowers/plans/2026-10-22-rest-icon-only.md).
 
 Para descansar, Rest -> APAGAR LUZ. La siesta diurna dura 30 minutos y
 recupera +1 energia cada cinco minutos encendido; pueden necesitarse varias
