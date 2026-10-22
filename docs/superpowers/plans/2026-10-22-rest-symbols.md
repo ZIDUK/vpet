@@ -32,9 +32,9 @@ caption only for Energy, never for Bedtime, in both renderers.
 - [x] Inspect scaled/native previews, run focused/full Python and firmware
   validation, regenerate Pico and smoke-test the isolated simulator.
 - [x] Update current roadmap and record host/USB evidence separately.
-- [ ] USB deployment requires connected hardware and repository prerequisites;
-  no serial port was detected. Publication is verified against origin/master
-  after commit/push, not inferred from a local commit alone.
+- [x] USB deployment: user reconnected hardware and explicitly waived prior
+  physical Status validation for this delivery. Fresh build/backup, upload,
+  independent firmware/FS verification and normal startup observation passed.
 
 ## Evidence
 
@@ -61,7 +61,8 @@ caption only for Energy, never for Bedtime, in both renderers.
   12.89% asset-budget margin; not a measurement of actual filesystem free space.
 - Sources: two transparent image_gen originals added to the exact mood PNG
   allowlist in .gitignore; normal builder packs them without repainting.
-- USB serial not detected; no board deployment or physical acceptance yet.
+- At initial preparation USB serial was not detected. Subsequent deployment
+  is recorded below; physical visual acceptance remains separate.
 
 Prepared binary/source SHA-256 (not verification of flashed hardware):
 
@@ -71,3 +72,44 @@ littlefs.bin 4b9ad7781b66729334f99498bab21c3417a99bafde18366cd264e4001ccfa062
 fatigue-drops-v1.png 91666034f596b4561949ac7f5caf7aedfaeb8852795d863bea5f5c4892789e40
 sleepy-face-v1.png c8d05181296fe42809fa54a51d25da9aa5af8bb34e46412d30ceae364302decb
 ```
+
+## USB Follow-Up: 2026-10-22
+
+The user connected the board and explicitly authorized deploying this
+revision without the repository's pending prior physical validation of the
+four Status pages. This exception applies to this delivery only; it does
+not close physical Status acceptance or change the standing guardrail.
+The eight host Status views remain byte-identical to the previous renderer.
+
+Fresh build of source revision `3a9c406` succeeded before upload; firmware
+SHA-256 still matches the prepared image above. Detected ESP32-D0WDQ6-V3,
+MAC 08f9e0d00788, 16 MB, `/dev/cu.usbserial-57040013171`.
+
+Fresh critical backup (partition table + NVS, 24576 bytes) retained:
+`out/board-backups/20261022-rest-symbols-deploy/08f9e0d00788-20261022-135455-critical.bin`.
+Stored and recomputed SHA-256 match:
+`9f3faac3751e6db5179cd59f7ccdd34a8158ae43445e8760b8fa5065732c13cc`.
+No live-pet state was injected to stage the needs or mood.
+
+`uploadfs` rebuilt the LittleFS image during deployment. Its digest for
+this upload is `7cdeabc8a7c3f3a682b6236cf381e00e534572fd02344a076de39d3c9125b40d`,
+distinct from the earlier prepared image above. All 225 source assets were
+checked against their manifest (sizes and SHA-256), payload 10789125 bytes.
+Independent USB verification used the actual rebuilt upload image.
+
+Firmware and LittleFS uploaded successfully without erasing NVS/reserve.
+Independent esptool verification matched both images at 0x10000 and
+0x410000. Firmware digest is unchanged from the prepared image; installed
+LittleFS digest is the rebuilt value above. Local evidence (not published):
+`out/rest-symbols/deploy.log`, `verify-flash.log` and `board-boot.log`.
+
+Deploy OK / VPET_READY: heap free 66144, minimum at ready 66124, flash
+16777216, manifest 1, filesystem 11685888/12451840. Actual filesystem free
+space is 765952 bytes including overhead, not the 12.89% asset-budget margin.
+
+Normal reset plus 45-second serial observation ended with
+`REST_SYMBOLS_BOARD_BOOT_OK`: four runtime samples, free heap 66144 in each,
+watermark 61008, BLE ADVERTISING/PAIRED/CONNECTED (runtime state 2), zero
+fatal lines and no observed restart. First loop maximum 430369us, later
+maxima 65913/66017/65668us. This is idle startup evidence, not an FPS,
+long-session/reconnection claim or visual acceptance of the physical screen.

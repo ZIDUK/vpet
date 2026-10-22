@@ -21,7 +21,7 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | Globos y caras de animo | Comida/descanso/lesion/tristeza/enojo en Home; cuatro caras en el slot vital de Status, sin nuevos Calls ni persistencia | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY y BLE conectado. Aceptacion visual fisica pendiente |
 | Rest y pausa | Rest solo luz/volver; Pausar crianza en Opciones; reserva conservada. Pausa detiene sueno y margen Call. Luz apagada oscurece Home sin alterar dia/noche | Menus y apagar/encender luz aceptados por el usuario. Falta noche real y ciclo de pausa/reanudacion; evidencia USB en plan |
 | Cuerpo Angry | Cuatro hojas originales de 25 frames, seleccion por las reglas de animo vigentes y globos conservados | 1376 Python/183 nativas aprobadas; cargado, ambos digests y arranque verificados. Falta verlo activarse naturalmente en la partida. [Evidencia](2026-10-19-angry-sprites.md) |
-| Claridad de descanso | Gotas de cansancio con nivel/meta y barra; hora de dormir solo carita dormida, sin letras ni hora. Horario aprendido intacto; hambre sin cambios | 1432 Python/185 nativas, compilacion y preview correctos. USB no detectado; falta cargar y aceptar legibilidad fisica. [Evidencia vigente](2026-10-22-rest-symbols.md) |
+| Claridad de descanso | Gotas de cansancio con nivel/meta y barra; hora de dormir solo carita dormida, sin letras ni hora. Horario aprendido intacto; hambre sin cambios | 1432 Python/185 nativas. Cargado el 2026-10-22, ambos digests y arranque verificados; BLE conectado. Falta aceptar legibilidad fisica. [Evidencia vigente](2026-10-22-rest-symbols.md) |
 
 Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
 [exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
@@ -65,11 +65,14 @@ de hardware mantienen su alcance pendiente.
   necesidad. Sin recortes al caminar ni overlay durante acciones/paneles.
   [Contrato](../../mood-cues.md).
 
-- [ ] Cargar y aceptar gotas de cansancio y carita dormida:
+- [x] Cargar gotas y carita dormida: revision 3a9c406, firmware/FS verificados
+  por digest y VPET_READY. Excepcion previa de Status autorizada por el usuario
+  solo para esta carga; no cierra su aceptacion fisica.
+- [ ] Aceptar gotas de cansancio y carita dormida:
   meta 30/35/40 y horario aprendido correctos, sin letras/hora en el aviso
   de dormir ni tapar pet/menu al caminar,
   desaparicion al recuperar energia y ocultacion al dormir. El hambre queda
-  con su globo anterior; no hay contador nuevo de comidas. USB pendiente.
+  con su globo anterior; no hay contador nuevo de comidas. USB completado.
 
 - [ ] Aceptar noche/descanso en placa: limites 18:00/06:00, cuatro sprites,
   acostarse temprano/tarde, interrupcion, reinicio, energia y premio unico.
@@ -177,9 +180,16 @@ mapas inexistentes y venta sin economia. No habilitar WiFi ni cambiar enums NVS.
 
 ## Evidencia y comandos
 
-Ultima carga confirmada: Angry, 1376 Python/183 nativas; firmware/FS y
-arranque verificados. [Evidencia](2026-10-19-angry-sprites.md). La claridad
-de descanso del 2026-10-22 y su revision de simbolos estan pendientes de USB.
+Ultima carga confirmada: simbolos de descanso, revision 3a9c406, 2026-10-22.
+1432 Python/185 nativas; firmware/FS coinciden por digest independiente,
+VPET_READY heap libre 66144/minimo inicial 66124, manifest 1, FS
+11685888/12451840. Observacion de 45 s: BLE conectado, cuatro muestras,
+heap libre 66144, minimo 61008, sin fatal/reinicio. Respaldo critico nuevo
+verificado; no se borro NVS. Falta aceptacion visual y la matriz prolongada.
+[Evidencia](2026-10-22-rest-symbols.md).
+
+Carga anterior: Angry, 1376 Python/183 nativas; firmware/FS y arranque
+verificados. [Evidencia](2026-10-19-angry-sprites.md).
 
 Entrega anterior, globos y caras: 1292 pruebas Python, 183 nativas, Make Sim
 90 frames, Pico regenerado y compilacion ESP32 correctos. RAM estatica

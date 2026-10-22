@@ -15,8 +15,15 @@ recuperacion, horario aprendido, hambre, Status, guardado ni animaciones.
 1432 pruebas Python y 185 nativas aprobadas; compilacion ESP32 correcta.
 RAM estatica 56108/327680, app 1015085/4194304. Pico/T-Display regenerados:
 225 assets, 10789125 bytes de payload. Otros nueve iconos identicos.
-Vista previa inspeccionada; carga y aceptacion fisica pendientes por USB
-no detectado. [Contrato](mood-cues.md),
+Vista previa inspeccionada. Cargado el 2026-10-22 desde la revision 3a9c406:
+firmware y LittleFS coinciden por digest independiente. Respaldo critico
+nuevo verificado; sin borrar NVS. Arranque VPET_READY, manifest 1, heap libre
+66144/minimo inicial 66124; FS 11685888/12451840. Observacion posterior de
+45 s: cuatro muestras, heap libre estable en 66144, minimo 61008, BLE
+conectado y sin fatal/reinicio. No certifica FPS ni sesiones prolongadas.
+El usuario autorizo esta carga sin validacion fisica previa de Status;
+esa aceptacion y la legibilidad natural de los nuevos globos siguen abiertas.
+[Contrato](mood-cues.md),
 [plan y evidencia](superpowers/plans/2026-10-22-rest-symbols.md).
 
 ## Claridad del descanso: primera version
@@ -32,8 +39,8 @@ son identicos; se agregan dos globos de energia a los assets reproducibles.
 RAM estatica 56108/327680, app 1015213/4194304. Pico/T-Display regenerados,
 225 assets, 10789233 bytes de payload; simulador headless 90 frames correcto.
 Vista previa aislada inspeccionada. Carga y aceptacion visual en placa
-pendientes: no se detecto puerto USB durante esta entrega. El ultimo
-firmware confirmado en placa sigue siendo el de Angry, descrito abajo.
+pendientes en esa primera preparacion: no se detecto puerto USB. En ese
+momento el ultimo firmware confirmado en placa era Angry, descrito abajo.
 [Evidencia historica](superpowers/plans/2026-10-22-rest-cue-clarity.md).
 Rayo, bombilla y texto horario se sustituyen por la revision descrita arriba.
 
