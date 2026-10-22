@@ -187,6 +187,8 @@ STAT_STRINGS = {
 
 TRAINING_STRINGS.update({
     "rest.title": {"ES": "DESCANSO", "EN": "REST"},
+    "rest.cue.energy": {"ES": "POCA ENERGIA", "EN": "LOW ENERGY"},
+    "rest.cue.bedtime": {"ES": "HORA DE DORMIR", "EN": "BEDTIME"},
     "rest.off": {"ES": "APAGAR LUZ", "EN": "LIGHTS OFF"},
     "rest.on": {"ES": "ENCENDER LUZ", "EN": "LIGHTS ON"},
     "rest.back": {"ES": "VOLVER", "EN": "BACK"},

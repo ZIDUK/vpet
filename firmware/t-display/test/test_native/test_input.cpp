@@ -9,6 +9,8 @@ using vpet::InputEvent;
 void test_ui_cue_priority_and_faces();
 void test_ui_cues_are_read_only_and_hidden_asleep();
 void test_ui_bubbles_fit_below_header_at_both_edges();
+void test_rest_detail_separates_bedtime_and_energy_without_mutation();
+void test_rest_caption_never_overlaps_bubble_or_pet();
 
 void test_feed_updates_stats_once_when_animation_completes();
 void test_nutrition_condition_and_unlimited_food_contract();
@@ -433,5 +435,7 @@ int main(int, char**) {
     RUN_TEST(test_ui_cue_priority_and_faces);
     RUN_TEST(test_ui_cues_are_read_only_and_hidden_asleep);
     RUN_TEST(test_ui_bubbles_fit_below_header_at_both_edges);
+    RUN_TEST(test_rest_detail_separates_bedtime_and_energy_without_mutation);
+    RUN_TEST(test_rest_caption_never_overlaps_bubble_or_pet);
     return UNITY_END();
 }

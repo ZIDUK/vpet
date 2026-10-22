@@ -1,6 +1,6 @@
 # Roadmap vigente de vPet
 
-Actualizado: 2026-10-19. Prioridad: cerrar calidad y aceptacion de T-Display
+Actualizado: 2026-10-22. Prioridad: cerrar calidad y aceptacion de T-Display
 antes de ampliar el juego. El [roadmap anterior](2026-10-11-delivery-roadmap-history-through-2026-10-16.md)
 se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 
@@ -21,6 +21,7 @@ se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 | Globos y caras de animo | Comida/descanso/lesion/tristeza/enojo en Home; cuatro caras en el slot vital de Status, sin nuevos Calls ni persistencia | Firmware/FS cargados y verificados por digest el 2026-10-18; VPET_READY y BLE conectado. Aceptacion visual fisica pendiente |
 | Rest y pausa | Rest solo luz/volver; Pausar crianza en Opciones; reserva conservada. Pausa detiene sueno y margen Call. Luz apagada oscurece Home sin alterar dia/noche | Menus y apagar/encender luz aceptados por el usuario. Falta noche real y ciclo de pausa/reanudacion; evidencia USB en plan |
 | Cuerpo Angry | Cuatro hojas originales de 25 frames, seleccion por las reglas de animo vigentes y globos conservados | 1376 Python/183 nativas aprobadas; cargado, ambos digests y arranque verificados. Falta verlo activarse naturalmente en la partida. [Evidencia](2026-10-19-angry-sprites.md) |
+| Claridad de descanso | POCA ENERGIA con nivel/meta y barra; HORA DE DORMIR con horario aprendido. ES/EN, sin cambiar hambre ni balance | 1413 Python/185 nativas, compilacion y preview correctos. USB no detectado; falta cargar y aceptar legibilidad fisica. [Evidencia](2026-10-22-rest-cue-clarity.md) |
 
 Fuentes: [arquitectura](../../architecture.md), [consumibles](../../adopted-items.md),
 [exploracion](../../exploration.md), [Flamemon](../../flamemon-assets.md),
@@ -64,6 +65,11 @@ de hardware mantienen su alcance pendiente.
   necesidad. Sin recortes al caminar ni overlay durante acciones/paneles.
   [Contrato](../../mood-cues.md).
 
+- [ ] Cargar y aceptar las etiquetas POCA ENERGIA / HORA DE DORMIR:
+  meta 30/35/40 y horario aprendido correctos, sin tapar pet/menu al caminar,
+  desaparicion al recuperar energia y ocultacion al dormir. El hambre queda
+  con su globo anterior; no hay contador nuevo de comidas. USB pendiente.
+
 - [ ] Aceptar noche/descanso en placa: limites 18:00/06:00, cuatro sprites,
   acostarse temprano/tarde, interrupcion, reinicio, energia y premio unico.
   El amanecer no despierta antes de completar la sesion. Sin credito apagado.
@@ -91,6 +97,11 @@ Sin RTC respaldado: perder calendario exige ajustar Fecha/Hora antes de
 enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
 ## P1: paridad visual y estabilidad
+
+- [x] Distinguir poca energia de hora de dormir en Home, Python/C++ y ES/EN.
+  Detalle de solo lectura; umbrales y prioridades vigentes, sin nuevos campos
+  persistidos. Dos iconos nuevos; los once anteriores permanecen identicos.
+  [Contrato y evidencia](2026-10-22-rest-cue-clarity.md).
 
 - [x] Globos de necesidades y caras happy/neutral/sad/angry portables,
   once iconos empaquetados y misma geometria de Status. 1536 vectores
@@ -162,7 +173,11 @@ mapas inexistentes y venta sin economia. No habilitar WiFi ni cambiar enums NVS.
 
 ## Evidencia y comandos
 
-Ultima entrega, globos y caras: 1292 pruebas Python, 183 nativas, Make Sim
+Ultima carga confirmada: Angry, 1376 Python/183 nativas; firmware/FS y
+arranque verificados. [Evidencia](2026-10-19-angry-sprites.md). La claridad
+de descanso del 2026-10-22 esta validada en host y pendiente de USB.
+
+Entrega anterior, globos y caras: 1292 pruebas Python, 183 nativas, Make Sim
 90 frames, Pico regenerado y compilacion ESP32 correctos. RAM estatica
 56100/327680, app 1014749/4194304; 219 assets, 11075765 bytes de payload.
 Firmware/FS cargados y verificados por digest independiente; reinicio de

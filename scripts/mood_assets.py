@@ -5,7 +5,8 @@ from PIL import Image
 
 
 NAMES = ("face_happy", "face_neutral", "face_sad", "face_angry",
-         "food", "food_angry", "rest", "rest_angry", "hurt", "sad", "angry")
+         "food", "food_angry", "rest", "rest_angry", "hurt", "sad", "angry",
+         "energy", "energy_angry")
 
 
 def _fit(image, size):
@@ -45,23 +46,24 @@ def build_mood_assets(root, output_dir):
     _center(blank, _fit(cells[4], (30, 26)), (1, 1, 30, 26))
     content = {"food": "assets/ui/items/meat.png",
                "rest": "assets/ui/icons/Rest.png",
+               "energy": "assets/ui/icons/Energy.png",
                "hurt": "assets/ui/items/adopted/bandage.png"}
     for name, path in content.items():
         with Image.open(root / path) as source:
             art = source.convert("RGBA")
-        if name == "rest":
-            # The menu bulb includes a dark tile; keep only its lit glyph.
+        if name in ("rest","energy"):
+            # Menu icons include a dark tile; keep only the lit glyph.
             light = art.convert("L").point(lambda value: 255 if value >= 72 else 0)
             art.putalpha(light)
         glyph = _fit(art, (16, 16))
         canvas = blank.copy()
         _center(canvas, glyph, (7, 2, 18, 19))
         images[name] = canvas
-        if name == "rest":
+        if name in ("rest","energy"):
             canvas = blank.copy()
             _center(canvas, _fit(glyph, (12, 14)), (4, 3, 14, 18))
             _center(canvas, _fit(cells[5], (8, 8)), (21, 3, 8, 8))
-            images["rest_angry"] = canvas
+            images[name+"_angry"] = canvas
     for name, cell in (("sad", cells[2]), ("angry", cells[3])):
         canvas = blank.copy()
         _center(canvas, _fit(cell, (15, 15)), (7, 2, 18, 19))

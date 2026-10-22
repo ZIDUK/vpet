@@ -1,7 +1,7 @@
 """Deterministic renderer shared by simulator tests and pygame."""
 from pathlib import Path
 from core.sleep import is_night
-from core.cues import pet_cue, bubble_name, bubble_position
+from core.cues import pet_cue, bubble_name, bubble_position, rest_detail, rest_label_position
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
@@ -212,14 +212,32 @@ def _paste_mood(frame, build_dir, name, x, y, size=None, flip=False):
     frame.paste(icon.convert("RGB"), (x, y), mask)
 
 
-def _draw_pet_cue(frame, build_dir, pet, x, y, facing, motion_state, tired):
+def _draw_pet_cue(frame, build_dir, pet, x, y, facing, motion_state, tired, minute=None):
     if motion_state not in ("idle", "walk"):
         return
     need, _, angry = pet_cue(pet, tired)
     name = bubble_name(need, angry)
+    detail=rest_detail(pet,tired,minute)
+    if detail['kind']=='energy':
+        name='energy_angry' if angry else 'energy'
     if name is not None:
         bx, by, flip = bubble_position(x, y, facing)
         _paste_mood(frame, build_dir, name, bx, by, flip=flip)
+        if detail['kind'] is not None:
+            from core.i18n import tr
+            caption=Image.new('RGB',(100,18),(0,0,0))
+            draw=ImageDraw.Draw(caption)
+            font=_status_font(9)
+            title=tr(pet,'rest.cue.energy') if detail['kind']=='energy' else tr(pet,'rest.cue.bedtime')
+            draw.text((2,-1),title,font=font,fill=(255,255,255))
+            if detail['kind']=='energy':
+                number='%d/%d'%(detail['current'],detail['target'])
+                draw.rectangle((43,12,96,15),fill=(123,125,123))
+                width=min(54,54*detail['current']//detail['target'])
+                if width: draw.rectangle((43,12,42+width,15),fill=(255,255,0))
+            else: number='%02d:%02d'%(detail['bedtime']//60,detail['bedtime']%60)
+            draw.text((2,8),number,font=font,fill=(255,255,255))
+            frame.paste(caption,rest_label_position(bx))
 
 
 def _paste_ui_icon(frame, build_dir, name, x, y, size=20):
@@ -1005,7 +1023,7 @@ def render_frame(
                 mask = portrait.point([0] + [255] * 255, mode="L")
                 frame.paste(portrait.convert("RGB"), (x, EVOLUTION_THUMB_Y), mask)
     if profile.name == "tdisplay" and panel_mode is None and not status_visible:
-        _draw_pet_cue(frame, build_dir, pet, sprite_x, sprite_y, facing, motion_state, tired)
+        _draw_pet_cue(frame, build_dir, pet, sprite_x, sprite_y, facing, motion_state, tired, minute)
         if pet.sleep.asleep or motion_state == "sleep":
             world = frame.crop((0, profile.menu_height, profile.width, profile.height))
             channels = world.split()

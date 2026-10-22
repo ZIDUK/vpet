@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from core.cues import bubble_position, pet_cue
+from core.cues import bubble_position, pet_cue, rest_label_position
 from core.pet import Pet
 from core.status_card import STATUS_SPLIT_X
 from display_profiles import get_display_profile
@@ -41,8 +41,8 @@ def board(root, binary, mode, mood, x=76, panel="home",language="ES"):
 
 
 @pytest.mark.parametrize("mode,mood,name", [
-    ("food",80,"food"),("food",30,"food_angry"),("rest",80,"rest"),
-    ("rest",30,"rest_angry"),("hurt",10,"hurt"),("idle",30,"sad"),("idle",10,"angry")])
+    ("food",80,"food"),("food",30,"food_angry"),("rest",80,"energy"),
+    ("rest",30,"energy_angry"),("hurt",10,"hurt"),("idle",30,"sad"),("idle",10,"angry")])
 @pytest.mark.parametrize("x", [0,76,152])
 def test_real_board_bubble_pixels_and_no_corner_badge(mood_pixels, mode, mood, name, x):
     root,binary=mood_pixels
@@ -68,6 +68,27 @@ def test_real_board_bubble_pixels_and_no_corner_badge(mood_pixels, mode, mood, n
         for px in range(32):
             if bmp.getpixel((px,y)):
                 assert simulated.getpixel((bx+px,by+y))==rgb.getpixel((px,y))
+
+
+@pytest.mark.parametrize('mode',['rest','bedtime','bedtime-low'])
+@pytest.mark.parametrize('x',[0,76,152])
+@pytest.mark.parametrize('language',['ES','EN'])
+def test_rest_captions_bar_and_recovery_in_real_renderer_and_sim(mood_pixels,mode,x,language):
+    root,binary=mood_pixels
+    actual=board(root,binary,mode,80,x,language=language)
+    pet=Pet(species='rookie',state='live'); pet.dna=(1,2,3,0)
+    pet.stats.update(h=80,e=20 if mode in ('rest','bedtime-low') else 80,p=80)
+    pet.language=language; pet.sleep.bedtime=1320 if mode!='rest' else 0
+    simulated=render_frame(root/'sim',pet,pet_x=x,current_datetime=(2026,10,22,22 if mode!='rest' else 12,0),
+                           profile=get_display_profile('tdisplay'))
+    bx,_,_=bubble_position(x,43,1); lx,ly=rest_label_position(bx)
+    if mode=='rest':
+        for col in range(54):
+            expected=(255,255,0) if col<36 else (123,125,123)
+            assert actual.getpixel((lx+43+col,ly+12))==expected
+            assert simulated.getpixel((lx+43+col,ly+12))==expected
+    assert actual.getpixel((lx,ly))==(0,0,0)
+    assert simulated.getpixel((lx,ly))==(0,0,0)
 
 
 @pytest.mark.parametrize("mode", ["egg","dead","cold","away","sleep","eat","panel","idle"])

@@ -20,6 +20,22 @@ def pet_cue(pet, tired=False):
     return need, face, angry
 
 
+def rest_detail(pet, tired=False, minute=None):
+    """Explain the current Rest cue without advancing the sleep routine."""
+    trait=pet.dna[3] % 3
+    bedtime=pet.sleep.preferred(trait)
+    detail={'kind':None,'current':pet.stats['e'],'target':0,'bedtime':bedtime}
+    if pet_cue(pet,tired)[0]!='rest':
+        return detail
+    scheduled=minute is not None and 0<=minute<1440 and (minute>=bedtime or minute<360)
+    detail.update(kind='bedtime' if scheduled else 'energy',target=30+trait*5)
+    return detail
+
+
+def rest_label_position(bubble_x):
+    return (bubble_x-102 if bubble_x>=104 else bubble_x+34),25
+
+
 def bubble_position(pet_x, pet_y, facing):
     anchor = int(pet_x)+(22 if facing<0 else 66)
     flip = facing<0

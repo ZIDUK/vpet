@@ -1,8 +1,25 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-19
+## Estado vigente: 2026-10-22
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
+
+## Claridad del descanso
+
+Implementadas las explicaciones aprobadas POCA ENERGIA (nivel/meta y barra)
+y HORA DE DORMIR (horario preferido/aprendido) en Home, ES/EN. La segunda
+tiene prioridad al coincidir; sin calendario valido se conserva energia.
+Hambre, alimentacion, consumibles, reglas de sueno, Calls y persistencia
+no cambian. Status conserva su distribucion. Los once iconos anteriores
+son identicos; se agregan dos globos de energia a los assets reproducibles.
+
+1413 pruebas Python (197 enfocadas) y 185 nativas aprobadas; compilacion ESP32 correcta,
+RAM estatica 56108/327680, app 1015213/4194304. Pico/T-Display regenerados,
+225 assets, 10789233 bytes de payload; simulador headless 90 frames correcto.
+Vista previa aislada inspeccionada. Carga y aceptacion visual en placa
+pendientes: no se detecto puerto USB durante esta entrega. El ultimo
+firmware confirmado en placa sigue siendo el de Angry, descrito abajo.
+[Contrato](mood-cues.md), [evidencia](superpowers/plans/2026-10-22-rest-cue-clarity.md).
 
 ## Angry en las cuatro etapas
 

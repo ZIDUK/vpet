@@ -24,6 +24,8 @@ inline const char* optionsTitle(bool spanish) { return pick(spanish, "OPTIONS", 
 inline const char* restTitle(bool spanish) { return pick(spanish, "REST", "DESCANSO"); }
 inline const char* restLight(bool spanish, bool asleep) { return asleep ? pick(spanish,"LIGHTS ON","ENCENDER LUZ") : pick(spanish,"LIGHTS OFF","APAGAR LUZ"); }
 inline const char* restBack(bool spanish) { return pick(spanish,"BACK","VOLVER"); }
+inline const char* lowEnergy(bool spanish) { return pick(spanish,"LOW ENERGY","POCA ENERGIA"); }
+inline const char* bedtime(bool spanish) { return pick(spanish,"BEDTIME","HORA DE DORMIR"); }
 inline const char* pausePet(bool spanish) { return pick(spanish,"PAUSE PET","PAUSAR CRIANZA"); }
 inline const char* sleep(bool spanish) { return pick(spanish, "SLEEP", "DORMIR"); }
 inline const char* cold(bool spanish) { return pick(spanish, "COLD", "FRIO"); }

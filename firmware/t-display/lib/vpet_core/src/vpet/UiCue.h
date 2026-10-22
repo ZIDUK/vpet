@@ -31,6 +31,18 @@ inline const char* facePath(Face face) {
         "/ui/mood/face_sad.vpa","/ui/mood/face_angry.vpa"};
     return paths[static_cast<uint8_t>(face)];
 }
+enum class RestKind : uint8_t { None, Energy, Bedtime };
+struct RestDetail { RestKind kind; int current,target,bedtime; };
+inline RestDetail restDetail(const PetState& pet,bool tired=false,int minute=-1) {
+    const int trait=pet.dna()[3]%3;
+    RestDetail detail{RestKind::None,pet.energy(),0,pet.sleep.preferred(trait)};
+    if(forPet(pet,tired).need!=Need::Rest) return detail;
+    const bool scheduled=minute>=0 && minute<1440 && (minute>=detail.bedtime || minute<360);
+    detail.kind=scheduled ? RestKind::Bedtime : RestKind::Energy;
+    detail.target=30+trait*5;
+    return detail;
+}
+inline int restLabelX(int bubbleX) { return bubbleX>=104 ? bubbleX-102 : bubbleX+34; }
 inline const char* bubblePath(Cue value) {
     switch(value.need) {
         case Need::Food: return value.angry ? "/ui/mood/food_angry.vpa" : "/ui/mood/food.vpa";

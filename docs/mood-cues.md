@@ -28,6 +28,30 @@ Home en T-Display. Las ventanas de atencion y penalidades no cambian.
 No se implementan preferencias de ambiente, riesgo extra de enfermedad,
 longevidad ni reglas de regano de otro juego.
 
+## Motivo de descanso: 2026-10-22
+
+Se separan las dos explicaciones aprobadas de la necesidad Rest existente:
+
+- POCA ENERGIA / LOW ENERGY: energia actual y meta de recuperacion 30/35/40,
+  segun el mismo rasgo ADN y la histeresis de cansancio ya vigentes.
+- HORA DE DORMIR / BEDTIME: hora preferida, incluyendo el horario aprendido.
+  Se elige desde esa hora hasta las 06:00 cuando hay una senal Rest activa.
+  Si coincide con poca energia, tiene prioridad el horario de dormir.
+
+Sin calendario valido no se inventa un horario actual. La lectura del
+detalle no modifica la rutina ni su latch. Resolver el motivo recalcula
+la senal; durante el sueno se oculta, no es un contador de horas dormidas.
+Las prioridades de lesion/comida y las supresiones anteriores se conservan.
+No cambian hambre, alimentacion, consumibles, efectos, Calls, guardado,
+reglas de descanso ni Status. No se agregan contadores de comida ni toasts.
+
+El rayo reutiliza Energy.png en el globo existente, con variante de enojo.
+Los once assets anteriores conservan exactamente sus bytes; el paquete
+agrega solo energy/energy_angry. La etiqueta y barra son informativas,
+sin framebuffer nuevo ni cambio de escala/cadencia del pet.
+Contrato, pruebas y alcance de carga en el
+[plan de esta entrega](superpowers/plans/2026-10-22-rest-cue-clarity.md).
+
 ## Cuerpo Angry: seguimiento 2026-10-19
 
 Los cuatro originales aportados por el usuario completan la expresion
@@ -73,8 +97,8 @@ separa host, carga USB y aceptacion visual, sin bajar el animo de la partida rea
 - `scripts/mood_assets.py` extrae las celdas, elimina alfa tenue, recorta,
   reduce con vecino cercano y reserva indice transparente 0. Reutiliza
   Carne, luz y medicina del catalogo actual. No descarga assets al jugar.
-- El build produce siete globos 32x28 y cuatro caras 20x20, 11.477 bytes
-  VPA en total. Pico los empaqueta para mantener un artefacto reproducible;
+- El build produce nueve globos 32x28 y cuatro caras 20x20. Pico los
+  empaqueta para mantener un artefacto reproducible;
   el overlay nuevo es exclusivo del target T-Display.
 - Status conserva exactamente su icono 16x16, barras, valores y cuatro
   paginas. La cara usa alfa real sin descartar su contorno oscuro.

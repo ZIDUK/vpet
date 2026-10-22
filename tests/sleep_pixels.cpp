@@ -5,6 +5,7 @@
 int main(int argc,char** argv) {
     assert(argc==7); assetRoot=argv[1];
     vpet::PetState pet; pet.evolveTo(static_cast<vpet::SpeciesId>(atoi(argv[2])));
+    const uint8_t dna[]={1,2,3,2}; pet.restoreDna(dna);
     const std::string mode=argv[3];
     if(mode.find("angry")!=std::string::npos) pet.setHappiness(10);
     if(mode=="food-angry") { pet.setHappiness(30); pet.setHunger(10); }
@@ -24,6 +25,7 @@ int main(int argc,char** argv) {
     const int minute=atoi(argv[4]), frame=atoi(argv[5]);
     if (sleeping) motion.tick(frame*105);
     const bool tired=mode=="tired" || mode=="angry-tired";
+    if(tired) pet.setEnergy(20);
     renderer.draw({pet,motion,5,static_cast<uint32_t>(frame*90),atoi(argv[6])!=0,minute,tired});
     if(mode!="sleep" && mode!="tired" && mode!="angry-pixels") {
         const char* action=tired?"tired":sleeping?"sleep":mode=="angry-eat"?"eat":

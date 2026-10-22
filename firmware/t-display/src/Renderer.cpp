@@ -159,10 +159,27 @@ void Renderer::drawCallCue(const AppViewModel& model) {
 
 void Renderer::drawNeedBubble(const AppViewModel& model) {
     if (model.motion.state() != MotionState::Idle && model.motion.state() != MotionState::Walk) return;
-    const char* path = cue::bubblePath(cue::forPet(model.pet, model.tired));
+    const auto value = cue::forPet(model.pet, model.tired);
+    const auto detail = cue::restDetail(model.pet,model.tired,model.minuteOfDay);
+    const char* path = detail.kind==cue::RestKind::Energy
+        ? (value.angry ? "/ui/mood/energy_angry.vpa" : "/ui/mood/energy.vpa") : cue::bubblePath(value);
     if (path == nullptr) return;
     const auto position = cue::position(model.motion.x(), model.motion.y(), model.motion.direction());
     assets_.drawFrame(canvas_, path, 0, position.x, position.y, position.flip);
+    if(detail.kind==cue::RestKind::None) return;
+    const int x=cue::restLabelX(position.x);
+    canvas_.fillRect(x,25,100,18,TFT_BLACK);
+    canvas_.setTextDatum(TL_DATUM);
+    canvas_.setTextColor(TFT_WHITE,TFT_BLACK);
+    canvas_.drawString(detail.kind==cue::RestKind::Energy ? copy::lowEnergy(model.spanish) :
+                       copy::bedtime(model.spanish),x+2,26,1);
+    char number[12];
+    if(detail.kind==cue::RestKind::Energy) {
+        snprintf(number,sizeof(number),"%d/%d",detail.current,detail.target);
+        canvas_.fillRect(x+43,37,54,4,TFT_DARKGREY);
+        canvas_.fillRect(x+43,37,std::min(54,54*detail.current/detail.target),4,TFT_YELLOW);
+    } else snprintf(number,sizeof(number),"%02d:%02d",detail.bedtime/60,detail.bedtime%60);
+    canvas_.drawString(number,x+2,35,1);
 }
 
 void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {

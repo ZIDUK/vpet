@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 from scripts import build, build_tdisplay
 from scripts.tdisplay_assets import decode_vpa
 from scripts.sim_renderer import render_frame
@@ -85,8 +85,14 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
     frame=sprite.frames[index if mode=='tired' else sleep_frame]
     expected.paste(frame,(76+(88-frame.width)//2,43+88-frame.height),frame)
     if mode=='tired':
-        bubble=decode_vpa((root/'data/ui/mood/rest.vpa').read_bytes()).frames[0]
+        bedtime=minute>=1080 or minute<360
+        bubble=decode_vpa((root/'data/ui/mood'/('rest.vpa' if bedtime else 'energy.vpa')).read_bytes()).frames[0]
         expected.paste(bubble,(144,27),bubble)
+        draw=ImageDraw.Draw(expected)
+        draw.rectangle((42,25,141,42),fill=(0,0,0))
+        if not bedtime:
+            draw.rectangle((85,37,138,40),fill=(123,125,123))
+            draw.rectangle((85,37,111,40),fill=(255,255,0))
     else:
         expected=lights_off(expected)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
