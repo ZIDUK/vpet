@@ -661,14 +661,14 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             art = Image.new("RGB", thumb.size, (20, 20, 24)) if hidden else thumb.convert("RGB")
             frame.paste(art, (x, y), mask)
             card = evolution_card(index, pet, EVOLUTION_REGISTRY, spanish)
-            name_color = (145, 165, 165) if hidden else green if stage == current_stage else ink
+            name_color = (145, 165, 165) if hidden else ink
             draw.text((x + EVO_CHIP // 2, 98), card["label"],
                       fill=name_color, font=_status_font(8), anchor="mm")
         selected_card = evolution_card(selected, pet, EVOLUTION_REGISTRY, spanish)
         stage_status = selected_card["status"]
         progress_label = "%s  %d/5" % (stage_status, selected + 1)
         draw.text((120, 111), progress_label,
-                  fill=green if selected == current_stage else ink, font=_status_font(9), anchor="mm")
+                  fill=ink, font=_status_font(9), anchor="mm")
         draw.rounded_rectangle((10, 122, 230, 129), radius=3, outline=outline)
         filled = 218 * (current_stage + 1) // EVOLUTION_NODE_COUNT
         draw.rounded_rectangle((11, 123, 11 + filled, 128), radius=2, fill=green)

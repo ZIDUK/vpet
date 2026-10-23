@@ -83,3 +83,31 @@ def test_simulator_stage_icons_preserve_colors_selection_and_unlocked_menus(menu
                                 profile=get_display_profile("tdisplay"))
         actual, baseline = frame(species), frame("rookie")
         assert actual.crop((0, 0, 240, 24)).tobytes() == expected_bar(baseline, species, False).tobytes()
+
+
+@pytest.mark.parametrize("species_id,species", SPECIES)
+@pytest.mark.parametrize("language", ["ES", "EN"])
+def test_board_evolution_current_text_uses_dark_ink(menu_stage_pixels, species_id, species, language):
+    from core.evolution import evolution_current_stage
+    _, data, binary = menu_stage_pixels
+    pet = Pet(species=species, state="egg" if species == "egg" else "live")
+    subprocess.run([str(binary), str(data), str(species_id), "evolution",
+                    str(evolution_current_stage(pet)), language], check=True, stdout=subprocess.DEVNULL)
+
+
+@pytest.mark.parametrize("species_id,species", SPECIES)
+@pytest.mark.parametrize("language", ["ES", "EN"])
+def test_simulator_evolution_current_text_uses_dark_ink(menu_stage_pixels, species_id, species, language):
+    from core.evolution import EVO_CHIP, evolution_current_stage, evolution_tree_xy, evolution_window
+    sim, _, _ = menu_stage_pixels
+    pet = Pet(species=species, state="egg" if species == "egg" else "live")
+    pet.language = language
+    current = evolution_current_stage(pet)
+    frame = render_frame(sim, pet, menu_index=7, panel_mode="evolution", panel_index=current,
+                         profile=get_display_profile("tdisplay"))
+    x, _ = evolution_tree_xy(current, evolution_window(current)[0])
+    for bounds in ((x - 10, 92, x + EVO_CHIP + 10, 104), (0, 104, 240, 119)):
+        colors = set(frame.crop(bounds).getdata())
+        assert any(max(color) < 110 for color in colors)
+        assert (66, 190, 140) not in colors
+    assert frame.getpixel((12, 125)) == (66, 190, 140)  # Progress color is unchanged.

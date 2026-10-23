@@ -4,6 +4,24 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Contraste De Evolucion
+
+Nombre de la etapa actual y NOW/AHORA usan la tinta oscura existente en
+vez de verde claro. Solo cambia el color de esos textos; seleccion,
+progreso, siluetas, posiciones, reglas y partida intactos. Firmware y sim
+corregidos. Veinte casos nuevos verifican cinco etapas en ES/EN, mediante
+colores enviados a TFT y pixeles del simulador; 50 comparaciones contra
+la revision anterior confirman cambios limitados a las etiquetas.
+55 pruebas focalizadas aprobadas y ESP32 compilado: RAM 56116/327680,
+app 1015425/4194304. Vista previa en `out/evolution-contrast/after.png`.
+Suite general final: 1512 Python aprobadas en 247.33 s; avisos existentes
+conservados. Catalogo generado comprobado y diff sin errores de espacios.
+Carga y aceptacion fisica pendientes; se solicita autorizacion para cargar
+esta correccion junto al salto NEXT preparado anteriormente, sin completar
+antes la validacion pendiente de Status. Sin reescribir LittleFS ni NVS.
+La nota de Mochila queda en este documento;
+el catalogo generado se regenera desde su fuente, sin edicion manual.
+
 ## Menus Por Etapa
 
 La barra atenua al 50% las actividades bloqueadas por etapa: huevo

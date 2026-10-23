@@ -24,9 +24,12 @@ public:
 class TFT_eSprite {
     int width = 240, height = 135;
     bool swapBytes = false;
+    uint16_t textForeground = 0, textBackground = 0;
 public:
+    struct TextDraw { std::string value; int x, y; uint16_t foreground, background; };
     std::vector<uint16_t> pixels = std::vector<uint16_t>(240 * 135);
     std::vector<std::string> labels;
+    std::vector<TextDraw> textDraws;
     explicit TFT_eSprite(TFT_eSprite* = nullptr) {}
     void setColorDepth(int) {}
     void setSwapBytes(bool enabled) { swapBytes=enabled; }
@@ -60,10 +63,15 @@ public:
         for(int i=0;i<=steps;++i) drawPixel(x+(x1-x)*i/std::max(steps,1),y+(y1-y)*i/std::max(steps,1),color);
     }
     void setTextDatum(int) {}
-    void setTextColor(uint16_t,uint16_t) {}
+    void setTextColor(uint16_t foreground,uint16_t background) {
+        textForeground=foreground; textBackground=background;
+    }
     // Capture labels; these tests exercise production sprite draws, not TFT font rasterization.
     int textWidth(const std::string& value,int font=1) { return int(value.size())*(font==1 ? 6 : 8); }
-    void drawString(const std::string& value,int,int,int=1) { labels.push_back(value); }
+    void drawString(const std::string& value,int x,int y,int=1) {
+        labels.push_back(value);
+        textDraws.push_back({value,x,y,textForeground,textBackground});
+    }
     void drawNumber(int value,int x,int y,int font=1) { drawString(std::to_string(value),x,y,font); }
     void pushSprite(int,int) {}
     void pushImage(int x, int y, int w, int h, const uint16_t* colors) {

@@ -561,7 +561,7 @@ void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index, bool
     display_.drawRoundRect(x, y, kEvoChip, kEvoChip, 4, active ? TFT_YELLOW : kInk);
     assets_.drawFrame(display_, portraitPath(species, true), 0, x, y, false, hidden ? TFT_BLACK : -1);
     display_.setTextDatum(MC_DATUM);
-    display_.setTextColor(hidden ? TFT_DARKGREY : stage == navigation.currentStage() ? TFT_GREEN : kInk, kPanel);
+    display_.setTextColor(hidden ? TFT_DARKGREY : kInk, kPanel);
     display_.drawString(hidden ? "???" : copy::evoShort(stage, spanish), x + kEvoChip / 2, y + kEvoChip + 7, 1);
     display_.setTextDatum(TL_DATUM);
 }
@@ -590,7 +590,7 @@ void Panels::drawEvolutionProgress(const Navigation& navigation, bool spanish) {
     const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
     const bool hidden = selected > navigation.currentStage();
     display_.setTextDatum(MC_DATUM);
-    display_.setTextColor(hidden ? TFT_DARKGREY : selected == navigation.currentStage() ? TFT_GREEN : kInk, kPanel);
+    display_.setTextColor(hidden ? TFT_DARKGREY : kInk, kPanel);
     char stageLabel[28];
     snprintf(stageLabel, sizeof(stageLabel), "%s  %u/5",
              hidden ? (spanish ? "POR DESCUBRIR" : "UNDISCOVERED") :

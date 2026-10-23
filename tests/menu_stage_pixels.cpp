@@ -4,13 +4,15 @@
 #include "vpet/MenuBar.h"
 #include "vpet/Panels.h"
 #include "vpet/Renderer.h"
+#include "vpet/Strings.h"
 
 int main(int argc, char** argv) {
-    assert(argc == 5);
+    assert(argc == 5 || argc == 6);
     assetRoot = argv[1];
     const auto species = static_cast<vpet::SpeciesId>(atoi(argv[2]));
     const std::string view = argv[3];
     const uint8_t selected = atoi(argv[4]);
+    const bool spanish = argc == 5 || std::string(argv[5]) == "ES";
     vpet::PetState pet;
     pet.evolveTo(vpet::SpeciesId::Rookie);
     TFT_eSPI display;
@@ -30,6 +32,12 @@ int main(int argc, char** argv) {
         motion.setSpecies(pet.species());
         if (view == "home") renderer.draw({pet,motion,selected,0,true});
         else if (view == "status") panels.draw(navigation,pet,vpet::BleStatus::Off,clock,"ES",false);
+        else if (view == "evolution") {
+            navigation.setCurrentSpecies(pet.species());
+            navigation.setPanel(vpet::PanelId::EvolutionTree);
+            navigation.setPanelIndex(selected);
+            panels.draw(navigation,pet,vpet::BleStatus::Off,clock,spanish ? "ES" : "EN",false);
+        }
         else panels.drawExploration(exploration,pet,1791979200,0,"ES",false,selected);
     };
     auto menuOpens = [&]() {
@@ -45,6 +53,20 @@ int main(int argc, char** argv) {
     const auto warm = menuOpens();
     draw();
     if (view != "explore-uncached") assert(menuOpens() == warm);
+    if (view == "evolution") {
+        bool nameFound=false, progressFound=false;
+        for (const auto& text : canvas.textDraws) {
+            if (text.value == vpet::copy::evoShort(navigation.currentStage(),spanish)) {
+                assert(text.foreground == 0x31C7);
+                nameFound=true;
+            }
+            if (text.value.find(vpet::copy::evoNow(spanish)) == 0) {
+                assert(text.foreground == 0x31C7);
+                progressFound=true;
+            }
+        }
+        assert(nameFound && progressFound);
+    }
     printf("P6\n240 135\n255\n");
     for (int y=0;y<135;++y) for (int x=0;x<240;++x) {
         const uint16_t pixel=canvas.readPixel(x,y);
