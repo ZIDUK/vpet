@@ -78,11 +78,14 @@ Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_e
 void Panels::drawExploration(const ExplorationSession& session,const PetState& pet,
                             uint64_t wall,uint32_t nowMs,const char* language,bool home,uint8_t menu) {
     if (scene_) {
-        if (sceneKind_ != Scene::Exploration) {
+        if (sceneKind_ != Scene::Exploration || sceneSpecies_ != pet.species()) {
             scene_->fillSprite(exploration_ui::ink);
-            for (uint8_t i=0;i<menu_bar::count;++i)
+            for (uint8_t i=0;i<menu_bar::count;++i) {
                 assets_.drawFrame(*scene_,menu_bar::icons[i],0,menu_bar::iconX(i),2);
+                menu_bar::dimLockedIcon(*scene_,pet.species(),i);
+            }
             sceneKind_ = Scene::Exploration;
+            sceneSpecies_ = pet.species();
         }
         memcpy(display_.getPointer(),scene_->getPointer(),240*24*2);
     }
@@ -91,6 +94,7 @@ void Panels::drawExploration(const ExplorationSession& session,const PetState& p
         AssetStore& assets;
         void fillRect(int x,int y,int w,int h,uint16_t color) { if(w>0 && h>0) pixels.fillRect(x,y,w,h,color); }
         void drawPixel(int x,int y,uint16_t color) { pixels.drawPixel(x,y,color); }
+        uint16_t readPixel(int x,int y) { return pixels.readPixel(x,y); }
         void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
     } canvas{display_,assets_};
     exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language)).draw(home,menu,scene_==nullptr);
@@ -143,6 +147,7 @@ void Panels::drawChrome(uint8_t selected, const char* title, bool calling) {
     display_.fillScreen(TFT_BLACK);
     for (uint8_t index = 0; index < menu_bar::count; ++index) {
         assets_.drawFrame(display_, menu_bar::icons[index], 0, menu_bar::iconX(index), 2);
+        menu_bar::dimLockedIcon(display_,menuSpecies_,index);
     }
     const int16_t selectorX = menu_bar::left(selected), width = menu_bar::width(selected);
     display_.drawRect(selectorX, 0, width, 24, TFT_YELLOW);
@@ -803,7 +808,8 @@ void Panels::draw(
     const PanelId panel = navigation.panel();
     const bool spanish = languageIsSpanish(language);
     const bool calling = pet.callReason() != CallReason::None;
-    const bool panelChanged = panel != lastPanel_ || spanish != lastSpanish_;
+    const bool panelChanged = panel != lastPanel_ || spanish != lastSpanish_ || menuSpecies_ != pet.species();
+    menuSpecies_ = pet.species();
     lastPanel_ = panel;
     lastSpanish_ = spanish;
     switch (panel) {

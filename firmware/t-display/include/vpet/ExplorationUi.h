@@ -125,7 +125,10 @@ public:
     }
     void draw(bool home=false,uint8_t menu=3,bool chrome=true) {
         rect(0,chrome ? 0 : 24,240,chrome ? 135 : 111,ink);
-        if(chrome) for(uint8_t i=0;i<menu_bar::count;++i) icon(menu_bar::icons[i],menu_bar::iconX(i),2);
+        if(chrome) for(uint8_t i=0;i<menu_bar::count;++i) {
+            icon(menu_bar::icons[i],menu_bar::iconX(i),2);
+            menu_bar::dimLockedIcon(c,pet.species(),i);
+        }
         outline(menu_bar::left(menu),0,menu_bar::width(menu),24,yellow);
         outline(menu_bar::left(menu)+1,1,menu_bar::width(menu)-2,22,yellow);
         if(!ExplorationSession::eligible(pet)) {

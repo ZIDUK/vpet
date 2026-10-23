@@ -4,6 +4,20 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Menus Por Etapa
+
+La barra atenua al 50% las actividades bloqueadas por etapa: huevo
+Alimentar/Entrenar/Explorar/Batalla/Descanso; Sparkmon Entrenar/Explorar/
+Batalla. Firemon y etapas posteriores conservan brillo. No se cambia el
+acceso a vistas de consulta, el marco seleccionado ni el recorrido NEXT.
+Home, paneles y Exploracion coinciden con el simulador T-Display y
+refrescan la barra al evolucionar. Sin textos ni cambios de reglas/NVS.
+1478 Python y 185 nativas aprobadas. Firmware cargado y verificado por
+digest, con globos sin textos incluidos; LittleFS/NVS no reescritos.
+Arranque VPET_READY, heap libre 66128 estable, minimo 61000, BLE conectado
+y sin fatal/reinicio en 45 s. Aceptacion visual fisica solicitada.
+[Contrato y evidencia](superpowers/plans/2026-10-22-stage-menu-dimming.md).
+
 ## Training: velocidad y Tecnicas
 
 Reporte reabierto el 2026-10-22: vistas previas demasiado rapidas solo en
@@ -25,9 +39,9 @@ conservar. Se eliminan esas tres capas y el fondo negro en ambos renderers.
 Poca energia queda solo con gotas; hora de dormir sigue solo con carita.
 No cambian reglas de descanso, prioridad, ocultacion, metas internas,
 assets, Status, Training, Arena ni NVS.
-1443 Python y 185 nativas aprobadas; firmware compilado. Carga pendiente
-de reconectar USB: el primer intento no pudo abrir el puerto y no escribio
-la placa. No confundir la vista previa corregida con firmware instalado.
+La primera carga no pudo abrir el puerto y no escribio la placa. Tras
+reconectar, se carga junto a menus atenuados: 1478 Python y 185 nativas,
+digest de firmware y arranque verificados. Falta aceptacion visual fisica.
 [Correccion y evidencia](superpowers/plans/2026-10-22-rest-icon-only.md).
 
 ## Simbolos de descanso: entrega anterior

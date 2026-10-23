@@ -56,3 +56,14 @@ Primer intento de carga: el puerto USB desaparecio despues del respaldo.
 Esptool fallo al abrirlo (`No such file or directory`), antes de borrar o
 escribir flash. Registro: `out/rest-icon-only/upload.log`. Se solicita
 reconexion; este intento no cambia firmware, LittleFS ni NVS de la placa.
+
+## Entrega Conjunta Posterior
+
+El usuario reconecta USB y autoriza cargar ambas mejoras: estos avisos
+sin textos y los menus atenuados por etapa. Se escribe solo firmware,
+verificado por digest independiente; no se vuelve a escribir LittleFS
+ni NVS. Esta entrega usa la imagen nueva
+`529e7374819ff1859e3582be8e051a606b8b6d69938a16589fae237b00aacb22`,
+no el binario preparado anterior. Respaldo, registros y verificacion de
+arranque se documentan en
+[Menus por etapa](2026-10-22-stage-menu-dimming.md).

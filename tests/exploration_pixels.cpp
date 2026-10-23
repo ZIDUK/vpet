@@ -8,6 +8,7 @@
 struct Canvas {
     std::string root;
     uint16_t pixels[240*135] = {};
+    uint16_t readPixel(int x,int y) const { return pixels[y*240+x]; }
     void drawPixel(int x,int y,uint16_t color) {
         if(x<0 || x>=240 || y<0 || y>=135) throw std::runtime_error("Exploration pixel out of bounds");
         pixels[y*240+x]=color;

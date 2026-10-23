@@ -118,7 +118,7 @@ const char* Renderer::animationPath(const AppViewModel& model) const {
     return path;
 }
 
-void Renderer::rebuildStaticScene(bool night) {
+void Renderer::rebuildStaticScene(bool night, SpeciesId species) {
     assets_.drawFrame(
         staticScene_,
         night ? "/backgrounds/background_night.vpa" : "/backgrounds/background.vpa",
@@ -129,9 +129,11 @@ void Renderer::rebuildStaticScene(bool night) {
     staticScene_.fillRect(0, 0, 240, 24, TFT_BLACK);
     for (uint8_t index = 0; index < menu_bar::count; ++index) {
         assets_.drawFrame(staticScene_, menu_bar::icons[index], 0, menu_bar::iconX(index), 2);
+        menu_bar::dimLockedIcon(staticScene_,species,index);
     }
     staticSceneReady_ = true;
     staticSceneNight_ = night;
+    staticSceneSpecies_ = species;
 }
 
 void Renderer::drawSelector(uint8_t selected, bool calling) {
@@ -170,8 +172,8 @@ void Renderer::drawNeedBubble(const AppViewModel& model) {
 
 void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {
     const bool night = SleepRoutine::isNight(model.minuteOfDay);
-    if (!staticSceneReady_ || staticSceneNight_ != night) {
-        rebuildStaticScene(night);
+    if (!staticSceneReady_ || staticSceneNight_ != night || staticSceneSpecies_ != model.pet.species()) {
+        rebuildStaticScene(night,model.pet.species());
     }
     memcpy(canvas_.getPointer(), staticScene_.getPointer(), 240 * 135 * 2);
     drawSelector(model.menuIndex, model.pet.callReason() != CallReason::None);

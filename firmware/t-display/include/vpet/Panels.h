@@ -92,6 +92,8 @@ private:
     TFT_eSprite* scene_;
     enum class Scene : uint8_t { None, Arena, Exploration, TrainingFooter };
     Scene sceneKind_ = Scene::None;
+    SpeciesId sceneSpecies_ = SpeciesId::Egg;
+    SpeciesId menuSpecies_ = SpeciesId::Egg;
     uint8_t trainingFooterCursor_ = 255;
     uint16_t arenaFooterKey_ = 0xFFFF;
     PanelId lastPanel_ = PanelId::Home;

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "vpet/PetState.h"
 
 namespace vpet { namespace menu_bar {
 constexpr uint8_t count = 9;
@@ -11,4 +12,16 @@ constexpr const char* icons[] = {
     "/ui/icons/explore.vpa", "/ui/icons/battle.vpa", "/ui/icons/rest.vpa",
     "/ui/icons/backpack.vpa", "/ui/icons/pedia.vpa", "/ui/icons/options.vpa"
 };
+inline bool availableAtStage(SpeciesId species, uint8_t index) {
+    if (index == 2 || index == 3 || index == 4)
+        return species != SpeciesId::Egg && species != SpeciesId::Baby;
+    if (index == 1 || index == 5) return species != SpeciesId::Egg;
+    return true;
+}
+
+template<class Canvas> void dimLockedIcon(Canvas& canvas, SpeciesId species, uint8_t index) {
+    if (availableAtStage(species,index)) return;
+    for (int y=2;y<22;++y) for (int x=iconX(index);x<iconX(index)+20;++x)
+        canvas.drawPixel(x,y,(canvas.readPixel(x,y)>>1)&0x7BEF);
+}
 } }

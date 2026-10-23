@@ -237,6 +237,14 @@ def _paste_ui_icon(frame, build_dir, name, x, y, size=20):
     frame.paste(icon, (x, y), _icon_glyph_mask(icon))
 
 
+def _menu_available_at_stage(species, index):
+    if index in (2, 3, 4):
+        return species not in ("egg", "baby")
+    if index in (1, 5):
+        return species != "egg"
+    return True
+
+
 def _mix(color, other, amount):
     return tuple(int(color[index] * (1 - amount) + other[index] * amount) for index in range(3))
 
@@ -790,6 +798,8 @@ def render_frame(
     stride = profile.width // len(icons)
     for index, path in enumerate(icons):
         icon = _load_image(device_path(build_dir, path)).convert("RGB")
+        if profile.name == "tdisplay" and not _menu_available_at_stage(pet.species, index):
+            icon = icon.point(lambda channel: channel >> 1)
         icon_x = index * stride + (stride - profile.icon_size) // 2
         icon_y = (profile.menu_height - profile.icon_size) // 2
         frame.paste(icon, (icon_x, icon_y))
