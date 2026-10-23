@@ -54,6 +54,29 @@ def test_home_bag_lists_adopted_items_and_blocks_combat_consumption():
     assert p.stats['p'] == 30 and p.adopted_inventory['blue_apple'] == 0
 
 
+@pytest.mark.parametrize('species', ['baby', 'rookie', 'champion', 'ultimate'])
+def test_all_starter_bag_items_respect_their_context_and_need(species):
+    from core.inventory import use_inventory_item
+    from core.adopted_items import menu_index
+    p = Pet(species=species, state='live')
+    p.stats['p'] = 100
+    before = dict(p.adopted_inventory)
+    for item_id in ('small_recovery', 'mp_floppy', 'off_disk', 'bandage', 'blue_apple'):
+        assert use_inventory_item(p, menu_index(item_id)) == 'blocked'
+    assert p.adopted_inventory == before
+    p.stats['p'] = 10
+    p.injured = True
+    p.sleep.asleep = True
+    for item_id in ('bandage', 'blue_apple'):
+        assert use_inventory_item(p, menu_index(item_id)) == 'blocked'
+    assert p.adopted_inventory == before
+    p.sleep.asleep = False
+    assert use_inventory_item(p, menu_index('bandage')) == 'used'
+    assert not p.injured and p.adopted_inventory['bandage'] == 0
+    assert use_inventory_item(p, menu_index('blue_apple')) == 'used'
+    assert p.stats['p'] == 30 and p.adopted_inventory['blue_apple'] == 0
+
+
 def test_cold_blocks_care_combat_and_manual_without_spending():
     from core.inventory import use_inventory_item
     from core.adopted_items import menu_index

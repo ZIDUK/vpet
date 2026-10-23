@@ -33,6 +33,21 @@ int main() {
     Store kv; SettingsStore storage(kv); Renderer renderer; Panels panels; BleService ble;
     PetState p; p.restore(SpeciesId::Rookie,70,60,70,0,90,0); p.rollDna(42);
     Settings settings; assert(storage.save(p,settings));
+    // The first key after loading must already use the saved pet's stage.
+    for (auto species : {SpeciesId::Egg, SpeciesId::Baby, SpeciesId::Rookie,
+                         SpeciesId::Champion, SpeciesId::Ultimate}) {
+        Store stageKv; SettingsStore stageStorage(stageKv);
+        Renderer stageRenderer; Panels stagePanels; BleService stageBle;
+        PetState stagePet; stagePet.restore(species,70,70,70,0,90,0);
+        assert(stageStorage.save(stagePet,settings));
+        App stageApp(stageRenderer,stagePanels,stageStorage,stageBle,clockNow);
+        stageApp.begin(0);
+        stageApp.tick(50,InputEvent::Next);
+        assert(stageRenderer.menuIndex==(species==SpeciesId::Egg ? 6 : 1));
+        stageApp.tick(100,InputEvent::Next);
+        assert(stageRenderer.menuIndex==(species==SpeciesId::Egg ? 7 :
+               species==SpeciesId::Baby ? 5 : 2));
+    }
     App app(renderer,panels,storage,ble,clockNow); app.begin(0);
     uint32_t ms=0;
     auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
@@ -137,4 +152,22 @@ int main() {
     const int beforeTraining=renderer.invalidations;
     training.tick(200,InputEvent::None);
     assert(renderer.invalidations==beforeTraining+1);
+
+    // A usable care item is consumed by the actual bag input handler and survives reload.
+    Store bagKv; SettingsStore bagStorage(bagKv);
+    PetState bagPet; bagPet.restore(SpeciesId::Baby,70,70,10,0,90,0);
+    bagPet.restoreItems(0,0,0,0,0,0);
+    const int apple=adopted::indexOf("blue_apple");
+    bagPet.adoptedStock=AdoptedInventory(); bagPet.adoptedStock.set(apple,1);
+    assert(bagStorage.save(bagPet,settings));
+    App bag(renderer,panels,bagStorage,ble,clockNow); bag.begin(0); ms=0;
+    auto bagKey=[&](InputEvent e) { ms+=50; bag.tick(ms,e); };
+    for(int i=0;i<3;++i) bagKey(InputEvent::Next); // Feed, Rest, Backpack.
+    bagKey(InputEvent::Action); assert(panels.lastPanel==PanelId::Inventory);
+    bagKey(InputEvent::Action);
+    assert(bagStorage.load(bagPet,settings)==LoadResult::Loaded);
+    assert(bagPet.happiness()==30 && bagPet.adoptedStock.count(apple)==0);
+    bagKey(InputEvent::Action); // Empty bag now selects Back, not a second use.
+    assert(bagStorage.load(bagPet,settings)==LoadResult::Loaded);
+    assert(bagPet.happiness()==30 && bagPet.adoptedStock.count(apple)==0);
 }

@@ -563,6 +563,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
 
     }
 
+    navigation_.setCurrentSpecies(pet_.species());
     const bool acceptsInput =
         navigation_.panel() != PanelId::Home ||
         pet_.pendingAction() == Action::None ||

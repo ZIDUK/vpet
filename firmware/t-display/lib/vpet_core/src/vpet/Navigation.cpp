@@ -1,4 +1,5 @@
 #include "vpet/Navigation.h"
+#include "vpet/MenuAccess.h"
 
 namespace vpet {
 namespace {
@@ -95,7 +96,8 @@ void Navigation::openSelectedMenu() {
 void Navigation::dispatch(InputEvent event) {
     if (event == InputEvent::None) return;
     if (panel_ == PanelId::Home) {
-        if (event == InputEvent::Next) menuIndex_ = (menuIndex_ + 1) % kMenuCount;
+        if (event == InputEvent::Next)
+            menuIndex_ = menu_access::next(kEvolutionStages[currentStage_], menuIndex_);
         else if (event == InputEvent::Action) openSelectedMenu();
         return;
     }

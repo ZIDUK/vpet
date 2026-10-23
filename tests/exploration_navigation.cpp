@@ -4,6 +4,21 @@
 int main() {
     using namespace vpet;
     Navigation n;
+    const uint8_t eggMenus[] = {0, 6, 7, 8};
+    const uint8_t babyMenus[] = {0, 1, 5, 6, 7, 8};
+    for (int cycle = 0; cycle < 2; ++cycle) {
+        for (auto menu : eggMenus) {
+            assert(n.menuIndex() == menu);
+            n.dispatch(InputEvent::Next);
+        }
+    }
+    n.setCurrentSpecies(SpeciesId::Baby);
+    n.select(SpeciesId::Ultimate); // Pedia selection must not change the active stage.
+    for (auto menu : babyMenus) {
+        assert(n.menuIndex() == menu);
+        n.dispatch(InputEvent::Next);
+    }
+    n.setCurrentSpecies(SpeciesId::Rookie);
     for (int i = 0; i < 9; ++i) {
         assert(n.menuIndex() == i);
         n.dispatch(InputEvent::Next);

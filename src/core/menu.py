@@ -12,6 +12,22 @@ from core.training import (MENU_TRAIN_ENERGY_COST, MENU_TRAIN_STATS, train_menu,
                             menu_train_block_reason)
 
 
+def tdisplay_menu_available(species, index):
+    if index in (2, 3, 4):
+        return species not in ("egg", "baby")
+    if index in (1, 5):
+        return species != "egg"
+    return True
+
+
+def next_tdisplay_menu(species, index):
+    for _ in range(9):
+        index = (index + 1) % 9
+        if tdisplay_menu_available(species, index):
+            return index
+    return 0
+
+
 def activate_menu_item(pet, motion, menu_index, now, hour=12,
                         menu_train_stat=None):
     if motion.state == MOTION_SLEEP:

@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
-#include "vpet/PetState.h"
+#include "vpet/MenuAccess.h"
 
 namespace vpet { namespace menu_bar {
-constexpr uint8_t count = 9;
+constexpr uint8_t count = menu_access::count;
 constexpr int left(uint8_t index) { return (index % count) * 240 / count; }
 constexpr int width(uint8_t index) { return ((index % count) + 1) * 240 / count - left(index); }
 constexpr int iconX(uint8_t index) { return left(index) + (width(index) - 20) / 2; }
@@ -13,10 +13,7 @@ constexpr const char* icons[] = {
     "/ui/icons/backpack.vpa", "/ui/icons/pedia.vpa", "/ui/icons/options.vpa"
 };
 inline bool availableAtStage(SpeciesId species, uint8_t index) {
-    if (index == 2 || index == 3 || index == 4)
-        return species != SpeciesId::Egg && species != SpeciesId::Baby;
-    if (index == 1 || index == 5) return species != SpeciesId::Egg;
-    return true;
+    return menu_access::availableAtStage(species, index);
 }
 
 template<class Canvas> void dimLockedIcon(Canvas& canvas, SpeciesId species, uint8_t index) {

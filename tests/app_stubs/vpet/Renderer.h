@@ -9,8 +9,8 @@ struct AppViewModel {
         : pet(p),motion(m),menuIndex(menu),nowMs(ms),spanish(es),minuteOfDay(minute),tired(sleepy) {}
 };
 struct Renderer {
-    int invalidations=0, minute=720; bool sleeping=false, tired=false;
+    int invalidations=0, minute=720; uint8_t menuIndex=0; bool sleeping=false, tired=false;
     void invalidate() { ++invalidations; }
-    void draw(const AppViewModel& m) { minute=m.minuteOfDay; sleeping=m.pet.sleep.asleep; tired=m.tired; }
+    void draw(const AppViewModel& m) { menuIndex=m.menuIndex; minute=m.minuteOfDay; sleeping=m.pet.sleep.asleep; tired=m.tired; }
 };
 }

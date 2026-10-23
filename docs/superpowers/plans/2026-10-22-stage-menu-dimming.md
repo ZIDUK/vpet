@@ -12,7 +12,8 @@ vean mas desvanecidos, por ejemplo Batalla en Sparkmon.
   en las etapas iniciales; sus iconos conservan brillo normal.
 - Solo representa restricciones por etapa. No agrega bloqueos por hambre,
   lesion, pausa o sueno, ni cambia acciones, equipo, balance o NVS.
-- No agrega textos, candados, avisos ni saltos al recorrer NEXT.
+- No agrega textos, candados ni avisos. La primera carga conservaba NEXT;
+  tras probarla, el usuario solicita que tambien salte los iconos atenuados.
 
 ## Implementacion
 
@@ -84,5 +85,43 @@ Observacion posterior de 45 s: cuatro muestras, heap libre estable en
 66128, minimo 61000, BLE conectado, sin fatal ni reinicios. No hubo
 eventos de botones en ese intervalo; no mide FPS ni latencia de uso.
 Registros `board-boot.log` y `board-runtime.json` en el mismo directorio.
-Se solicita al usuario aceptar visualmente atenuacion, seleccion y
-ausencia de etiquetas en los globos; sigue pendiente esa confirmacion.
+Usuario confirma visualmente atenuacion y globos sin textos. Solicita
+ademas saltar los iconos bloqueados al recorrer NEXT.
+
+## Revision: Saltar Actividades Bloqueadas
+
+La misma regla portable alimenta el cursor y la atenuacion en cada runtime.
+MenuAccess.h se comparte entre Navigation y MenuBar; core.menu comparte
+el contrato entre el simulador y su renderer. Solo cambia NEXT en Home
+T-Display; los cursores internos y el perfil Pico conservan su recorrido.
+
+- Huevo: Status -> Mochila -> Pedia -> Opciones -> Status.
+- Sparkmon: Status -> Alimentar -> Descanso -> Mochila -> Pedia -> Opciones.
+- Firemon y posteriores: las nueve opciones, en su orden original.
+- Se usa la especie actual antes de procesar la primera tecla tras cargar
+  o evolucionar, no la especie consultada en Pedia.
+- Sin cambios en assets, balance, consumo, guardado o enums numericos.
+
+Pruebas nuevas: recorrido y vuelta completa, seleccion Pedia independiente,
+primera tecla de App en cinco etapas, input pygame T-Display/Pico y consumo
+persistido de un objeto de cuidado desde el handler real de Mochila.
+Las pruebas del kit inicial distinguen combate, lesion, animo lleno y sueno.
+No identifican por si mismas la causa de bloqueo en la partida del usuario.
+
+La regresion C++ fallo primero porque NEXT aun visitaba Alimentar en
+Huevo; el handler App tambien fallo en su primera tecla. Ambas pasan
+con el filtro por etapa. La seleccion de Pedia no habilita actividades.
+
+185 pruebas nativas aprobadas. Compilacion final ESP32 correcta:
+RAM estatica 56116/327680 (sin aumento), app 1015453/4194304.
+Pico y T-Display regenerados por los builders; los assets conservan
+225 archivos y 10789125 bytes de payload. Las copias generadas de menu.py
+son identicas al fuente. No hay recursos ni framebuffer nuevos.
+
+Suite Python completa: 1492 aprobadas en 259.59 s; avisos existentes
+conservados. Comprobacion final de diff sin errores de espacios.
+Firmware preparado SHA-256:
+`9acf10321e49a51c66819ec4e3e54655b1f36e1db522806f77a75d093849b167`.
+Puerto USB presente, pero no se ha escrito esta revision: se solicita
+autorizacion nueva para omitir la validacion previa pendiente de Status.
+La excepcion anterior no se extiende automaticamente a esta nueva carga.

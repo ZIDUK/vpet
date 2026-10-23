@@ -51,7 +51,7 @@ from core.inventory import (
     next_visible_inventory_index,
     use_inventory_item,
 )
-from core.menu import activate_menu_item
+from core.menu import activate_menu_item, next_tdisplay_menu
 from core.motion import MOTION_IDLE, MOTION_SLEEP, PetMotion
 from core.pet import Pet
 from core.options import OptionsSession
@@ -194,7 +194,9 @@ def main():
                         options_session.next()
                     else:
                         panel_mode = None
-                        menu_index = (menu_index + 1) % len(menu_icons)
+                        menu_index = (next_tdisplay_menu(pet.species, menu_index)
+                                      if profile.name == "tdisplay"
+                                      else (menu_index + 1) % len(menu_icons))
                 elif event.key == pygame.K_a and pet.is_live:
                     if profile.name == "tdisplay" and pet.sleep.asleep and panel_mode is None and menu_index == rest_index:
                         panel_mode = "rest"

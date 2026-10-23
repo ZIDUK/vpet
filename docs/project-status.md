@@ -9,14 +9,27 @@ Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-deliver
 La barra atenua al 50% las actividades bloqueadas por etapa: huevo
 Alimentar/Entrenar/Explorar/Batalla/Descanso; Sparkmon Entrenar/Explorar/
 Batalla. Firemon y etapas posteriores conservan brillo. No se cambia el
-acceso a vistas de consulta, el marco seleccionado ni el recorrido NEXT.
+acceso a vistas de consulta ni el marco seleccionado. Tras la confirmacion
+visual del usuario, NEXT ahora salta las actividades bloqueadas por etapa;
+no salta necesidades temporales como sueno o cansancio.
 Home, paneles y Exploracion coinciden con el simulador T-Display y
 refrescan la barra al evolucionar. Sin textos ni cambios de reglas/NVS.
 1478 Python y 185 nativas aprobadas. Firmware cargado y verificado por
 digest, con globos sin textos incluidos; LittleFS/NVS no reescritos.
 Arranque VPET_READY, heap libre 66128 estable, minimo 61000, BLE conectado
-y sin fatal/reinicio en 45 s. Aceptacion visual fisica solicitada.
+y sin fatal/reinicio en 45 s. Usuario confirma atenuacion y globos sin
+textos; aceptacion fisica del nuevo salto NEXT pendiente.
+Revision NEXT: 1492 Python y 185 nativas aprobadas; compilacion final
+correcta, RAM estatica sin aumento. Sin escribir la placa todavia,
+pendiente autorizacion de esta revision respecto al gate de Status.
 [Contrato y evidencia](superpowers/plans/2026-10-22-stage-menu-dimming.md).
+
+Reporte de Mochila: el usuario intenta todos los objetos. Pruebas del
+handler real App confirman consumo de manzana azul y descuento persistido
+al recargar cuando hay animo por recuperar. Los objetos BAT solo funcionan
+en Arena; venda requiere lesion y cuidado no se gasta sin efecto ni dormido.
+No se han cambiado esas reglas ni identificado aun la condicion concreta
+de la partida fisica. [Contrato](adopted-items.md).
 
 ## Training: velocidad y Tecnicas
 
@@ -41,7 +54,8 @@ No cambian reglas de descanso, prioridad, ocultacion, metas internas,
 assets, Status, Training, Arena ni NVS.
 La primera carga no pudo abrir el puerto y no escribio la placa. Tras
 reconectar, se carga junto a menus atenuados: 1478 Python y 185 nativas,
-digest de firmware y arranque verificados. Falta aceptacion visual fisica.
+digest de firmware y arranque verificados. Usuario confirma que se ven sin
+textos; desaparicion al resolver necesidad sigue pendiente en placa.
 [Correccion y evidencia](superpowers/plans/2026-10-22-rest-icon-only.md).
 
 ## Simbolos de descanso: entrega anterior
