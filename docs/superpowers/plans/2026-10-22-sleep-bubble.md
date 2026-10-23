@@ -25,7 +25,7 @@ lights-off dimming. Domain rules, persistence, combat pacing and Status stay int
 - [x] Inspect an actual C++ pixel preview and generated icon at display scale.
 - [x] Back up critical flash, upload app/FS, verify both digests and unchanged
   critical bytes, reset to normal boot, inspect bounded runtime telemetry.
-- [ ] Commit and push the verified source changes; keep board visual acceptance
+- [x] Commit and push the verified source changes; keep board visual acceptance
   and the four-page Status acceptance explicitly pending until user confirmation.
 
 ## Verification
@@ -66,3 +66,7 @@ free heap 66128 stable, minimum watermark 60980, no fatal/restart and zero
 button events. Max loop 584084 us includes startup; no FPS claim. Evidence
 under `out/sleep-bubble/` (deployment.json, upload/verify logs, boot log,
 runtime JSON). Visual Zzz acceptance, a full night and Status remain open.
+
+Source delivered as 7815af9 on origin/master. User subsequently confirms
+Zzz appears, but requests placement directly above the visible pet; the
+position correction is tracked in `2026-10-23-sleep-bubble-position.md`.

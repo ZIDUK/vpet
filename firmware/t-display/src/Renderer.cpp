@@ -208,6 +208,7 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
     }
     const bool emotion = angryIdle(model) || (model.tired &&
         (model.motion.state() == MotionState::Idle || model.motion.state() == MotionState::Walk));
+    int16_t visiblePetTop = -1;
     assets_.drawFrame(
         canvas_,
         animationPath(model),
@@ -216,7 +217,8 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
         y,
         model.motion.direction() < 0 && !evolution,
         -1, 0,
-        evolution ? 0 : 88
+        evolution ? 0 : 88,
+        &visiblePetTop
     );
     if (model.pet.injured()) {
         canvas_.setTextColor(TFT_YELLOW, TFT_BLACK);
@@ -234,10 +236,11 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
         const auto state = model.motion.state();
         if (model.pet.species() != SpeciesId::Egg && !model.pet.cold() && !model.pet.exploration.away() &&
             (state == MotionState::Sleep || state == MotionState::Idle || state == MotionState::Walk)) {
-            const auto position = cue::position(model.motion.x(), model.motion.y(), model.motion.direction());
+            const int16_t bubbleX = std::max(0, std::min(208, model.motion.x() + 28));
+            const int16_t bubbleY = std::max(25, std::min(107, (visiblePetTop < 0 ? y : visiblePetTop) - 30));
             // Keep the sleep indicator legible after dimming the world and pet.
-            assets_.drawFrame(canvas_, position.flip ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa",
-                              0, position.x, position.y);
+            assets_.drawFrame(canvas_, model.motion.direction() < 0 ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa",
+                              0, bubbleX, bubbleY);
         }
     }
     if (present) {

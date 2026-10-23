@@ -1,8 +1,26 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-22
+## Estado vigente: 2026-10-23
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
+
+## Posicion Del Globo Zzz
+
+El usuario confirma que Zzz aparece en placa pero pide que quede encima
+del vPet, no separado en la parte superior. Se centra horizontalmente en
+el cuadro de 88 px y se situa a 2 px sobre la primera fila visible del
+sprite, con limite bajo la barra de navegacion. Sigue la postura al
+tumbarse. AssetStore devuelve esa fila durante el dibujo ya existente:
+sin otra lectura, escaneo de fondo, buffers, cambios de assets o NVS.
+Simulador usa los limites de la mascara de transparencia del mismo frame.
+
+1602 pruebas Python (234.27 s), 213 focalizadas, 185 nativas y build ESP32
+aprobados. RAM 56116,
+app 1015849 bytes. Vista previa real C++ en
+`out/sleep-bubble-position/home-lying.png` y `sleep-gallery.png`.
+Esta correccion aun no se ha cargado: autorizacion excepcional de Status
+solicitada y pendiente de respuesta. La placa conserva la revision
+original Zzz 7815af9; aceptacion fisica de la nueva posicion pendiente.
 
 ## Indicador De Sueno Zzz
 

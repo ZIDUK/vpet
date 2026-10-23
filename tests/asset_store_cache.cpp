@@ -12,7 +12,9 @@ int main(int argc, char** argv) {
     assert(store.begin().mounted);
     for(int i=0;i<10;++i) {
         char path[32]; snprintf(path,sizeof(path),"/training/icon%d.vpa",i);
-        assert(store.drawFrame(canvas,path,0,i*16,0));
+        int16_t top=-1;
+        assert(store.drawFrame(canvas,path,0,i*16,0,false,-1,0,0,&top));
+        assert(top==2);
     }
     const auto expected=canvas.pixels;
     const size_t opens=assetOpens, reads=assetReads;
@@ -20,7 +22,9 @@ int main(int argc, char** argv) {
         canvas.fillSprite(0);
         for(int i=0;i<10;++i) {
             char path[32]; snprintf(path,sizeof(path),"/training/icon%d.vpa",i);
-            assert(store.drawFrame(canvas,path,repeat,i*16,0));
+            int16_t top=-1;
+            assert(store.drawFrame(canvas,path,repeat,i*16,0,false,-1,0,0,&top));
+            assert(top==2);
         }
         assert(canvas.pixels==expected);
     }
@@ -71,4 +75,7 @@ int main(int argc, char** argv) {
     assert(canvas.readPixel(88,134)==0x284B);
     assert(!store.drawFrameScaled(canvas,"/training/portrait.vpa",0,0,0,76,76,false,-1,0,0));
     assert(!store.drawFrameScaled(canvas,"/training/portrait.vpa",0,0,0,76,76,false,-1,0,240));
+    int16_t top=123;
+    assert(!store.drawFrame(canvas,"/missing.vpa",0,0,0,false,-1,0,0,&top));
+    assert(top==-1);
 }

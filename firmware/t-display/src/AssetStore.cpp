@@ -50,8 +50,10 @@ bool AssetStore::drawFrame(
     bool flipHorizontal,
     int32_t tint,
     uint8_t minLuma,
-    uint16_t anchorSize
+    uint16_t anchorSize,
+    int16_t* visibleTop
 ) {
+    if (visibleTop) *visibleTop = -1;
     const bool plainIcon = !flipHorizontal && tint < 0 && minLuma == 0 &&
         strncmp(path, "/training/", 10) == 0 && strlen(path) < sizeof(iconCache_[0].path);
     if (plainIcon) {
@@ -68,9 +70,11 @@ bool AssetStore::drawFrame(
                     while (col < entry.width && !visible(col)) ++col;
                     const uint16_t start = col;
                     while (col < entry.width && visible(col)) ++col;
-                    if (col > start)
+                    if (col > start) {
+                        if (visibleTop && *visibleTop < 0) *visibleTop = y + row;
                         canvas.pushImage(x + start, y + row, col - start, 1,
                                          entry.colors + row * entry.width + start);
+                    }
                 }
             }
             return true;
@@ -218,6 +222,7 @@ bool AssetStore::drawFrame(
                     colors[runLength++] = color;
                     ++column;
                 }
+                if (visibleTop && *visibleTop < 0) *visibleTop = y + firstRow + row;
                 canvas.pushImage(x + runStart, y + firstRow + row, runLength, 1, colors);
             }
         }

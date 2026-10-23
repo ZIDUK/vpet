@@ -35,9 +35,9 @@ def mood_pixels(tmp_path_factory):
     return root, binary
 
 
-def board(root, binary, mode, mood, x=76, panel="home",language="ES"):
+def board(root, binary, mode, mood, x=76, panel="home",language="ES",facing=1):
     return Image.open(io.BytesIO(subprocess.check_output([
-        str(binary),str(root/"data"),mode,str(mood),str(x),panel,language]))).convert("RGB")
+        str(binary),str(root/"data"),mode,str(mood),str(x),panel,language,str(facing)]))).convert("RGB")
 
 
 @pytest.mark.parametrize("mode,mood,name", [
@@ -108,18 +108,20 @@ def test_real_board_does_not_show_bubbles_in_hidden_states(mood_pixels, mode):
 
 @pytest.mark.parametrize('x',[0,76,152])
 @pytest.mark.parametrize('language',['ES','EN'])
-def test_sleep_bubble_is_bright_static_read_only_and_disappears_on_wake(mood_pixels,x,language):
+@pytest.mark.parametrize('facing',[-1,1])
+def test_sleep_bubble_is_bright_static_read_only_and_disappears_on_wake(mood_pixels,x,language,facing):
     root,binary=mood_pixels
-    actual=board(root,binary,'sleep',80,x,language=language)
+    actual=board(root,binary,'sleep',80,x,language=language,facing=facing)
     pet=Pet(species='rookie',state='live'); pet.language=language
     pet.sleep.start(20000*86400+23*3600,1)
     before=pet.to_dict()
-    args=dict(build_dir=root/'sim',pet=pet,pet_x=x,current_datetime=(2026,10,22,12,0),
+    args=dict(build_dir=root/'sim',pet=pet,pet_x=x,facing=facing,current_datetime=(2026,10,22,12,0),
               profile=get_display_profile('tdisplay'))
     simulated=render_frame(**args,motion_state='sleep',now_ms=0)
     later=render_frame(**args,motion_state='sleep',now_ms=840)
-    bx,by,flip=bubble_position(x,43,1)
-    name='asleep_left' if flip else 'asleep'
+    bx,by=x+28,25
+    assert bx+16==x+44  # Bubble center follows the 88px pet, not the screen corner.
+    name='asleep_left' if facing<0 else 'asleep'
     asset=root/'data/ui/mood'/(name+'.vpa')
     assert asset.is_file()
     bubble=decode_vpa(asset.read_bytes()).frames[0]
@@ -135,7 +137,7 @@ def test_sleep_bubble_is_bright_static_read_only_and_disappears_on_wake(mood_pix
     assert pet.to_dict()==before
     pet.sleep.stop(); pet.stats.update(h=80,e=80,p=80)
     awake=render_frame(**args)
-    awake_board=board(root,binary,'idle',80,x,language=language)
+    awake_board=board(root,binary,'idle',80,x,language=language,facing=facing)
     assert awake.crop((bx,by,bx+32,by+16)).tobytes()!=simulated.crop((bx,by,bx+32,by+16)).tobytes()
     assert awake_board.crop((bx,by,bx+32,by+16)).tobytes()!=actual.crop((bx,by,bx+32,by+16)).tobytes()
 

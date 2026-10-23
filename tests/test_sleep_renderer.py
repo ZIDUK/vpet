@@ -94,7 +94,8 @@ def test_real_board_renderer_colors_feet_cadence_and_background_cache(sleep_pixe
     else:
         expected=lights_off(expected)
         bubble=decode_vpa((root/'data/ui/mood/asleep.vpa').read_bytes()).frames[0]
-        expected.paste(bubble,(144,27),bubble)
+        top=43+88-frame.height+frame.getbbox()[1]
+        expected.paste(bubble,(104,max(25,top-30)),bubble)
     assert actual.crop((0,24,240,135)).tobytes()==expected.crop((0,24,240,135)).tobytes()
     assert actual.getpixel((76,132))==expected.getpixel((76,132))
 

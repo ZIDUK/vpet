@@ -24,7 +24,9 @@ public:
         bool flipHorizontal = false,
         int32_t tint = -1,
         uint8_t minLuma = 0,
-        uint16_t anchorSize = 0
+        uint16_t anchorSize = 0,
+        // Destination's first opaque row, or -1 when nothing is drawn.
+        int16_t* visibleTop = nullptr
     );
     // Like drawFrame but renders into a square scratch sprite and pushes
     // the sprite scaled to (w, h) at (x, y). Used by Status 4/4 stat

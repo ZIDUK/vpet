@@ -1021,6 +1021,8 @@ def render_frame(
             frame.paste(dimmed, (0, profile.menu_height))
             if (pet.species != EGG_SPECIES and not pet.dead and not pet.cold and not pet.exploration.away
                     and motion_state in ("sleep", "idle", "walk")):
-                bx, by, flip = bubble_position(sprite_x, sprite_y, facing)
-                _paste_mood(frame, build_dir, "asleep_left" if flip else "asleep", bx, by)
+                bounds = transparency_mask.getbbox()
+                top = sprite_y + (bounds[1] if bounds else 0)
+                bx, by = max(0, min(208, sprite_x+28)), max(25, min(107, top-30))
+                _paste_mood(frame, build_dir, "asleep_left" if facing<0 else "asleep", bx, by)
     return frame

@@ -6,7 +6,7 @@
 #include "vpet/UiCue.h"
 
 int main(int argc,char** argv) {
-    assert(argc==6 || argc==7); assetRoot=argv[1];
+    assert(argc==6 || argc==7 || argc==8); assetRoot=argv[1];
     const bool es=argc==6 || std::string(argv[6])=="ES";
     const std::string mode=argv[2];
     const int mood=atoi(argv[3]), x=atoi(argv[4]);
@@ -38,6 +38,7 @@ int main(int argc,char** argv) {
         pet.sleep.asleep=true;
     }
     vpet::Motion motion(x*2+88,135,24,88); motion.setSpecies(pet.species());
+    if(argc==8 && atoi(argv[7])<0) motion.tick(0);
     if(mode=="eat") motion.startAction(vpet::Action::Feed,0);
     if(sleeping) motion.startAction(vpet::Action::Rest,0);
     if(mode=="sleep-eat") motion.startAction(vpet::Action::Feed,0);
@@ -78,8 +79,7 @@ int main(int argc,char** argv) {
         const int minute=bedtime ? 1320 : 720;
         renderer.draw({pet,motion,5,0,es,minute,tired},mode=="panel" || mode=="sleep-panel"?104:0);
         if(sleeping) {
-            const auto pos=vpet::cue::position(motion.x(),motion.y(),motion.direction());
-            const char* asleepPath=pos.flip ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa";
+            const char* asleepPath=motion.direction()<0 ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa";
             assert((assetPathOpens[asleepPath]>0)==(mode=="sleep"));
         }
         const auto cue=vpet::cue::forPet(pet,tired);
