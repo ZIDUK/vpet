@@ -18,9 +18,18 @@ Simulador usa los limites de la mascara de transparencia del mismo frame.
 aprobados. RAM 56116,
 app 1015849 bytes. Vista previa real C++ en
 `out/sleep-bubble-position/home-lying.png` y `sleep-gallery.png`.
-Esta correccion aun no se ha cargado: autorizacion excepcional de Status
-solicitada y pendiente de respuesta. La placa conserva la revision
-original Zzz 7815af9; aceptacion fisica de la nueva posicion pendiente.
+El usuario autoriza cargar solo firmware ece6506 sin repetir antes la
+validacion fisica pendiente de Status. Compilacion fresca y presupuestos
+verificados; app escrita solo en 0x10000 y digest coincidente. LittleFS
+no se escribe y su digest coincide con los graficos de la carga anterior.
+Respaldo critico nuevo en `out/board-backups/20261023-zzz-position/`;
+lectura posterior de 24576 bytes de tabla/NVS identica, SHA-256
+`1eacf2312d618bb69f24ad3a0a1d1c3e19ba50c4fd201c4eee608dbd563ff287`.
+Arranque VPET_READY, manifest 1; heap libre 66144 estable y minimo 60952
+en 45 s, cuatro muestras, sin fatal/reinicio, cero eventos de botones.
+La evidencia USB no demuestra FPS, una noche ni la posicion fisica:
+aceptacion visual de la nueva posicion y cuatro paginas de Status siguen
+pendientes. Logs y metadatos en `out/sleep-bubble-position/`.
 
 ## Indicador De Sueno Zzz
 
