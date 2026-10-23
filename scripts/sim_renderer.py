@@ -1019,4 +1019,8 @@ def render_frame(
                 ((value >> shift) >> 2) * 255 // maximum for value in range(256)
             ]) for channel, shift, maximum in zip(channels, (3, 2, 3), (31, 63, 31))))
             frame.paste(dimmed, (0, profile.menu_height))
+            if (pet.species != EGG_SPECIES and not pet.dead and not pet.cold and not pet.exploration.away
+                    and motion_state in ("sleep", "idle", "walk")):
+                bx, by, flip = bubble_position(sprite_x, sprite_y, facing)
+                _paste_mood(frame, build_dir, "asleep_left" if flip else "asleep", bx, by)
     return frame

@@ -1,12 +1,12 @@
 """Prepare small, transparent UI assets from the approved raster artwork."""
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 
 NAMES = ("face_happy", "face_neutral", "face_sad", "face_angry",
          "food", "food_angry", "rest", "rest_angry", "hurt", "sad", "angry",
-         "energy", "energy_angry")
+         "energy", "energy_angry", "asleep", "asleep_left")
 
 
 def _fit(image, size):
@@ -44,6 +44,16 @@ def build_mood_assets(root, output_dir):
 
     blank = Image.new("RGBA", (32, 28))
     _center(blank, _fit(cells[4], (30, 26)), (1, 1, 30, 26))
+    for name, shell in (("asleep", blank),
+                        ("asleep_left", blank.transpose(Image.Transpose.FLIP_LEFT_RIGHT))):
+        canvas = shell.copy()
+        draw = ImageDraw.Draw(canvas)
+        draw.fontmode = "1"
+        # Flip only the bubble tail: Zzz must read normally on either side.
+        for glyph, x, y, size in (("Z", 6, 7, 13), ("z", 15, 5, 10), ("z", 21, 3, 8)):
+            draw.text((x, y), glyph, font=ImageFont.load_default(size=size),
+                      anchor="lt", fill=(32, 40, 56, 255))
+        images[name] = canvas
     content = {"food": "assets/ui/items/meat.png",
                "rest": "assets/ui/mood/sleepy-face-v1.png",
                "energy": "assets/ui/mood/fatigue-drops-v1.png",

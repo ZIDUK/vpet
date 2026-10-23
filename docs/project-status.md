@@ -4,6 +4,29 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Indicador De Sueno Zzz
+
+Usuario aprueba un globo fijo Zzz y su carga conservando la partida, sin
+repetir antes la validacion fisica pendiente de Status. Se agregan dos
+assets pequenos: cola izquierda/derecha y letras sin espejo. Home lo
+compone despues de oscurecer el mundo; no aparece en paneles, huevo,
+muerto, pausa o viaje y desaparece al despertar. Sin cambios en reglas
+de sueno, animo, Arena, calendario, NVS o persistencia.
+
+1596 pruebas Python y 185 nativas aprobadas; build ESP32 y LittleFS
+correctos. RAM 56116/327680, app 1015685/4194304; 227 assets,
+10891653 bytes de payload. Los 13 iconos anteriores son identicos byte a
+byte. Pillow minimo 10.1 por la API de tamano de fuente embebida.
+Cargados app (0x10000) y FS (0x410000), ambos digests verificados.
+Los 24576 bytes de tabla/NVS son identicos al respaldo fresco, SHA-256
+`695011133bba21d31b869b2cc8b99ca3692087a9771cdfa2509a094e0b0949b4`.
+Arranque VPET_READY/manifest 1; FS real 11792384/12451840, heap libre
+66128 estable, minimo 60980. Cuatro muestras en 45 s, sin fatal/reinicio;
+cero eventos de botones: no prueba FPS, una noche ni uso del indicador.
+Aceptacion visual del globo y cuatro paginas de Status pendientes.
+Evidencia en `out/sleep-bubble/`; respaldo en
+`out/board-backups/20261022-sleep-zzz-final/`.
+
 ## Entrega Conjunta De Exploracion
 
 El usuario autoriza cargar juntas las tres correcciones: sprite de viaje

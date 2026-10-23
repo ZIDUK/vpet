@@ -231,6 +231,14 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
                 canvas_.drawPixel(px, py, ((color >> 2) & 0x39E7));
             }
         }
+        const auto state = model.motion.state();
+        if (model.pet.species() != SpeciesId::Egg && !model.pet.cold() && !model.pet.exploration.away() &&
+            (state == MotionState::Sleep || state == MotionState::Idle || state == MotionState::Walk)) {
+            const auto position = cue::position(model.motion.x(), model.motion.y(), model.motion.direction());
+            // Keep the sleep indicator legible after dimming the world and pet.
+            assets_.drawFrame(canvas_, position.flip ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa",
+                              0, position.x, position.y);
+        }
     }
     if (present) {
         display_.startWrite();

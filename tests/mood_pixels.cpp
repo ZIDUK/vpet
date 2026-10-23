@@ -27,10 +27,20 @@ int main(int argc,char** argv) {
         assert(pet.exploration.start(pet,vpet::ExploreRoute::Patio,vpet::CombatStat::Hp,1000));
         pet.setHunger(0);
     }
-    if(mode=="sleep") { pet.sleep.asleep=true; pet.setHunger(0); }
+    const bool sleeping=mode.find("sleep")==0;
+    if(sleeping) { pet.sleep.asleep=true; pet.setHunger(0); }
+    if(mode=="sleep-egg") pet.resetToEgg();
+    if(mode=="sleep-cold") pet.setCold(true);
+    if(mode=="sleep-dead") pet.restoreInjury(true,15,true);
+    if(mode=="sleep-away") {
+        pet.sleep.asleep=false;
+        assert(pet.exploration.start(pet,vpet::ExploreRoute::Patio,vpet::CombatStat::Hp,1000));
+        pet.sleep.asleep=true;
+    }
     vpet::Motion motion(x*2+88,135,24,88); motion.setSpecies(pet.species());
     if(mode=="eat") motion.startAction(vpet::Action::Feed,0);
-    if(mode=="sleep") motion.startAction(vpet::Action::Rest,0);
+    if(sleeping) motion.startAction(vpet::Action::Rest,0);
+    if(mode=="sleep-eat") motion.startAction(vpet::Action::Feed,0);
     TFT_eSPI display; TFT_eSprite canvas,scene; canvas.setSwapBytes(true); scene.setSwapBytes(true);
     vpet::AssetStore assets; assert(assets.begin().mounted);
     vpet::Renderer renderer(display,canvas,scene,assets);
@@ -66,7 +76,12 @@ int main(int argc,char** argv) {
         const bool bedtime=mode=="bedtime" || mode=="bedtime-low";
         const bool tired=mode=="rest" || bedtime;
         const int minute=bedtime ? 1320 : 720;
-        renderer.draw({pet,motion,5,0,es,minute,tired},mode=="panel"?104:0);
+        renderer.draw({pet,motion,5,0,es,minute,tired},mode=="panel" || mode=="sleep-panel"?104:0);
+        if(sleeping) {
+            const auto pos=vpet::cue::position(motion.x(),motion.y(),motion.direction());
+            const char* asleepPath=pos.flip ? "/ui/mood/asleep_left.vpa" : "/ui/mood/asleep.vpa";
+            assert((assetPathOpens[asleepPath]>0)==(mode=="sleep"));
+        }
         const auto cue=vpet::cue::forPet(pet,tired);
         const char* bubble=mode=="rest" ? (cue.angry ? "/ui/mood/energy_angry.vpa" : "/ui/mood/energy.vpa") :
             vpet::cue::bubblePath(cue);

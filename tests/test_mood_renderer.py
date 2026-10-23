@@ -94,7 +94,7 @@ def test_rest_bubbles_have_no_text_counter_or_bar_in_real_renderer_and_sim(mood_
     assert simulated.crop(box).tobytes()==before_need.crop(box).tobytes()
 
 
-@pytest.mark.parametrize("mode", ["egg","dead","cold","away","sleep","eat","panel","idle"])
+@pytest.mark.parametrize("mode", ["egg","dead","cold","away","eat","panel","idle"])
 def test_real_board_does_not_show_bubbles_in_hidden_states(mood_pixels, mode):
     root,binary=mood_pixels
     actual=board(root,binary,mode,80)
@@ -104,6 +104,46 @@ def test_real_board_does_not_show_bubbles_in_hidden_states(mood_pixels, mode):
         expected=tuple(((value>>shift)>>2)*255//maximum
                        for value,shift,maximum in zip(expected,(3,2,3),(31,63,31)))
     assert actual.getpixel((155,30))==expected
+
+
+@pytest.mark.parametrize('x',[0,76,152])
+@pytest.mark.parametrize('language',['ES','EN'])
+def test_sleep_bubble_is_bright_static_read_only_and_disappears_on_wake(mood_pixels,x,language):
+    root,binary=mood_pixels
+    actual=board(root,binary,'sleep',80,x,language=language)
+    pet=Pet(species='rookie',state='live'); pet.language=language
+    pet.sleep.start(20000*86400+23*3600,1)
+    before=pet.to_dict()
+    args=dict(build_dir=root/'sim',pet=pet,pet_x=x,current_datetime=(2026,10,22,12,0),
+              profile=get_display_profile('tdisplay'))
+    simulated=render_frame(**args,motion_state='sleep',now_ms=0)
+    later=render_frame(**args,motion_state='sleep',now_ms=840)
+    bx,by,flip=bubble_position(x,43,1)
+    name='asleep_left' if flip else 'asleep'
+    asset=root/'data/ui/mood'/(name+'.vpa')
+    assert asset.is_file()
+    bubble=decode_vpa(asset.read_bytes()).frames[0]
+    bmp=Image.open(root/'sim/UIMood'/(name+'.bmp'))
+    rgb=bmp.convert('RGB')
+    for y in range(28):
+        for px in range(32):
+            if bubble.getpixel((px,y))[3]:
+                assert actual.getpixel((bx+px,by+y))==bubble.getpixel((px,y))[:3]
+            if bmp.getpixel((px,y)):
+                assert simulated.getpixel((bx+px,by+y))==rgb.getpixel((px,y))
+                assert later.getpixel((bx+px,by+y))==rgb.getpixel((px,y))
+    assert pet.to_dict()==before
+    pet.sleep.stop(); pet.stats.update(h=80,e=80,p=80)
+    awake=render_frame(**args)
+    awake_board=board(root,binary,'idle',80,x,language=language)
+    assert awake.crop((bx,by,bx+32,by+16)).tobytes()!=simulated.crop((bx,by,bx+32,by+16)).tobytes()
+    assert awake_board.crop((bx,by,bx+32,by+16)).tobytes()!=actual.crop((bx,by,bx+32,by+16)).tobytes()
+
+
+@pytest.mark.parametrize('mode',['sleep-egg','sleep-cold','sleep-away','sleep-dead','sleep-eat','sleep-panel'])
+def test_sleep_bubble_is_not_loaded_in_ineligible_states(mood_pixels,mode):
+    root,binary=mood_pixels
+    board(root,binary,mode,80)
 
 
 @pytest.mark.parametrize("mood,face", [(80,"happy"),(60,"neutral"),(30,"sad"),(10,"angry")])

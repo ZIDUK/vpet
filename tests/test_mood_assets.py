@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def test_mood_assets_are_small_transparent_and_deterministic(tmp_path):
     files=build_mood_assets(ROOT,tmp_path)
-    assert len(files)==13
+    assert len(files)==15
     before={p.name:p.read_bytes() for p in files}
     for path in files:
         with Image.open(path) as image:
@@ -18,6 +18,17 @@ def test_mood_assets_are_small_transparent_and_deterministic(tmp_path):
     assert before=={p.name:p.read_bytes() for p in build_mood_assets(ROOT,tmp_path)}
     assert before['energy.bmp']!=before['rest.bmp']
     assert before['energy_angry.bmp']!=before['energy.bmp']
+
+
+def test_sleep_bubble_changes_tail_without_mirroring_zzz(tmp_path):
+    paths={p.stem:p for p in build_mood_assets(ROOT,tmp_path)}
+    assert {'asleep','asleep_left'} <= paths.keys()
+    right=Image.open(paths['asleep']).convert('RGB')
+    left=Image.open(paths['asleep_left']).convert('RGB')
+    masks=[tuple(image.getpixel((x,y))==(32,40,56)
+                 for y in range(3,19) for x in range(5,27)) for image in (right,left)]
+    assert sum(masks[0])>=40 and masks[0]==masks[1]
+    assert right.crop((0,20,32,28)).tobytes()!=left.crop((0,20,32,28)).tobytes()
 
 
 def test_rest_bubbles_use_transparent_glyphs_not_menu_tiles(tmp_path):
