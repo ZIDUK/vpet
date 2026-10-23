@@ -27,9 +27,11 @@ lectura posterior de 24576 bytes de tabla/NVS identica, SHA-256
 `1eacf2312d618bb69f24ad3a0a1d1c3e19ba50c4fd201c4eee608dbd563ff287`.
 Arranque VPET_READY, manifest 1; heap libre 66144 estable y minimo 60952
 en 45 s, cuatro muestras, sin fatal/reinicio, cero eventos de botones.
-La evidencia USB no demuestra FPS, una noche ni la posicion fisica:
-aceptacion visual de la nueva posicion y cuatro paginas de Status siguen
-pendientes. Logs y metadatos en `out/sleep-bubble-position/`.
+El usuario confirma el 2026-10-23 que el globo queda bien justo encima
+del vPet, tambien al terminar de acostarse. Posicion aceptada en placa.
+Esa confirmacion no valida FPS, una noche completa, desaparicion al
+despertar ni las cuatro paginas de Status, que siguen pendientes.
+Logs y metadatos en `out/sleep-bubble-position/`.
 
 ## Indicador De Sueno Zzz
 

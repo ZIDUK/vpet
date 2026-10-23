@@ -24,7 +24,7 @@ the approved fixed glyph, darkness, actions, persistence and Status.
 - [x] Obtain revision-specific Status waiver before firmware-only load.
 - [x] Back up current NVS/table, load only app, independently verify digest
   and unchanged critical bytes, confirm normal boot and bounded liveness.
-- [ ] Obtain physical acceptance of corrected position; Status stays open.
+- [x] Obtain physical acceptance of corrected position; Status stays open.
 
 ## Evidence
 
@@ -41,8 +41,9 @@ Original Zzz revision 7815af9 was loaded and accepted only as present.
 User explicitly authorized this position correction as firmware-only,
 preserving the game and without repeating the pending four-page Status
 validation. Fresh build from ece6506 loaded at 0x10000 only; no FS,
-partition-table or NVS write. Physical placement and Status acceptance
-remain pending; do not infer them from host pixels or serial telemetry.
+partition-table or NVS write. User explicitly accepted physical placement
+on 2026-10-23. Status remains open; do not infer its acceptance from the
+position confirmation, host pixels or serial telemetry.
 
 ## Board Delivery Evidence
 
@@ -61,4 +62,12 @@ samples over 45.182 s: free heap 66144 stable, minimum watermark 60952,
 no fatal/restart, zero button events. Max loop includes startup, not FPS.
 Evidence: `out/sleep-bubble-position/deployment.json`, upload/verify logs,
 board boot log, runtime JSON and critical post-read. No backup/log/game
-data is committed. User visual confirmation of corrected position requested.
+data is committed.
+
+## Physical Acceptance
+
+On 2026-10-23 the user answered "Si, ahora queda bien" to the question
+whether Zzz now sits directly above the pet, including after it lies down.
+This closes the position correction only. Full-night behavior, disappearance
+on waking, all screen-edge/facing cases and the four Status pages are not
+physically accepted by that answer. No further firmware load is needed.
