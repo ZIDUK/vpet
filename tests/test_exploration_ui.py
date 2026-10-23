@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import json
 import pytest
+from PIL import Image
 from core.pet import Pet
 from display_profiles import get_display_profile
 from scripts import build as build_script
@@ -42,6 +43,26 @@ def test_travel_animation_advances_under_a_second(assets, species):
     a = render_frame(assets, p, now_ms=0, **kwargs)
     b = render_frame(assets, p, now_ms=350, **kwargs)
     assert a.crop((0, 56, 240, 85)).tobytes() != b.crop((0, 56, 240, 85)).tobytes()
+
+
+@pytest.mark.parametrize("species", ["rookie", "champion", "ultimate"])
+@pytest.mark.parametrize("language", ["ES", "EN"])
+@pytest.mark.parametrize("elapsed", [0, 14400, 28799])
+@pytest.mark.parametrize("view", ["home", "panel"])
+def test_large_travel_sprite_does_not_cover_trip_information(assets, species, language, elapsed, view):
+    p = Pet(species=species, state="live")
+    p.language = language
+    assert p.exploration.start(p, "jornada", "off", 100000)
+    session = ExplorationSession(p, lambda _: True, lambda: 100000 + elapsed) if view == "panel" else None
+    frame = render_frame(assets, p, now_ms=1700, panel_mode="explore" if session else None,
+                         exploration_menu=session, exploration_now=100000 + elapsed,
+                         profile=get_display_profile("tdisplay"))
+    lane = frame.crop((0, 60, 240, 104))
+    mask = Image.new("1", lane.size)
+    mask.putdata([r > 100 and r > g * 1.2 and r > b * 1.5 for r, g, b in lane.getdata()])
+    bounds = mask.getbbox()
+    assert bounds is not None and bounds[3] - bounds[1] >= 30
+    assert bounds[0] >= 4 and bounds[2] <= 236
 
 
 def test_real_simulator_jornada_claim_guide_and_training(assets, tmp_path, monkeypatch):

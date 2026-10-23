@@ -120,8 +120,17 @@ son identicas al fuente. No hay recursos ni framebuffer nuevos.
 
 Suite Python completa: 1492 aprobadas en 259.59 s; avisos existentes
 conservados. Comprobacion final de diff sin errores de espacios.
-Firmware preparado SHA-256:
+Firmware preparado inicialmente SHA-256:
 `9acf10321e49a51c66819ec4e3e54655b1f36e1db522806f77a75d093849b167`.
-Puerto USB presente, pero no se ha escrito esta revision: se solicita
-autorizacion nueva para omitir la validacion previa pendiente de Status.
-La excepcion anterior no se extiende automaticamente a esta nueva carga.
+Esa preparacion se sustituye por el paquete final de Exploracion, que
+incluye tambien contraste de Evolucion y el sprite ampliado. El usuario
+autoriza cargar las tres mejoras juntas sin completar antes Status.
+No se cierra por ello su aceptacion fisica.
+
+Carga conjunta completada el 2026-10-22: aplicacion y LittleFS verificados
+por digest independiente. Los 24576 bytes de tabla de particiones/NVS
+coinciden exactamente con el respaldo nuevo antes de arrancar la app.
+VPET_READY, heap libre estable 66128, minimo 60932, BLE ADVERTISING y sin
+fatal/reinicios en 45 s; sin eventos de botones, no implica FPS medido.
+Respaldo en `out/board-backups/20261022-exploration-sprite44-final/` y
+logs/digests en `out/exploration-sprite44/`. Falta aceptar NEXT en placa.

@@ -35,8 +35,8 @@ def package_training(sim_build, data_dir, include_dir):
                     frames.append(cell.resize((68, 68), Image.Resampling.NEAREST))
                 asset(f"{pet_name}_{action}", frames)
                 if action in ("idle", "walk"):
-                    size = 48 if action == "idle" else 28
-                    # Exploration has a narrower portrait column than Training.
+                    size = 48 if action == "idle" else 44
+                    # Exploration portraits and the travel lane stay smaller than Training.
                     explore_frames = []
                     for x in range(0, atlas.width, atlas.height):
                         cell = atlas.crop((x, 0, x + atlas.height, atlas.height))

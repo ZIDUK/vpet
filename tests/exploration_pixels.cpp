@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <cassert>
 #include "vpet/ExplorationUi.h"
 
 struct Canvas {
@@ -23,6 +24,11 @@ struct Canvas {
         auto u16=[&](int p) { return unsigned(data.at(p)) | (unsigned(data.at(p+1))<<8); };
         auto u32=[&](int p) { return u16(p) | (u16(p+2)<<16); };
         const unsigned w=u16(4),h=u16(6),frames=u16(8),colors=u16(10);
+        if(std::string(path).find("_walk")!=std::string::npos) {
+            assert(w==44 && h==44);
+            assert(x>=4 && x+int(w)<=236 && y==60);
+            assert(y+int(h)<=104);
+        }
         const unsigned offset=u32(13+colors*2+(frame%frames)*4);
         for(unsigned yy=0;yy<h;++yy) for(unsigned xx=0;xx<w;++xx) {
             const unsigned idx=data.at(offset+yy*w+xx);
@@ -39,7 +45,7 @@ struct Canvas {
 };
 
 int main(int argc,char** argv) {
-    if(argc!=9) return 2;
+    if(argc!=9 && argc!=10) return 2;
     using namespace vpet;
     Canvas c; c.root=argv[1];
     PetState pet;
@@ -55,6 +61,6 @@ int main(int argc,char** argv) {
         if(!pet.exploration.start(pet,s.route,s.stat,now)) return 3;
         if(s.page==ExplorationSession::Page::Receipt) pet.exploration.claim(pet,wall);
     }
-    exploration_ui::View<Canvas>(c,pet,s,wall,1700,std::string(argv[3])=="ES").draw();
+    exploration_ui::View<Canvas>(c,pet,s,wall,1700,std::string(argv[3])=="ES").draw(argc==10 && std::string(argv[9])=="home");
     c.write();
 }

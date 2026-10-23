@@ -77,17 +77,17 @@ template<class Canvas> class View {
         char path[80];
         const bool walk=walking && pet.species()!=SpeciesId::Egg;
         snprintf(path,sizeof(path),"/exploration/%s_%s%d.vpa",names[static_cast<uint8_t>(pet.species())],
-                 walk ? "walk" : "idle",walk ? 28 : 48);
+                 walk ? "walk" : "idle",walk ? 44 : 48);
         c.asset(path,ms/(walk ? 70 : 85),x,y);
     }
     void heading(const char* label) { rect(0,24,240,20,panel); text(8,25,224,17,label,yellow,true); }
-    void button(int i,int count,const char* label,bool outlined=false) {
+    void button(int i,int count,const char* label,bool outlined=false,int top=116) {
         const int width=232/count, x=4+i*width;
         const bool focus=s.cursor==i;
         const uint16_t bg=outlined ? ink : focus ? yellow : panel;
-        rect(x,116,width-4,18,bg);
-        if(outlined) outline(x,116,width-4,18,focus ? yellow : muted);
-        text(x+5,117,width-10,16,label,outlined ? (focus ? yellow : muted) : focus ? ink : white);
+        rect(x,top,width-4,134-top,bg);
+        if(outlined) outline(x,top,width-4,134-top,focus ? yellow : muted);
+        text(x+5,top+1,width-10,132-top,label,outlined ? (focus ? yellow : muted) : focus ? ink : white);
     }
     void row(int y,const char* name,const char* value,const char* path,uint16_t accent=green,int h=11) {
         rect(70,y,168,h,ink); outline(70,y,168,h,panel); rect(160,y,1,h,panel);
@@ -189,16 +189,16 @@ public:
             heading(tr("EXPLORANDO","EXPLORING"));
             const auto& e=pet.exploration;
             const uint32_t remaining=e.remaining(wall), duration=Exploration::duration(e.route);
-            text(8,48,126,15,routeName(e.route),white,true);
-            char time[20]; formatTime(remaining,time,sizeof(time)); text(142,48,90,15,time,cyan,true);
+            text(8,46,126,13,routeName(e.route),white,true);
+            char time[20]; formatTime(remaining,time,sizeof(time)); text(142,46,90,13,time,cyan,true);
             const int x=18+202ULL*(duration-remaining)/duration;
-            rect(18,84,203,2,muted); rect(18,84,x-18+1,2,green);
-            for(int tick : {18,119,220}) rect(tick-2,82,5,5,white);
-            portrait(true,x<32 ? 4 : x>224 ? 210 : x-14,56);
+            rect(18,106,203,2,muted); rect(18,106,x-18+1,2,green);
+            for(int tick : {18,119,220}) rect(tick-2,104,5,5,white);
+            portrait(true,x<26 ? 4 : x>214 ? 192 : x-22,60);
             const bool newWeek=(wall+259200)/604800>e.week;
             char week[50]; snprintf(week,sizeof(week),"%s %u/8 EV  %u/4 DOM",tr("SEMANA","WEEK"),newWeek ? 0 : e.weekEv,newWeek ? 0 : e.weekMastery);
-            text(8,96,224,12,week,muted);
-            if(!home) { button(0,2,tr("VOLVER","BACK")); button(1,2,tr("REGRESAR","RETURN")); }
+            text(8,109,224,10,week,muted);
+            if(!home) { button(0,2,tr("VOLVER","BACK"),false,120); button(1,2,tr("REGRESAR","RETURN"),false,120); }
         }
         if(s.saveFailed) { rect(0,100,240,15,ink); text(5,100,230,15,tr("NO GUARDADO. REINTENTAR","NOT SAVED. RETRY"),pink); }
     }

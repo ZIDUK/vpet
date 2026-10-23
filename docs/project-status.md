@@ -4,6 +4,31 @@
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
 
+## Entrega Conjunta De Exploracion
+
+El usuario autoriza cargar juntas las tres correcciones: sprite de viaje
+ampliado, contraste de Evolucion y salto de menus bloqueados por etapa,
+conservando la partida y sin completar antes la validacion pendiente de
+las cuatro paginas de Status. Esa aceptacion de Status sigue abierta.
+No cambian reglas de viajes, premios, velocidad de animacion ni NVS.
+
+1584 pruebas Python y 185 nativas aprobadas; 215 focalizadas de Exploracion.
+Compilacion ESP32 y buildfs correctos: RAM 56116/327680, app 1015489/4194304;
+225 assets, 10889361 bytes de payload. Presupuesto logico de assets mas
+manifest 10947098/12451840, antes del coste interno de LittleFS. Respaldo critico nuevo en
+`out/board-backups/20261022-exploration-sprite44-final/`.
+Cargados aplicacion en 0x10000 y LittleFS en 0x410000, con verificacion
+independiente de ambos digests. Comparacion posterior de los 24576 bytes
+criticos: tabla de particiones y NVS identicos al respaldo, SHA-256
+`7a30d88d7a4581c2cff4839b1e76034cba354903c2667f5e78d07ea1dcc918a3`.
+Arranque VPET_READY, manifest 1; uso real FS 11784192/12451840 (667648
+bytes libres tras overhead). Heap libre 66128 estable, minimo 60932;
+BLE ADVERTISING, sin fatal/reinicios en 45 s. No hubo eventos de botones;
+no demuestra FPS ni aceptacion visual. Evidencia en `out/exploration-sprite44/`.
+El usuario confirma que la escala del sprite y las letras de Evolucion
+se ven bien en placa. Esa aceptacion no cierra Status ni el resto de
+pruebas fisicas de persistencia y viajes.
+
 ## Contraste De Evolucion
 
 Nombre de la etapa actual y NOW/AHORA usan la tinta oscura existente en
@@ -16,9 +41,9 @@ la revision anterior confirman cambios limitados a las etiquetas.
 app 1015425/4194304. Vista previa en `out/evolution-contrast/after.png`.
 Suite general final: 1512 Python aprobadas en 247.33 s; avisos existentes
 conservados. Catalogo generado comprobado y diff sin errores de espacios.
-Carga y aceptacion fisica pendientes; se solicita autorizacion para cargar
-esta correccion junto al salto NEXT preparado anteriormente, sin completar
-antes la validacion pendiente de Status. Sin reescribir LittleFS ni NVS.
+Cargado en el paquete de Exploracion descrito arriba, con firmware y
+LittleFS verificados y NVS preservada. Usuario confirma que las letras
+se leen bien; la autorizacion excepcional no cierra la validacion de Status.
 La nota de Mochila queda en este documento;
 el catalogo generado se regenera desde su fuente, sin edicion manual.
 
@@ -37,9 +62,9 @@ digest, con globos sin textos incluidos; LittleFS/NVS no reescritos.
 Arranque VPET_READY, heap libre 66128 estable, minimo 61000, BLE conectado
 y sin fatal/reinicio en 45 s. Usuario confirma atenuacion y globos sin
 textos; aceptacion fisica del nuevo salto NEXT pendiente.
-Revision NEXT: 1492 Python y 185 nativas aprobadas; compilacion final
-correcta, RAM estatica sin aumento. Sin escribir la placa todavia,
-pendiente autorizacion de esta revision respecto al gate de Status.
+Revision NEXT: cargada junto al paquete de Exploracion y contraste,
+1584 Python y 185 nativas aprobadas; firmware/FS y arranque verificados.
+RAM estatica sin aumento; aceptacion fisica de NEXT pendiente.
 [Contrato y evidencia](superpowers/plans/2026-10-22-stage-menu-dimming.md).
 
 Reporte de Mochila: el usuario intenta todos los objetos. Pruebas del

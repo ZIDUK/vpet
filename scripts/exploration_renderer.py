@@ -69,17 +69,17 @@ def draw_exploration(frame, build_dir, pet, session, now, animation_ms=0):
         sprite = info_icon(name, size)
         frame.paste(sprite, (x, y), sprite)
 
-    def buttons():
+    def buttons(top=116):
         choices = session.choices() if session else (("claim",) if not remaining else ())
         for i, choice in enumerate(choices):
             width = 232 // len(choices)
             x = 4 + i * width
             selected = session is not None and i == session.index
             outlined = page == 'confirm'
-            draw.rectangle((x, 116, x + width - 4, 133),
+            draw.rectangle((x, top, x + width - 4, 133),
                            fill=INK if outlined else YELLOW if selected else PANEL,
                            outline=(YELLOW if selected else MUTED) if outlined else None)
-            fitted_text(draw, (x + 5, 117, x + width - 6, 133), label(choice),
+            fitted_text(draw, (x + 5, top + 1, x + width - 6, 133), label(choice),
                         small, (YELLOW if selected else MUTED) if outlined else INK if selected else WHITE)
 
     def table_row(y, name, caption, value, color=GREEN, asset=False, height=11):
@@ -181,21 +181,21 @@ def draw_exploration(frame, build_dir, pet, session, now, animation_ms=0):
         if page == "recall" or not remaining:
             return_table(e.preview(pet, now))
         else:
-            text((8, 48), label(route), WHITE)
-            text((142, 48), duration_label(remaining), CYAN)
-            draw.line((18, 84, 220, 84), fill=MUTED, width=2)
+            fitted_text(draw, (8, 46, 134, 59), label(route), font, WHITE)
+            fitted_text(draw, (142, 46, 232, 59), duration_label(remaining), font, CYAN)
+            draw.line((18, 106, 220, 106), fill=MUTED, width=2)
             progress = 1 - remaining / DURATIONS[route]
             x = 18 + int(202 * progress)
-            draw.line((18, 84, x, 84), fill=GREEN, width=2)
+            draw.line((18, 106, x, 106), fill=GREEN, width=2)
             for px in (18, 119, 220):
-                draw.rectangle((px - 2, 82, px + 2, 86), fill=WHITE)
-            pet_sprite(frame, build_dir, min(210, max(4, x - 14)), 56, 28,
+                draw.rectangle((px - 2, 104, px + 2, 108), fill=WHITE)
+            pet_sprite(frame, build_dir, min(192, max(4, x - 22)), 60, 44,
                        "walk" if remaining else None, animation_ms, species=pet.species,
                        frame_interval_ms=70)
             week_ev = e.week_ev if week_id(now) <= e.week else 0
             week_mastery = e.week_mastery if week_id(now) <= e.week else 0
-            text((8, 96), tr(pet, "explore.week", week_ev, week_mastery), MUTED, True)
-        buttons()
+            fitted_text(draw, (8, 109, 232, 119), tr(pet, "explore.week", week_ev, week_mastery), small, MUTED)
+        buttons(120 if page == "trip" and remaining else 116)
     else:
         heading("receipt")
         receipt = e.receipt
