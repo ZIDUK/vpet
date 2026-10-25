@@ -30,8 +30,9 @@ Los avisos de necesidades siguen sin textos; no se cambia su contrato.
 - [x] Respaldo critico NUEVO de tabla de particiones/NVS y checksum local.
 - [x] Cargar firmware/LittleFS, verificar hashes y arranque VPET_READY.
 - [x] Publicar commit y registro de despliegue en origin/master: `4c6ce16`.
-- [ ] Validacion fisica del usuario: cuatro paginas Status, partida,
-  entrenamiento, evolucion y reinicio con identidad estable.
+- [x] Status: aceptacion visual del usuario tras solicitar revisar sus cuatro paginas.
+- [ ] Confirmacion fisica de partida/progreso, entrenamiento, evolucion
+  y reinicio con identidad estable.
 
 ## Presupuestos Verificados
 
@@ -84,7 +85,11 @@ independiente con `esptool verify_flash` confirmo ambos digests en la placa:
 serial posterior de 70 segundos registro BLE conectado, heap libre estable
 en 65964 bytes y minimo 60768 bytes, sin otro reinicio tras el arranque inicial.
 Esto no certifica sesiones largas, fluidez visual ni ciclos de reconexion BLE.
-La aceptacion fisica de Status sigue pendiente y se solicito al usuario.
+Tras solicitar recorrer las cuatro paginas de Status, el usuario confirma:
+"Si el status se ve bien". Se registra aceptacion visual reportada por el
+usuario, sin fotos por pagina ni medicion independiente. Esta respuesta no
+confirma conservacion de partida/progreso, entrenamiento, evolucion ni
+persistencia de identidad tras reiniciar; esas comprobaciones siguen pendientes.
 
 ### Publicacion
 

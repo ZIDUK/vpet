@@ -6,9 +6,9 @@
 
 Firmware y LittleFS de F1/F2 cargados el 2026-10-24, con respaldo critico
 nuevo, digests comprobados contra la placa y arranque `VPET_READY` confirmado.
-La revision fisica de las cuatro paginas de Status y la conservacion visual
-del progreso siguen pendientes de confirmacion del usuario, quien autorizo
-validarlas despues. [Registro de entrega](superpowers/plans/2026-10-24-f1-f2-board-delivery.md).
+El usuario confirma que Status se ve bien tras solicitar recorrer sus cuatro
+paginas. La conservacion de mascota/progreso y la identidad tras reiniciar
+siguen pendientes de confirmacion. [Registro de entrega](superpowers/plans/2026-10-24-f1-f2-board-delivery.md).
 Creator queda fuera del commit por decision expresa; sus cambios locales
 concurrentes se conservan. Las notas inferiores de F1/F2 "sin flashear"
 describen comprobaciones previas a esta carga, no el estado de despliegue actual.
