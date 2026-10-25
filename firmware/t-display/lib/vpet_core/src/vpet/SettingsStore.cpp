@@ -21,6 +21,8 @@ uint8_t safeWeight(int value) {
 
 LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
     if (!recoverAll()) return LoadResult::Unsupported;
+    PetProfile profile;
+    if (!profile.decode(store_.getString("petProfile", ""))) return LoadResult::Unsupported;
     if (!pet.exploration.decode(store_.getString("expState", ""))) return LoadResult::Unsupported;
     if (!pet.sleep.decode(store_.getString("sleepState", ""))) return LoadResult::Unsupported;
     if (!pet.adoptedStock.decode(store_.getString("adoptBag", ""))) return LoadResult::Unsupported;
@@ -30,6 +32,7 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
         return LoadResult::Missing;
     }
     if (version != 1 && version != 2 && version != 3) return LoadResult::Unsupported;
+    pet.profile = profile;
     pet.restore(
         static_cast<SpeciesId>(store_.getInt("species", 0)),
         store_.getInt("hunger", 80),
@@ -117,6 +120,9 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
     settings.language = store_.getString("language", "ES");
     settings.soundEnabled = store_.getInt("sound", 1) != 0;
     settings.bluetoothEnabled = store_.getInt("bluetooth", 0) != 0;
+    if (profiles_ && !pet.profile.assigned() && !needsLifeRestart() &&
+        (!save(pet,settings) || !recoverAll()))
+        return LoadResult::Unsupported;
     return LoadResult::Loaded;
 }
 
@@ -128,16 +134,22 @@ bool SettingsStore::restartLifeIfNeeded(PetState& pet, Settings& settings) {
     return true;
 }
 
-bool SettingsStore::save(const PetState& pet, const Settings& settings) {
+bool SettingsStore::save(PetState& pet, const Settings& settings) {
     if (!recoverAll()) return false;
+    PetState candidate=pet;
+    if (profiles_ && !candidate.profile.assigned()) {
+        candidate.profile=profiles_();
+        if (!candidate.profile.assigned()) return false;
+    }
     storage::SnapshotStore captured(&store_);
     SettingsStore writer(captured);
-    if (!writer.writeSnapshot(pet, settings)) return false;
+    if (!writer.writeSnapshot(candidate, settings)) return false;
     const auto record = storage::encodeSnapshot(captured);
     storage::SnapshotStore validated;
     if (!storage::decodeSnapshot(record, validated)) return false;
     // A single atomic NVS string write commits the complete desired state.
     if (store_.commitString("saveTx", record.c_str()) == StoreCommit::Rejected) return false;
+    pet.profile=candidate.profile;
     recoverSnapshotTransaction();
     return true;
 }
@@ -225,6 +237,7 @@ bool SettingsStore::writeSnapshot(const PetState& pet, const Settings& settings)
     if (ok) ok = store_.putString("adoptBag", pet.adoptedStock.encode().c_str());
     if (ok) ok = store_.putString("expState", pet.exploration.encode().c_str());
     if (ok) ok = store_.putString("sleepState", pet.sleep.encode().c_str());
+    if (ok) ok = store_.putString("petProfile", pet.profile.encode().c_str());
     return ok;
 }
 
@@ -365,13 +378,18 @@ SpeciesId SettingsStore::backupSpecies() const {
 }
 
 bool SettingsStore::swapOrPark(PetState& pet, Settings& settings) {
+    if (profiles_ && !pet.profile.assigned()) return false;
     if (backup_ == nullptr || !recoverAll()) return false;
-    SettingsStore parkedStore(*backup_);
+    SettingsStore parkedStore(*backup_,nullptr,profiles_);
     PetState target;
     Settings ignored;
     const auto result = parkedStore.load(target, ignored);
     if (result == LoadResult::Unsupported) return false;
     if (result == LoadResult::Missing) { target = pet; target.resetToEgg(); }
+    if (profiles_ && !target.profile.assigned()) {
+        target.profile=profiles_();
+        if (!target.profile.assigned()) return false;
+    }
     storage::SnapshotStore active(&store_), parked(backup_);
     SettingsStore activeWriter(active), parkedWriter(parked);
     if (!activeWriter.writeSnapshot(target, settings) || !parkedWriter.writeSnapshot(pet, settings)) return false;

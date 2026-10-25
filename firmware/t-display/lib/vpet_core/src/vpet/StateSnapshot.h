@@ -61,7 +61,9 @@ inline bool validSnapshotValue(const char* key, int32_t value) {
 
 inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
     std::ostringstream out;
-    out << "4\n";
+    const auto profile=snapshot.strings.find("petProfile");
+    const bool profilePresent=profile!=snapshot.strings.end() && !profile->second.empty();
+    out << (profilePresent ? "5\n" : "4\n");
     for (const auto key : kSnapshotKeys) {
         const auto found = snapshot.ints.find(key);
         if (found == snapshot.ints.end() || !validSnapshotValue(key, found->second)) return "";
@@ -77,6 +79,11 @@ inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
         if (found == snapshot.strings.end() || found->second.find('\n') != std::string::npos) return "";
         out << found->second << '\n';
     }
+    if (profilePresent) {
+        PetProfile validated;
+        if (!validated.decode(profile->second)) return "";
+        out << profile->second << '\n';
+    }
     out << "END\n";
     return out.str();
 }
@@ -85,10 +92,11 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     if (record.size() > 3800) return false;
     std::istringstream in(record);
     std::string line, key;
-    if (!std::getline(in, line) || (line != "1" && line != "2" && line != "3" && line != "4")) return false;
-    const bool sleepPresent = line == "4";
+    if (!std::getline(in, line) || (line != "1" && line != "2" && line != "3" && line != "4" && line != "5")) return false;
+    const bool profilePresent = line == "5";
+    const bool sleepPresent = line == "4" || profilePresent;
     const bool explorationPresent = line != "1";
-    const bool expandedTechniques = line == "3" || line == "4";
+    const bool expandedTechniques = line == "3" || sleepPresent;
     SnapshotStore next;
     for (const auto expected : kSnapshotKeys) {
         if (!std::getline(in, line)) return false;
@@ -119,6 +127,11 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
         if (!std::getline(in,line) || line.empty() || !routine.decode(line)) return false;
         next.strings["sleepState"] = line;
     }
+    if (profilePresent) {
+        PetProfile profile;
+        if (!std::getline(in,line) || line.empty() || !profile.decode(line)) return false;
+        next.strings["petProfile"]=line;
+    }
     if (!std::getline(in, line) || line != "END") return false;
     if (std::getline(in, line)) return false;
     snapshot = next;
@@ -145,6 +158,9 @@ inline bool replaySnapshot(KeyValueStore& destination, const SnapshotStore& snap
     const auto sleep = snapshot.strings.find("sleepState");
     if (sleep != snapshot.strings.end() && destination.getString("sleepState", "") != sleep->second &&
         !destination.putString("sleepState",sleep->second.c_str())) return false;
+    const auto profile = snapshot.strings.find("petProfile");
+    if (profile != snapshot.strings.end() && destination.getString("petProfile", "") != profile->second &&
+        !destination.putString("petProfile",profile->second.c_str())) return false;
     return true;
 }
 

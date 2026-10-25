@@ -100,7 +100,7 @@ def test_max_reps_bounded_by_ev_headroom_uses_ceiling_for_partial():
     """If EV is 248, one rep is still possible (gain 4, cost 8). The
     ceiling round-up makes this visible to the UI so the player is
     not surprised by the partial last rep."""
-    pet = _firemon(energy=80, ev={"off": 248})
+    pet = _firemon(energy=80, ev={"off": 80})
     reps, reason = batch_max_reps(pet, "off")
     assert reason == ""
     # Energy caps at 80 // 8 = 10. EV caps at ceil(4/6) = 1. Bound 1.
@@ -146,12 +146,12 @@ def test_plan_one_rep_does_not_mutate_pet():
 
 def test_plan_one_rep_partial_at_cap():
     """At ev=250, the next rep gains 2 (not 6); the cost is still 8."""
-    pet = _firemon(energy=80, ev={"off": 250})
+    pet = _firemon(energy=80, ev={"off": 82})
     plan = batch_plan_one_rep(pet, "off")
     assert plan["can"] is True
     assert plan["ev_added"] == 2
     assert plan["energy_cost"] == TRAINING_ENERGY_COST
-    assert pet.to_dict() == _firemon(energy=80, ev={"off": 250}).to_dict()
+    assert pet.to_dict() == _firemon(energy=80, ev={"off": 82}).to_dict()
 
 
 def test_plan_one_rep_blocked_at_cap():
@@ -231,16 +231,14 @@ def test_batch_apply_4_reps_matches_4_single_train_attribute_calls():
 
 
 def test_batch_apply_at_cap_does_partial_last_rep():
-    """At ev=250 with 24 ENE available (3 reps), the batch applies
-    2+2+2 = 6 EV instead of 2+2+6 = 10; the last rep partial is
-    decided by the per-rep cap."""
-    pet = _firemon(energy=24, ev={"off": 250})
+    """Only the one partial rep that can grant EV is charged."""
+    pet = _firemon(energy=24, ev={"off": 82})
     result = batch_apply(pet, "off", 3)
-    assert result["reps"] == 3
-    assert result["ev_added"] == 2  # 250 + 2 = 252, then partial 2 + 2 + 2
-    assert result["energy_charged"] == 24
-    assert pet.ev_at("off") == 252
-    assert pet.get("e") == 0
+    assert result["reps"] == 1
+    assert result["ev_added"] == 2
+    assert result["energy_charged"] == 8
+    assert pet.ev_at("off") == 84
+    assert pet.get("e") == 16
 
 
 def test_batch_apply_zero_reps_is_noop():

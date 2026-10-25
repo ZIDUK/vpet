@@ -165,6 +165,13 @@ public:
                 int stats[6];
                 for (int i = 0; i < 6; ++i) stats[i] = pet.effectiveCombatStat(static_cast<CombatStat>(i));
                 battle.player.init(stats);
+                if (pet.techniqueStage()) {
+                    const int value = growth::statValue(8,pet.evLimit()/2,pet.techniqueStage());
+                    const int rivalStats[] = {value,value,value,value,value,value};
+                    battle.rival.init(rivalStats);
+                    const uint8_t equipment[] = {3,7,29};
+                    battle.rival.equipped = equipment[pet.techniqueStage()-1];
+                }
                 battle.player.element = pet.species() == SpeciesId::Egg || pet.species() == SpeciesId::Baby
                     ? practice::Element::Neutral : practice::Element::Fire;
                 battle.player.equipped = pet.practice.equipped;

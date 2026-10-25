@@ -340,7 +340,8 @@ def test_simulator_dumbbell_route_and_held_action_do_not_repeat(practice_assets,
         practice=True, training=False, max_frames=4))
     monkeypatch.setattr(sim, "PracticeSession", create_practice)
     monkeypatch.setattr(sim, "TrainingSession", create_training)
-    monkeypatch.setattr(sim.SimulatorServices, "load", lambda self, pet: False)
+    # Startup persistence is covered separately; count only gameplay commits.
+    monkeypatch.setattr(sim.SimulatorServices, "start", lambda self, pet: True)
     monkeypatch.setattr(sim.SimulatorServices, "save", lambda self, pet: saves.append(pet.to_dict()) or True)
     events = []
 
@@ -416,7 +417,8 @@ def test_simulator_feeding_and_backpack_route_commit_items(monkeypatch):
         profile="tdisplay", scale=1, build_dir=".", record=None,
         practice=False, training=False, max_frames=100,
     ))
-    monkeypatch.setattr(sim.SimulatorServices, "load", lambda *_: False)
+    # Startup persistence is covered separately; count only gameplay commits.
+    monkeypatch.setattr(sim.SimulatorServices, "start", lambda *_: True)
     monkeypatch.setattr(sim.SimulatorServices, "save",
                         lambda _, value: saves.append(value.to_dict()) or True)
     monkeypatch.setattr(sim_renderer, "render_boot_intro", lambda *_: Image.new("RGB", (240, 135)))

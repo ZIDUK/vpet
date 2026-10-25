@@ -88,6 +88,10 @@ assets/ui/icons/*
 !assets/ui/items/
 assets/ui/items/*
 !assets/ui/items/*.png
+!assets/ui/fx/
+assets/ui/fx/*
+!assets/ui/fx/bag_sheet.png
+!assets/ui/fx/grave.png
 build-tdisplay/
 out/
 

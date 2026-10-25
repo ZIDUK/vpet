@@ -11,10 +11,13 @@ struct Panels {
     bool away = false;
     uint8_t selectedMenu = 3;
     PanelId lastPanel = PanelId::Home;
+    uint8_t panelIndex = 0, detailPage = 0;
     int arenaResult = 0;
     void invalidate() {}
     void drawStorageError(const char*) { ++errors; }
-    template<class... T> void draw(const Navigation& n,T&&...) { lastPanel=n.panel(); }
+    template<class... T> void draw(const Navigation& n,T&&...) {
+        lastPanel=n.panel(); panelIndex=n.panelIndex(); detailPage=n.evolutionDetailPage();
+    }
     void drawPractice(const PracticeSession& s,const PetState&,uint32_t,const char*) {
         arenaResult=s.battle.result;
     }

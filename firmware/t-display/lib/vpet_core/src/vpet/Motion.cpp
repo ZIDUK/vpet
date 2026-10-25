@@ -2,11 +2,12 @@
 
 namespace vpet {
 
-Motion::Motion(int displayWidth, int displayHeight, int menuHeight, int frameSize)
+Motion::Motion(int displayWidth, int displayHeight, int menuHeight, int frameSize,
+               const content::PetDefinition& definition)
     : maxX_(displayWidth - frameSize),
       y_(displayHeight - frameSize - 4),
       x_((displayWidth - frameSize) / 2),
-      xMilli_(x_ * 1000) {
+      xMilli_(x_ * 1000), definition_(definition) {
     if (y_ < menuHeight) {
         y_ = menuHeight;
     }
@@ -87,60 +88,21 @@ void Motion::enterIdle(uint32_t nowMs) {
 }
 
 uint16_t Motion::frameCount() const {
-    switch (state_) {
-        case MotionState::Idle:
-            if (species_ == SpeciesId::Egg) return 16;
-            if (species_ == SpeciesId::Baby) return 25;
-            if (species_ == SpeciesId::Rookie) return 19;
-            if (species_ == SpeciesId::Champion) return 15;
-            return 25;
-        case MotionState::Walk:
-            if (species_ == SpeciesId::Baby) return 25;
-            if (species_ == SpeciesId::Rookie) return 22;
-            if (species_ == SpeciesId::Champion) return 15;
-            return 25;
-        case MotionState::Eat: return 25;
-        case MotionState::Punch: return 15;
-        case MotionState::Cast:
-        case MotionState::Hit:
-        case MotionState::Hurt:
-        case MotionState::Dodge:
-        case MotionState::Block: return 15;
-        case MotionState::Sleep:
-            if (species_ == SpeciesId::Baby || species_ == SpeciesId::Ultimate) return 25;
-            return 15;
-        case MotionState::Evolution: return species_ == SpeciesId::Rookie ? 16 : 15;
-        case MotionState::Hatch: return 10;
-    }
-    return 1;
+    return definition_.stage(species_).motionFrames[static_cast<uint8_t>(state_)];
 }
 
 uint16_t Motion::frameInterval() const {
-    switch (state_) {
-        case MotionState::Idle: return 85;
-        case MotionState::Walk: return 65;
-        case MotionState::Eat: return 75;
-        case MotionState::Punch: return 65;
-        case MotionState::Cast:
-        case MotionState::Hit:
-        case MotionState::Hurt:
-        case MotionState::Dodge:
-        case MotionState::Block: return 70;
-        case MotionState::Sleep: return 105;
-        case MotionState::Evolution: return 85;
-        case MotionState::Hatch: return 80;
-    }
-    return 100;
+    return definition_.stage(species_).motionIntervals[static_cast<uint8_t>(state_)];
 }
 
 uint16_t Motion::sleepLoopStart() const {
-    constexpr uint16_t kLieDownFrame = 11;
+    const uint16_t kLieDownFrame = definition_.clip(species_, content::Action::Sleep).loopStart;
     const uint16_t count = frameCount();
     return kLieDownFrame < count ? kLieDownFrame : 0;
 }
 
 uint16_t Motion::sleepLoopEnd() const {
-    constexpr uint16_t kLastLyingFrame = 14;
+    const uint16_t kLastLyingFrame = definition_.clip(species_, content::Action::Sleep).loopEnd;
     const uint16_t count = frameCount();
     return kLastLyingFrame < count ? kLastLyingFrame : static_cast<uint16_t>(count - 1);
 }

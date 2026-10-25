@@ -3,10 +3,15 @@
 Effective 2026-10-10. The dumbbell attribute flow uses the same rules in the
 Python simulator and T-Display firmware.
 
+Updated 2026-10-24: [F2b growth integration](growth-integration.md) is active
+in local code, not flashed. EV caps are 84/168/252 by adult rank; stored
+legacy EV is retained. Stats use the rank/IV profile, no universal 99 clamp.
+
 - Selecting an eligible attribute opens preparation without spending resources.
 - START reserves one repetition and immediately begins a 10,000 ms session.
-- One completed session costs 8 energy and grants up to 6 EV, capped at 252.
-  Existing stat conversion and secondary effects are unchanged.
+- One completed session costs 8 energy and grants up to 6 EV, capped by rank.
+  Secondary effects and the HP/MP pool conversions are unchanged; the base
+  combat stat now follows the F2b profile. A zero-gain session is not charged.
 - Real pet values remain unchanged until completion. The timer advances on each
   application tick, without requiring input or blocking the application loop.
 - Cancellation confirmation pauses the timer. Continue resumes the remaining

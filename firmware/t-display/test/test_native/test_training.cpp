@@ -189,7 +189,7 @@ void test_training_max_reps_energy_bounded() {
 
 void test_training_max_reps_ev_bounded() {
     auto pet = makeRookie(255);  // plenty of energy
-    pet.setEvAt(vpet::CombatStat::Def, 240);  // 12 EV headroom → 2 reps of 6
+    pet.setEvAt(vpet::CombatStat::Def, pet.evLimit()-12);
     const char* reason = vpet::kTrainingOk;
     const uint8_t reps = vpet::trainingMaxReps(pet, vpet::CombatStat::Def, &reason);
     TEST_ASSERT_EQUAL(2, reps);
@@ -198,7 +198,7 @@ void test_training_max_reps_ev_bounded() {
 
 void test_training_max_reps_partial_ev_included() {
     auto pet = makeRookie(80);
-    pet.setEvAt(vpet::CombatStat::Spd, 248);  // 4 EV headroom → 1 rep with 4 EV
+    pet.setEvAt(vpet::CombatStat::Spd, pet.evLimit()-4);
     const char* reason = vpet::kTrainingOk;
     const uint8_t reps = vpet::trainingMaxReps(pet, vpet::CombatStat::Spd, &reason);
     TEST_ASSERT_EQUAL(1, reps);
@@ -260,14 +260,14 @@ void test_training_apply_debits_energy_and_grows_ev() {
 
 void test_training_apply_partial_last_rep() {
     auto pet = makeRookie(80);
-    pet.setEvAt(vpet::CombatStat::Off, 250);  // 2 EV headroom
+    pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-2);
     auto summary = vpet::trainingApply(pet, vpet::CombatStat::Off, 3);
     // 1st rep: 6 EV → 256 → clamped to 252, gain=6. Headroom=0, stop.
     // 1 rep total. Energy = 80 - 8 = 72. 1 training session.
     TEST_ASSERT_EQUAL(1, summary.reps);
     TEST_ASSERT_EQUAL(2, summary.evAdded);  // only the partial gain counted
     TEST_ASSERT_EQUAL(8, summary.energyCharged);  // 1 rep full cost
-    TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(pet.evLimit(), pet.evAt(vpet::CombatStat::Off));
     TEST_ASSERT_EQUAL(72, pet.energy());
 }
 
@@ -364,53 +364,23 @@ void test_training_cancel_leaves_pet_untouched() {
 }
 
 void test_training_projection_uses_real_formula() {
-    // PetState::combatStat uses `10 + IV*3 + EV/6` (clamped 1..99).
-    // The projection must recompute with the projected EV, not assume
-    // 1 stat per EV. This test exercises a non-multiple-of-6 delta
-    // (EV 0 + 5 = 5, so 5/6 = 0 in integer division, the projected
-    // stat is the same as the current stat).
     auto pet = makeRookie(80);
-    pet.setEvAt(vpet::CombatStat::Off, 0);
-    // IV defaults to 0 for Off (rollDna is random; we don't care about
-    // the absolute value, only that the projection formula matches
-    // PetState::combatStat for a given IV/EV).
-    const int iv = pet.ivAt(vpet::CombatStat::Off);
-    // Current stat
-    int currentValue = 10 + iv * 3 + 0 / 6;
-    if (currentValue < 1) currentValue = 1;
-    if (currentValue > 99) currentValue = 99;
-    // Project +5 EV (NOT a multiple of 6): 0/6 = 0, 5/6 = 0 → same.
-    const int proj0 = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 5);
-    TEST_ASSERT_EQUAL(currentValue, proj0);
-
-    // Project +6 EV: (0 + 6)/6 = 1 → +1 stat point.
-    const int proj1 = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 6);
-    TEST_ASSERT_EQUAL(currentValue + 1, proj1);
-
-    // Project +12 EV: +2 stat points.
-    const int proj2 = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 12);
-    TEST_ASSERT_EQUAL(currentValue + 2, proj2);
-
-    // Edge: when projected EV exceeds 252, the projection caps at 252.
-    pet.setEvAt(vpet::CombatStat::Off, 250);
-    const int atCap = vpet::projectedStatValue(pet, vpet::CombatStat::Off, 200);
-    // (250 + 200) → clamped to 252 → 10 + IV*3 + 252/6 = 10 + IV*3 + 42.
-    const int cap = 10 + iv * 3 + 252 / 6;
-    TEST_ASSERT_EQUAL(cap, atCap);
-
-    // The HP conversion: HP = 40 + value*2. Value is capped at 99.
-    auto hpPet = makeRookie(80);
-    hpPet.setEvAt(vpet::CombatStat::Hp, 252);
-    const int hp = vpet::projectedStatValue(hpPet, vpet::CombatStat::Hp, 0);
-    const int hpValue = 10 + hpPet.ivAt(vpet::CombatStat::Hp) * 3 + 252 / 6;
-    TEST_ASSERT_EQUAL(40 + hpValue * 2, hp);
-
-    // The MP conversion: MP = 10 + value.
-    auto mpPet = makeRookie(80);
-    mpPet.setEvAt(vpet::CombatStat::Mp, 252);
-    const int mp = vpet::projectedStatValue(mpPet, vpet::CombatStat::Mp, 0);
-    const int mpValue = 10 + mpPet.ivAt(vpet::CombatStat::Mp) * 3 + 252 / 6;
-    TEST_ASSERT_EQUAL(10 + mpValue, mp);
+    for (auto species : {vpet::SpeciesId::Rookie,vpet::SpeciesId::Champion,vpet::SpeciesId::Ultimate}) {
+        pet.evolveTo(species);
+        for (int ev : {0,5,82,168,252}) for (int delta : {0,5,6,12,200}) {
+            for (auto stat : {vpet::CombatStat::Off,vpet::CombatStat::Hp,vpet::CombatStat::Mp}) {
+                pet.setEvAt(stat,ev);
+                const int projected = vpet::projectedStatValue(pet,stat,delta);
+                auto copy = pet;
+                copy.addEv(stat,delta);
+                const int value = copy.combatStat(stat);
+                const int expected = stat==vpet::CombatStat::Hp ? 40+2*value :
+                                     stat==vpet::CombatStat::Mp ? 10+value : value;
+                TEST_ASSERT_EQUAL(expected,projected);
+                TEST_ASSERT_EQUAL(ev,pet.evAt(stat));
+            }
+        }
+    }
 }
 
 void test_training_apply_clamps_by_energy_and_headroom() {
@@ -424,7 +394,7 @@ void test_training_apply_clamps_by_energy_and_headroom() {
     // (partial, +4 EV), 8 ENE charged, 1 trainingSession.
     {
         auto pet = makeRookie(80);
-        pet.setEvAt(vpet::CombatStat::Off, 248);  // headroom = 4
+        pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-4);
         const int e0 = pet.energy();
         const int ts0 = pet.trainingSessions();
         auto summary = vpet::trainingApply(pet, vpet::CombatStat::Off, 10);
@@ -436,7 +406,7 @@ void test_training_apply_clamps_by_energy_and_headroom() {
         TEST_ASSERT_EQUAL(0, summary.weightDelta);
         TEST_ASSERT_EQUAL(e0 - 8, pet.energy());
         TEST_ASSERT_EQUAL(ts0 + 1, pet.trainingSessions());
-        TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+        TEST_ASSERT_EQUAL(pet.evLimit(), pet.evAt(vpet::CombatStat::Off));
     }
 
     // Case 2: abundant energy, EV headroom 0 → zero reps, no charges.
@@ -481,7 +451,7 @@ void test_training_apply_clamps_by_energy_and_headroom() {
     // (1 rep by EV); result: 1 rep, 8 ENE, 6 EV, 1 trainingSession.
     {
         auto pet = makeRookie(8);
-        pet.setEvAt(vpet::CombatStat::Off, 242);  // headroom 10 → 2 reps
+        pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-10);
         const int e0 = pet.energy();
         auto summary = vpet::trainingApply(pet, vpet::CombatStat::Off, 5);
         TEST_ASSERT_EQUAL(1, summary.reps);
@@ -489,21 +459,21 @@ void test_training_apply_clamps_by_energy_and_headroom() {
         TEST_ASSERT_EQUAL(8, summary.energyCharged);
         TEST_ASSERT_EQUAL(1, pet.trainingSessions());
         TEST_ASSERT_EQUAL(e0 - 8, pet.energy());
-        TEST_ASSERT_EQUAL(248, pet.evAt(vpet::CombatStat::Off));
+        TEST_ASSERT_EQUAL(pet.evLimit()-4, pet.evAt(vpet::CombatStat::Off));
     }
 
     // Case 5: partial cap. 3 reps asked, headroom 4 → 1 rep, 8 ENE.
     // The two no-op reps are not billed.
     {
         auto pet = makeRookie(80);
-        pet.setEvAt(vpet::CombatStat::Off, 250);  // headroom 2 → 1 rep
+        pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-2);
         const int e0 = pet.energy();
         auto summary = vpet::trainingApply(pet, vpet::CombatStat::Off, 3);
         TEST_ASSERT_EQUAL(1, summary.reps);
         TEST_ASSERT_EQUAL(2, summary.evAdded);
         TEST_ASSERT_EQUAL(8, summary.energyCharged);
         TEST_ASSERT_EQUAL(e0 - 8, pet.energy());
-        TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+        TEST_ASSERT_EQUAL(pet.evLimit(), pet.evAt(vpet::CombatStat::Off));
     }
 }
 
@@ -679,13 +649,13 @@ void test_training_session_caps_at_energy_budget() {
 
 void test_training_session_partial_ev_gain_and_block() {
     auto pet = makeRookie(80);
-    pet.setEvAt(vpet::CombatStat::Off, 250);
+    pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-2);
     vpet::TrainingSession s;
     s.input(pet, vpet::InputEvent::Action, 0);
     s.input(pet, vpet::InputEvent::Action, 0);
     TEST_ASSERT_EQUAL(2, s.pendingEv);
     s.input(pet, vpet::InputEvent::None, 10000);
-    TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(pet.evLimit(), pet.evAt(vpet::CombatStat::Off));
     TEST_ASSERT_EQUAL(72, pet.energy());
     TEST_ASSERT_EQUAL(2, s.lastSummary.evAdded);
 }

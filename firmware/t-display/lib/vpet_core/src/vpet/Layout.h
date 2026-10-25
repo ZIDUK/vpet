@@ -39,8 +39,8 @@ constexpr int16_t kCallIconY = 111;
 //   EV           rowX+70 (18 px, up to three digits)
 constexpr int16_t kStatusDnaRowX = 145;
 constexpr int16_t kStatusDnaRowW = 92;
-constexpr int16_t kStatusDnaBarOffset = 48;
-constexpr int16_t kStatusDnaBarW = 18;
+constexpr int16_t kStatusDnaBarOffset = 54;
+constexpr int16_t kStatusDnaBarW = 12;
 constexpr int16_t kStatusDnaEvOffset = 70;
 
 inline uint8_t inventoryWindowStart(uint8_t count, uint8_t pos, uint8_t size = kInventoryWindow) {

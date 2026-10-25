@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "id": "vpet.firemon",
+  "version": "1.0.0",
+  "profile": "tdisplay-240x135",
+  "background": "/Background/background.bmp",
+  "background_night": "/Background/background_night.bmp",
+  "background_asset": "/backgrounds/background.vpa",
+  "background_night_asset": "/backgrounds/background_night.vpa",
+  "stages": {
+    "egg": {
+      "name": "EGG", "short_name": "EGG", "battle_name": "EGG",
+      "stem": "egg", "atlas_root": "digimon1/Egg", "home_root": "/animations/egg",
+      "portrait": "/UIEvolution/Egg.bmp", "portrait_asset": "/ui/evolution/egg.vpa",
+      "training_prefix": "/training/egg", "battle_prefix": "/battle/egg", "exploration_prefix": "/exploration/egg",
+      "actions": {
+        "idle": {"frames": 16, "interval_ms": 85},
+        "hatch": {"frames": 10, "interval_ms": 80}
+      },
+      "aliases": {"walk": "idle", "eat": "idle", "punch": "idle", "cast": "idle", "sleep": "idle", "evolution": "hatch", "hit": "idle", "hurt": "idle", "dodge": "idle", "block": "idle", "happy": "idle", "sad": "idle", "tired": "idle", "angry": "idle", "hit_react": "idle"},
+      "training_actions": ["idle"], "battle_actions": [],
+      "motion_overrides": {"walk": [25,65], "eat": [25,75], "punch": [15,65], "cast": [15,70], "sleep": [15,105], "evolution": [15,85], "hit": [15,70], "hurt": [15,70], "dodge": [15,70], "block": [15,70]}
+    },
+    "baby": {
+      "name": "SPARKMON", "short_name": "SPARK", "battle_name": "SPARKMON",
+      "stem": "sparkmon", "atlas_root": "digimon1/Baby", "home_root": "/animations/baby",
+      "portrait": "/UIEvolution/Sparkmon.bmp", "portrait_asset": "/ui/evolution/sparkmon.vpa",
+      "training_prefix": "/training/sparkmon", "battle_prefix": "/battle/baby", "exploration_prefix": "/exploration/sparkmon",
+      "actions": {
+        "idle": {"frames": 25, "interval_ms": 85}, "walk": {"frames": 25, "interval_ms": 65},
+        "eat": {"frames": 25, "interval_ms": 75}, "sleep": {"frames": 25, "interval_ms": 105, "loop": [11,14]},
+        "evolution": {"frames": 16, "interval_ms": 85},
+        "tired": {"frames": 25, "interval_ms": 90}, "angry": {"frames": 25, "interval_ms": 90}
+      },
+      "aliases": {"punch": "idle", "cast": "idle", "hatch": "idle", "hit": "idle", "hurt": "idle", "dodge": "idle", "block": "idle", "happy": "idle", "sad": "idle", "hit_react": "idle"},
+      "training_actions": ["idle", "walk", "eat"], "battle_actions": [],
+      "motion_overrides": {"punch": [15,65], "cast": [15,70], "evolution": [15,85], "hatch": [10,80], "hit": [15,70], "hurt": [15,70], "dodge": [15,70], "block": [15,70]}
+    },
+    "rookie": {
+      "name": "FIREMON", "short_name": "FIRE", "battle_name": "FIREMON",
+      "stem": "firemon", "atlas_root": "digimon1/Rookie", "home_root": "/animations/rookie",
+      "portrait": "/UIEvolution/Firemon.bmp", "portrait_asset": "/ui/evolution/firemon.vpa",
+      "training_prefix": "/training/firemon", "battle_prefix": "/battle/rookie", "exploration_prefix": "/exploration/firemon",
+      "actions": {
+        "idle": {"frames": 19, "interval_ms": 85}, "walk": {"frames": 22, "interval_ms": 65},
+        "eat": {"frames": 25, "interval_ms": 75}, "punch": {"frames": 15, "interval_ms": 65},
+        "cast": {"frames": 15, "interval_ms": 70}, "sleep": {"frames": 15, "interval_ms": 105, "loop": [11,14]},
+        "evolution": {"frames": 15, "interval_ms": 85}, "hit": {"frames": 15, "interval_ms": 70},
+        "hurt": {"frames": 15, "interval_ms": 70}, "dodge": {"frames": 15, "interval_ms": 70},
+        "block": {"frames": 15, "interval_ms": 70}, "happy": {"frames": 15, "interval_ms": 80},
+        "sad": {"frames": 15, "interval_ms": 80}, "tired": {"frames": 25, "interval_ms": 90},
+        "angry": {"frames": 25, "interval_ms": 90}
+      },
+      "aliases": {"hatch": "idle", "hit_react": "hurt"},
+      "training_actions": ["idle", "punch", "block", "walk", "cast"],
+      "battle_actions": ["idle", "punch", "cast", "block", "hit", "hurt", "dodge", "happy", "sad"],
+      "motion_overrides": {"evolution": [16,85], "hatch": [10,80]}
+    },
+    "champion": {
+      "name": "FLAMEMON", "short_name": "FLAME", "battle_name": "FLAMEMON",
+      "stem": "flamemon", "atlas_root": "digimon1/Champion", "home_root": "/animations/champion",
+      "portrait": "/UIEvolution/Flamemon.bmp", "portrait_asset": "/ui/evolution/flamemon.vpa",
+      "training_prefix": "/training/flamemon", "battle_prefix": "/battle/champion", "exploration_prefix": "/exploration/flamemon",
+      "actions": {
+        "idle": {"frames": 15, "interval_ms": 85}, "walk": {"frames": 15, "interval_ms": 65},
+        "eat": {"frames": 25, "interval_ms": 75}, "punch": {"frames": 15, "interval_ms": 65},
+        "cast": {"frames": 15, "interval_ms": 70}, "sleep": {"frames": 15, "interval_ms": 105, "loop": [11,14]},
+        "evolution": {"frames": 15, "interval_ms": 85}, "hurt": {"frames": 15, "interval_ms": 70},
+        "hit_react": {"frames": 15, "interval_ms": 70}, "dodge": {"frames": 15, "interval_ms": 70},
+        "block": {"frames": 15, "interval_ms": 70}, "happy": {"frames": 15, "interval_ms": 80},
+        "sad": {"frames": 15, "interval_ms": 80}, "tired": {"frames": 25, "interval_ms": 90},
+        "angry": {"frames": 25, "interval_ms": 90}
+      },
+      "aliases": {"hatch": "idle", "hit": "punch"},
+      "training_actions": ["idle", "punch", "block", "walk", "cast"],
+      "battle_actions": ["idle", "punch", "cast", "block", "hurt", "hit_react", "dodge", "happy", "sad"],
+      "motion_overrides": {"hatch": [10,80]}
+    },
+    "ultimate": {
+      "name": "DRAGFIREMON", "short_name": "DRAG", "battle_name": "DRAGFIRE",
+      "stem": "dragfiremon", "atlas_root": "digimon1/Ultimate", "home_root": "/animations/ultimate",
+      "portrait": "/UIEvolution/Dragfiremon.bmp", "portrait_asset": "/ui/evolution/dragfiremon.vpa",
+      "training_prefix": "/training/dragfiremon", "battle_prefix": "/battle/ultimate", "exploration_prefix": "/exploration/dragfiremon",
+      "actions": {
+        "idle": {"frames": 25, "interval_ms": 85}, "walk": {"file": "fly", "frames": 25, "interval_ms": 65},
+        "eat": {"frames": 25, "interval_ms": 75}, "punch": {"frames": 15, "interval_ms": 65},
+        "cast": {"frames": 15, "interval_ms": 70}, "sleep": {"frames": 25, "interval_ms": 105, "loop": [11,14]},
+        "hurt": {"frames": 15, "interval_ms": 70}, "block": {"frames": 15, "interval_ms": 70},
+        "happy": {"frames": 15, "interval_ms": 80}, "sad": {"frames": 15, "interval_ms": 80},
+        "tired": {"frames": 25, "interval_ms": 90}, "angry": {"frames": 25, "interval_ms": 90}
+      },
+      "aliases": {"evolution": "cast", "hatch": "idle", "hit": "punch", "dodge": "cast", "hit_react": "hurt"},
+      "training_actions": ["idle", "punch", "block", "walk", "cast"],
+      "battle_actions": ["idle", "punch", "cast", "block", "hurt", "happy", "sad"],
+      "motion_overrides": {"evolution": [15,85], "hatch": [10,80]}
+    }
+  }
+}

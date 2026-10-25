@@ -44,8 +44,8 @@ def test_combat_stat_uses_iv_ev_formula():
     pet.restore_dna((0x0F, 0x00, 0x00, 0x01))
     pet.restore_ev({"hp": 252})
     assert pet.combat_stat("mp") == 10
-    assert pet.combat_stat("hp") == 97
-    assert combat_stat((0x0F, 0x00, 0x00, 0x01), {"hp": 252}, "hp") == 97
+    assert pet.combat_stat("hp") == 107
+    assert combat_stat((0x0F, 0x00, 0x00, 0x01), {"hp": 252}, "hp") == 107
 
 
 def test_care_and_items_gain_ev():

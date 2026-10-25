@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from core.sleep import SleepRoutine
+from core.profile import PetProfile
 
 def clock_hour(clock, default=12):
     """Read hour from the shared get_datetime() 5-tuple."""
@@ -34,6 +35,7 @@ class SimulatorServices:
         self._clock_offset = 0
         self.connected_ssid = None
         self.wifi_status = "OFF"
+        self.storage_blocked = False
 
     def evolve_and_save(self, pet, evolution):
         if getattr(pet,'cold',False):
@@ -49,7 +51,15 @@ class SimulatorServices:
         pet.__dict__.update(before)
         return False
 
+    def start(self, pet):
+        """Load/migrate, or persist a first egg, before allowing gameplay."""
+        if self.load(pet):
+            return True
+        return not self.storage_blocked and self.save(pet)
+
     def save(self, pet):
+        if self.storage_blocked:
+            return False
         temporary = None
         try:
             self.save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -59,12 +69,19 @@ class SimulatorServices:
             ) as stream:
                 temporary = Path(stream.name)
                 data = pet.to_dict()
+                profile = None
+                if hasattr(pet, "profile") and not pet.profile.pet_id:
+                    random = os.urandom(16)
+                    profile = PetProfile.from_words(tuple(int.from_bytes(random[i:i+4], "big") for i in range(0,16,4)))
+                    data["profile"] = profile.encode()
                 if self._clock_offset:
                     data["_sim_clock_offset"] = self._clock_offset
                 json.dump(data, stream, separators=(",", ":"))
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self.save_path)
+            if profile is not None:
+                pet.profile = profile
             return True
         except (OSError, TypeError, ValueError):
             if temporary is not None:
@@ -114,23 +131,30 @@ class SimulatorServices:
         return complete
 
     def load(self, pet):
+        before = copy.deepcopy(pet.__dict__)
+        previous_offset = self._clock_offset
         try:
             with self.save_path.open(encoding="utf-8") as stream:
                 data = json.load(stream)
             if not isinstance(data, dict):
-                return False
+                raise ValueError("Invalid save")
             offset = float(data.get("_sim_clock_offset", 0))
             if not math.isfinite(offset):
-                return False
-            snapshot = pet.to_dict()
-            try:
-                pet.load_from_dict(data)
-            except (TypeError, ValueError, KeyError, OverflowError):
-                pet.load_from_dict(snapshot)
-                return False
+                raise ValueError("Invalid clock offset")
+            pet.load_from_dict(data)
             self._clock_offset = offset
+            self.storage_blocked = False
+            if not pet.profile.pet_id and not self.save(pet):
+                raise OSError("Profile migration was not saved")
             return True
-        except (OSError, ValueError, TypeError, OverflowError):
+        except FileNotFoundError:
+            self.storage_blocked = False
+            return False
+        except (OSError, ValueError, TypeError, KeyError, OverflowError):
+            pet.__dict__.clear()
+            pet.__dict__.update(before)
+            self._clock_offset = previous_offset
+            self.storage_blocked = True
             return False
 
     def scan_wifi(self):

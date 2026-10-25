@@ -200,10 +200,22 @@ def write_catalog_header(include_dir, catalog):
         "    uint8_t minHealth;",
         "};",
         "inline constexpr EvolutionEdge kEvolutionEdges[] = {",
-        '    {"egg", "baby", false, false, 8, -1, 0, 0, 0, 0, 0},',
-        '    {"baby", "rookie", true, false, 43800, 1, 0, 0, 0, 0, 0},',
-        '    {"rookie", "champion", true, false, 86400, -1, 0, 55, 55, 55, 75},',
-        '    {"champion", "ultimate", true, false, 129600, -1, 15, 0, 0, 0, 0},',
+    ])
+    for edge in catalog["evolution"]:
+        bars = edge.get("requirements", {})
+        lines.append('    {"%s", "%s", %s, %s, %d, %d, %d, %d, %d, %d, %d},' % (
+            edge["from"], edge["to"], str(edge.get("automatic", True)).lower(),
+            str(edge.get("requirements_pending", False)).lower(), edge.get("min_stage_age_seconds", 0),
+            edge.get("max_care_mistakes", -1), edge.get("battles_required", 0),
+            *[bars.get(k, 0) for k in ("h", "e", "p", "hp")]))
+    lines.extend([
+        "};",
+        "struct EvolutionWeight { const char* from; uint8_t minimum; uint8_t maximum; };",
+        "inline constexpr EvolutionWeight kEvolutionWeights[] = {",
+    ])
+    for edge in catalog["evolution"]:
+        lines.append('    {"%s", %d, %d},' % (edge["from"], edge.get("min_weight", 0), edge.get("max_weight", 0)))
+    lines.extend([
         "};",
         "}  // namespace vpet::generated",
         "",

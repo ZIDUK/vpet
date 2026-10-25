@@ -162,7 +162,7 @@ void training() {
     assert(p.exploration.guide && p.evAt(CombatStat::Off)==0);
     auto applied=trainingCommit(p,CombatStat::Off,1,nullptr);
     assert(applied.evAdded==7 && !p.exploration.guide && p.adoptedStock.count(manual)==1);
-    p.exploration.guide=true; p.setEvAt(CombatStat::Off,246);
+    p.exploration.guide=true; p.setEvAt(CombatStat::Off,p.evLimit()-6);
     applied=trainingCommit(p,CombatStat::Off,1,nullptr);
     assert(applied.evAdded==6 && p.exploration.guide);
     p=pet(); p.exploration.guidePending=true;

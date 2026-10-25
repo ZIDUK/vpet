@@ -6,25 +6,21 @@ from PIL import Image, ImageDraw, ImageFont
 from scripts.practice_icons import info_icon, technique_icon
 from scripts.tdisplay_assets import write_asset
 from src.core.i18n import TRAINING_STRINGS, STAT_STRINGS
+from core.content import ROLES, builtin_definition
 
 
-def package_training(sim_build, data_dir, include_dir):
+def package_training(sim_build, data_dir, include_dir, definition=None):
     records = []
+    definition = definition or builtin_definition()
 
     def asset(name, frames):
         records.append(write_asset(data_dir / "training" / (name + ".vpa"),
                                    frames, frames[0].size))
 
-    sprite_sets = {
-        "egg": ("Egg", "egg", {"idle": "idle"}),
-        "sparkmon": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
-        "firemon": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "walk", "cast": "cast"}),
-        "flamemon": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "walk", "cast": "cast"}),
-        "dragfiremon": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "block": "block", "walk": "fly", "cast": "cast"}),
-    }
-    for pet_name, (stage, filename, actions) in sprite_sets.items():
-        for action, source_action in actions.items():
-            source = sim_build / "digimon1" / stage / f"{filename}_{source_action}_atlas.bmp"
+    for role in ROLES:
+        for action in definition.stage(role)["training_actions"]:
+            clip = definition.clip(role, action, "training")
+            source = sim_build / clip["atlas"].lstrip("/")
             with Image.open(source) as atlas:
                 frames = []
                 for x in range(0, atlas.width, atlas.height):
@@ -33,7 +29,7 @@ def package_training(sim_build, data_dir, include_dir):
                     cell = cell.convert("RGBA")
                     cell.putalpha(alpha)
                     frames.append(cell.resize((68, 68), Image.Resampling.NEAREST))
-                asset(f"{pet_name}_{action}", frames)
+                records.append(write_asset(data_dir / clip["path"].lstrip("/"), frames, frames[0].size))
                 if action in ("idle", "walk"):
                     size = 48 if action == "idle" else 44
                     # Exploration portraits and the travel lane stay smaller than Training.
@@ -44,11 +40,12 @@ def package_training(sim_build, data_dir, include_dir):
                         cell = cell.convert("RGBA")
                         cell.putalpha(alpha)
                         explore_frames.append(cell.resize((size, size), Image.Resampling.NEAREST))
-                    records.append(write_asset(data_dir / "exploration" / f"{pet_name}_{action}{size}.vpa",
+                    explore = definition.clip(role, action, "exploration")
+                    records.append(write_asset(data_dir / explore["path"].lstrip("/"),
                                                explore_frames, (size, size)))
 
     for action in ("idle", "punch", "block", "walk", "cast"):
-        with Image.open(sim_build / "digimon1/Rookie" / f"firemon_{action}_atlas.bmp") as atlas:
+        with Image.open(sim_build / definition.clip("rookie", action, "training")["atlas"].lstrip("/")) as atlas:
             frames = []
             for x in range(0, atlas.width, atlas.height):
                 cell = atlas.crop((x, 0, x + atlas.height, atlas.height))

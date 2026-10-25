@@ -36,7 +36,7 @@ public:
 
 private:
     const char* animationPath(const AppViewModel& model) const;
-    void rebuildStaticScene(bool night, SpeciesId species);
+    void rebuildStaticScene(bool night, SpeciesId species, const content::PetDefinition& definition);
     void drawSelector(uint8_t selected, bool calling);
     void drawCallCue(const AppViewModel& model);
     void drawNeedBubble(const AppViewModel& model);
@@ -48,6 +48,7 @@ private:
     bool staticSceneReady_ = false;
     bool staticSceneNight_ = false;
     SpeciesId staticSceneSpecies_ = SpeciesId::Egg;
+    const content::PetDefinition* staticDefinition_ = nullptr;
 };
 
 }  // namespace vpet

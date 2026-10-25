@@ -5,6 +5,7 @@ Amounts are vPet rules, never the original game's raw stat magnitudes.
 """
 
 VERSION = 2
+from core.growth import MAX_BATTLE_STAT
 
 
 def _item(item_id, name, reference, category, effects, duration='instant'):
@@ -145,7 +146,7 @@ def has_training_bonus(pet):
 
 
 def consume_training_bonus(pet, stat):
-    if pet.exploration.away or stat not in STAT_INDEX or pet.ev_at(stat) >= 252:
+    if pet.exploration.away or stat not in STAT_INDEX or pet.ev_at(stat) >= pet.ev_limit():
         return 0
     if pet.exploration.guide:
         return pet.exploration.use_guide(pet, stat)
@@ -227,7 +228,7 @@ def use_combat_item(fighter, stock, item_id):
             idx = STAT_INDEX[target]
             if amount > boosts[idx]:
                 boosts[idx] = amount
-                stats[idx] = min(99, base[idx] + max(1, base[idx] * amount // 100))
+                stats[idx] = min(MAX_BATTLE_STAT, base[idx] + max(1, base[idx] * amount // 100))
     if (hp, mp, tuple(stats)) == (fighter.hp, fighter.mp, fighter.stats):
         return False
     fighter.hp, fighter.mp = hp, mp

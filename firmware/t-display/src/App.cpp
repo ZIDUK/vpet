@@ -1,5 +1,6 @@
 #include "vpet/App.h"
 #include "vpet/Nutrition.h"
+#include "vpet/EvolutionProgress.h"
 #include "vpet/Strings.h"
 
 #include <Arduino.h>
@@ -154,6 +155,11 @@ void App::applyDateTime() {
 
 void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
+    if (panel == PanelId::EvolutionDetail && event == InputEvent::Next) {
+        const auto progress = evolution_progress::forPet(pet_, navigation_.panelIndex());
+        navigation_.setEvolutionDetailPage((navigation_.evolutionDetailPage() + 1) % progress.pages());
+        return;
+    }
     if (pet_.sleep.asleep && event==InputEvent::Action &&
         (panel==PanelId::Inventory || panel==PanelId::Feeding || panel==PanelId::Exploration)) return;
     if (panel == PanelId::Exploration) { explorationInput(event); return; }

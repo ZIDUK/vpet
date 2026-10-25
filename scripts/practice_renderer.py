@@ -12,6 +12,8 @@ from config import (BACKGROUND_PATH,
 from core.techniques import TECHNIQUES, REQUIRED_STAGE, REQUIRED_TRAINING, technique_name, technique_stage
 from scripts.practice_icons import technique_icon, muted_icon, info_icon
 from scripts.sim_renderer import _load_image, device_path
+from core.content import builtin_definition
+from scripts.content_loader import definition_for
 
 INK = (19, 23, 27)
 WHITE = (242, 244, 238)
@@ -134,22 +136,12 @@ def _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip=False,
     frame.paste(sprite, (x, y), sprite)
 
 
-def _species_atlas(species, action):
-    sprites = {
-        "egg": ("Egg", "egg", {"idle": "idle"}),
-        "baby": ("Baby", "sparkmon", {"idle": "idle", "walk": "walk", "eat": "eat"}),
-        "rookie": ("Rookie", "firemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hit": "hit", "hurt": "hurt", "happy": "happy", "sad": "sad"}),
-        "champion": ("Champion", "flamemon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "walk", "hurt": "hurt", "hit_react": "hit_react", "dodge": "dodge", "happy": "happy", "sad": "sad"}),
-        "ultimate": ("Ultimate", "dragfiremon", {"idle": "idle", "punch": "punch", "cast": "cast", "block": "block", "walk": "fly", "hurt": "hurt", "happy": "happy", "sad": "sad"}),
-    }
-    stage, name, available = sprites.get(species, sprites["rookie"])
-    requested = action if action in available else ("punch" if action in ("hit", "hurt") and "punch" in available else "idle")
-    return f"/digimon1/{stage}/{name}_{available[requested]}_atlas.bmp"
+def _species_atlas(species, action, definition=None):
+    return (definition or builtin_definition()).clip(species, action)["atlas"]
 
 
-def _practice_species_label(species):
-    return {"egg": "EGG", "baby": "SPARKMON", "rookie": "FIREMON",
-            "champion": "FLAMEMON", "ultimate": "DRAGFIRE"}.get(species, "VPET")
+def _practice_species_label(species, definition=None):
+    return (definition or builtin_definition()).name(species, "battle")
 
 
 def _english(session):
@@ -162,7 +154,7 @@ def _technique_label(action, english):
 
 def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False, species="rookie", frame_interval_ms=100):
     requested = {0: "punch", 1: "cast", 2: "block", 3: "cast", 4: "cast", "walk": "walk", "eat": "eat"}.get(action, "idle")
-    path = _species_atlas(species, requested)
+    path = _species_atlas(species, requested, definition_for(build_dir))
     _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip,
                 frame_interval_ms=frame_interval_ms)
 
@@ -170,11 +162,11 @@ def pet_sprite(frame, build_dir, x, y, size, action, now_ms, flip=False, species
 def impact_sprite(frame, build_dir, x, y, size, kind, now_ms, flip=False, species="rookie"):
     """Render the hit (attacker) or hurt (defender) frame for PRACTICE_IMPACT_MS."""
     if kind == "hit":
-        path = _species_atlas(species, "hit")
+        path = _species_atlas(species, "hit", definition_for(build_dir))
         count = PET_HIT_FRAME_COUNT
         interval_ms = int(PET_HIT_FRAME_INTERVAL * 1000)
     else:
-        path = _species_atlas(species, "hurt")
+        path = _species_atlas(species, "hurt", definition_for(build_dir))
         count = PET_HURT_FRAME_COUNT
         interval_ms = int(PET_HURT_FRAME_INTERVAL * 1000)
     _draw_atlas(frame, build_dir, path, x, y, size, now_ms, flip,
@@ -227,7 +219,7 @@ def render_technique_panel(frame, draw, build_dir, session, now_ms):
                 ("mastery", ("DOMINIO " if es else "MASTERY ") + "%d/100" % progress.mastery[i], MUTED)]
         if not learned:
             stage_ok = technique_stage(session.pet.species) >= REQUIRED_STAGE[i]
-            requirement = ('FLAMEMON' if REQUIRED_STAGE[i] == 2 else 'DRAGFIREMON') if not stage_ok else '%d / %d' % (progress.training, REQUIRED_TRAINING[i])
+            requirement = definition_for(build_dir).name('champion' if REQUIRED_STAGE[i] == 2 else 'ultimate') if not stage_ok else '%d / %d' % (progress.training, REQUIRED_TRAINING[i])
             rows = [("training", "ENTRENAR" if es else "TRAIN", MUTED), ("lock", requirement, YELLOW)]
         for row, (symbol, label, color) in enumerate(rows):
             y = 82 + row * 14
@@ -338,7 +330,7 @@ def _draw_combatant(frame, build_dir, session, now_ms, side):
             action = "hurt"
         elif own == 2:
             action = "block"
-    frames = _arena_frames(str(build_dir), _species_atlas(species, action))
+    frames = _arena_frames(str(build_dir), _species_atlas(species, action, definition_for(build_dir)))
     sprite = frames[((elapsed if action != "idle" else now_ms) // 80) % len(frames)]
     if not player:
         sprite = sprite.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
@@ -353,7 +345,7 @@ def _arena_frames(build_dir, path):
 
 
 
-def _draw_combat_header(draw, frame, battle, pet):
+def _draw_combat_header(draw, frame, battle, pet, definition=None):
     """Top band: title, wide HP/MP bars and right-aligned ``value/max``
     numbers. Each side occupies half the screen, split at ``SPLIT_X``."""
     draw.rectangle((0, 0, 239, HEADER_BOTTOM), fill=INK)
@@ -361,7 +353,7 @@ def _draw_combat_header(draw, frame, battle, pet):
     # Left column: current pet form (x=4..118), right column: practice rival.
     rival_label = "PRACTICE" if pet.language != "ES" else "PRACTICA"
     for x, name, fighter, color_hp, color_mp in (
-        (4, _practice_species_label(pet.species), battle.player, HP, MP),
+        (4, _practice_species_label(pet.species, definition), battle.player, HP, MP),
         (125, rival_label, battle.rival, HP, MP),
     ):
         text(draw, (x, 0), name)
@@ -415,7 +407,7 @@ def _draw_result_banner(frame, draw, build_dir, session, now_ms):
         text(draw, (16, 84), reward, GREEN, small=True)
     action = {"VICTORIA": "happy", "DERROTA": "sad"}.get(session.battle.result)
     if action and session.pet.species in ("rookie", "champion", "ultimate"):
-        _draw_atlas(frame, build_dir, _species_atlas(session.pet.species, action),
+        _draw_atlas(frame, build_dir, _species_atlas(session.pet.species, action, definition_for(build_dir)),
                     164, 44, 64, max(0, now_ms - session.updated_at), frame_interval_ms=100)
     else:
         pet_sprite(frame, build_dir, 164, 44, 64, None, now_ms,
@@ -494,7 +486,7 @@ def render_battle(frame, draw, build_dir, session, now_ms):
     if not battle.result:
         _draw_combatant(frame, build_dir, session, now_ms, "player")
         _draw_combatant(frame, build_dir, session, now_ms, "rival")
-    _draw_combat_header(draw, frame, battle, session.pet)
+    _draw_combat_header(draw, frame, battle, session.pet, definition_for(build_dir))
     if battle.result:
         _draw_result_banner(frame, draw, build_dir, session, now_ms)
     _draw_action_selector(frame, draw, build_dir, session)

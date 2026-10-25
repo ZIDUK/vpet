@@ -15,9 +15,11 @@ A Pet also has a lifecycle state:
 import time
 
 from core.dna import SPECIES_ID, combat_stat, iv_at, mix_entropy
+from core.growth import adult_rank, ev_limit, stat_limit, projected_ev
 from core.techniques import TechniqueProgress
 from core.exploration import Exploration
 from core.sleep import SleepRoutine
+from core.profile import PetProfile
 from core.item_catalog import DEFAULT_STOCK, ITEM_BY_ID, effect_amount
 from core.nutrition import (apply_food, body_condition, complete_training_weight,
                             consume_hunger, effective_stat, migrate_legacy_weight)
@@ -70,6 +72,7 @@ class Pet:
     """Holds pet state: stats, age, species, line, lifecycle state."""
 
     def __init__(self, species=DEFAULT_SPECIES, line=DEFAULT_LINE, state=None):
+        self.profile = PetProfile()
         self.species = species      # current form: "sproutspore", "sprouto", "thornback", "hydravine"
         self.line = line            # evolution line: "sprout_line"
         self.stats = {"h": 70, "e": 70, "p": 70, "hp": 70}
@@ -237,6 +240,13 @@ class Pet:
     def combat_stat(self, stat):
         return combat_stat(self.dna, self.ev, stat, self.species)
 
+    def ev_limit(self):
+        return ev_limit(self.species)
+
+    def stat_limit(self, stat):
+        rank = adult_rank(self.species)
+        return stat_limit(self.iv_at(stat), rank) if rank else 99
+
     def effective_combat_stat(self, stat):
         condition = body_condition(self.species, self.weight)
         penalty = condition.get({"off": "off_penalty", "def": "def_penalty",
@@ -249,7 +259,7 @@ class Pet:
     def gain_ev(self, stat, amount):
         if stat not in self.ev:
             return
-        self.ev[stat] = min(252, self.ev[stat] + int(amount))
+        self.ev[stat] = projected_ev(self.ev[stat], amount, self.species)
 
     def feed(self, from_item=False):
         return apply_food(self, "meat")["applied"]
@@ -393,6 +403,7 @@ class Pet:
     def to_dict(self):
         """Serialise for save file."""
         return {
+            "profile": self.profile.encode(),
             "species": self.species,
             "line": self.line,
             "state": self.state,
@@ -432,12 +443,14 @@ class Pet:
         }
 
     def load_from_dict(self, d):
+        profile = PetProfile.decode(d.get("profile", ""))
         from core.adopted_items import load_stock
         self.adopted_inventory, self.item_reward_cursor = load_stock(
             d.get('adopted_items'), missing='adopted_items' not in d)
         self.techniques = TechniqueProgress(d.get("techniques"), d.get("species", self.species))
         self.exploration = Exploration(d.get("exploration"))
         self.sleep = SleepRoutine(d.get("sleep"))
+        self.profile = profile
         self.cold = d.get("cold",False) is True
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)

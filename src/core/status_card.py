@@ -142,7 +142,7 @@ def battle_rows(pet, spanish):
 
 # ---------------------------------------------------------------------------
 # Page 4/4: DNA. The full code XX-XX-XX-XX is rendered alongside the
-# rotating helix; six combat stats have bars on a 0..99 scale and a
+# rotating helix; six combat stats use the current stage/gene ceiling and a
 # separate accumulated EV column. The renderer draws this page; the helper
 # here only returns the data.
 # ---------------------------------------------------------------------------

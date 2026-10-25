@@ -16,7 +16,7 @@ struct BodyCondition {
 
 uint8_t referenceWeight(SpeciesId species);
 BodyCondition bodyCondition(SpeciesId species, uint8_t weight);
-uint8_t effectiveStat(uint8_t base, uint8_t penalty);
+uint16_t effectiveStat(uint16_t base, uint8_t penalty);
 uint8_t evolvedWeight(SpeciesId from, SpeciesId to, uint8_t weight);
 uint8_t migrateLegacyWeight(SpeciesId species, uint8_t weight);
 

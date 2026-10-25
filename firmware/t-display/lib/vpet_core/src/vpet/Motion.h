@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "vpet/PetState.h"
+#include "vpet/PetDefinition.h"
 
 namespace vpet {
 
@@ -36,7 +37,8 @@ enum class AnimationId : uint8_t {
 
 class Motion {
 public:
-    Motion(int displayWidth, int displayHeight, int menuHeight, int frameSize);
+    Motion(int displayWidth, int displayHeight, int menuHeight, int frameSize,
+           const content::PetDefinition& definition = content::builtinDefinition());
     void setSpecies(SpeciesId species) { species_ = species; }
     void alignClock(uint32_t nowMs);
     void startWalking(uint32_t nowMs);
@@ -54,6 +56,7 @@ public:
 
     MotionState state() const { return state_; }
     AnimationId animation() const;
+    const content::PetDefinition& definition() const { return definition_; }
     int x() const { return x_; }
     int y() const { return y_; }
     int direction() const { return direction_; }
@@ -79,6 +82,7 @@ private:
     uint32_t stateUntilMs_ = 0;
     bool actionCompleted_ = false;
     bool tired_ = false;
+    const content::PetDefinition& definition_;
 };
 
 }  // namespace vpet

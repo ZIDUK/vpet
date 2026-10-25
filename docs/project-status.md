@@ -1,8 +1,258 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-23
+## Estado vigente: 2026-10-24
+
+## Entrega F1/F2 Cargada En Placa
+
+Firmware y LittleFS de F1/F2 cargados el 2026-10-24, con respaldo critico
+nuevo, digests comprobados contra la placa y arranque `VPET_READY` confirmado.
+La revision fisica de las cuatro paginas de Status y la conservacion visual
+del progreso siguen pendientes de confirmacion del usuario, quien autorizo
+validarlas despues. [Registro de entrega](superpowers/plans/2026-10-24-f1-f2-board-delivery.md).
+Creator queda fuera del commit por decision expresa; sus cambios locales
+concurrentes se conservan. Las notas inferiores de F1/F2 "sin flashear"
+describen comprobaciones previas a esta carga, no el estado de despliegue actual.
+
+vPet Hub local: catalogo, previews por etapa/accion e importacion de JSON F1
+con validacion de metadatos. Sin cuentas, tienda ni escrituras en placa.
+Instalacion USB deshabilitada hasta implementar el protocolo y recuperacion.
+Ver [alcance y arranque](vpet-hub.md).
 
 Roadmap actualizado: [prioridades vigentes](superpowers/plans/2026-10-11-delivery-roadmap.md).
+
+## F2a: Perfil Individual Integrado Localmente, Sin Flashear
+
+`PetProfile` por composicion en Pet/PetState: ID de 128 bits, sexo M/F
+equiprobable y referencias de padres; conservados al evolucionar y con nueva
+identidad al reiniciar una vida. Fundadores legacy con padres desconocidos.
+No hay ventaja de stats por sexo ni nuevo indicador en Status.
+
+Migracion de simulador/NVS y reserva, journal v5 compatible con v1-v4,
+schema principal 3 intacto. Entropia fuera del core: OS en sim, mbedTLS
+sembrado antes de RF/ADC en ESP32, sin activar WiFi. Carga invalida/futura
+bloquea migracion, no inventa otra identidad. No acredita recompensas.
+[Contrato](individual-profile.md), [plan](superpowers/plans/2026-10-24-f2a-individual-profile.md).
+
+Verificacion final con codigo congelado: 1768 Python aprobadas en 286.54 s,
+185 nativas en 1.40 s, ESP32 compilado en 8.89 s. RAM 56228/327680,
+app 1044313/4194304; sin cambios de assets. Se conservan las 13239 advertencias
+Python preexistentes y TOUCH_CS de TFT. Evidencia y hashes en
+`out/individual-profile/verification.json`. Sin acceso a partida personal,
+carga a placa, commit ni push. Breeding, roster, inventario compartido de coleccion,
+premios, instalacion y aprendizaje siguen pendientes.
+
+## F2b: Crecimiento Integrado Localmente, Sin Flashear
+
+El usuario autoriza continuar del piloto a la integracion. Perfil por rango
+y ADN ya conectado en Python/C++: EV 84/168/252, potencial 200+8*IV y hasta
+320 por stat permanente. PetState, penalizaciones y bases de boost ampliados;
+boost temporal hasta 448 y HP/MP hasta 680/330. Cuidado permanece en 0..100.
+
+Training, previews, bonus, Exploracion y chips respetan caps; EXP sin efecto
+no consume. Repeticiones sin EV no cobran ni guardan. EV legacy se conserva
+en carga/reserva y al sumar, sin cambiar schema NVS 3 ni enums. Arena usa
+rival de referencia 61/108/156 por rango, sin escalar con cada entrenamiento.
+No se cambia cadencia ni pausa de Mochila, ni se implemento F2a o breeding
+en esa entrega (F2a local posterior se documenta arriba).
+
+57 pruebas especificas aprobadas: 12.144 puntos del PetState real, guardado
+y reserva, rollback, boosts amplios, tres etapas y seis genes. Incluyen 18
+comparaciones pixel-perfect de Training C++/Python con valores amplios, y
+Status con seis 320 dentro de sus columnas. Galerias inspeccionadas, no
+validacion fisica de tipografia. [Contrato y limites](growth-integration.md),
+[plan](superpowers/plans/2026-10-23-f2b-growth-integration.md).
+
+Cierre 2026-10-24: suite completa 1752 aprobadas en 288.75 s, 185 nativas
+en 1.02 s y firmware compilado en 9.56 s. RAM 56068/327680 (+16 vs F1),
+app 1031545/4194304. Recursos regenerados: 227 assets, 10891653 bytes, sin
+aumento. Se mantienen advertencias preexistentes de Pillow/pytest/TFT.
+Verificaciones reforzadas cubren 72864 valores del calculador Python activo
+(seis genes) y 12144 del PetState C++ real frente al candidato independiente.
+Sin flasheo, WiFi, lectura de partida personal, commit ni push en esta entrega.
+
+Las secciones siguientes conservan evidencia historica; sus notas de techo
+99 o piloto sin activar describen la revision anterior, no este codigo local.
+
+## F2b: Piloto Previo, Sin Activar En Esa Revision
+
+Continuacion autorizada de la simulacion recomendada tras F1. Calculador
+puro Python y referencia C++ opt-in; ningun consumidor activo incorpora la
+curva. Formula vigente, techo 99, PetState, NVS, menus y recursos sin cambios.
+F2a (identidad/sexo/parentesco), migracion e integracion de F2b siguen abiertas.
+
+12.144 puntos escalares: cero stats inferiores a la formula actual y cero
+retrocesos de evolucion en el perfil de tres rangos. Paridad de 97.152
+proyecciones Python/C++; pruebas de EV legacy retenido, ganancia parcial,
+bonus y no gasto al llegar al cap. Se proponen 84/168/252 EV (14 repeticiones
+por atributo y tramo), aun sin aprobar balance. Mayor salto observado: +107.
+
+218 encuentros host reutilizan el motor real, sin items/peso ni guardado.
+Mediana de rivales iguales: 7 rondas vigente, 9 piloto; rival fijo de Arena
+demasiado debil y empates defensivos al limite de 30. Aumentar stats no
+resuelve navegar Mochila. Probe de boost en fixture >99 baja 264 a 99:
+bloqueo para integrar el candidato, no ruta nueva activa de la placa.
+
+23 pruebas nuevas; suite completa 1710 aprobadas en 279.39 s con las 12617
+advertencias existentes. Nativas: 185 aprobadas en 4.49 s. ESP32 compilado
+en 23.81 s: RAM 56052/327680 y app 1030989/4194304, igual que F1.
+No se flasheo, accedio a USB, cambio partida ni publico esta revision.
+Artefactos reproducibles en `out/growth-pilot/`; [informe y limites](growth-pilot.md),
+[plan y evidencia](superpowers/plans/2026-10-23-f2-growth-pilot.md).
+
+## F1: Definiciones Implementadas Y Probadas Localmente
+
+El usuario prioriza implementar F1 y pruebas sin cerrar aun F0 en placa.
+Definicion visual builtin validada, resolver portable Python/C++, Motion y
+vistas reales integrados. Las tres reglas automaticas se generan desde JSON
+sin cambiar balance; el peso 8..14 ya coincide tambien en catalogos.
+La ficha evolutiva local anterior se conserva. Sin cambios NVS, WiFi o carga.
+
+1687 Python aprobadas en 255.05 s y 185 nativas en 1.29 s. Pruebas F1:
+34 casos, 680 resoluciones cruzadas y siete vistas por cada plataforma con
+otra definicion de prueba; sin atlas legacy ni mutacion de partida. Arte de
+fixture derivado del existente, no otra mascota comercial independiente.
+ESP32 compilado: RAM 56052/327680, app 1030989/4194304; sin afirmar FPS fisicos.
+Se conservan advertencias existentes de Pillow/pytest/TFT.
+
+Presupuesto: payload 10891653 bytes, linea referenciada 10233972. Dos lineas
+modeladas de ese tamano con staging, journals, reserva y cuatro registros
+provisionales necesitan 32752237 bytes frente a 12451840: no caben. Cuatro
+individuos pueden compartir arte, pero capacidad efectiva/roster aun no medidos.
+Instalador USB, segunda linea comercial y optimizacion de almacenamiento siguen
+pendientes. [Contrato F1](content-definitions.md),
+[plan](superpowers/plans/2026-10-23-f1-content-definitions.md).
+
+Inventario compartido confirmado; objetivo de hasta cuatro mascotas, no
+garantia de cuatro paquetes. Curva piloto, plazas de huevos, breeding e
+items por turno/cadencia de Arena siguen propuestas, detalladas en
+[decisiones de producto](product-decisions-2026-10-23.md). No se activaron en F1.
+
+## Programa Consolidado De Implementacion
+
+Se consolida a solicitud del usuario lo existente, requisitos, aprobaciones
+y orden recomendado en el [programa de entregas](superpowers/plans/2026-10-23-consolidated-delivery-program.md).
+F0 calidad; F1 definiciones/presupuesto; F2 identidad/potencial; F3 Hub de
+consulta/respaldo; F4 roster; F5 instalacion y premios/items; F6 aprendizaje;
+F7 breeding interno; F8 encuentros/regalos P2P; F9 TinyML opcional/lanzamiento.
+Las fases se especifican por separado; ni este indice ni los ejemplos de
+balance autorizan migraciones o despliegues. El techo visible de 99 queda
+como problema a resolver, no una restriccion de producto aceptada.
+Solo documentacion en esta consolidacion; no se repitieron suites ni USB.
+
+## Herencia Conductual Moderada Aprobada
+
+El usuario aprueba que la cria reciba temperamento y una influencia inicial
+moderada de tacticas/preferencias parentales, sin ser una copia entrenada.
+Su experiencia propia puede cambiar ese estilo. No hereda EV, victorias,
+dominio de tecnicas, recuerdos completos ni malestar temporal. Se actualiza
+el [programa genetico](superpowers/plans/2026-10-23-social-genetics-learning-program.md)
+con separacion entre predisposicion y experiencia, recibos reproducibles y
+pruebas entre generaciones. Pesos/mezcla/topes aun por especificar y aprobar;
+criterio documentado, no implementado en simulador ni firmware.
+
+## Recepcion De Items De Terceros
+
+El usuario requiere recibir items de otras personas o proveedores. Se amplia
+el [diseno de paquetes](content-packages.md) para distinguir definicion/assets
+de entrega de unidades, con validacion de emisor/destinatario, compatibilidad,
+capacidad y recuperacion sin duplicar acreditaciones. Hub USB primero como
+propuesta; regalos entre usuarios deben coordinar debito y credito. Servidor,
+confianza y prevencion de doble gasto tras restaurar respaldos aun por definir.
+Solo documentado: no hay protocolo, servicio, transferencia BLE ni cambios
+de inventario/firmware implementados por este requisito.
+
+## Identidad Y Sexo: Criterio Aprobado
+
+El usuario aprueba identidad propia, sexo y parentesco conservados al
+evolucionar; distribucion macho/hembra 50/50 y sin ventajas de combate por
+sexo. Se registra en el [programa genetico](superpowers/plans/2026-10-23-social-genetics-learning-program.md).
+Fue la decision de producto previa a F2a. La implementacion local posterior
+se documenta arriba; no implica breeding, programa completo ni carga a placa.
+
+## Detalle Evolutivo Aprobado E Implementado Localmente
+
+Usuario aprueba el rediseno de IMG_4245. Nueva ficha de solo lectura con
+requisitos para salir de la etapa actual, tiempo restante, valores frente
+a objetivos, peso en rango y maximo de errores. Fondo oscuro, nombre completo,
+retrato 64 px, cuatro filas por pagina y marcadores cumplido/pendiente.
+NEXT pagina; ACTION/BACK vuelve al mismo nodo del arbol. Etapas anteriores,
+futuras, huevo y final no muestran comparaciones falsas con stats actuales.
+No cambian condiciones, recursos, guardado, NVS, enums ni Status.
+
+189 pruebas focalizadas aprobadas. 240 vectores de modelo Python/C++, 56
+comparaciones de detalle del renderer real de C++ contra sim y 18 previews
+adicionales ES/EN sin diferencias de pixeles bajo la barra de navegacion.
+App real recorre paginas y vuelve sin escrituras de partida; galeria
+inspeccionada. Suite completa: 1653 Python aprobadas en 340.54 s y 185
+nativas en 7.99 s. ESP32 compilado: RAM 56116, sin aumento estatico;
+app 1017761 bytes. Advertencias existentes de Pillow/pytest/TFT conservadas.
+No se ha cargado la placa por esta aprobacion de implementacion; legibilidad,
+botones y aceptacion fisica de la nueva ficha pendientes.
+[Contrato](evolution-progress.md), [plan](superpowers/plans/2026-10-23-evolution-progress.md).
+
+Precision sobre el reporte anterior: el peso 8..14 ya coincide en el runtime
+Python (config.py) y C++. Falta en JSON/catalogos generados; esa deuda de
+fuente unica no significa que el simulador jugable omita esa regla.
+
+## Arquitectura OO, Paquetes E Individuos
+
+Usuario solicita una arquitectura que permita recibir otra mascota como
+huevo de premio, criar individuos distintos y hacer breeding interno en
+una board. No es una skin; cantidades de mascotas y huevos aun por definir.
+Se actualizan [arquitectura](architecture.md) y [paquetes](content-packages.md)
+con inventario de dependencias actuales y direccion propuesta por composicion:
+motor/reglas comunes, definiciones, clips/resolver, paquetes compartidos,
+roster/individuos y recepcion de huevos transaccional. El plan genetico
+incorpora modalidad interna sin BLE; la modalidad entre boards sigue separada.
+
+El firmware ya es OO, pero nombres/rutas, frames, cinco especies y reglas
+duplicadas aun impiden el plug and play. La inspeccion del codigo no equivale
+a un refactor implementado. No hay instalador, roster ni breeding disponibles.
+Los 16 MB no son capacidad de mascotas: ultima carga registra 659456 bytes
+libres en LittleFS; hacen falta medir arte compartido, registros y rollback.
+No se fija una cantidad ni politica de incubacion/stock sin presupuesto y
+aprobacion; no se cambia ni se flashea codigo por esta revision documental.
+La vista Archify antigua queda identificada como instantanea historica.
+Revision documental de esta ampliacion: 142 enlaces locales en nueve
+documentos, sin destinos ausentes ni espacios finales; diff comprobado.
+No se ejecutaron tests de codigo ni nuevos ensayos de USB/capacidad por
+editar arquitectura. Las cifras de memoria son del registro de carga anterior.
+
+## Documentacion De Producto Y Preparacion Del Lanzamiento
+
+El usuario solicita mantener documentadas todas las opciones para preparar
+un video promocional al lanzar el producto. Se agrega la
+[guia funcional](product-guide.md), con nueve menus, subopciones, condiciones,
+efectos y limites, y la [matriz audiovisual](launch-video.md), con tomas,
+evidencias y criterios de publicacion. Son borradores de preparacion; no
+hay video producido ni aprobacion de lanzamiento. README y workflow apuntan
+a esos documentos y separan funciones actuales, propuestas y validacion fisica.
+Revision documental: 112 enlaces locales existentes y sin errores de espacios
+en los siete documentos revisados; no se ejecutan suites Python/C++ ni una
+nueva carga por estos cambios exclusivamente documentales. Los bloques de
+entregas anteriores conservan su evidencia historica; las actualizaciones mas
+recientes prevalecen para identificar la ultima carga y aceptacion.
+
+El [programa social/genetico/de aprendizaje](superpowers/plans/2026-10-23-social-genetics-learning-program.md)
+es una propuesta, no implementacion: el usuario confirma disponer de una
+sola board. Sexo, breeding, rivales guardados, P2P, limites por ADN y TinyML
+no se anuncian como disponibles. No se cambia firmware ni se flashea por
+esta actualizacion documental; los resultados de pruebas anteriores siguen
+siendo evidencia de sus revisiones, no ejecuciones nuevas.
+
+## Reporte Inicial: Detalle De Evolucion
+
+IMG_4245 muestra dificultad para interpretar tiempos, abreviaturas y lista
+de etapas. La inspeccion confirma que el detalle compara la edad actual
+con requisitos para alcanzar la etapa seleccionada, no con los de su
+siguiente evolucion. Se propuso una ficha de progreso, posteriormente
+aprobada e implementada en la entrega descrita arriba; sigue pendiente
+la validacion fisica. Este reporte no cambia reglas ni sustituye la
+aceptacion previa del contraste.
+Antes de publicar requisitos definitivos hay que reconciliar catalogo
+Python y firmware: Evolution.cpp exige peso 8..14 para Firemon, pero
+rookie.json no declara ese campo. El manual explicita el alcance de placa;
+la diferencia no se corrige silenciosamente como parte de documentacion.
 
 ## Posicion Del Globo Zzz
 

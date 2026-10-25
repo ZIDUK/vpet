@@ -34,10 +34,17 @@ enum class LoadResult : uint8_t { Missing, Loaded, Unsupported };
 
 class SettingsStore {
 public:
-    explicit SettingsStore(KeyValueStore& store, KeyValueStore* backup = nullptr)
-        : store_(store), backup_(backup) {}
+    explicit SettingsStore(KeyValueStore& store, KeyValueStore* backup = nullptr,
+                           ProfileGenerator profiles = nullptr)
+        : store_(store), backup_(backup), profiles_(profiles) {}
     LoadResult load(PetState& pet, Settings& settings);
-    bool save(const PetState& pet, const Settings& settings);
+    bool save(PetState& pet, const Settings& settings);
+    // Immutable snapshots cannot receive a newly allocated identity.
+    bool save(const PetState& pet, const Settings& settings) {
+        if (profiles_ && !pet.profile.assigned()) return false;
+        PetState copy=pet;
+        return save(copy,settings);
+    }
     bool recoverPending() { return recoverAll(); }
     bool commitFood(const PetState& pet);
     // False means rejected. True includes accepted intents awaiting sync/replay.
@@ -61,6 +68,7 @@ private:
     KeyValueStore& store_;
     KeyValueStore* backup_ = nullptr;
     bool migratedDna_ = false;
+    ProfileGenerator profiles_ = nullptr;
 };
 
 }  // namespace vpet

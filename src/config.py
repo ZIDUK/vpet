@@ -45,35 +45,7 @@ MENU_ACTIONS = {1: 0, 2: 2, 4: 3}
 
 CARE_TIME_SCALE = 600
 
-EVOLUTION_REGISTRY = {
-    "baby": {
-        "evolves_to": "rookie",
-        "automatic": True,
-        "requirements_pending": False,
-        "min_stage_age_seconds": 43800,
-        "max_care_mistakes": 1,
-        "battles_required": 0,
-        "requirements": {},
-    },
-    "rookie": {
-        "evolves_to": "champion",
-        "automatic": True,
-        "requirements_pending": False,
-        "min_stage_age_seconds": 86400,
-        "battles_required": 0,
-        "requirements": {"h": 55, "e": 55, "p": 55, "hp": 75},
-        "min_weight": 8,
-        "max_weight": 14,
-    },
-    "champion": {
-        "evolves_to": "ultimate",
-        "automatic": True,
-        "requirements_pending": False,
-        "min_stage_age_seconds": 129600,
-        "battles_required": 15,
-        "requirements": {},
-    },
-}
+from core.rules_builtin import EVOLUTION_REGISTRY
 EVOLVED_SPECIES = "champion"
 ULTIMATE_SPECIES = "ultimate"
 EGG_SPECIES = "egg"

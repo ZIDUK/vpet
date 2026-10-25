@@ -8,6 +8,8 @@ from functools import lru_cache
 from PIL import Image, ImageDraw, ImageFont
 
 from display_profiles import get_display_profile
+from core.content import ROLES
+from scripts.content_loader import definition_for
 
 from config import (
     BABY_SPECIES,
@@ -448,7 +450,7 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
                       font=label_font)
             draw.text((card_x + 34, y + 1), "%02d" % value, fill=ink,
                       font=_status_font(8))
-            _draw_meter(draw, card_x + 48, y + 2, 18, value, 99,
+            _draw_meter(draw, card_x + 54, y + 2, 12, value, pet.stat_limit(key),
                         bar_color, ink)
             draw.text((card_x + 88, y + 1), str(ev), fill=ink,
                       font=_status_font(8), anchor="ra")
@@ -487,8 +489,12 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
                         width=wide_w, height=wide_h)
 
 
-def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0, exploration_menu=None):
+def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_session, current_datetime=None, now_ms=0, exploration_menu=None, evolution_scale=1):
     from core.i18n import tr
+    if panel_mode == "evolution_detail":
+        from scripts.evolution_renderer import draw_evolution_progress
+        draw_evolution_progress(frame, build_dir, pet, panel_index, evolution_scale)
+        return
     if panel_mode == "explore" and hasattr(exploration_menu, "choices"):
         from scripts.exploration_renderer import draw_exploration
         draw_exploration(frame, build_dir, pet, exploration_menu, exploration_menu.now(), now_ms)
@@ -626,7 +632,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         draw.text((119, 123), "VOLVER" if spanish else "BACK",
                   fill=ink, font=_status_font(8), anchor="mm")
     elif panel_mode == "evolution":
-        species = ("Egg.bmp", "Sparkmon.bmp", "Firemon.bmp", "Flamemon.bmp", "Dragfiremon.bmp")
+        definition = definition_for(build_dir)
         current_stage = evolution_current_stage(pet)
         selected = current_stage if panel_index is None else panel_index % EVOLUTION_NODE_COUNT
         chip = _mix(ink, panel, 0.88)
@@ -655,14 +661,15 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 fill=selector if active else chip,
                 outline=selector if active else outline,
             )
-            portrait = _load_image(Path(build_dir) / "UIEvolution" / species[stage])
+            portrait = _load_image(Path(build_dir) / definition.stage(ROLES[stage])["portrait"].lstrip("/"))
             thumb = portrait.resize((32, 32), Image.Resampling.NEAREST)
             mask = thumb.point([0] + [255] * 255, mode="L")
             art = Image.new("RGB", thumb.size, (20, 20, 24)) if hidden else thumb.convert("RGB")
             frame.paste(art, (x, y), mask)
             card = evolution_card(index, pet, EVOLUTION_REGISTRY, spanish)
             name_color = (145, 165, 165) if hidden else ink
-            draw.text((x + EVO_CHIP // 2, 98), card["label"],
+            label = "???" if hidden else "HUEVO" if spanish and stage == 0 else definition.name(ROLES[stage], "short")
+            draw.text((x + EVO_CHIP // 2, 98), label,
                       fill=name_color, font=_status_font(8), anchor="mm")
         selected_card = evolution_card(selected, pet, EVOLUTION_REGISTRY, spanish)
         stage_status = selected_card["status"]
@@ -672,41 +679,6 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
         draw.rounded_rectangle((10, 122, 230, 129), radius=3, outline=outline)
         filled = 218 * (current_stage + 1) // EVOLUTION_NODE_COUNT
         draw.rounded_rectangle((11, 123, 11 + filled, 128), radius=2, fill=green)
-    elif panel_mode == "evolution_detail":
-        spanish = getattr(pet, "language", "EN") == "ES"
-        selected = panel_index % EVOLUTION_NODE_COUNT
-        card = evolution_card(selected, pet, EVOLUTION_REGISTRY, spanish)
-        chip = _mix(ink, panel, 0.88)
-        outline = _mix(ink, panel, 0.45)
-        muted = _mix(ink, panel, 0.28)
-        portrait = _load_image(Path(build_dir) / "UIEvolution" / card["portrait"])
-        thumb = portrait.resize((36, 36), Image.Resampling.NEAREST)
-        mask = thumb.point([0] + [255] * 255, mode="L")
-        art = Image.new("RGB", thumb.size, (20, 20, 24)) if card["hidden"] else thumb.convert("RGB")
-        frame.paste(art, (32, 56), mask)
-        draw.text((50, 96), card["label"], fill=ink, font=_status_font(12), anchor="mm")
-        status = card["status"] if not card["snapshot"] else "%s %s" % (card["status"], card["snapshot"])
-        draw.text((50, 108), status, fill=muted, font=_status_font(10), anchor="mm")
-        first, second = split_requirement_lines(card["requirements"])
-        if first:
-            draw.text((50, 118), first, fill=muted, font=_status_font(10), anchor="mm")
-        if second:
-            draw.text((50, 128), second, fill=muted, font=_status_font(10), anchor="mm")
-        x = STATUS_SPLIT_X + 4
-        width = 232 - STATUS_SPLIT_X
-        for slot, index in enumerate(evolution_window(selected)):
-            y = STATUS_CARD_Y + slot * STATUS_CARD_ROW
-            entry = evolution_card(index, pet, EVOLUTION_REGISTRY, spanish)
-            selector = (255, 215, 0)
-            border = selector if index == selected else outline
-            draw.rounded_rectangle(
-                (x, y, x + width, y + STATUS_CARD_H),
-                radius=5,
-                fill=selector if index == selected else chip,
-                outline=border,
-            )
-            _paste_ui_icon(frame, build_dir, "Pedia", x + 2, y + 2, 20)
-            draw.text((x + 24, y + 6), entry["label"], fill=ink, font=_status_font(12))
     elif panel_mode == "options" and options_session is not None:
         if options_session.mode in ("date", "time"):
             draw.text((120, 67), options_session.mode.upper(), fill=ink, font=_status_font(12), anchor="mm")
@@ -769,6 +741,7 @@ def render_frame(
     now_ms=0,
     exploration_menu=None,
     exploration_now=None,
+    evolution_scale=1,
 ):
     """Render the composition shared with the CircuitPython display group."""
     profile = profile or get_display_profile("pico")
@@ -778,7 +751,9 @@ def render_frame(
     minute = (current_datetime[3]*60+current_datetime[4]
               if current_datetime and current_datetime[0]>=2024 else None)
     night = (minute is not None and is_night(minute)) if profile.name == "tdisplay" else motion_state == "sleep"
-    background_path = BACKGROUND_NIGHT_PATH if night else BACKGROUND_PATH
+    definition = definition_for(build_dir) if profile.name == "tdisplay" else None
+    background_path = (definition.document["background_night" if night else "background"] if definition
+                       else BACKGROUND_NIGHT_PATH if night else BACKGROUND_PATH)
     frame = _load_image(device_path(build_dir, background_path)).convert("RGB")
     if frame.size != (profile.width, profile.height):
         raise ValueError(f"Background must be {profile.width}x{profile.height}")
@@ -819,7 +794,23 @@ def render_frame(
     angry = (profile.name == "tdisplay" and panel_mode is None and not status_visible and
              motion_state in ("idle", "walk") and not tired and
              pet_cue(pet)[0] is not None and pet_cue(pet)[1] == "angry")
-    if pet.species == EGG_SPECIES:
+    if definition:
+        action = "tired" if tired else "angry" if angry else motion_state
+        source_role = pet.species
+        if motion_state == "evolution" and pet.species in ("rookie", "champion", "ultimate"):
+            source_role = ROLES[ROLES.index(pet.species) - 1]
+            sprite_size = profile.height - profile.menu_height
+            sprite_x, sprite_y = (profile.width - sprite_size) // 2, profile.menu_height
+        elif pet.species == "egg":
+            action = "hatch" if motion_state == "hatch" else "idle"
+            sprite_x = (profile.width - sprite_size) // 2
+        elif pet.species == "baby" and motion_state == "evolution":
+            action = "idle"
+        clip = definition.clip(source_role, action)
+        image_path, frame_count = clip["atlas"], clip["frames"]
+        if tired or angry:
+            sprite_frame = now_ms // clip["interval_ms"]
+    elif pet.species == EGG_SPECIES:
         if motion_state == "hatch":
             image_path = EGG_HATCH_IMAGE_PATH
             frame_count = EGG_HATCH_FRAME_COUNT
@@ -927,21 +918,8 @@ def render_frame(
     if status_split and motion_state != "evolution":
         sprite_x = pin_pet_x(sprite_size)
         sprite_y = 47
-        if pet.species == EGG_SPECIES:
-            image_path = EGG_IDLE_IMAGE_PATH
-            frame_count = EGG_IDLE_FRAME_COUNT
-        elif pet.species == BABY_SPECIES:
-            image_path = SPARKMON_IDLE_IMAGE_PATH
-            frame_count = SPARKMON_FRAME_COUNT
-        elif pet.species == ULTIMATE_SPECIES:
-            image_path = DRAGFIREMON_IDLE_IMAGE_PATH
-            frame_count = DRAGFIREMON_IDLE_FRAME_COUNT
-        elif pet.species == EVOLVED_SPECIES:
-            image_path = FLAMEMON_IDLE_IMAGE_PATH
-            frame_count = FLAMEMON_IDLE_FRAME_COUNT
-        else:
-            image_path = PET_IDLE_IMAGE_PATH
-            frame_count = PET_IDLE_FRAME_COUNT
+        clip = definition.clip(pet.species, "idle")
+        image_path, frame_count = clip["atlas"], clip["frames"]
     atlas = _load_image(device_path(build_dir, image_path))
     frame_index = sprite_frame % frame_count
     rookie = atlas.crop(
@@ -962,7 +940,7 @@ def render_frame(
         if profile.name == "tdisplay":
             _draw_wide_panel(
                 frame, build_dir, pet, panel_mode, panel_index, options_session,
-                current_datetime, now_ms, exploration_menu,
+                current_datetime, now_ms, exploration_menu, evolution_scale,
             )
             if status_split:
                 if pet.dead or pet.injured:

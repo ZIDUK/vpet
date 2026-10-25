@@ -460,7 +460,7 @@ def test_action_in_error_with_discard_returns_to_select():
 
 def test_extreme_energy_does_not_overflow_renderer(practice_assets, monkeypatch):
     _patch_monotonic(monkeypatch)
-    s = _session(energy=100, ev={"off": 246})  # partial 6, projected cap
+    s = _session(energy=100, ev={"off": 78})  # partial 6, projected stage cap
     _drive_to(s, STATE_SESSION)
     s._reps_completed = 1
     s._pending_ev = 6

@@ -1,6 +1,7 @@
 """Deterministic practice rules; integer arithmetic mirrored in PracticeBattle.h."""
 from core.techniques import TECHNIQUES
 from core.elements import ELEMENTS, elemental_damage
+from core.growth import MAX_STAT
 
 AUTO = -1
 
@@ -8,7 +9,7 @@ AUTO = -1
 class Fighter:
     def __init__(self, stats, equipped=(0, 1, 2), mastery=(0, 0, 0), personality=0, bond=50,
                  element="neutral"):
-        self.stats = tuple(max(1, min(99, int(v))) for v in stats)
+        self.stats = tuple(max(1, min(MAX_STAT, int(v))) for v in stats)
         if len(self.stats) != 6:
             raise ValueError("Expected HP MP OFF DEF SPD BRN")
         self.max_hp = 40 + self.stats[0] * 2

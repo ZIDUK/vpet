@@ -70,8 +70,8 @@ def test_care_items_respect_caps_and_context():
     from core.pet import Pet
     p = Pet(species='rookie', state='live')
     stock = {'off_chip': 2, 'bandage': 1, 'prickly_pear': 1}
-    p.ev['off'] = 250
-    assert use_care_item(p, stock, 'off_chip') and p.ev['off'] == 252
+    p.ev['off'] = p.ev_limit()-2
+    assert use_care_item(p, stock, 'off_chip') and p.ev['off'] == p.ev_limit()
     assert not use_care_item(p, stock, 'off_chip') and stock['off_chip'] == 1
     assert not use_care_item(p, stock, 'bandage')
     p.injured = True

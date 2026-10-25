@@ -8,6 +8,8 @@
   "requirements_pending": false,
   "min_stage_age_seconds": 86400,
   "battles_required": 0,
+  "min_weight": 8,
+  "max_weight": 14,
   "requirements": {
     "h": 55,
     "e": 55,

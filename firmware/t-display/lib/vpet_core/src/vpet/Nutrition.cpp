@@ -1,4 +1,5 @@
 #include "vpet/Nutrition.h"
+#include "vpet/Growth.h"
 
 namespace vpet {
 
@@ -25,12 +26,12 @@ BodyCondition bodyCondition(SpeciesId species, uint8_t weight) {
     return BodyCondition{reference, ratio, low, low, high};
 }
 
-uint8_t effectiveStat(uint8_t base, uint8_t penalty) {
+uint16_t effectiveStat(uint16_t base, uint8_t penalty) {
     if (base < 1) base = 1;
-    if (base > 99) base = 99;
+    if (base > growth::kMaxStat) base = growth::kMaxStat;
     if (penalty > 100) penalty = 100;
     const uint16_t value = (static_cast<uint16_t>(base) * (100U - penalty) + 50U) / 100U;
-    return static_cast<uint8_t>(value < 1 ? 1 : value);
+    return static_cast<uint16_t>(value < 1 ? 1 : value);
 }
 
 uint8_t evolvedWeight(SpeciesId from, SpeciesId to, uint8_t weight) {

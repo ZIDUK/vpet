@@ -41,13 +41,13 @@ void test_evolution_technique_slots_and_new_actions() {
 void test_adopted_care_items_cap_and_consume() {
     vpet::PetState pet;
     pet.evolveTo(vpet::SpeciesId::Rookie);
-    pet.setEvAt(vpet::CombatStat::Off, 250);
+    pet.setEvAt(vpet::CombatStat::Off, pet.evLimit()-2);
     uint8_t stock = 2;
     uint8_t chip = 0;
     for (uint8_t i = 0; i < vpet::adopted::kCount; ++i)
         if (strcmp(vpet::adopted::kItems[i].id, "off_chip") == 0) chip = i;
     TEST_ASSERT_TRUE(vpet::consumables::useHome(pet, stock, chip));
-    TEST_ASSERT_EQUAL(252, pet.evAt(vpet::CombatStat::Off));
+    TEST_ASSERT_EQUAL(pet.evLimit(), pet.evAt(vpet::CombatStat::Off));
     TEST_ASSERT_EQUAL(1, stock);
     TEST_ASSERT_FALSE(vpet::consumables::useHome(pet, stock, chip));
     TEST_ASSERT_EQUAL(1, stock);

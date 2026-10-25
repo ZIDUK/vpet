@@ -27,7 +27,7 @@ inline bool boost(practice::Fighter& fighter, uint8_t& stock, int stat, int perc
     const int base = fighter.itemBoosts[stat] ? fighter.itemBase[stat] : fighter.stats[stat];
     int gain = base * percent / 100;
     if (gain < 1) gain = 1;
-    const int value = base + gain > 99 ? 99 : base + gain;
+    const int value = base + gain > growth::kMaxBattleStat ? growth::kMaxBattleStat : base + gain;
     if (value == fighter.stats[stat]) return false;
     fighter.itemBase[stat] = base; fighter.itemBoosts[stat] = percent;
     fighter.stats[stat] = value; --stock;

@@ -10,6 +10,16 @@ secundaria mediante los comandos terminados en `-pico`.
 
 ## Estado actual
 
+Portal local: [vPet Hub](docs/vpet-hub.md), catalogo animado e importacion de
+definiciones F1. Arranque: `.venv-platformio/bin/python scripts/hub_server.py`.
+No instala paquetes ni modifica partidas; el transporte USB esta pendiente.
+
+Resumen actualizado el 2026-10-24. Consulta la [guia por opcion](docs/product-guide.md),
+el [estado y evidencia](docs/project-status.md) y el
+[roadmap vigente](docs/superpowers/plans/2026-10-11-delivery-roadmap.md).
+El [programa consolidado de entregas](docs/superpowers/plans/2026-10-23-consolidated-delivery-program.md)
+separa funciones actuales, criterios aprobados y ampliaciones por implementar.
+
 - Huevo animado que eclosiona en Sparkmon despues de 2 segundos de juego.
 - Linea visual: Huevo -> Sparkmon -> Firemon -> Flamemon -> Dragfiremon.
 - Firemon, Flamemon y Dragfiremon con idle, movimiento, comida, entrenamiento,
@@ -20,15 +30,24 @@ secundaria mediante los comandos terminados en `-pico`.
 - Exploracion en simulador y firmware: Patio, Jornada y Noche, con recibo
   persistente y reclamacion unica. Si se pierde la hora al apagar la placa,
   requiere ajustar Fecha/Hora; no inventa tiempo offline sin RTC respaldado.
-- Evolucion automatica COLOR: Sparkmon (12 h 10 min + CM<=1), Firemon
-  (24 h + barras), Flamemon (36 h + 15 batallas). La placa usa scale 1;
-  el sim usa 600 (~73 s hasta Firemon).
+- Evolucion automatica: Sparkmon (12 h 10 min y como maximo un error de
+  cuidado), Firemon (24 h, barras y peso en firmware), Flamemon (36 h,
+  15 batallas en esa forma y al menos 60% de victorias acumuladas).
+  La placa usa scale 1; el sim usa 600. Arena aporta resultados decisivos.
+  Nueva ficha de Evolucion aprobada e implementada localmente: tiempo
+  restante, requisitos actuales/objetivos y paginas con NEXT. Pendiente de
+  cargar y aceptar fisicamente. [Contrato](docs/evolution-progress.md).
 - Alimentar ofrece Carne y Proteina ilimitadas. Mochila conserva objetos legacy
   y consumibles adoptados, con stock guardado en NVS y bolsa de Arena.
-- Pedia con umbrales reales del catalogo. Opciones: BLE, idioma, sonido,
-  save/load, fecha/hora, EVOLVE.
-- El foco alterna descanso persistente: fondo nocturno y sprite acostado
-  (loop 12-14) hasta volver a pulsar el mismo icono.
+- Entrenamiento y cinco tecnicas en sim y firmware: Firemon equipa 2,
+  Flamemon 3 y Dragfiremon 4. Aprender y equipar son acciones distintas.
+- Rest ofrece apagar/encender luz y volver; no Backup ni Cold. La pausa
+  de crianza esta en Opciones, junto a BLE, idioma, sonido, save/load,
+  fecha/hora y EVOLVE (herramienta de desarrollo, no evolucion ganada).
+- Fondo nocturno de 18:00 a 06:00 con reloj valido, cansancio, horario de
+  descanso aprendido y guardado. Apagar luz oscurece fondo/pet e inicia
+  descanso; Zzz fijo aparece encima del sprite. Gotas y carita dormida
+  indican necesidades sin textos ni barras en Home.
 - Bluetooth LE bajo demanda, visible como `vPet-XXXX` en Ajustes del iPhone
   (teclado HID) y en LightBlue o nRF Connect.
 - Estado Bluetooth visible en Opciones: `OFF`, `ADVERTISING`, `CONNECTED` o
@@ -36,17 +55,32 @@ secundaria mediante los comandos terminados en `-pico`.
 - NVS schema 3: ADN/EV, especie, barras, edad, stageAge, CM, call, comidas,
   entrenos, batallas, wins/losses, peso, DP, proteina, inventario e idioma.
   Schema 1 migra con ceros. El anillo de eventos de cria es solo RAM.
-- WiFi queda deshabilitado y fuera de la interfaz hasta el siguiente feature.
+- F2a local: [identidad, sexo y parentesco](docs/individual-profile.md)
+  conservados al evolucionar y guardar; migracion de partida/reserva, sin
+  nueva interfaz ni flasheo. F2b local: [potencial por ADN](docs/growth-integration.md)
+  con stats hasta 320 y EV por etapa 84/168/252, tambien sin cargar.
+- WiFi queda deshabilitado y fuera de la interfaz. Breeding, P2P, rivales
+  guardados y TinyML siguen pendientes, no funciones disponibles en placa.
+- Arquitectura OO existente con dependencias concretas de Firemon aun por
+  extraer en el adaptador de arte original. F1 ya resuelve definiciones,
+  Motion y vistas por metadatos localmente; no es un instalador en placa.
+  [Contrato y presupuesto](docs/content-definitions.md). Paquetes plug and play, nuevas mascotas de premio como huevos,
+  roster y breeding interno son requisitos, no funciones implementadas;
+  la capacidad de mascotas/huevos sigue por definir. [Direccion tecnica](docs/content-packages.md).
 - Intro de arranque en la T-Display: logo `vPET`, llama, pet y estado `READY`,
   con una duracion aproximada de 2.2 segundos. El simulador reproduce la misma
   secuencia aproximada, con texto FIREMON en lugar del sprite final.
 
 ## Estado validado en hardware
 
-La validacion manual actual confirma que el telefono detecta el vPet por BLE,
-que WiFi ya no aparece en la interfaz y que la navegacion y las animaciones se
-perciben mas fluidas. La intro aun no se ha vuelto a cargar en la placa despues
-del ultimo commit.
+Ultima carga registrada: firmware ece6506 para posicion de Zzz, el
+2026-10-23, con digest de aplicacion/recursos comprobado, NVS conservada y
+VPET_READY. El usuario acepta Zzz encima del pet, tambien tumbado; previamente
+acepto apagar/encender luz, la mejora de Training/NEXT, la escala de
+Exploracion y el contraste de Evolucion. No equivale a validar todas las
+funciones ni las cuatro paginas de Status. Noche completa, viajes/consumo
+tras reiniciar, equipo ampliado y estabilidad prolongada siguen pendientes.
+Detalle y evidencia historica en [estado del proyecto](docs/project-status.md).
 
 ## Hardware principal
 
@@ -165,12 +199,12 @@ contenido en `scripts/build.py`, ejecuta las pruebas y despliega normalmente.
 
 ## Documentacion
 
-### Entrenamiento y combate: revision en simulador
+### Entrenamiento y combate
 
-Firemon dispone de entrenamiento por atributo, dos tecnicas equipadas y practica
-con HP/MP, enfriamientos y decisiones explicables. Los iconos acompanian nombres,
-costes y atributos; Guardia usa la animacion `block` existente. La practica no
-modifica las victorias oficiales.
+Training, Tecnicas y Arena estan integrados en simulador y firmware con NVS.
+El catalogo tiene Golpe, Llama, Guardia, Rafaga e Inferno, con espacios 2/3/4
+segun evolucion. Los resultados decisivos de Arena aportan al contador por
+etapa y W/L para evolucion automatica; empate y retirada no aportan esos contadores.
 
 - **Pesa:** ataque, defensa, velocidad, vida, MP, mente y aprendizaje de tecnicas.
   Cada sesion de atributo cuesta 8 ENE y suma 6 EV (maximo 252 por atributo).
@@ -180,11 +214,10 @@ modifica las victorias oficiales.
   con HP/MP y las tecnicas equipadas. No hay menu de preparacion intermedio.
   Aprender, consultar y equipar tecnicas se hace en Pesa > Tecnicas.
 
-El firmware tiene integrado el motor y el flujo anterior con NVS. Este nuevo
-menu de pesa, los iconos y el rediseno visual son por ahora del simulador;
-su traslado a C++ y la validacion fisica siguen pendientes. No se ha desplegado.
-Las seis fases y sus limites estan en el
-[plan de combate](docs/superpowers/plans/2026-10-05-practice-combat.md).
+La cadencia y NEXT de Training/Tecnicas corregidos fueron aceptados por el
+usuario; equipo de 3/4, evolucion ganada y persistencia fisica mantienen sus
+pruebas pendientes. Contratos: [entrenamiento](docs/training-session.md),
+[tecnicas](docs/techniques.md) y [Arena/evolucion](docs/superpowers/plans/2026-10-18-arena-evolution.md).
 
 ```sh
 make sim-training
@@ -195,8 +228,8 @@ make sim-practice
 RETIRARSE; retirarse o confirmar el resultado devuelve a Home con las espadas
 seleccionadas. Estos dos comandos comparten `out/sim_practice_save.json`, separado
 de la partida normal. En `make sim`, pesa y espadas abren los mismos menus
-cuando la mascota es Firemon y esta despierta, pero guardan en la partida normal.
-Las otras especies conservan el comportamiento anterior.
+cuando la mascota es una etapa de combate habilitada y esta despierta, pero
+guardan en la partida normal. Huevo y Sparkmon no entrenan ni pelean.
 
 Previews reproducibles con los assets reales:
 `.venv-platformio/bin/python scripts/preview_practice.py` genera
@@ -204,11 +237,19 @@ Previews reproducibles con los assets reales:
 
 ### Referencias
 
+- [Guia de funciones: las nueve opciones y sus limites](docs/product-guide.md)
+- [Preparacion del video de lanzamiento y matriz de tomas](docs/launch-video.md)
+- [Programa propuesto: genetica, encuentros y aprendizaje](docs/superpowers/plans/2026-10-23-social-genetics-learning-program.md)
+- [Programa consolidado: base, Hub, paquetes, items y nuevas mascotas](docs/superpowers/plans/2026-10-23-consolidated-delivery-program.md)
 - [Arquitectura](docs/architecture.md)
 - [Flujo de desarrollo y despliegue](docs/development-workflow.md)
 - [Hardware](docs/hardware.md)
 - [Conectividad](docs/connectivity.md)
 - [Paquetes y catalogo comunitario](docs/content-packages.md)
+- [F1: definiciones, resolver y presupuesto](docs/content-definitions.md)
+- [F2b: piloto de crecimiento, medidas y bloqueos de activacion](docs/growth-pilot.md)
+- [F2b: crecimiento integrado, conservacion de EV y limites de esta revision](docs/growth-integration.md)
+- [Decisiones: cuatro mascotas, stock compartido, crecimiento y breeding](docs/product-decisions-2026-10-23.md)
 - [Seguridad y proteccion del firmware](docs/security.md)
 - [Estado, alcance y pendientes](docs/project-status.md)
 - [Arquitectura visual interactiva (Archify)](.archify/architecture-vpet-20261005/review-2/vpet-architecture.html)

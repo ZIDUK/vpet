@@ -60,6 +60,8 @@ class PetMotion:
         min_x=PET_MIN_X,
         max_x=PET_MAX_X,
         start_x=PET_X,
+        definition=None,
+        species="rookie",
     ):
         self.random = random_source or random
         self.min_x = min_x
@@ -73,6 +75,8 @@ class PetMotion:
         self.state_until = now + self._duration(MOTION_IDLE)
         self.action_frame_count = None
         self.tired = False
+        self.definition = definition
+        self.species = species
 
     def set_tired(self, tired, now):
         self.tired = tired
@@ -132,20 +136,30 @@ class PetMotion:
 
         if self.state == MOTION_SLEEP:
             frame_count, interval = ACTION_ANIMATIONS[MOTION_SLEEP]
+            loop_start, loop_end = 12 if 12 < frame_count else 0, frame_count - 1
+            if self.definition:
+                clip = self.definition.clip(self.species, "sleep")
+                frame_count, interval = clip["frames"], clip["interval_ms"] / 1000
+                loop_start, loop_end = clip["loop"]
             elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
             if elapsed_frames:
                 nxt = self.frame + elapsed_frames
-                loop_start = 12 if 12 < frame_count else 0
-                if nxt < frame_count:
+                if nxt <= loop_end:
                     self.frame = nxt
                 else:
-                    loop_len = frame_count - loop_start
-                    self.frame = loop_start + (nxt - frame_count) % loop_len if loop_len else nxt % frame_count
+                    loop_len = loop_end - loop_start + 1
+                    self.frame = loop_start + (nxt - loop_end - 1) % loop_len
                 self.last_frame += elapsed_frames * interval
             return
 
         if self.state in ACTION_ANIMATIONS:
             frame_count, interval = ACTION_ANIMATIONS[self.state]
+            if self.definition:
+                clip = self.definition.clip(self.species, self.state)
+                frame_count, interval = clip["frames"], clip["interval_ms"] / 1000
+                override = self.definition.stage(self.species).get("motion_overrides", {}).get(self.state)
+                if override:
+                    frame_count, interval = override[0], override[1] / 1000
             if self.action_frame_count is not None:
                 frame_count = self.action_frame_count
             elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
@@ -174,6 +188,9 @@ class PetMotion:
             PET_IDLE_FRAME_INTERVAL if self.state == MOTION_IDLE else PET_WALK_FRAME_INTERVAL
         )
         frame_count = PET_IDLE_FRAME_COUNT if self.state == MOTION_IDLE else PET_WALK_FRAME_COUNT
+        if self.definition:
+            clip = self.definition.clip(self.species, self.state)
+            frame_count, interval = clip["frames"], clip["interval_ms"] / 1000
         elapsed_frames = int((now - self.last_frame + 0.000001) / interval)
         if elapsed_frames:
             self.frame = (self.frame + elapsed_frames) % frame_count

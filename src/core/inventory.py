@@ -123,6 +123,8 @@ def use_inventory_item(pet, index):
         return "blocked"
     if index == 1 and pet.get("e") >= 100:
         return "blocked"
+    if index == 2 and pet.effort >= 100 and pet.ev_at("brn") >= pet.ev_limit():
+        return "blocked"
 
     _, key, stat, amount = INVENTORY_ITEMS[index]
     count = pet.inventory.get(key, 0)

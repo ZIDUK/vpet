@@ -6,6 +6,7 @@
 #include "vpet/ItemCatalog.generated.h"
 #include "vpet/AdoptedInventory.h"
 #include "vpet/Exploration.h"
+#include "vpet/PetProfile.h"
 
 namespace vpet {
 
@@ -56,6 +57,7 @@ struct CareSnapshot {
 
 class PetState {
 public:
+    PetProfile profile;
     PracticeProgress practice;
     Exploration exploration;
     AdoptedInventory adoptedStock;
@@ -125,8 +127,11 @@ public:
     bool hasDna() const;
     uint8_t ivAt(CombatStat stat) const;
     uint8_t evAt(CombatStat stat) const;
-    uint8_t combatStat(CombatStat stat) const;
-    uint8_t effectiveCombatStat(CombatStat stat) const;
+    uint16_t combatStat(CombatStat stat) const;
+    uint16_t combatStatAt(CombatStat stat, uint8_t ev) const;
+    uint16_t effectiveCombatStat(CombatStat stat) const;
+    uint8_t evLimit() const;
+    uint16_t statLimit(CombatStat stat) const;
 
     // Public mutators used by TrainingSession (and other batched flows).
     // The single-rep path uses the private gainEv; batched callers go

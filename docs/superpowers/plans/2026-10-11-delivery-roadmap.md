@@ -1,10 +1,18 @@
 # Roadmap vigente de vPet
 
-Actualizado: 2026-10-23. Prioridad: cerrar calidad y aceptacion de T-Display
+Actualizado: 2026-10-24. Prioridad: cerrar calidad y aceptacion de T-Display
 antes de ampliar el juego. El [roadmap anterior](2026-10-11-delivery-roadmap-history-through-2026-10-16.md)
 se conserva como historia; sus cifras y checkboxes no son el backlog actual.
 
+Para el orden conjunto de calidad, Hub USB, paquetes, individuos, items,
+genetica y aprendizaje, ver el [programa consolidado](2026-10-23-consolidated-delivery-program.md).
+Esta matriz conserva la aceptacion detallada de las funciones actuales.
+
 ## Estado real de entrega
+
+F1/F2a/F2b posteriores estan implementados localmente, no cargados: definiciones,
+[perfil individual y migracion](../../individual-profile.md), crecimiento por
+ADN y stats amplios. No confundir la matriz de placa anterior con esa revision.
 
 | Bloque | Implementacion | Placa / aceptacion |
 | --- | --- | --- |
@@ -165,6 +173,21 @@ enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
 ## P1: versionado y documentacion
 
+- [x] Guia de las nueve opciones y subopciones, limites y contratos:
+  [manual de trabajo](../../product-guide.md). Corregir referencias obsoletas
+  del README y del workflow; no anunciar propuestas como implementadas.
+- [x] Crear [matriz audiovisual](../../launch-video.md) por opcion con tomas,
+  evidencia y criterios de publicacion. No equivale a un video producido.
+- [ ] Aprobar version de lanzamiento, cerrar validacion fisica pendiente,
+  grabar y revisar manual/video contra la misma version.
+- [x] F1 genera las tres reglas automaticas desde JSON para Python/C++ y
+  catalogos, incluido peso 8..14. Sin cambio de balance. Metadata legacy
+  del huevo de 8 s frente a runtime 2 s sigue separada por compatibilidad.
+- [x] Aprobar e implementar detalle de Evolucion segun IMG_4245: tiempo
+  restante, condiciones de siguiente etapa, valores/objetivos y paginacion.
+  [Contrato y evidencia local](../../evolution-progress.md).
+- [ ] Cargar y aceptar fisicamente nueva ficha de Evolucion. No confundir
+  con el contraste de la version anterior ya aceptado ni con Status.
 - [x] Actualizar roadmap y estado; separar implementacion, flash y aceptacion.
 - [x] Conservar roadmap previo como historia, no backlog vivo.
 - [x] Entrega anterior versionada: codigo, tests, PNG fuente, docs y build
@@ -174,6 +197,35 @@ enviar/reclamar; no prometer progreso sin alimentacion. Nunca borrar backups.
 
 ## P2: ampliaciones separadas
 
+- [x] Piloto F2b local, NO activado: barrido de crecimiento, proyecciones de
+  entrenamiento, paridad Python/C++ y combates de laboratorio. [Resultados](../../growth-pilot.md).
+- [x] F2b local: curva integrada con tipos, previews, boosts, rivales por etapa
+  y fuentes de EV acotadas; guardado/reserva compatible sin rebajar progreso.
+  [Contrato](../../growth-integration.md). No se ha cargado la placa.
+- [ ] Validar fisicamente caps, stats amplios, boosts y balance del rival,
+  despues de autorizacion/gate de Status. F2a sigue pendiente.
+- [x] Fundamento F1 local: definicion builtin, resolver comun y Motion/vistas
+  reales por metadatos, segunda definicion de prueba, 680 resoluciones y
+  siete vistas por plataforma sin mutar partida. [Contrato](../../content-definitions.md).
+- [ ] Resolver presupuesto/optimizacion para dos lineas independientes,
+  activacion persistida y [contrato de instalacion](../../content-packages.md).
+  El arte actual no cabe duplicado con recuperacion; F1 no es un instalador.
+- [ ] Mascotas de premio como huevos, roster multi-individuo y breeding
+  interno sin segunda board. Objetivo cuatro mascotas sujeto a presupuesto;
+  inventario compartido confirmado. Cerrar plazas de huevos/paquetes,
+  incubacion inactiva y migracion de stock antes de implementar recepcion.
+- [ ] Medir dos paquetes completos y recuperacion antes de prometer instalacion
+  sin recompilar: actualmente solo 659456 bytes libres segun ultima carga.
+  No confundir nuevas clases con un instalador/paquete ya compatible.
+- [ ] Revisar [programa propuesto de genetica, encuentros y aprendizaje](2026-10-23-social-genetics-learning-program.md):
+  sexo, potencial por ADN, experiencias, BLE de juego, rivales guardados,
+  breeding y TinyML opcional. Identidad/sexo y herencia conductual moderada
+  aprobados como criterios; formulas/limites aun por cerrar. Ninguna fase
+  implementada. Actualmente hay
+  una board; las pruebas fisicas entre dos dispositivos siguen abiertas.
+- [ ] Hub USB para consulta/respaldo, luego carga atomica de paquetes,
+  huevos y entregas de items de proveedores. Regalos entre usuarios requieren
+  coordinar ambos inventarios; confianza y doble gasto aun por disenar.
 - [ ] Especie planta y tecnica: alcance, nombre, potencia, assets y balance
   independientes. Las pruebas elementales actuales usan combatientes de prueba.
 - [ ] Arte opcional: dodge de Dragfiremon y emociones Sparkmon; no necesita
@@ -192,7 +244,16 @@ mapas inexistentes y venta sin economia. No habilitar WiFi ni cambiar enums NVS.
 
 ## Evidencia y comandos
 
-Ultima carga confirmada: simbolos de descanso, revision 3a9c406, 2026-10-22.
+Ultima carga registrada: posicion Zzz, firmware ece6506, 2026-10-23.
+1602 Python y 185 nativas en esa entrega, no ejecutadas de nuevo por esta
+actualizacion documental. App/FS verificados por digest; solo se escribio
+firmware, tabla/NVS identicas al respaldo y VPET_READY. Heap libre 66144,
+minimo 60952 en 45 s, sin fatal/reinicio y sin eventos de botones.
+Usuario acepta posicion encima del pet, incluso tumbado. No cierra Status,
+despertar, noche real, FPS ni pruebas prolongadas.
+[Evidencia vigente](2026-10-23-sleep-bubble-position.md).
+
+Corte anterior: simbolos de descanso, revision 3a9c406, 2026-10-22.
 1432 Python/185 nativas; firmware/FS coinciden por digest independiente,
 VPET_READY heap libre 66144/minimo inicial 66124, manifest 1, FS
 11685888/12451840. Observacion de 45 s: BLE conectado, cuatro muestras,

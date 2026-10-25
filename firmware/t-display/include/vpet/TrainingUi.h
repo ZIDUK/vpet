@@ -5,6 +5,7 @@
 #include "generated/TrainingArtwork.h"
 #include "vpet/TrainingSession.h"
 #include "vpet/PracticeSession.h"
+#include "vpet/PetDefinition.h"
 
 namespace vpet {
 namespace training_ui {
@@ -29,6 +30,7 @@ template<class Canvas> class View {
     const PetState& pet;
     uint32_t now;
     bool es;
+    const content::PetDefinition& definition;
     using State = TrainingSession::State;
 
     const char* tr(const char* key) const { return training_assets::copy(key, es); }
@@ -76,25 +78,8 @@ template<class Canvas> class View {
         c.asset(path,frame,x,y);
     }
     void petAsset(const char* action, int x, int y, uint32_t frame=0) {
-        const char* name = "firemon";
-        const char* resolved = action;
-        switch (pet.species()) {
-            case SpeciesId::Egg: name="egg"; resolved="idle"; break;
-            case SpeciesId::Baby:
-                name="sparkmon";
-                if (strcmp(action,"walk")!=0 && strcmp(action,"eat")!=0) resolved="idle";
-                break;
-            case SpeciesId::Rookie: break;
-            case SpeciesId::Champion:
-                name="flamemon";
-                break;
-            case SpeciesId::Ultimate:
-                name="dragfiremon";
-                break;
-        }
-        char path[64];
-        snprintf(path,sizeof(path),"/training/%s_%s.vpa",name,resolved);
-        c.asset(path,frame,x,y);
+        const auto& clip = definition.clip(pet.species(), content::actionFor(action), content::Context::Training);
+        c.asset(clip.path,frame % clip.frames,x,y);
     }
     int index() const {
         const auto i = trainingIndexFor(s.chosenStat);
@@ -120,7 +105,7 @@ template<class Canvas> class View {
     const char* block() const {
         const char* base = trainingBlockReason(pet,s.chosenStat);
         if (*base) return reason(base);
-        if (pet.evAt(s.chosenStat)+s.pendingEv >= 252) return reason(kTrainingEvMaxReason);
+        if (pet.evAt(s.chosenStat)+s.pendingEv >= pet.evLimit()) return reason(kTrainingEvMaxReason);
         if (pet.energy()-s.energyReserved < 8) return reason(kTrainingNoEnergy);
         return "";
     }
@@ -166,7 +151,7 @@ template<class Canvas> class View {
             rect(66,41,2,19,yellow);
             text(72,41,line,green);
             rect(70,61,165,2,panel);
-            rect(70,61,pet.evAt(stat)*165/252,2,green);
+            rect(70,61,std::min(int(pet.evAt(stat)),int(pet.evLimit()))*165/pet.evLimit(),2,green);
             const char* blocked;
             const int reps = trainingMaxReps(pet,stat,&blocked);
             selectBlocked = blocked;
@@ -177,7 +162,7 @@ template<class Canvas> class View {
                 rect(xs[i],73,52,2,accents[i]);
             }
             text(73,77,"EV",muted,true);
-            snprintf(line,sizeof(line),"%d/252",pet.evAt(stat));
+            snprintf(line,sizeof(line),"%d/%d",pet.evAt(stat),pet.evLimit());
             text(73,89,line,green,true);
             text(129,77,es ? "SES" : "SETS",muted,true);
             snprintf(line,sizeof(line),"%d",reps);
@@ -240,7 +225,7 @@ private:
         char value[24];
         snprintf(value,sizeof(value),"%d > %d",real,projected);
         metric(40,es ? "VALOR" : "VALUE",value,green);
-        snprintf(value,sizeof(value),"%u/252",pet.evAt(s.chosenStat));
+        snprintf(value,sizeof(value),"%u/%u",pet.evAt(s.chosenStat),pet.evLimit());
         metric(54,es ? "ENTRENO" : "TRAINING",value,green);
         snprintf(value,sizeof(value),"%d/100",pet.energy());
         metric(68,es ? "ENERGIA" : "ENERGY",value,mp);
@@ -316,7 +301,9 @@ private:
                 char shortName[5]; snprintf(shortName,sizeof(shortName),"%.4s",name(i));
                 text(70,y,shortName,trained ? yellow : white,true);
                 outline(108,y,97,7,muted);
-                const int beforeWidth=(before*96+126)/252, afterWidth=(after*96+126)/252;
+                const int limit=pet.evLimit();
+                const int beforeWidth=(std::min(before,limit)*96+limit/2)/limit;
+                const int afterWidth=(std::min(after,limit)*96+limit/2)/limit;
                 if (beforeWidth) rect(108,y,beforeWidth+1,7,muted);
                 if (afterWidth) rect(108,y,afterWidth+1,7,trained ? yellow : green);
                 char value[16]; snprintf(value,sizeof(value),delta ? "%+d" : "%d",delta ? delta : after);
@@ -330,8 +317,7 @@ private:
             text(162,25,es ? "CAMBIO" : "CHANGE",muted,true);
             text(202,25,es ? "AHORA" : "AFTER",muted,true);
             const int evAfter=pet.evAt(s.chosenStat), evBefore=evAfter-summary.evAdded;
-            int before=10+pet.ivAt(s.chosenStat)*3+evBefore/6;
-            if (before>99) before=99;
+            int before=pet.combatStatAt(s.chosenStat,evBefore);
             if (s.chosenStat==CombatStat::Hp) before=40+before*2;
             if (s.chosenStat==CombatStat::Mp) before=10+before;
             const int after=projectedStatValue(pet,s.chosenStat,0);
@@ -405,7 +391,7 @@ public:
                 asset("training10",126,82); text(140,82,es ? "ENTRENAR" : "TRAIN",muted,true);
                 asset("lock10",126,96);
                 if (pet.techniqueStage() < techniques::kCatalog[i].stage)
-                    snprintf(line,sizeof(line),"%s",techniques::kCatalog[i].stage==2 ? "FLAMEMON" : "DRAGFIREMON");
+                    snprintf(line,sizeof(line),"%s",definition.stage(techniques::kCatalog[i].stage==2 ? SpeciesId::Champion : SpeciesId::Ultimate).name);
                 else snprintf(line,sizeof(line),"%u / %d",pet.practice.training,techniques::kCatalog[i].training);
                 text(140,96,line,yellow,true);
             }
@@ -435,8 +421,9 @@ public:
             text(8+j*78,120,commands[j],p.cursor==j ? yellow : muted,true);
         }
     }
-    View(Canvas& canvas, const TrainingSession& session, const PetState& p, uint32_t ms, bool spanish)
-        : c(canvas), s(session), pet(p), now(ms), es(spanish) {}
+    View(Canvas& canvas, const TrainingSession& session, const PetState& p, uint32_t ms, bool spanish,
+         const content::PetDefinition& contentDefinition = content::builtinDefinition())
+        : c(canvas), s(session), pet(p), now(ms), es(spanish), definition(contentDefinition) {}
     void draw(bool drawSelectFooter = true) {
         rect(0,0,240,135,ink);
         switch(s.state) {

@@ -11,10 +11,14 @@ from PIL import Image
 ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 from scripts.tdisplay_assets import write_asset, write_catalog_header, write_manifest
 from scripts.training_assets import package_training
 from scripts.battle_assets import ACTIONS as BATTLE_ACTIONS, normalize_frames
+from scripts.content_definitions import load_definition, validate_art, export, rules_registry
+from core.content import ROLES
 
 
 SPECIES = {
@@ -62,29 +66,36 @@ def _reset_generated(directory):
             child.unlink()
 
 
-def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
+def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None, definition=None):
     root = Path(root)
+    if definition and definition.document != load_definition().document and root.resolve() == ROOT.resolve() and (data_dir is None or include_dir is None):
+        raise ValueError("Alternative content requires separate data_dir and include_dir; not a board installer")
     sim_build = Path(sim_build or root / "build-tdisplay")
     data_dir = Path(data_dir or root / "firmware" / "t-display" / "data")
     include_dir = Path(include_dir or root / "firmware" / "t-display" / "include" / "generated")
+    definition = definition or load_definition()
+    export(check=True)
+    validate_art(definition, sim_build)
     _reset_generated(data_dir)
     _reset_generated(include_dir)
 
     records = []
     animations = []
-    for stage, species in SPECIES.items():
-        source_dir = sim_build / "digimon1" / stage
-        for source in sorted(source_dir.glob("*_atlas.bmp")):
-            action = source.stem.split("_", 1)[1].removesuffix("_atlas")
+    for species in ROLES:
+        stage = definition.stage(species)
+        for semantic, source_clip in sorted(stage["actions"].items()):
+            clip = definition.clip(species, semantic)
+            source = sim_build / clip["atlas"].lstrip("/")
+            action = source_clip.get("file", semantic)
             frames = _atlas_frames(source)
-            relative = Path("animations") / species / f"{source.stem.removesuffix('_atlas')}.vpa"
+            relative = Path(clip["path"].lstrip("/"))
             record = write_asset(data_dir / relative, frames, frames[0].size,
                                  trim_transparent=action in ("tired","angry","eat","walk","fly","sleep",
                                                              "punch","cast","hurt","block","dodge","hit","hit_react"))
             records.append(record)
-            if species in ("rookie", "champion", "ultimate") and action in BATTLE_ACTIONS:
+            if semantic in stage["battle_actions"] and action in BATTLE_ACTIONS:
                 battle_frames = normalize_frames(frames)
-                battle_path = Path("battle") / (species + "_" + action + ".vpa")
+                battle_path = Path(definition.clip(species, semantic, "battle")["path"].lstrip("/"))
                 records.append(write_asset(data_dir / battle_path, battle_frames, battle_frames[0].size))
             animations.append({
                 "species": species,
@@ -102,7 +113,8 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
         with Image.open(source) as sprite:
             image = sprite.convert("RGBA").resize((16, 16), Image.Resampling.NEAREST)
             records.append(write_asset(data_dir / "ui/items" / (source.stem + ".vpa"), [image], image.size))
-    singles.extend((path, Path("ui/evolution") / f"{path.stem.lower()}.vpa", True) for path in sorted((sim_build / "UIEvolution").glob("*.bmp")))
+    singles.extend((sim_build / definition.stage(role)["portrait"].lstrip("/"),
+                    Path(definition.stage(role)["portrait_asset"].lstrip("/")), True) for role in ROLES)
     for source, relative, transparent in singles:
         image = _rgba_image(source, transparent=transparent)
         records.append(write_asset(data_dir / relative, [image], image.size))
@@ -116,24 +128,18 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
             relative = Path("ui/fx") / f"{source.stem.lower()}.vpa"
             records.append(write_asset(data_dir / relative, [image], image.size))
 
-    records.extend(package_training(sim_build, data_dir, include_dir))
+    records.extend(package_training(sim_build, data_dir, include_dir, definition))
+    rules = rules_registry()
     catalog = {
         "format": 1,
         "display": {"width": 240, "height": 135, "menu_height": 24},
-        "species": {
-            "egg": {"name": "Egg", "stage": 0},
-            "baby": {"name": "Sparkmon", "stage": 1},
-            "rookie": {"name": "Firemon", "stage": 2},
-            "champion": {"name": "Flamemon", "stage": 3},
-            "ultimate": {"name": "Dragfiremon", "stage": 4},
-        },
+        "species": {role: {"name": definition.name(role), "stage": i} for i, role in enumerate(ROLES)},
+        "content_definition": definition.document,
         "animations": sorted(animations, key=lambda item: (item["species"], item["action"])),
         "evolution": [
             {"from": "egg", "to": "baby", "automatic": False, "requirements_pending": False, "min_stage_age_seconds": 8},
-            {"from": "baby", "to": "rookie", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 43800, "max_care_mistakes": 1},
-            {"from": "rookie", "to": "champion", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 86400, "requirements": {"h": 55, "e": 55, "p": 55, "hp": 75}},
-            {"from": "champion", "to": "ultimate", "automatic": True, "requirements_pending": False, "min_stage_age_seconds": 129600, "battles_required": 15},
-        ],
+        ] + [{"from": role, "to": rule["evolves_to"], **{k: v for k, v in rule.items() if k != "evolves_to"}}
+             for role, rule in rules.items()],
     }
     manifest_path = write_manifest(data_dir, records, catalog)
     write_catalog_header(include_dir, catalog)
@@ -145,9 +151,14 @@ def build(root=ROOT, sim_build=None, data_dir=None, include_dir=None):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sim-build", default=str(ROOT / "build-tdisplay"))
+    parser.add_argument("--definition", help="Validated build-time definition; not a board installer")
+    parser.add_argument("--data-dir", type=Path)
+    parser.add_argument("--include-dir", type=Path)
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     arguments = parse_args()
-    build(ROOT, sim_build=arguments.sim_build)
+    build(ROOT, sim_build=arguments.sim_build,
+          data_dir=arguments.data_dir, include_dir=arguments.include_dir,
+          definition=load_definition(arguments.definition) if arguments.definition else None)

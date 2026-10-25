@@ -134,7 +134,7 @@ class TrainingSession:
             return False
         if self._energy_reserved + plan["energy_cost"] > self.pet.get("e"):
             return False
-        if self.pet.ev_at(self._chosen_stat) + self._pending_ev >= 252:
+        if self.pet.ev_at(self._chosen_stat) + self._pending_ev >= self.pet.ev_limit():
             return False
         return True
 
@@ -148,7 +148,7 @@ class TrainingSession:
             return plan["reason"]
         if self._energy_reserved + plan["energy_cost"] > self.pet.get("e"):
             return "FALTA ENERGIA"
-        if self.pet.ev_at(self._chosen_stat) + self._pending_ev >= 252:
+        if self.pet.ev_at(self._chosen_stat) + self._pending_ev >= self.pet.ev_limit():
             return "EV AL MAXIMO"
         return ""
 

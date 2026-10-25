@@ -22,7 +22,9 @@ def test_targeted_training_changes_only_chosen_ev_and_preserves_dna(index):
     ev[stat] += 6
     assert pet.ev == ev and pet.dna == dna
     assert training_values(pet, index)[0] == after
-    assert after - before == (2 if stat == "hp" else 1)
+    from core.growth_pilot import point
+    delta = point(pet.iv_at(stat), 6, 1)["stat"] - point(pet.iv_at(stat), 0, 1)["stat"]
+    assert after - before == delta * (2 if stat == "hp" else 1)
     assert pet.get("e") == energy - 8
     assert pet.training_sessions == 1
     assert pet.techniques.training == 0  # attribute sessions are not technique lessons
@@ -69,7 +71,7 @@ def test_training_cap_invalid_input_and_no_repeat_during_animation():
     in the confirm sub-state, so the assertions check the draft
     buffer during the session."""
     pet = firemon()
-    pet.ev["off"] = 250
+    pet.ev["off"] = 82
     saves = []
     s = TrainingSession(pet, lambda p: saves.append(p.to_dict()) or True)
     # A → B: pick ATAQUE (index 0).
@@ -80,9 +82,9 @@ def test_training_cap_invalid_input_and_no_repeat_during_animation():
     assert s.state == "session"
     # START reserves one partial rep immediately, without mutation.
     assert s.reps == 1
-    assert s.pending_ev == 2  # partial: 250 + 2 = 252, not 6
+    assert s.pending_ev == 2  # partial: 82 + 2 = 84, not 6
     assert s.energy_reserved == 8
-    assert pet.ev_at("off") == 250  # pet unchanged in state C
+    assert pet.ev_at("off") == 82  # pet unchanged in state C
     s.input(None, 100)
     assert s.reps == 1
     # After the animation window the next rep is blocked: the
@@ -94,7 +96,7 @@ def test_training_cap_invalid_input_and_no_repeat_during_animation():
     s.input(None, 10000)
     assert s.state == "result"
     # The pet is mutated exactly once, on commit, with the partial EV.
-    assert pet.ev_at("off") == 252
+    assert pet.ev_at("off") == 84
     assert pet.training_sessions == 1
     assert len(saves) == 1
     # Edge: training_block_reason and batch_block_reason agree on

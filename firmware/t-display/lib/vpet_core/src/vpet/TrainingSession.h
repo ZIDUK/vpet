@@ -59,7 +59,7 @@ inline const char* trainingBlockReason(const PetState& pet, CombatStat stat) {
     if (pet.species() == SpeciesId::Egg || pet.species() == SpeciesId::Baby) return kTrainingNotFit;
     if (pet.dead() || pet.injured() || pet.cold()) return kTrainingNotFit;
     if (pet.exploration.away()) return kTrainingNotFit;
-    if (pet.evAt(stat) >= kTrainingEvMax) return kTrainingEvMaxReason;
+    if (pet.evAt(stat) >= pet.evLimit()) return kTrainingEvMaxReason;
     if (pet.energy() < kTrainingEnergyCost) return kTrainingNoEnergy;
     return kTrainingOk;
 }
@@ -81,7 +81,7 @@ inline uint8_t trainingMaxReps(const PetState& pet, CombatStat stat, const char*
     const char* block = trainingBlockReason(pet, stat);
     if (block != kTrainingOk) { *reason = block; return 0; }
     const uint8_t energyReps = pet.energy() / kTrainingEnergyCost;
-    const int headroom = static_cast<int>(kTrainingEvMax) - pet.evAt(stat);
+    const int headroom = static_cast<int>(pet.evLimit()) - pet.evAt(stat);
     uint8_t evReps = 0;
     if (headroom > 0) {
         // Ceiling: a partial last rep is still included when headroom < 6.
@@ -121,7 +121,7 @@ inline TrainingPlan trainingPlanOneRep(const PetState& pet, CombatStat stat) {
         plan.reason = block;
         return plan;
     }
-    const int headroom = static_cast<int>(kTrainingEvMax) - pet.evAt(stat);
+    const int headroom = static_cast<int>(pet.evLimit()) - pet.evAt(stat);
     plan.can = true;
     plan.evAdded = static_cast<uint8_t>(headroom < static_cast<int>(kTrainingEvGain) ? headroom : kTrainingEvGain);
     plan.energyCost = kTrainingEnergyCost;
@@ -133,7 +133,8 @@ inline TrainingPlan trainingPlanOneRep(const PetState& pet, CombatStat stat) {
 }
 
 inline uint8_t trainingPreviewEv(const PetState& pet, CombatStat stat, uint8_t baseEv) {
-    const int headroom=kTrainingEvMax-pet.evAt(stat);
+    const int headroom=pet.evLimit()-pet.evAt(stat);
+    if (headroom <= 0) return 0;
     const int gain=baseEv<headroom ? baseEv : headroom;
     const bool bonus=gain>0 && gain<headroom &&
         (pet.exploration.guide || pet.adoptedStock.count(adopted::indexOf("training_manual")));
@@ -141,7 +142,7 @@ inline uint8_t trainingPreviewEv(const PetState& pet, CombatStat stat, uint8_t b
 }
 
 inline uint8_t consumeTrainingBonus(PetState& pet, CombatStat stat) {
-    if (pet.exploration.away() || pet.evAt(stat) >= kTrainingEvMax) return 0;
+    if (pet.exploration.away() || pet.evAt(stat) >= pet.evLimit()) return 0;
     const int manual = adopted::indexOf("training_manual");
     if (pet.exploration.guide) {
         pet.exploration.guide = pet.exploration.guidePending;
@@ -157,7 +158,7 @@ inline uint8_t consumeTrainingBonus(PetState& pet, CombatStat stat) {
 // to `stat`, without mutating the pet. The formula mirrors
 // PetState::combatStat exactly:
 //
-//   value = clamp(1, 99, 10 + IV*3 + projectedEV/6)
+// Adult values use the stage/IV growth profile; stored legacy EV is retained.
 //
 // HP and MP use the project's pool conversions (40 + hp*2 / 10 + mp),
 // matching src/core/training.py:batch_projected_stat.
@@ -170,17 +171,10 @@ inline int projectedStatValue(
 ) {
     const int currentEv = pet.evAt(stat);
     int projectedEv = currentEv + static_cast<int>(evDelta);
-    if (projectedEv > kTrainingEvMax) projectedEv = kTrainingEvMax;
+    if (projectedEv > pet.evLimit()) projectedEv = pet.evLimit();
+    if (projectedEv < currentEv) projectedEv = currentEv;
     if (projectedEv < 0) projectedEv = 0;
-    const int iv = static_cast<int>(pet.ivAt(stat));
-    int value = 10 + iv * 3 + projectedEv / 6;
-    const int growth = pet.species() == SpeciesId::Egg ? 50 :
-                       pet.species() == SpeciesId::Baby ? 75 :
-                       pet.species() == SpeciesId::Champion ? 120 :
-                       pet.species() == SpeciesId::Ultimate ? 140 : 100;
-    value = (value * growth + 50) / 100;
-    if (value < 1) value = 1;
-    if (value > 99) value = 99;
+    const int value = pet.combatStatAt(stat,static_cast<uint8_t>(projectedEv));
     if (stat == CombatStat::Hp) {
         return hpPoolBase + value * 2;
     }
@@ -218,7 +212,7 @@ inline TrainingApplySummary trainingApply(PetState& pet, CombatStat stat, uint8_
     // extra reps for partial-final-EV situations.
     const uint8_t energyReps = pet.energy() / kTrainingEnergyCost;
     if (reps > energyReps) reps = energyReps;
-    const int headroomTotal = static_cast<int>(kTrainingEvMax) - pet.evAt(stat);
+    const int headroomTotal = static_cast<int>(pet.evLimit()) - pet.evAt(stat);
     if (headroomTotal <= 0) return summary;
     // Ceiling so a partial last rep is counted: at headroom=4 we still
     // get 1 rep with +4 EV.
@@ -227,7 +221,7 @@ inline TrainingApplySummary trainingApply(PetState& pet, CombatStat stat, uint8_
     uint8_t repsDone = 0;
     uint8_t evAdded = 0;
     for (uint8_t i = 0; i < reps; ++i) {
-        const int headroom = static_cast<int>(kTrainingEvMax) - pet.evAt(stat);
+        const int headroom = static_cast<int>(pet.evLimit()) - pet.evAt(stat);
         if (headroom <= 0) break;
         const uint8_t gain = static_cast<uint8_t>(headroom < static_cast<int>(kTrainingEvGain) ? headroom : kTrainingEvGain);
         pet.addEv(stat, gain);

@@ -819,6 +819,8 @@ def main(profile_name="pico", output_dir=None):
         BUILD = Path(output_dir)
     print("=== build.py ===")
     try:
+        from scripts.content_definitions import export, load_definition
+        export(check=True)
         clean_build()
         copy_runtime_sources()
         collect_background()
@@ -830,6 +832,8 @@ def main(profile_name="pico", output_dir=None):
         collect_fx()
         validate_runtime_assets()
         write_manifest()
+        if ACTIVE_PROFILE.name == "tdisplay":
+            (BUILD / "content.json").write_text(json.dumps(load_definition().document, indent=2) + "\n")
         print("OK")
     finally:
         ACTIVE_PROFILE = previous_profile

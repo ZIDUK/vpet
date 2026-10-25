@@ -41,8 +41,11 @@ El puerto detectado durante esta migracion fue
 5. Ejecuta `make deploy` con la placa conectada.
 6. Confirma `VPET_READY` y prueba los dos botones.
 
-Estado al 2026-10-05: despliegue aplazado por el usuario. Trabajar con el
-simulador, builds y documentacion hasta que solicite cargar la board.
+Toda carga requiere la autorizacion aplicable, build fresco y el gate de
+aceptacion fisica de Status definido en AGENTS.md, o una excepcion explicita
+para esa revision. Una autorizacion anterior no aprueba automaticamente una
+nueva entrega. El ultimo despliegue y sus limites estan en
+[estado del proyecto](project-status.md); una tarea documental no flashea.
 El bootstrap instala tambien Pillow, pygame y pytest. Para evitar usar otro
 Python puedes ejecutar `make sim PY=.venv-platformio/bin/python`.
 
@@ -121,6 +124,30 @@ descritos en [content-packages.md](content-packages.md).
 
 ## Pruebas
 
+Piloto de balance aislado, sin cargar ni leer partidas:
+
+```bash
+.venv-platformio/bin/python scripts/growth_pilot.py --out out/growth-pilot
+.venv-platformio/bin/python -m pytest -q tests/test_growth_pilot.py
+```
+
+Genera medidas, no configura el producto. Ver [supuestos y resultados](growth-pilot.md)
+antes de interpretar los tiempos de combate/entrenamiento o cambiar limites.
+
+La integracion local de F2b usa [este contrato](growth-integration.md).
+Con poco espacio en disco, las pruebas pueden liberar `tmp_path` exitosos:
+
+```bash
+.venv-platformio/bin/python -m pytest -q \
+  --basetemp=/private/tmp/vpet-growth-validation \
+  -o tmp_path_retention_policy=failed
+```
+
+`--basetemp` debe ser una carpeta dedicada y descartable: pytest la vacia.
+Usar una distinta por ejecucion concurrente. No apuntar a `out/board-backups`,
+partidas, fuentes ni recursos de trabajo; no usar retencion global cero cuando
+hay otras suites en ejecucion.
+
 `make test` cubre:
 
 - logica de mascota y evolucion;
@@ -132,6 +159,28 @@ descritos en [content-packages.md](content-packages.md).
 `make native-test` compila y prueba el nucleo C++ sin hardware. `make firmware`
 es adicionalmente obligatorio porque detecta errores en adaptadores Arduino,
 TFT, NimBLE, NVS y LittleFS que el target nativo no enlaza.
+
+## Documentacion Por Entrega
+
+Una funcion no se cierra solo al compilar. Actualizar en la misma entrega:
+
+1. Su contrato de dominio: acceso, efectos, limites, cancelacion y guardado.
+2. [Guia del producto](product-guide.md): opcion/subopcion, controles,
+   significado y motivos por los que puede rechazar una accion.
+3. [Estado](project-status.md) y [roadmap](superpowers/plans/2026-10-11-delivery-roadmap.md):
+   separar implementado, probado en host, cargado y aceptado fisicamente.
+4. README si cambia el resumen vigente o el acceso a una funcion.
+5. [Matriz del video](launch-video.md): tomas nuevas o invalidadas, evidencia
+   pendiente y afirmaciones que aun no se pueden publicar.
+
+No editar a mano catalogos/documentacion generados: corregir fuente y
+regenerar. Las decisiones visuales siguen con su propietario; registrar
+solicitudes no convierte un diseno propuesto en aprobado. Preservar cortes
+historicos fechados sin presentarlos como el estado vigente.
+
+En cambios exclusivamente documentales revisar diff y enlaces locales;
+no reutilizar cifras de pruebas anteriores como pruebas recien ejecutadas.
+No hace falta flashear para actualizar manuales o preparar el video.
 
 ## Despliegue seguro
 

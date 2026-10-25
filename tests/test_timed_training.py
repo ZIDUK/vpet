@@ -86,7 +86,7 @@ def test_all_attributes_finish_once_with_partial_ev_cap(index, stat):
     pet = Pet()
     pet.complete_hatch("rookie", entropy=42)
     pet.stats["e"] = 80
-    pet.ev[stat] = 250
+    pet.ev[stat] = pet.ev_limit() - 2
     saves = []
     s = TrainingSession(pet, lambda p: saves.append(p.to_dict()) or True)
     s.index = index
@@ -94,7 +94,7 @@ def test_all_attributes_finish_once_with_partial_ev_cap(index, stat):
     s.input("action", 0)
     assert s.pending_ev == 2
     s.input(None, 10000)
-    assert pet.ev_at(stat) == 252
+    assert pet.ev_at(stat) == pet.ev_limit()
     assert pet.get("e") == 72
     assert len(saves) == 1
     assert s._focus == "back"

@@ -45,6 +45,7 @@ from core.evolution import (
     evolution_hidden,
     evolution_tree_node,
 )
+from core.evolution_progress import next_detail_index
 from scripts.exploration_session import ExplorationSession
 from core.inventory import (
     clamp_visible_inventory_index,
@@ -113,11 +114,16 @@ def main():
         "max_x": profile.width - profile.pet_size,
         "start_x": (profile.width - profile.pet_size) / 2,
     }
+    if profile.name == "tdisplay":
+        from scripts.content_loader import definition_for
+        motion_kwargs["definition"] = definition_for(build_dir)
     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
     evolution = Evolution(EVOLUTION_REGISTRY)
     services = SimulatorServices(ROOT)
     if profile.name == "tdisplay" and not (args.practice or args.training):
-        services.load(pet)
+        if not services.start(pet):
+            pygame.quit()
+            raise RuntimeError("Simulator storage blocked; original save preserved")
     practice = None
     training = None
     exploration_menu = None
@@ -128,7 +134,9 @@ def main():
         motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
         # Preview saves are isolated from the ordinary simulator save.
         services.save_path = ROOT / "out" / "sim_practice_save.json"
-        services.load(pet)
+        if not services.start(pet):
+            pygame.quit()
+            raise RuntimeError("Simulator preview storage blocked; original save preserved")
         if pet.species != "rookie":
             pet.complete_hatch("rookie", entropy=12345)
         if args.training:
@@ -185,6 +193,8 @@ def main():
                         inventory_index = (inventory_index + 1) % 2
                     elif panel_mode == "status":
                         inventory_index = (inventory_index + 1) % STATUS_PAGE_COUNT
+                    elif panel_mode == "evolution_detail" and profile.name == "tdisplay":
+                        inventory_index = next_detail_index(pet, EVOLUTION_REGISTRY, inventory_index)
                     elif panel_mode in ("evolution", "evolution_detail"):
                         inventory_index = (inventory_index + 1) % EVOLUTION_NODE_COUNT
                     elif panel_mode == "explore" and exploration_menu is not None:
@@ -253,6 +263,7 @@ def main():
                             panel_mode = "evolution_detail"
                     elif panel_mode == "evolution_detail":
                         panel_mode = "evolution"
+                        inventory_index %= EVOLUTION_NODE_COUNT
                     elif panel_mode == "explore" and exploration_menu is not None:
                         practice_keys.add(event.key)
                         was_away = pet.exploration.away
@@ -322,6 +333,7 @@ def main():
                 elif event.key == pygame.K_b:
                     if panel_mode == "evolution_detail":
                         panel_mode = "evolution"
+                        inventory_index %= EVOLUTION_NODE_COUNT
                     elif panel_mode == "explore" and exploration_menu is not None:
                         practice_keys.add(event.key)
                         if not exploration_menu.input("back"):
@@ -430,6 +442,7 @@ def main():
             minute = dt[3]*60+dt[4] if dt and dt[0]>=2024 else None
             motion.set_tired(not pet.dead and not pet.injured and not getattr(pet,'cold',False) and
                              pet.sleep.tired(pet.stats['e'], pet.dna[3], minute), now)
+        if profile.name == "tdisplay": motion.species = pet.species
         if not getattr(pet,'cold',False): motion.update(now)
         sprite_frame = motion.frame
         egg_motion = motion.state
@@ -459,6 +472,7 @@ def main():
             now_ms=int(now * 1000),
             exploration_menu=exploration_menu,
             exploration_now=services.exploration_time(),
+            evolution_scale=CARE_TIME_SCALE,
         )
         surface = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
         scaled = pygame.transform.scale(surface, window_size)

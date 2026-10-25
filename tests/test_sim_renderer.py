@@ -232,33 +232,29 @@ def test_tdisplay_evolution_tree_renders_three_stage_window(tmp_path):
     assert spark.getpixel((EVO_X0 + stride + 1, EVO_COLOR_Y + 1)) == selector
 
 
-def test_tdisplay_evolution_detail_splits_card_and_list(tmp_path):
-    from core.status_card import STATUS_CARD_Y, STATUS_SPLIT_X
-
+def test_tdisplay_evolution_detail_has_dark_progress_pages(tmp_path):
     build_dir = tmp_path / "build-tdisplay"
     profile = get_display_profile("tdisplay")
     build_script.main(profile_name="tdisplay", output_dir=build_dir)
-    egg = render_frame(
+    first = render_frame(
         build_dir,
         _rookie(),
         menu_index=6,
         panel_mode="evolution_detail",
-        panel_index=0,
+        panel_index=2,
         profile=profile,
     )
-    spark = render_frame(
+    second = render_frame(
         build_dir,
         _rookie(),
         menu_index=6,
         panel_mode="evolution_detail",
-        panel_index=1,
+        panel_index=7,
         profile=profile,
     )
-    parchment = (214, 180, 112)
-    left = (0, 48, STATUS_SPLIT_X, 135)
-    assert egg.crop(left).tobytes() != spark.crop(left).tobytes()
-    assert egg.getpixel((STATUS_SPLIT_X + 10, STATUS_CARD_Y + 4)) != parchment
-    assert egg.getpixel((8, STATUS_CARD_Y + 4)) == parchment
+    assert first.crop((74, 48, 240, 135)).tobytes() != second.crop((74, 48, 240, 135)).tobytes()
+    assert first.crop((0, 48, 72, 135)).tobytes() == second.crop((0, 48, 72, 135)).tobytes()
+    assert first.getpixel((239, 134)) == (19, 23, 27)
 
 
 def test_tdisplay_options_uses_dedicated_setting_icons(tmp_path):

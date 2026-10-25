@@ -10,12 +10,14 @@
 #include "vpet/PracticeSession.h"
 #include "vpet/TrainingSession.h"
 #include "vpet/ExplorationSession.h"
+#include "vpet/PetDefinition.h"
 
 namespace vpet {
 
 class Panels {
 public:
-    Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene = nullptr);
+    Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene = nullptr,
+           const content::PetDefinition& definition = content::builtinDefinition());
     void draw(
         const Navigation& navigation,
         const PetState& pet,
@@ -36,6 +38,9 @@ public:
                          bool home = false, uint8_t menu = 3);
 
 private:
+    const char* portraitPath(SpeciesId species, bool thumbnail) const;
+    const char* battleSpritePath(SpeciesId species, int action) const;
+    const char* battleSpeciesLabel(SpeciesId species) const;
     void drawChrome(uint8_t selected, const char* title, bool calling);
     void beginPanel(bool panelChanged, uint8_t selected, const char* title, bool calling);
     void drawCallBadge(uint8_t selected, bool calling);
@@ -88,6 +93,7 @@ private:
     TFT_eSPI& output_;
     TFT_eSprite& display_;
     AssetStore& assets_;
+    const content::PetDefinition& definition_;
     // Borrow Home's existing framebuffer; App invalidates its owner before use.
     TFT_eSprite* scene_;
     enum class Scene : uint8_t { None, Arena, Exploration, TrainingFooter };

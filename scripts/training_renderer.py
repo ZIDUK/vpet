@@ -127,9 +127,9 @@ def _ev_row(draw, pet, x, y, current_ev, pending_ev):
     base = int(current_ev)
     if pending > 0:
         line = tr(pet, "training.session.ev_delta", base, pending,
-                  min(252, base + pending))
+                  max(base, min(pet.ev_limit(), base + pending)), pet.ev_limit())
     else:
-        line = tr(pet, "training.session.ev_static", base)
+        line = tr(pet, "training.session.ev_static", base, pet.ev_limit())
     text(draw, (x, y), line, GREEN if pending > 0 else WHITE, small=True)
 
 
@@ -181,7 +181,7 @@ def _render_select(build_dir, session, now_ms):
              GREEN)
         ev = session.pet.ev_at(item["stat"])
         draw.rectangle((70, 61, 234, 62), fill=PANEL)
-        fill_width = ev * 165 // 252
+        fill_width = min(ev, session.pet.ev_limit()) * 165 // session.pet.ev_limit()
         if fill_width:
             draw.rectangle((70, 61, 69 + fill_width, 62), fill=GREEN)
         max_reps, reason = _max_reps_with_reason(session.pet, item["stat"])
@@ -190,7 +190,7 @@ def _render_select(build_dir, session, now_ms):
             draw.rectangle((x, 73, x + 51, 103), fill=PANEL)
             draw.rectangle((x, 73, x + 51, 74), fill=accent)
         text(draw, (73, 77), "EV", MUTED, small=True)
-        text(draw, (73, 89), "%d/252" % ev, GREEN, small=True)
+        text(draw, (73, 89), "%d/%d" % (ev, session.pet.ev_limit()), GREEN, small=True)
         text(draw, (129, 77), "SES" if session.pet.language == "ES" else "SETS",
              MUTED, small=True)
         text(draw, (129, 89), str(max_reps), YELLOW, small=True)
@@ -264,7 +264,7 @@ def _render_prepare(build_dir, session, now_ms):
     real, projected = batch_projected_value(session.pet, stat, TRAINING_EV_GAIN + bonus)
     es = session.pet.language == "ES"
     _metric(draw, 40, "VALOR" if es else "VALUE", "%d > %d" % (real, projected), GREEN)
-    _metric(draw, 54, "ENTRENO" if es else "TRAINING", "%d/252" % session.pet.ev_at(stat), GREEN)
+    _metric(draw, 54, "ENTRENO" if es else "TRAINING", "%d/%d" % (session.pet.ev_at(stat), session.pet.ev_limit()), GREEN)
     _metric(draw, 68, "ENERGIA" if es else "ENERGY", "%d/100" % session.pet.get("e"), MP)
     _metric(draw, 82, "COSTE" if es else "COST", "-8", HP)
     _metric(draw, 96, "TIEMPO" if es else "TIME", "10s", YELLOW)
@@ -318,7 +318,8 @@ def _render_session(build_dir, session, now_ms):
     real, projected = session.current_view(now_ms)
     es = session.pet.language == "ES"
     _metric(draw, 40, "VALOR" if es else "VALUE", "%d > %d" % (real, projected), GREEN)
-    _metric(draw, 54, "GANANCIA" if es else "GAIN", "+%d EV" % session.pending_ev, GREEN)
+    gain = min(session.pending_ev, max(0, session.pet.ev_limit() - session.pet.ev_at(stat)))
+    _metric(draw, 54, "GANANCIA" if es else "GAIN", "+%d EV" % gain, GREEN)
     _metric(draw, 68, "ENERGIA" if es else "ENERGY",
             "%d > %d" % (session.pet.get("e"), session.pet.get("e") - session.energy_reserved), MP)
     elapsed = max(0, now_ms - (session._animation_started_ms or 0))
@@ -447,8 +448,8 @@ def _render_result_summary(build_dir, session, now_ms):
                 text(draw, (x, y), value, color, small=True)
         # Stat pool row (HP/MP conversion applied).
         cs_before = combat_stat(session.pet.dna,
-                                  {**session.pet.ev, stat: ev_before}, stat)
-        cs_after = combat_stat(session.pet.dna, session.pet.ev, stat)
+                                  {**session.pet.ev, stat: ev_before}, stat, session.pet.species)
+        cs_after = combat_stat(session.pet.dna, session.pet.ev, stat, session.pet.species)
         before_pool, after_pool = _stat_pool(stat, cs_before, cs_after)
         delta = after_pool - before_pool
         row(40, local_name, before_pool, delta, after_pool, WHITE)
@@ -506,7 +507,7 @@ def _render_result_stats(build_dir, session, now_ms):
         delta = ev_after - ev_before
         highlight = (s == trained)
         _stat_bar_row(draw, local_name, ev_before, ev_after, delta,
-                       rows_y + i * 12, highlight=highlight)
+                       rows_y + i * 12, highlight=highlight, max_ev=session.pet.ev_limit())
     _result_buttons(draw, session)
     return frame
 
@@ -546,7 +547,7 @@ def _stat_bar_width(ev, max_ev=252, max_width=96):
     return int(round((clamped / float(max_ev)) * max_width))
 
 
-def _stat_bar_row(draw, label, ev_before, ev_after, delta, y, highlight=False):
+def _stat_bar_row(draw, label, ev_before, ev_after, delta, y, highlight=False, max_ev=252):
     """Render one row of the six-attribute overview. Layout in 240x135:
 
     * x=70..104 : localised stat name (up to 4 chars at the default font).
@@ -555,8 +556,8 @@ def _stat_bar_row(draw, label, ev_before, ev_after, delta, y, highlight=False):
     """
     color = YELLOW if highlight else WHITE
     text(draw, (70, y), label[:4], color, small=True)
-    width_before = _stat_bar_width(ev_before)
-    width_after = _stat_bar_width(ev_after)
+    width_before = _stat_bar_width(ev_before, max_ev)
+    width_after = _stat_bar_width(ev_after, max_ev)
     # Outline + bar.
     draw.rectangle((108, y, 108 + 96, y + 6), outline=MUTED)
     if width_before > 0:

@@ -1,5 +1,6 @@
 """Hatch genome helpers shared by Pet and the T-Display simulator."""
 import math
+from core.growth import adult_rank, stat_value
 
 COMBAT_STATS = ("hp", "mp", "off", "def", "spd", "brn")
 SPECIES_ID = {
@@ -29,6 +30,14 @@ def iv_at(dna, stat):
 
 
 def combat_stat(dna, ev, stat, species="rookie"):
+    rank = adult_rank(species)
+    if rank:
+        return stat_value(iv_at(dna, stat), int(ev.get(stat, 0)), rank)
+    return legacy_combat_stat(dna, ev, stat, species)
+
+
+def legacy_combat_stat(dna, ev, stat, species="rookie"):
+    """Frozen pre-F2b formula for young stages and historical balance reports."""
     value = 10 + iv_at(dna, stat) * 3 + int(ev.get(stat, 0)) // 6
     value = (value * COMBAT_GROWTH_PERCENT.get(species, 100) + 50) // 100
     return max(1, min(99, value))

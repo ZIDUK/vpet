@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "vpet/Elements.h"
 #include "vpet/TechniqueCatalog.h"
+#include "vpet/Growth.h"
 
 namespace vpet {
 namespace practice {
@@ -13,14 +14,14 @@ struct Fighter {
     int hp = 90, mp = 30, maxHp = 90, maxMp = 30;
     uint8_t mastery[techniques::kCount] = {};
     uint8_t cooldown[techniques::kCount] = {};
-    uint8_t itemBase[6] = {0, 0, 0, 0, 0, 0};
+    uint16_t itemBase[6] = {0, 0, 0, 0, 0, 0};
     uint8_t itemBoosts[6] = {0, 0, 0, 0, 0, 0};
     uint8_t equipped = 7;
     int personality = 1, bond = 50;
     Element element = Element::Neutral;
 
     void init(const int* values) {
-        for (int i = 0; i < 6; ++i) stats[i] = values[i] < 1 ? 1 : (values[i] > 99 ? 99 : values[i]);
+        for (int i = 0; i < 6; ++i) stats[i] = values[i] < 1 ? 1 : (values[i] > growth::kMaxStat ? growth::kMaxStat : values[i]);
         hp = maxHp = 40 + stats[0] * 2;
         mp = maxMp = 10 + stats[1];
         for (int i = 0; i < techniques::kCount; ++i) cooldown[i] = 0;

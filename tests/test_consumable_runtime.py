@@ -174,7 +174,7 @@ def test_manual_does_not_stack_with_old_guide_or_get_consumed_at_cap():
     result = batch_commit(p, 'off', 1, lambda _: True)
     assert result['guide_ev'] == 1 and not p.exploration.guide
     assert p.adopted_inventory['training_manual'] == 1
-    p.ev['off'] = 251
+    p.ev['off'] = p.ev_limit()-1
     result = batch_commit(p, 'off', 1, lambda _: True)
     assert result['guide_ev'] == 0 and p.adopted_inventory['training_manual'] == 1
 

@@ -49,8 +49,10 @@ public:
     void openEvolutionTree(SpeciesId currentSpecies);
     void openEvolutionTree();
     void select(SpeciesId species);
-    void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; }
+    void setPanel(PanelId panel, uint8_t index = 0) { panel_ = panel; panelIndex_ = index; evolutionDetailPage_ = 0; }
     void setPanelIndex(uint8_t index) { panelIndex_ = index; }
+    void setEvolutionDetailPage(uint8_t page) { evolutionDetailPage_ = page; }
+    uint8_t evolutionDetailPage() const { return evolutionDetailPage_; }
     EvolutionNode selectedEvolutionNode() const;
     bool evolutionSelectedHidden() const;
 
@@ -66,6 +68,7 @@ private:
     PanelId panel_ = PanelId::Home;
     uint8_t menuIndex_ = 0;
     uint8_t panelIndex_ = 0;
+    uint8_t evolutionDetailPage_ = 0;
     SpeciesId selectedSpecies_ = SpeciesId::Egg;
     uint8_t currentStage_ = 0;
     bool championDiscovered_ = true;

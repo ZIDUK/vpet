@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>vPet Hub</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header><a class="brand" href="/">vPet <span>HUB</span></a><span class="edition">T-DISPLAY / 240 × 135</span><button id="device">Mi dispositivo</button></header>
+<main>
+<nav aria-label="Secciones"><button class="active" data-tab="catalog">Catálogo</button><button data-tab="import">Importar</button><button data-tab="device">Dispositivo</button></nav>
+<section id="catalog" class="view"><div class="section-heading"><div><p class="eyebrow">COLECCIÓN / 001</p><h1>Mascotas</h1></div><span class="tag">Contenido del proyecto</span></div>
+<div class="workspace"><div class="collection"><button id="firemon" class="pet-entry" aria-pressed="true"><strong>Firemon</strong><span>Fuego · 5 etapas</span><span class="version">v1.0.0 →</span></button></div>
+<article class="detail"><div class="detail-heading"><div><p class="eyebrow">LÍNEA EVOLUTIVA</p><h2 id="pet-name">Firemon</h2></div><span class="tag">Incluido</span></div><div class="stage-scene"><canvas id="sprite" width="320" height="240" aria-label="Animación de la mascota"></canvas><p id="preview-error" role="status"></p></div><div id="stages" class="segments" aria-label="Etapas"></div><div class="controls"><label>Animación<select id="action"></select></label><button id="pause" aria-pressed="false">Pausar</button></div><dl><div><dt>Definición</dt><dd id="definition-id">—</dd></div><div><dt>Perfil</dt><dd>ESP32 T-Display</dd></div><div><dt>Origen</dt><dd>Proyecto vPet</dd></div></dl><div class="install-row"><span>Instalador USB pendiente</span><button disabled>Instalar en dispositivo</button></div></article></div></section>
+<section id="import" class="view" hidden><p class="eyebrow">CONTENIDO LOCAL</p><h1>Importar definición</h1><div class="import-area"><label for="file">Definición F1 (.json)</label><input id="file" type="file" accept=".json,application/json"><p class="muted">Máximo 64 KiB. No se instala ni se sube a un servidor externo.</p></div><div id="import-result" role="status" aria-live="polite"></div></section>
+<section id="device-view" class="view" hidden><p class="eyebrow">CONEXIÓN USB</p><h1>Mi dispositivo</h1><div class="device-state"><span class="status-dot"></span><h2>Sin conexión</h2><p id="serial-support"></p><p>El firmware actual aún no admite instalación de paquetes por USB.</p><button disabled>Conectar placa</button></div></section>
+</main><footer><span>vPet Hub · Vista previa local</span><span>Partidas y placa sin cambios</span></footer>
+</body></html>

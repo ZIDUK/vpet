@@ -80,7 +80,7 @@ struct Exploration {
             const int amount = (good ? 25 : 10) * r.elapsed / duration(route);
             r.energy = static_cast<uint8_t>(std::max(0, std::min(amount, 100 - pet.energy())));
         } else if (route == ExploreRoute::Jornada) {
-            r.ev = static_cast<uint8_t>(std::min(int(r.elapsed / 14400), std::min(8 - spentEv, 252 - int(pet.evAt(stat)))));
+            r.ev = static_cast<uint8_t>(std::max(0,std::min(int(r.elapsed / 14400), std::min(8 - spentEv, int(pet.evLimit()) - int(pet.evAt(stat))))));
             r.guide = good && r.full && !(guide || guidePending);
         } else if (learning) {
             r.learning = r.full && !pet.practice.learned(1) ? 1 : 0;

@@ -10,9 +10,13 @@ Esta lista sustituye la propuesta de importar los 81 objetos sin filtrar.
 - HP/MP porcentuales se calculan sobre el maximo del luchador, no sobre salud de cuidado.
 - Recuperacion: 20/50/90/100%; redondeo hacia abajo, minimo 1, sin superar el maximo.
 - No resucita, no consume con recurso lleno y no cura fuera de combate.
-- Discos: 20% o 40% sobre atributo inicial del combate; no acumulan, tope 99.
+- Discos: 20% o 40% sobre atributo inicial del combate; no acumulan. F2b local
+  admite hasta 448 temporales sobre una base permanente de hasta 320.
 - Un disco fuerte sustituye a uno debil; nunca se multiplica un bono anterior.
-- Chips: +4 EV; alimentos de atributo: +2 EV; tope 252 por atributo, sin alterar IV.
+- Chips: +4 EV; alimentos de atributo: +2 EV; tope adulto por etapa
+  84/168/252, sin alterar IV ni rebajar EV legacy. [Contrato F2b](growth-integration.md).
+  El cap 252 del catalogo legacy generado es el limite de almacenamiento;
+  las ganancias actuales respetan ademas el techo menor de la etapa.
 - Venda cura lesion; Medicina cura lesion y recupera 20 de salud de cuidado.
 - Manual: +1 EV en la siguiente sesion completada; no se acumula con Guia.
 

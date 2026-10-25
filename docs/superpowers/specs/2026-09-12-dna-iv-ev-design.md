@@ -1,5 +1,10 @@
 # ADN, IV y EV (Corte 1)
 
+Documento historico. Desde 2026-10-24 el codigo local usa el
+[contrato F2b](../../growth-integration.md) para stats/caps adultos, sin techo
+universal 99. Este corte se conserva como antecedente de ADN y persistencia;
+su formula anterior ya no define el comportamiento local vigente.
+
 Cada vida tiene un genoma de 4 bytes al eclosionar. De ahí salen 6 IVs
 estilo Digimon World 1. Los EVs suben con cuidado. Status gana una
 página con hélice, código ADN, stat visible, IV y EV. Battle no cambia.

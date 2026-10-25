@@ -1,5 +1,6 @@
 """Two-button Arena controller with durable, once-only result progress."""
 from core.dna import COMBAT_STATS
+from core.growth import adult_rank, stat_value
 from core.practice import Fighter, PracticeBattle
 from core.adopted_items import ITEMS, COMBAT_CATEGORIES, award_victory_item
 from core.techniques import TECHNIQUES, REQUIRED_TRAINING
@@ -17,6 +18,11 @@ class PracticeSession:
             pet.techniques.mastery, pet.dna[3] % 3, pet.techniques.bond,
             element="fire" if pet.species in ("rookie", "champion", "ultimate") else "neutral"))
         if self.battle is not None:
+            rank = adult_rank(pet.species)
+            if rank:
+                value = stat_value(8, pet.ev_limit() // 2, rank)
+                equipment = ((0, 1), (0, 1, 2), (0, 2, 3, 4))[rank - 1]
+                self.battle.rival = Fighter((value,) * 6, equipped=equipment, personality=1, element="fire")
             self.battle.rival.element = "fire"  # The practice rival is Firemon.
         self.message = ""
         self.updated_at = 0

@@ -212,10 +212,55 @@ void settingsPending(const std::string& test) {
     CHECK(restored.meals() == expected.meals());
 }
 
+uint32_t profileSequence=100;
+PetProfile newProfile() {
+    const uint32_t words[]={profileSequence++,3,4,5};
+    return PetProfile::fromWords(words);
+}
+
+void profilePending(const std::string& test) {
+    using namespace storage_stub;
+    Settings settings;
+    std::string candidate;
+    const bool rebootTest=test.find("reboot")!=std::string::npos;
+    const bool mirror=test.find("mirror")!=std::string::npos;
+    const bool survives=test.find("new")!=std::string::npos || mirror;
+    {
+        NvsKeyValueStore adapter("pet");
+        auto pet=makePet(31);
+        CHECK(SettingsStore(adapter).save(pet,settings));
+        const auto dna=pet.dna()[0];
+        SettingsStore migration(adapter,nullptr,newProfile);
+        failCommitKey=mirror?"petProfile":"saveTx";
+        persistFailedCommit=survives;
+        CHECK(migration.load(pet,settings)==LoadResult::Unsupported);
+        CHECK(pet.profile.assigned());
+        candidate=pet.profile.encode();
+        const auto calls=profileSequence;
+        for(int retry=0;retry<3;++retry) {
+            CHECK(migration.load(pet,settings)==LoadResult::Unsupported);
+            CHECK(profileSequence==calls && pet.dna()[0]==dna && pet.hunger()==31);
+        }
+        if(!rebootTest) {
+            failCommitKey.clear();
+            CHECK(migration.load(pet,settings)==LoadResult::Loaded);
+            CHECK(pet.profile.encode()==candidate);
+        }
+    }
+    CHECK(handles.empty());
+    reboot();
+    NvsKeyValueStore adapter("pet");
+    PetState pet;
+    CHECK(SettingsStore(adapter,nullptr,newProfile).load(pet,settings)==LoadResult::Loaded);
+    CHECK(pet.profile.assigned() && pet.hunger()==31);
+    CHECK((pet.profile.encode()==candidate)==(!rebootTest || survives));
+}
+
 int main(int argc, char** argv) {
     CHECK(argc == 2);
     const std::string test = argv[1];
     using namespace vpet;
+    if(test.compare(0,8,"profile_")==0) { profilePending(test); return 0; }
     if (test.compare(0, 5, "swap_") == 0) {
         swapPending(test);
         return 0;

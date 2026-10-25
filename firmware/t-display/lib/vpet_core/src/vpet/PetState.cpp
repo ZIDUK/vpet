@@ -1,6 +1,7 @@
 #include "vpet/PetState.h"
 #include "vpet/ConsumableEffects.h"
 #include "vpet/Nutrition.h"
+#include "vpet/Growth.h"
 
 namespace vpet {
 
@@ -96,8 +97,17 @@ uint8_t PetState::evAt(CombatStat stat) const {
     return index < 6 ? ev_[index] : 0;
 }
 
-uint8_t PetState::combatStat(CombatStat stat) const {
-    int value = 10 + static_cast<int>(ivAt(stat)) * 3 + static_cast<int>(evAt(stat)) / 6;
+uint8_t PetState::evLimit() const { return growth::evLimit(techniqueStage()); }
+
+uint16_t PetState::statLimit(CombatStat stat) const {
+    return techniqueStage() ? growth::statLimit(ivAt(stat),techniqueStage()) : 99;
+}
+
+uint16_t PetState::combatStat(CombatStat stat) const { return combatStatAt(stat, evAt(stat)); }
+
+uint16_t PetState::combatStatAt(CombatStat stat, uint8_t ev) const {
+    if (techniqueStage()) return growth::statValue(ivAt(stat),ev,techniqueStage());
+    int value = 10 + static_cast<int>(ivAt(stat)) * 3 + static_cast<int>(ev) / 6;
     int growth = 100;
     if (species_ == SpeciesId::Egg) growth = 50;
     else if (species_ == SpeciesId::Baby) growth = 75;
@@ -106,10 +116,10 @@ uint8_t PetState::combatStat(CombatStat stat) const {
     value = (value * growth + 50) / 100;
     if (value < 1) return 1;
     if (value > 99) return 99;
-    return static_cast<uint8_t>(value);
+    return static_cast<uint16_t>(value);
 }
 
-uint8_t PetState::effectiveCombatStat(CombatStat stat) const {
+uint16_t PetState::effectiveCombatStat(CombatStat stat) const {
     const BodyCondition condition = bodyCondition(species_, weight_);
     uint8_t penalty = 0;
     if (stat == CombatStat::Off) penalty = condition.offPenalty;
@@ -121,8 +131,9 @@ uint8_t PetState::effectiveCombatStat(CombatStat stat) const {
 void PetState::gainEv(CombatStat stat, uint8_t amount) {
     const uint8_t index = static_cast<uint8_t>(stat);
     if (index > 5) return;
+    if (ev_[index] >= evLimit()) return;
     const int next = static_cast<int>(ev_[index]) + amount;
-    ev_[index] = next > 252 ? 252 : static_cast<uint8_t>(next);
+    ev_[index] = next > evLimit() ? evLimit() : static_cast<uint8_t>(next);
 }
 
 void PetState::addEv(CombatStat stat, uint8_t amount) {
@@ -642,6 +653,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
     if (index == 0 || index == 4) return ItemUseResult::Blocked;
     if (index == 5 && !injured_) return ItemUseResult::Blocked;
     if (index == 1 && energy_ >= 100) return ItemUseResult::Blocked;
+    if (index == 2 && effort_ >= 100 && evAt(CombatStat::Brn) >= evLimit()) return ItemUseResult::Blocked;
     uint8_t* stock = nullptr;
     switch (index) {
         case 0: stock = &meat_; break;

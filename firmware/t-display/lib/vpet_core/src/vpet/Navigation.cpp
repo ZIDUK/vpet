@@ -107,7 +107,8 @@ void Navigation::dispatch(InputEvent event) {
         return;
     }
     if (event == InputEvent::Next) {
-        if (panel_ == PanelId::EvolutionTree || panel_ == PanelId::EvolutionDetail) {
+        if (panel_ == PanelId::EvolutionDetail) return; // App pages the read-only requirement sheet.
+        if (panel_ == PanelId::EvolutionTree) {
             panelIndex_ = static_cast<uint8_t>((panelIndex_ + 1) % Navigation::kEvolutionNodeCount);
             selectedSpecies_ = kEvolutionStages[evolutionNodeStage(panelIndex_)];
         } else if (panel_ == PanelId::Options) {
@@ -126,6 +127,7 @@ void Navigation::dispatch(InputEvent event) {
     } else if (event == InputEvent::Action) {
         if (panel_ == PanelId::EvolutionTree && !evolutionSelectedHidden()) {
             panel_ = PanelId::EvolutionDetail;
+            evolutionDetailPage_ = 0;
         } else if (panel_ == PanelId::EvolutionDetail || panel_ == PanelId::Status) {
             panel_ = panel_ == PanelId::EvolutionDetail ? PanelId::EvolutionTree : PanelId::Home;
         }

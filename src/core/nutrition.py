@@ -1,5 +1,6 @@
 """Portable nutrition and body-condition rules shared with vpet_core."""
 from core.item_catalog import effect_amount
+from core.growth import MAX_STAT
 
 BODY_WEIGHT_REFERENCE = {
     "baby": 5,
@@ -37,7 +38,7 @@ def healthy_weight_range(species):
 
 def effective_stat(base, penalty):
     """Apply a percentage penalty with integer rounding and combat bounds."""
-    base = max(1, min(99, int(base)))
+    base = max(1, min(MAX_STAT, int(base)))
     penalty = max(0, min(100, int(penalty)))
     return max(1, (base * (100 - penalty) + 50) // 100)
 

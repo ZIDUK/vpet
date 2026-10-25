@@ -98,6 +98,7 @@ def test_dumbbell_sessions_to_cap_252_via_rest_loop():
     loop leaves 2-4 ENE stranded each cycle, so the asymptotic cost
     is 17 rests for 42 dumbbells (= 252 EV in OFF)."""
     pet = _fresh_firemon(energy=100)
+    pet.species = "ultimate"  # Global 252 remains available in the final rank.
     motion = _motion()
     rests = 0
     while pet.ev_at("off") < 252:
@@ -297,6 +298,7 @@ def test_strategy_dumbbell_only_252_off():
     """Pure dumbbell: 17 rests + 42 sessions = 252 EV in OFF.
     This is the baseline cost the v1 balance decision cites."""
     pet = _fresh_firemon(energy=100)
+    pet.species = "ultimate"
     motion = _motion()
     rests = 0
     while pet.ev_at("off") < 252:

@@ -212,10 +212,10 @@ void test_adopted_manual_rollback() {
     TEST_ASSERT_EQUAL(7,restored.evAt(CombatStat::Off));
     TEST_ASSERT_EQUAL(0,restored.adoptedStock.count(manual));
     pet.adoptedStock.set(manual,1);
-    pet.setEvAt(CombatStat::Off,250);
+    pet.setEvAt(CombatStat::Off,pet.evLimit()-2);
     s.state=TrainingSession::State::Confirm;
     s.input(pet,InputEvent::Action,0);
-    TEST_ASSERT_EQUAL(252,pet.evAt(CombatStat::Off));
+    TEST_ASSERT_EQUAL(pet.evLimit(),pet.evAt(CombatStat::Off));
     TEST_ASSERT_EQUAL(1,pet.adoptedStock.count(manual));
 }
 
@@ -363,10 +363,10 @@ void test_adopted_manual_preview_matches_commit() {
     PetState pet;
     pet.evolveTo(SpeciesId::Rookie);
     pet.adoptedStock.set(adopted::indexOf("training_manual"),1);
-    for (int ev : {0,245,246,250,252}) {
+    for (int ev : {0,77,78,82,84,200,252}) {
         pet.setEvAt(CombatStat::Off,ev);
         const auto base=trainingPlanOneRep(pet,CombatStat::Off);
-        const int expected=ev<246 ? 7 : ev<252 ? 252-ev : 0;
+        const int expected=ev<78 ? 7 : ev<84 ? 84-ev : 0;
         TEST_ASSERT_EQUAL(expected,trainingPreviewEv(pet,CombatStat::Off,base.evAdded));
         TEST_ASSERT_EQUAL(0,trainingPreviewEv(pet,CombatStat::Off,0));
     }

@@ -104,7 +104,7 @@ class Exploration:
             amount = (25 if t["good"] else 10) * elapsed // duration
             result["energy"] = max(0, min(amount, 100 - pet.get("e")))
         elif t["route"] == "jornada":
-            result["ev"] = min(elapsed // 14400, 8 - spent_ev, 252 - pet.ev_at(t["stat"]))
+            result["ev"] = max(0, min(elapsed // 14400, 8 - spent_ev, pet.ev_limit() - pet.ev_at(t["stat"])))
             result["guide"] = t["good"] and elapsed == duration and not (self.guide or self.guide_pending)
         elif t["learning"]:
             result["learning"] = int(elapsed == duration and not pet.techniques.learned(1))
@@ -136,9 +136,9 @@ class Exploration:
         return reward
 
     def use_guide(self, pet, stat):
-        if not self.guide or self.away or stat not in STATS or pet.ev_at(stat) >= 252:
+        if not self.guide or self.away or stat not in STATS or pet.ev_at(stat) >= pet.ev_limit():
             return 0
-        bonus = min(252 - pet.ev_at(stat), effect_amount("guide", "training_ev_bonus", "trained_stat"))
+        bonus = min(pet.ev_limit() - pet.ev_at(stat), effect_amount("guide", "training_ev_bonus", "trained_stat"))
         pet.gain_ev(stat, bonus)
         self.guide = False
         if self.guide_pending:

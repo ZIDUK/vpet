@@ -1,5 +1,6 @@
 """Targeted Firemon training prototype; integer EV gains preserve hatch DNA."""
 from core.dna import combat_stat
+from core.growth import projected_ev as capped_ev
 from core.nutrition import complete_training_weight
 from core.item_catalog import effect_amount
 
@@ -27,7 +28,7 @@ def training_values(pet, index):
     """Return current and projected battle values, including HP/MP pool sizes."""
     stat = TRAINING_TYPES[index]["stat"]
     projected_ev = dict(pet.ev)
-    projected_ev[stat] = min(252, pet.ev_at(stat) + TRAINING_EV_GAIN)
+    projected_ev[stat] = capped_ev(pet.ev_at(stat), TRAINING_EV_GAIN, pet.species)
     before, after = pet.combat_stat(stat), combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         return 40 + before * 2, 40 + after * 2
@@ -43,7 +44,7 @@ def training_block_reason(pet, index):
         return "TIPO INVALIDO"
     if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured or getattr(pet, "cold", False):
         return "PET NO APTO"
-    if pet.ev_at(TRAINING_TYPES[index]["stat"]) >= 252:
+    if pet.ev_at(TRAINING_TYPES[index]["stat"]) >= pet.ev_limit():
         return "NIVEL MAXIMO"
     if pet.get("e") < TRAINING_ENERGY_COST:
         return "FALTA ENERGIA"
@@ -94,7 +95,7 @@ def train_menu(pet, stat):
         return False
     if menu_train_block_reason(pet):
         return False
-    if pet.ev_at(stat) >= 252:
+    if pet.ev_at(stat) >= pet.ev_limit():
         return False
     pet.gain_ev(stat, MENU_TRAIN_EV_GAIN)
     pet.stats["e"] = max(0, pet.get("e") - MENU_TRAIN_ENERGY_COST)
@@ -142,7 +143,7 @@ def batch_block_reason(pet, stat):
     if not pet.is_live or pet.species in ("egg", "baby") or pet.dead or pet.injured \
             or getattr(pet, "cold", False):
         return "PET NO APTO"
-    if pet.ev_at(stat) >= 252:
+    if pet.ev_at(stat) >= pet.ev_limit():
         return "EV AL MAXIMO"
     if pet.get("e") < TRAINING_ENERGY_COST:
         return "FALTA ENERGIA"
@@ -165,7 +166,7 @@ def batch_max_reps(pet, stat):
     if reason:
         return 0, reason
     energy_reps = pet.get("e") // TRAINING_ENERGY_COST
-    headroom = 252 - pet.ev_at(stat)
+    headroom = pet.ev_limit() - pet.ev_at(stat)
     # Use ceiling so the partial last rep is always included: at ev=248
     # we can still queue 1 rep (gain 4 EV, cost 8 ENE).
     import math
@@ -195,7 +196,7 @@ def batch_plan_one_rep(pet, stat):
     if pet.get("e") < TRAINING_ENERGY_COST:
         return {"can": False, "ev_added": 0, "energy_cost": 0,
                 "secondary": {}, "reason": "FALTA ENERGIA"}
-    headroom = 252 - pet.ev_at(stat)
+    headroom = pet.ev_limit() - pet.ev_at(stat)
     from core.adopted_items import has_training_bonus
     bonus = 1 if has_training_bonus(pet) else 0
     ev_added = min(TRAINING_EV_GAIN + bonus, headroom)
@@ -215,7 +216,7 @@ def batch_projected_stat(pet, stat, ev_delta):
     ``ev_delta`` EV to the stat, without mutating the pet. HP/MP use
     the project's pool conversions (40 + hp*2, 10 + mp)."""
     projected_ev = dict(pet.ev)
-    projected_ev[stat] = min(252, pet.ev_at(stat) + ev_delta)
+    projected_ev[stat] = capped_ev(pet.ev_at(stat), ev_delta, pet.species)
     value = combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         return 40 + value * 2
@@ -233,7 +234,7 @@ def batch_projected_value(pet, stat, ev_delta):
     elif stat == "mp":
         current = 10 + current
     projected_ev = dict(pet.ev)
-    projected_ev[stat] = min(252, pet.ev_at(stat) + ev_delta)
+    projected_ev[stat] = capped_ev(pet.ev_at(stat), ev_delta, pet.species)
     value = combat_stat(pet.dna, projected_ev, stat, pet.species)
     if stat == "hp":
         value = 40 + value * 2
@@ -262,9 +263,10 @@ def batch_apply(pet, stat, reps):
                 "training_sessions_added": 0}
     if reps > (pet.get("e") // TRAINING_ENERGY_COST):
         reps = pet.get("e") // TRAINING_ENERGY_COST
+    reps = min(int(reps), (max(0, pet.ev_limit() - pet.ev_at(stat)) + TRAINING_EV_GAIN - 1) // TRAINING_EV_GAIN)
     ev_added = 0
     for _ in range(int(reps)):
-        headroom = 252 - pet.ev_at(stat)
+        headroom = pet.ev_limit() - pet.ev_at(stat)
         gain = min(TRAINING_EV_GAIN, headroom)
         if gain <= 0:
             break
@@ -304,6 +306,8 @@ def batch_commit(pet, stat, reps, save):
     value on success. Returns the apply summary dict on success."""
     snapshot = pet.to_dict()
     summary = batch_apply(pet, stat, reps)
+    if summary["reps"] == 0:
+        return summary
     if save(pet):
         return summary
     pet.load_from_dict(snapshot)

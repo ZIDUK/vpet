@@ -167,7 +167,7 @@ def test_guide_goes_to_training_and_is_atomic_with_completion():
 def test_guide_is_kept_when_base_training_fills_the_stat():
     p = pet()
     p.exploration.guide = True
-    p.ev["off"] = 251
+    p.ev["off"] = p.ev_limit() - 1
     assert batch_commit(p, "off", 1, lambda _: True)["ev_added"] == 1
     assert p.exploration.guide
 

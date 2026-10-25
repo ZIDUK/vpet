@@ -1,5 +1,6 @@
 #include "vpet/Panels.h"
 #include "vpet/Evolution.h"
+#include "vpet/EvolutionUi.h"
 #include "vpet/Layout.h"
 #include "vpet/Nutrition.h"
 #include "vpet/Strings.h"
@@ -22,58 +23,26 @@ constexpr SpeciesId kEvolutionStages[] = {
     SpeciesId::Champion, SpeciesId::Ultimate,
 };
 
-const char* portraitPath(SpeciesId species, bool thumbnail) {
-    switch (species) {
-        case SpeciesId::Egg: return thumbnail ? "/ui/evolution/egg.vpa" : "/animations/egg/egg_idle.vpa";
-        case SpeciesId::Baby: return thumbnail ? "/ui/evolution/sparkmon.vpa" : "/animations/baby/sparkmon_idle.vpa";
-        case SpeciesId::Rookie: return thumbnail ? "/ui/evolution/firemon.vpa" : "/animations/rookie/firemon_idle.vpa";
-        case SpeciesId::Champion: return thumbnail ? "/ui/evolution/flamemon.vpa" : "/animations/champion/flamemon_idle.vpa";
-        case SpeciesId::Ultimate: return thumbnail ? "/ui/evolution/dragfiremon.vpa" : "/animations/ultimate/dragfiremon_idle.vpa";
-    }
-    return "/ui/evolution/egg.vpa";
 }
 
-const char* battleSpritePath(SpeciesId species, int action) {
-    switch (species) {
-        case SpeciesId::Egg: return "/animations/egg/egg_idle.vpa";
-        case SpeciesId::Baby: return "/animations/baby/sparkmon_idle.vpa";
-        case SpeciesId::Rookie:
-            return action == 0 ? "/battle/rookie_punch.vpa" :
-                action == 1 ? "/battle/rookie_cast.vpa" :
-                action == 2 ? "/battle/rookie_block.vpa" :
-                action == 3 ? "/battle/rookie_hit.vpa" :
-                action == 4 ? "/battle/rookie_hurt.vpa" : "/battle/rookie_idle.vpa";
-        case SpeciesId::Champion:
-            return action == 0 ? "/battle/champion_punch.vpa" :
-                action == 1 ? "/battle/champion_cast.vpa" :
-                action == 2 ? "/battle/champion_block.vpa" :
-                action == 3 ? "/battle/champion_punch.vpa" :
-                action == 4 ? "/battle/champion_hurt.vpa" : "/battle/champion_idle.vpa";
-        case SpeciesId::Ultimate:
-            return action == 0 ? "/battle/ultimate_punch.vpa" :
-                action == 1 ? "/battle/ultimate_cast.vpa" :
-                action == 2 ? "/battle/ultimate_block.vpa" :
-                action == 3 ? "/battle/ultimate_punch.vpa" :
-                action == 4 ? "/battle/ultimate_hurt.vpa" : "/battle/ultimate_idle.vpa";
-    }
-    return "/battle/rookie_idle.vpa";
+const char* Panels::portraitPath(SpeciesId species, bool thumbnail) const {
+    return thumbnail ? definition_.stage(species).portrait : definition_.clip(species, content::Action::Idle).path;
 }
 
-const char* battleSpeciesLabel(SpeciesId species) {
-    switch (species) {
-        case SpeciesId::Egg: return "EGG";
-        case SpeciesId::Baby: return "SPARKMON";
-        case SpeciesId::Rookie: return "FIREMON";
-        case SpeciesId::Champion: return "FLAMEMON";
-        case SpeciesId::Ultimate: return "DRAGFIRE";
-    }
-    return "VPET";
+const char* Panels::battleSpritePath(SpeciesId species, int action) const {
+    const content::Action actions[] = {content::Action::Punch, content::Action::Cast, content::Action::Block,
+                                      content::Action::Hit, content::Action::Hurt};
+    return definition_.clip(species, action >= 0 && action < 5 ? actions[action] : content::Action::Idle,
+                            content::Context::Battle).path;
 }
 
+const char* Panels::battleSpeciesLabel(SpeciesId species) const {
+    return definition_.stage(species).battleName;
 }
 
-Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene)
-    : output_(display), display_(canvas), assets_(assets), scene_(scene) {}
+Panels::Panels(TFT_eSPI& display, TFT_eSprite& canvas, AssetStore& assets, TFT_eSprite* scene,
+               const content::PetDefinition& definition)
+    : output_(display), display_(canvas), assets_(assets), definition_(definition), scene_(scene) {}
 
 void Panels::drawExploration(const ExplorationSession& session,const PetState& pet,
                             uint64_t wall,uint32_t nowMs,const char* language,bool home,uint8_t menu) {
@@ -97,7 +66,7 @@ void Panels::drawExploration(const ExplorationSession& session,const PetState& p
         uint16_t readPixel(int x,int y) { return pixels.readPixel(x,y); }
         void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
     } canvas{display_,assets_};
-    exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language)).draw(home,menu,scene_==nullptr);
+    exploration_ui::View<Canvas>(canvas,pet,session,wall,nowMs,languageIsSpanish(language),definition_).draw(home,menu,scene_==nullptr);
     display_.pushSprite(0,0);
 }
 
@@ -363,7 +332,7 @@ void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
         );
         display_.setTextColor(kInk, kChip);
         drawLabel(names[i], rowX + 14, y + 1, 18, 1);
-        drawLabel(num, rowX + 34, y + 1, 12, 1);
+        drawLabel(num, rowX + 34, y + 1, 18, 1);
         snprintf(num, sizeof(num), "%u", pet.evAt(stats[i]));
         display_.setTextDatum(TR_DATUM);
         drawLabel(num, rowX + kStatusDnaEvOffset + 18, y + 1, 18, 1);
@@ -371,7 +340,7 @@ void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
         // Bar border: 7 px tall so the 5 px fill leaves 1 px padding
         // top and bottom.
         display_.drawRect(rowX + kStatusDnaBarOffset, y + 2, barW, 7, kInk);
-        const int16_t filled = static_cast<int16_t>((pet.combatStat(stats[i]) * (barW - 2)) / 99);
+        const int16_t filled = static_cast<int16_t>((pet.combatStat(stats[i]) * (barW - 2)) / pet.statLimit(stats[i]));
         if (filled > 0) display_.fillRect(rowX + kStatusDnaBarOffset + 1, y + 3, filled, 5, 0x94BF);
     }
     display_.setTextColor(kInk, kPanel);
@@ -562,7 +531,7 @@ void Panels::drawEvolutionNode(const Navigation& navigation, uint8_t index, bool
     assets_.drawFrame(display_, portraitPath(species, true), 0, x, y, false, hidden ? TFT_BLACK : -1);
     display_.setTextDatum(MC_DATUM);
     display_.setTextColor(hidden ? TFT_DARKGREY : kInk, kPanel);
-    display_.drawString(hidden ? "???" : copy::evoShort(stage, spanish), x + kEvoChip / 2, y + kEvoChip + 7, 1);
+    display_.drawString(hidden ? "???" : (stage == 0 && spanish ? "HUEVO" : definition_.stage(species).shortName), x + kEvoChip / 2, y + kEvoChip + 7, 1);
     display_.setTextDatum(TL_DATUM);
 }
 
@@ -607,62 +576,19 @@ void Panels::drawEvolution(const Navigation& navigation, bool spanish, const Pet
         drawEvolutionTree(navigation, spanish);
         return;
     }
-    const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
-    const uint8_t stage = Navigation::evolutionNodeStage(selected);
-    const bool hidden = stage > navigation.currentStage();
-    const SpeciesId species = kEvolutionStages[stage];
-    assets_.drawFrame(display_, portraitPath(species, true), 0, 32, 56, false, hidden ? TFT_BLACK : -1);
-    display_.setTextColor(kInk, kPanel);
-    display_.setTextDatum(MC_DATUM);
-    drawLabel(hidden ? "???" : copy::evoShort(stage, spanish), 50, 96, 88, 2);
-    if (hidden) {
-        drawLabel("???", 50, 108, 88, 1);
-    } else {
-        const bool now = stage == navigation.currentStage();
-        if (now) {
-            char status[20];
-            snprintf(
-                status,
-                sizeof(status),
-                "%s %lus CM%u",
-                copy::evoNow(spanish),
-                static_cast<unsigned long>(pet.stageAgeSeconds()),
-                pet.careMistakes()
-            );
-            drawLabel(status, 50, 108, 88, 1);
-        } else {
-            drawLabel(copy::evoReached(spanish), 50, 108, 88, 1);
+    const auto progress = evolution_progress::forPet(pet, navigation.panelIndex());
+    struct Canvas {
+        TFT_eSprite& display;
+        AssetStore& assets;
+        const content::PetDefinition& definition;
+        void fillRect(int x, int y, int w, int h, uint16_t color) { display.fillRect(x,y,w,h,color); }
+        void portrait(uint8_t stage, bool hidden) {
+            const char* path = definition.stage(kEvolutionStages[stage]).portrait;
+            if (hidden) assets.drawFrame(display,path,0,18,64,false,evolution_ui::muted);
+            else assets.drawFrameScaled(display,path,0,4,50,64,64,false,-1,0,36);
         }
-        char requirements[40];
-        Evolution().writeReachRequirements(species, spanish, requirements, sizeof(requirements));
-        if (requirements[0] != '\0') {
-            char* space = strchr(requirements, ' ');
-            if (space != nullptr) {
-                *space = '\0';
-                drawLabel(requirements, 50, 118, 88, 1);
-                drawLabel(space + 1, 50, 126, 88, 1);
-            } else {
-                drawLabel(requirements, 50, 118, 88, 1);
-            }
-        }
-    }
-    display_.setTextDatum(TL_DATUM);
-    const int16_t x = kStatusSplitX + 4;
-    const int16_t width = 232 - kStatusSplitX;
-    const uint8_t start = inventoryWindowStart(Navigation::kEvolutionNodeCount, selected);
-    for (uint8_t slot = 0; slot < kInventoryWindow; ++slot) {
-        const uint8_t index = static_cast<uint8_t>(start + slot);
-        const uint8_t listStage = Navigation::evolutionNodeStage(index);
-        const bool listHidden = listStage > navigation.currentStage();
-        const int16_t y = kStatusCardY + slot * kStatusCardRow;
-        const bool active = index == selected;
-        const uint16_t fill = active ? TFT_YELLOW : kChip;
-        display_.fillRoundRect(x, y, width, kStatusCardH, 4, fill);
-        display_.drawRoundRect(x, y, width, kStatusCardH, 4, active ? TFT_YELLOW : kInk);
-        assets_.drawFrame(display_, "/ui/icons/pedia.vpa", 0, x + 2, y + 2);
-        display_.setTextColor(kInk, fill);
-        drawLabel(listHidden ? "???" : copy::evoShort(listStage, spanish), x + 24, y + 5, width - 28, 2);
-    }
+    } canvas{display_, assets_, definition_};
+    evolution_ui::View<Canvas>(canvas, progress, spanish, definition_).draw(navigation.evolutionDetailPage());
 }
 
 void Panels::drawOptionsChip(
@@ -874,14 +800,9 @@ void Panels::draw(
             break;
         }
         case PanelId::EvolutionDetail: {
-            const uint8_t selected = navigation.panelIndex() % Navigation::kEvolutionNodeCount;
-            if (!cursorRedrawOnly(lastEvolutionIndex_, selected, false, panelChanged)) {
-                beginPanel(panelChanged, navigation.menuIndex(), copy::evolutionDetailTitle(spanish), calling);
-            } else {
-                display_.fillRect(0, 48, 240, 87, kPanel);
-            }
+            if (panelChanged) drawChrome(navigation.menuIndex(), "", calling);
+            else drawCallBadge(navigation.menuIndex(), calling);
             drawEvolution(navigation, spanish, pet, true);
-            lastEvolutionIndex_ = selected;
             break;
         }
         case PanelId::Options: {
@@ -977,7 +898,7 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             void asset(const char* path,uint32_t frame,int x,int y) { assets.drawFrame(pixels,path,frame,x,y); }
         } canvas{display_,assets_};
         const TrainingSession unused;
-        training_ui::View<Canvas>(canvas,unused,pet,nowMs,languageIsSpanish(language)).techniques(s);
+        training_ui::View<Canvas>(canvas,unused,pet,nowMs,languageIsSpanish(language),definition_).techniques(s);
         display_.pushSprite(0,0);
         return;
     }
@@ -989,12 +910,12 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
         if (scene_) {
             if (sceneKind_ != Scene::Arena) {
                 scene_->fillSprite(ink);
-                assets_.drawFrame(*scene_,"/backgrounds/background.vpa",0,0,0);
+                assets_.drawFrame(*scene_,definition_.background,0,0,0);
                 sceneKind_ = Scene::Arena;
                 arenaFooterKey_ = 0xFFFF;
             }
             memcpy(display_.getPointer(),scene_->getPointer(),240*135*2);
-        } else assets_.drawFrame(display_, "/backgrounds/background.vpa", 0, 0, 0);
+        } else assets_.drawFrame(display_, definition_.background, 0, 0, 0);
         const uint32_t roundElapsed = nowMs - s.updatedAt;
         const bool active = s.battle.round > 0 && roundElapsed < practice::kImpactMs;
         int lunge = 0;
@@ -1031,15 +952,8 @@ void Panels::drawPractice(const PracticeSession& s, const PetState& pet, uint32_
             display_.fillRect(0, 33, 240, 82, ink);
             display_.fillRect(10, 36, 220, 75, TFT_DARKGREY);
             display_.drawRect(10, 36, 220, 75, resultColor);
-            const char* reaction = portraitPath(pet.species(), false);
-            if (s.battle.result != 3) {
-                if (pet.species() == SpeciesId::Rookie)
-                    reaction = s.battle.result == 1 ? "/animations/rookie/firemon_happy.vpa" : "/animations/rookie/firemon_sad.vpa";
-                else if (pet.species() == SpeciesId::Champion)
-                    reaction = s.battle.result == 1 ? "/animations/champion/flamemon_happy.vpa" : "/animations/champion/flamemon_sad.vpa";
-                else if (pet.species() == SpeciesId::Ultimate)
-                    reaction = s.battle.result == 1 ? "/animations/ultimate/dragfiremon_happy.vpa" : "/animations/ultimate/dragfiremon_sad.vpa";
-            }
+            const char* reaction = definition_.clip(pet.species(), s.battle.result == 3 ? content::Action::Idle :
+                s.battle.result == 1 ? content::Action::Happy : content::Action::Sad).path;
             assets_.drawFrameScaled(display_, reaction, (nowMs - s.updatedAt) / 100,
                                     164, 44, 64, 64, false, -1, 0, 88);
             display_.setTextColor(resultColor, TFT_DARKGREY);
@@ -1170,11 +1084,11 @@ void Panels::drawTraining(
     const bool cachedFooter = scene_ && s.state == TrainingSession::State::Select;
     if (cachedFooter && (sceneKind_ != Scene::TrainingFooter || trainingFooterCursor_ != s.cursor)) {
         Canvas footer{*scene_, assets_};
-        training_ui::View<Canvas>(footer,s,pet,nowMs,languageIsSpanish(language)).selectFooter();
+        training_ui::View<Canvas>(footer,s,pet,nowMs,languageIsSpanish(language),definition_).selectFooter();
         trainingFooterCursor_ = s.cursor;
         sceneKind_ = Scene::TrainingFooter;
     }
-    training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language)).draw(!cachedFooter);
+    training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language),definition_).draw(!cachedFooter);
     if (cachedFooter) {
         // Reuse Home's scene buffer, as Arena does, without another allocation.
         memcpy(static_cast<uint16_t*>(display_.getPointer())+240*115,

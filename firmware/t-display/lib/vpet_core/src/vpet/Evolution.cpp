@@ -1,16 +1,11 @@
 #include "vpet/Evolution.h"
+#include "vpet/EvolutionRules.generated.h"
 
 #include <stdio.h>
 #include <string.h>
 
 namespace vpet {
 namespace {
-
-constexpr EvolutionRule kRules[] = {
-    {SpeciesId::Baby, SpeciesId::Rookie, true, false, 43800, 1, 0, 0, 0, 0, 0, 0, 0},
-    {SpeciesId::Rookie, SpeciesId::Champion, true, false, 86400, -1, 0, 55, 55, 55, 75, 8, 14},
-    {SpeciesId::Champion, SpeciesId::Ultimate, true, false, 129600, -1, 15, 0, 0, 0, 0, 0, 0},
-};
 
 bool barsMet(const EvolutionRule& rule, const PetState& pet) {
     if (rule.minHunger == 0 && rule.minEnergy == 0 && rule.minHappiness == 0 && rule.minHealth == 0) {
@@ -31,7 +26,7 @@ bool winRatioMet(const PetState& pet) {
 }
 
 const EvolutionRule* Evolution::ruleFor(SpeciesId from) const {
-    for (const EvolutionRule& rule : kRules) {
+    for (const EvolutionRule& rule : rules::kEvolutionRules) {
         if (rule.from == from) return &rule;
     }
     return nullptr;

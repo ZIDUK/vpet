@@ -4,6 +4,7 @@
 #include "generated/TrainingArtwork.h"
 #include "vpet/ExplorationSession.h"
 #include "vpet/MenuBar.h"
+#include "vpet/PetDefinition.h"
 
 namespace vpet { namespace exploration_ui {
 constexpr uint16_t rgb(int r, int g, int b) { return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3); }
@@ -18,6 +19,7 @@ template<class Canvas> class View {
     uint64_t wall;
     uint32_t ms;
     bool es;
+    const content::PetDefinition& definition;
     using Page = ExplorationSession::Page;
     void rect(int x,int y,int w,int h,uint16_t color) { c.fillRect(x,y,w,h,color); }
     void outline(int x,int y,int w,int h,uint16_t color) {
@@ -73,12 +75,10 @@ template<class Canvas> class View {
     }
     void icon(const char* path,int x,int y) { c.asset(path,0,x,y); }
     void portrait(bool walking=false,int x=5,int y=55) {
-        const char* names[] = {"firemon","flamemon","dragfiremon","egg","sparkmon"};
-        char path[80];
         const bool walk=walking && pet.species()!=SpeciesId::Egg;
-        snprintf(path,sizeof(path),"/exploration/%s_%s%d.vpa",names[static_cast<uint8_t>(pet.species())],
-                 walk ? "walk" : "idle",walk ? 44 : 48);
-        c.asset(path,ms/(walk ? 70 : 85),x,y);
+        const auto& clip = definition.clip(pet.species(), walk ? content::Action::Walk : content::Action::Idle,
+                                            content::Context::Exploration);
+        c.asset(clip.path,(ms/clip.intervalMs) % clip.frames,x,y);
     }
     void heading(const char* label) { rect(0,24,240,20,panel); text(8,25,224,17,label,yellow,true); }
     void button(int i,int count,const char* label,bool outlined=false,int top=116) {
@@ -118,8 +118,9 @@ template<class Canvas> class View {
         if(confirm) row(99,tr("COSTE","COST"),"0 ENE","/exploration/energy10.vpa",pink,h);
     }
 public:
-    View(Canvas& canvas,const PetState& p,const ExplorationSession& session,uint64_t now,uint32_t animation,bool spanish)
-        : c(canvas),pet(p),s(session),wall(now),ms(animation),es(spanish) {}
+    View(Canvas& canvas,const PetState& p,const ExplorationSession& session,uint64_t now,uint32_t animation,bool spanish,
+         const content::PetDefinition& contentDefinition = content::builtinDefinition())
+        : c(canvas),pet(p),s(session),wall(now),ms(animation),es(spanish),definition(contentDefinition) {}
     static void formatTime(uint32_t seconds,char* out,size_t size) {
         snprintf(out,size,"%02u:%02u:%02u",seconds/3600,(seconds%3600)/60,seconds%60);
     }
@@ -133,7 +134,9 @@ public:
         outline(menu_bar::left(menu)+1,1,menu_bar::width(menu)-2,22,yellow);
         if(!ExplorationSession::eligible(pet)) {
             heading(tr("EXPLORAR","EXPLORE")); portrait();
-            text(70,64,165,18,tr("DESDE FIREMON","FROM FIREMON"),muted);
+            char requirement[40];
+            snprintf(requirement,sizeof(requirement),es ? "DESDE %s" : "FROM %s",definition.stage(SpeciesId::Rookie).name);
+            text(70,64,165,18,requirement,muted);
             button(0,1,tr("VOLVER","BACK")); return;
         }
         if(s.page==Page::Clock) {

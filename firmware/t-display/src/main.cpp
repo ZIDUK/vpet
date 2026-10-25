@@ -10,6 +10,7 @@
 #include "vpet/Renderer.h"
 #include "vpet/NvsKeyValueStore.h"
 #include "vpet/SettingsStore.h"
+#include "vpet/ProfileRandom.h"
 
 namespace {
 TFT_eSPI display;
@@ -21,7 +22,11 @@ vpet::Renderer renderer(display, framebuffer, staticScene, assets);
 vpet::Panels panels(display, framebuffer, assets, &staticScene);
 vpet::NvsKeyValueStore stateStore("vpet_state");
 vpet::NvsKeyValueStore backupStore("vpet_bak");
-vpet::SettingsStore settingsStore(stateStore, &backupStore);
+vpet::ProfileRandom profileRandom;
+vpet::PetProfile newProfile() {
+    return profileRandom.next();
+}
+vpet::SettingsStore settingsStore(stateStore, &backupStore, newProfile);
 vpet::BleService bluetooth;
 vpet::App app(renderer, panels, settingsStore, bluetooth);
 vpet::AssetStatus startupAssets;
@@ -97,7 +102,7 @@ void drawBootIntro(const vpet::AssetStatus& status) {
     framebuffer.setTextColor(TFT_ORANGE, TFT_BLACK);
     framebuffer.drawString("vPET", 120, 18, 2);
     if (status.manifestPresent) {
-        assets.drawFrame(framebuffer, "/animations/rookie/firemon_idle.vpa", 0, 76, 35);
+        assets.drawFrame(framebuffer, vpet::content::builtinDefinition().clip(vpet::SpeciesId::Rookie, vpet::content::Action::Idle).path, 0, 76, 35);
         framebuffer.setTextColor(TFT_GREEN, TFT_BLACK);
         framebuffer.drawString("ASSETS OK", 120, 119, 2);
     } else {
@@ -111,6 +116,10 @@ void drawBootIntro(const vpet::AssetStatus& status) {
 
 void setup() {
     Serial.begin(115200);
+    if (!profileRandom.begin()) {
+        Serial.println("VPET_FATAL code=PROFILE_ENTROPY");
+        while (true) delay(1000);
+    }
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
     display.init();

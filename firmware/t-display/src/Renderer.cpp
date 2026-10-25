@@ -17,26 +17,13 @@ bool angryIdle(const AppViewModel& model) {
     return value.need != cue::Need::None && value.face == cue::Face::Angry;
 }
 
-const char* speciesName(SpeciesId species) {
-    switch (species) {
-        case SpeciesId::Egg: return "egg";
-        case SpeciesId::Baby: return "baby";
-        case SpeciesId::Rookie: return "rookie";
-        case SpeciesId::Champion: return "champion";
-        case SpeciesId::Ultimate: return "ultimate";
-    }
-    return "rookie";
-}
-
-const char* petName(SpeciesId species) {
-    switch (species) {
-        case SpeciesId::Egg: return "egg";
-        case SpeciesId::Baby: return "sparkmon";
-        case SpeciesId::Rookie: return "firemon";
-        case SpeciesId::Champion: return "flamemon";
-        case SpeciesId::Ultimate: return "dragfiremon";
-    }
-    return "firemon";
+content::Action visualAction(const AppViewModel& model) {
+    if (model.pet.species() == SpeciesId::Egg)
+        return model.motion.state() == MotionState::Hatch ? content::Action::Hatch : content::Action::Idle;
+    if (model.tired && (model.motion.state() == MotionState::Idle || model.motion.state() == MotionState::Walk))
+        return content::Action::Tired;
+    if (angryIdle(model)) return content::Action::Angry;
+    return static_cast<content::Action>(model.motion.state());
 }
 }
 
@@ -49,79 +36,13 @@ Renderer::Renderer(
     : display_(display), canvas_(canvas), staticScene_(staticScene), assets_(assets) {}
 
 const char* Renderer::animationPath(const AppViewModel& model) const {
-    static char path[72];
-    const MotionState state = model.motion.state();
-    const char* action = "idle";
-    if (model.pet.species() == SpeciesId::Egg) {
-        snprintf(
-            path,
-            sizeof(path),
-            model.motion.state() == MotionState::Hatch
-                ? "/animations/egg/egg_hatch.vpa"
-                : "/animations/egg/egg_idle.vpa"
-        );
-        return path;
-    }
-    if (state == MotionState::Evolution) {
-        switch (model.pet.species()) {
-            case SpeciesId::Rookie:
-                return "/animations/rookie/firemon_evolution.vpa";
-            case SpeciesId::Champion:
-                return "/animations/champion/flamemon_evolution.vpa";
-            case SpeciesId::Ultimate:
-                return "/animations/ultimate/dragfiremon_evolution.vpa";
-            default: return "/animations/baby/sparkmon_evolution.vpa";
-        }
-    }
-    switch (state) {
-        case MotionState::Walk:
-            action = model.pet.species() == SpeciesId::Ultimate ? "fly" : "walk";
-            break;
-        case MotionState::Eat: action = "eat"; break;
-        case MotionState::Punch: action = "punch"; break;
-        case MotionState::Cast: action = "cast"; break;
-        case MotionState::Hit: action = "hit"; break;
-        case MotionState::Hurt: action = "hurt"; break;
-        case MotionState::Dodge: action = "dodge"; break;
-        case MotionState::Block: action = "block"; break;
-        case MotionState::Sleep: action = "sleep"; break;
-        case MotionState::Evolution: break;
-        case MotionState::Hatch: break;
-        case MotionState::Idle: break;
-    }
-    if ((model.pet.species() == SpeciesId::Champion || model.pet.species() == SpeciesId::Ultimate) &&
-        strcmp(action, "hit") == 0)
-        action = "punch";
-    if (model.pet.species() == SpeciesId::Ultimate && strcmp(action, "dodge") == 0)
-        action = "cast";
-    if (model.pet.species() != SpeciesId::Rookie && model.pet.species() != SpeciesId::Champion &&
-        model.pet.species() != SpeciesId::Ultimate &&
-        (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0 ||
-         strcmp(action, "dodge") == 0 || strcmp(action, "block") == 0)) {
-        action = (strcmp(action, "hit") == 0 || strcmp(action, "hurt") == 0) ? "punch" : "cast";
-    }
-    if (model.tired && (state == MotionState::Idle || state == MotionState::Walk)) action = "tired";
-    else if (angryIdle(model)) action = "angry";
-    if (model.pet.species() == SpeciesId::Baby && strcmp(action, "tired") != 0 && strcmp(action, "angry") != 0 &&
-        strcmp(action, "idle") != 0 && strcmp(action, "walk") != 0 &&
-        strcmp(action, "eat") != 0 && strcmp(action, "sleep") != 0) {
-        action = "idle";
-    }
-    snprintf(
-        path,
-        sizeof(path),
-        "/animations/%s/%s_%s.vpa",
-        speciesName(model.pet.species()),
-        petName(model.pet.species()),
-        action
-    );
-    return path;
+    return model.motion.definition().clip(model.pet.species(), visualAction(model)).path;
 }
 
-void Renderer::rebuildStaticScene(bool night, SpeciesId species) {
+void Renderer::rebuildStaticScene(bool night, SpeciesId species, const content::PetDefinition& definition) {
     assets_.drawFrame(
         staticScene_,
-        night ? "/backgrounds/background_night.vpa" : "/backgrounds/background.vpa",
+        night ? definition.nightBackground : definition.background,
         0,
         0,
         0
@@ -134,6 +55,7 @@ void Renderer::rebuildStaticScene(bool night, SpeciesId species) {
     staticSceneReady_ = true;
     staticSceneNight_ = night;
     staticSceneSpecies_ = species;
+    staticDefinition_ = &definition;
 }
 
 void Renderer::drawSelector(uint8_t selected, bool calling) {
@@ -172,8 +94,9 @@ void Renderer::drawNeedBubble(const AppViewModel& model) {
 
 void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool present) {
     const bool night = SleepRoutine::isNight(model.minuteOfDay);
-    if (!staticSceneReady_ || staticSceneNight_ != night || staticSceneSpecies_ != model.pet.species()) {
-        rebuildStaticScene(night,model.pet.species());
+    if (!staticSceneReady_ || staticSceneNight_ != night || staticSceneSpecies_ != model.pet.species() ||
+        staticDefinition_ != &model.motion.definition()) {
+        rebuildStaticScene(night,model.pet.species(),model.motion.definition());
     }
     memcpy(canvas_.getPointer(), staticScene_.getPointer(), 240 * 135 * 2);
     drawSelector(model.menuIndex, model.pet.callReason() != CallReason::None);
@@ -212,7 +135,8 @@ void Renderer::draw(const AppViewModel& model, int16_t statusSplitX, bool presen
     assets_.drawFrame(
         canvas_,
         animationPath(model),
-        emotion ? (model.nowMs / 90) % 25 : model.motion.frame(),
+        emotion ? (model.nowMs / model.motion.definition().clip(model.pet.species(), visualAction(model)).intervalMs)
+                    % model.motion.definition().clip(model.pet.species(), visualAction(model)).frames : model.motion.frame(),
         x,
         y,
         model.motion.direction() < 0 && !evolution,
