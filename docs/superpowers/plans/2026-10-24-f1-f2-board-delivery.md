@@ -26,10 +26,10 @@ Los avisos de necesidades siguen sin textos; no se cambia su contrato.
 - [x] Pruebas nativas: 185 aprobadas.
 - [x] Compilar firmware actual y pasar preflight de memoria.
 - [x] Suite Python de la entrega aislada de Creator: 1768 aprobadas en 269.38 s.
-- [ ] Crear commit de codigo y documentos, sin partidas/backups/logs.
+- [x] Crear commit de codigo y documentos, sin partidas/backups/logs: `4c6ce16`.
 - [x] Respaldo critico NUEVO de tabla de particiones/NVS y checksum local.
 - [x] Cargar firmware/LittleFS, verificar hashes y arranque VPET_READY.
-- [ ] Publicar commit y registro de despliegue en origin/master.
+- [x] Publicar commit y registro de despliegue en origin/master: `4c6ce16`.
 - [ ] Validacion fisica del usuario: cuatro paginas Status, partida,
   entrenamiento, evolucion y reinicio con identidad estable.
 
@@ -85,3 +85,11 @@ serial posterior de 70 segundos registro BLE conectado, heap libre estable
 en 65964 bytes y minimo 60768 bytes, sin otro reinicio tras el arranque inicial.
 Esto no certifica sesiones largas, fluidez visual ni ciclos de reconexion BLE.
 La aceptacion fisica de Status sigue pendiente y se solicito al usuario.
+
+### Publicacion
+
+`4c6ce16` (`feat: deliver portable pet definitions, DNA growth and profiles`)
+publicado en `https://github.com/ZIDUK/vpet.git`, rama `master`.
+La confirmacion del push registra el avance `f733c60..4c6ce16`.
+Este cierre documental posterior no cambia firmware ni requiere otro flash.
+Los cambios locales de Creator permanecen sin publicar y sin revertir.
