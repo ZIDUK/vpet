@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-26
 
-## Coleccion: Motivo Del Bloqueo, Preparado Sin Cargar
+## Coleccion: Motivo Del Bloqueo Cargado
 
 El usuario reporta "Not Available" tras la correccion de pila. En la ruta de
 confirmacion ese aviso generico corresponde a una proteccion de sesion; aun
@@ -12,8 +12,13 @@ viaje, entrenamiento, batalla, accion pendiente o guardado/almacenamiento.
 24 pruebas focalizadas aprobadas, con ocho causas del controlador real en
 ambos idiomas y ninguna escritura ni identidad nueva al bloquear. Native:
 185 aprobadas; ESP32 compilado en 9.320 s. Sin cambios de assets, Status,
-schema o reglas de evolucion. No se ha cargado esta revision: se solicita
-autorizacion para firmware-only. La placa conserva la correccion de pila.
+schema o reglas de evolucion. Usuario autoriza y se carga firmware-only
+`dabc2e7`, conservando la correccion de pila, NVS y LittleFS. Compilacion
+preflash repetida en 3.435 s y 24 pruebas repetidas en 22.16 s; RAM estatica
+52236, app 1103785 bytes. Arranque `VPET_READY`, heap libre 90888/minimo
+88220, manifest 1. El usuario indica que estaba en Home; eso no identifica
+por si solo el bloqueo. Mensaje concreto y activacion fisica siguen pendientes.
+Ver [registro de carga](superpowers/plans/2026-10-26-collection-blocker-messages-delivery.md).
 
 ## Activacion De Coleccion: Correccion Cargada
 
