@@ -16,7 +16,11 @@ No se atribuye a pausa, saciedad ni guardado sin esos datos. El App real
 con Coleccion sintetica si inicia Eat y avanza fotogramas al aceptar carne
 y proteina en Firemon/Flamemon; rechazar por saciedad/ciclo o pausa mantiene
 FEED sin mutacion. La etiqueta UNLIMITED actual no explica esos rechazos.
-Se solicita Status y pausa actual. Sin cambios de produccion, reglas de
+IMG_4263 posterior muestra Firemon con salud 100, saciedad 6, energia 0 y
+animo 0; usuario confirma Pause Pet OFF. Esos valores no justifican rechazo
+por saciedad; sigue pendiente capturar la accion y su resultado real. Una
+lectura USB de 90.058 s incluye arranque, ocho muestras runtime estables y
+cero entradas; no reproduce el intento. Sin cambios de produccion, reglas de
 alimentacion, partida ni firmware instalado. Ver
 [diagnostico acotado](superpowers/plans/2026-10-26-feeding-menu-diagnostic.md).
 

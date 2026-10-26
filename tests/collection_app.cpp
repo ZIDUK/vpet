@@ -311,12 +311,17 @@ int main() {
     }
     // Accepted food must animate with Collection; rejected food must not mutate it.
     for (const auto species : {SpeciesId::Rookie, SpeciesId::Champion}) {
-        for (int scenario=0;scenario<4;++scenario) {
+        for (int scenario=0;scenario<6;++scenario) {
             Store foodLegacy; SettingsStore foodSettings(foodLegacy); Settings settings;
             PetState hungry;
             hungry.restore(species,70,70,90,0,100,0); hungry.profile=profile(); hungry.rollDna(17);
             if (scenario==2) { hungry.setHunger(100); hungry.restoreOverfeed(true,1); }
             if (scenario==3) hungry.setCold(true);
+            if (scenario>=4) { hungry.setHunger(6); hungry.setEnergy(0); hungry.setHappiness(0); }
+            const bool protein=scenario==1 || scenario==5;
+            const bool accepted=scenario<2 || scenario>=4;
+            const int expectedHunger=hungry.hunger()+(protein?0:20);
+            const int expectedEnergy=hungry.energy()+(protein?20:0);
             Repository foodRepository; CollectionStore foodStore(foodRepository); CollectionState state;
             std::string snapshot; assert(CollectionStore::capture(hungry,settings,snapshot));
             assert(foodStore.migrate(state,snapshot));
@@ -327,18 +332,18 @@ int main() {
             auto input=[&](InputEvent event) { now+=50; foodApp.tick(now,event); };
             input(InputEvent::Next); input(InputEvent::Action);
             assert(foodPanels.lastPanel==PanelId::Feeding);
-            if (scenario==1) input(InputEvent::Next);
+            if (protein) input(InputEvent::Next);
             const auto before=foodRepository.durable;
             const int changes=foodRenderer.frameChanges;
             input(InputEvent::Action);
             assert(foodApp.ready());
             PetState fed; Settings ignored;
             assert(foodStore.readPet(foodPanel.state(),0,fed,ignored));
-            if (scenario<2) {
+            if (accepted) {
                 assert(foodRenderer.motionState==MotionState::Eat);
                 assert(foodRenderer.lastFrame==0 && foodRepository.durable!=before);
-                assert(fed.hunger()==(scenario==0?90:70));
-                assert(fed.energy()==(scenario==1?90:70));
+                assert(fed.hunger()==expectedHunger);
+                assert(fed.energy()==expectedEnergy);
                 for (int i=0;i<10;++i) input(InputEvent::None);
                 assert(foodRenderer.motionState==MotionState::Eat);
                 assert(foodRenderer.frameChanges>changes+1);
@@ -346,7 +351,7 @@ int main() {
                 for (int i=0;i<200;++i) input(InputEvent::None);
                 assert(foodRenderer.motionState!=MotionState::Eat);
                 assert(foodStore.readPet(foodPanel.state(),0,fed,ignored));
-                assert(fed.hunger()==(scenario==0?90:70) && fed.energy()==(scenario==1?90:70));
+                assert(fed.hunger()==expectedHunger && fed.energy()==expectedEnergy);
             } else {
                 assert(foodPanels.lastPanel==PanelId::Feeding);
                 assert(foodRenderer.motionState!=MotionState::Eat && foodRepository.durable==before);

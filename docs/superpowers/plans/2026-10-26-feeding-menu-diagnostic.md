@@ -1,6 +1,6 @@
 # Alimentacion Permanece En FEED: Diagnostico
 
-Fecha: 2026-10-26. Estado: abierto; pendiente de valores reales de cuidado.
+Fecha: 2026-10-26. Estado: abierto; valores recibidos, intento no capturado.
 
 ## Evidencia Del Usuario
 
@@ -48,3 +48,27 @@ Verificacion ampliada: 89 pruebas focalizadas aprobadas en 36.54 s, con
 150 advertencias existentes de Pillow. Incluye los siete consumidores del
 renderer de prueba ampliado. git diff --check sin errores. No se ejecuta una
 suite completa ni un build nuevo porque solo cambian pruebas y documentos.
+
+## Valores Posteriores Y Observacion USB
+
+Usuario confirma Pause Pet OFF. IMG_4263 muestra Firemon, salud 100,
+saciedad 6, energia 0 y animo 0. Esos valores permiten aplicar carne;
+no se mantiene saciedad llena como explicacion del estado de la foto.
+El animo y energia cero tampoco bloquean por si solos Nutrition::applyFood.
+Proteina puede seguir restringida por su marca del ciclo, no visible aqui.
+
+Se amplia la caracterizacion a doce combinaciones: los dos adultos aceptan
+carne y proteina con los valores de la foto y marcas iniciales de comida
+libres, persisten un unico efecto y reproducen Eat. Prueba focalizada nueva:
+1 aprobada en 5.59 s. No se reprodujo un defecto del App en ese fixture.
+
+Lectura mediante observe_tdisplay.py durante 90.058 s, comandos enviados 0,
+reset solicitado false. El registro SI incluye un arranque POWERON_RESET;
+no se presenta esta captura como prueba de que no hubo arranque al abrir el
+puerto. No se identifica la causa de ese arranque. Despues, ocho muestras,
+heap libre estable 82944, minimo 65188, loop maximo 605300 us, BLE=0,
+sin otro reinicio ni fatal. Cero eventos de entrada: no acredita recepcion
+de ACTION, consumo, rechazo de comida o resultado de guardado durante el intento.
+
+Sigue pendiente observar una pulsacion real y comparar cuidado antes/despues.
+No se cambia firmware, limites, graficos ni partida para encubrir el fallo.
