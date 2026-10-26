@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-26
 
-## Alimentacion: Consumo Capturado; Correccion De Animacion Sin Cargar
+## Alimentacion: Correccion De Animacion Cargada; Validacion Visual Pendiente
 
 Captura real 20261026-132239: ACTION recibido en Feeding, result=0 y
 committed=1; saciedad 96 -> 100, energia 18 y animo 0. El usuario sigue
@@ -13,9 +13,14 @@ el tiempo compensado desde el inicio de tick, sin alterar efectos de comida.
 Incluye rollover uint32 y dos adultos, consumo unico y rollback previos.
 89 focalizadas (38.21 s), 185 nativas (0.503 s) y build aislado (7.925 s)
 aprobados; RAM 52236 y app 1104233 bytes. No cambia assets, Status ni schema.
-La correccion aun NO esta cargada; autorizacion solicitada y aceptacion
-visual pendientes. El guardado de varios segundos no se optimiza en esta
-correccion. Detalle en el registro de diagnostico enlazado abajo.
+El usuario autoriza firmware-only y se carga 81cee4b, sin Hub/Creator.
+Build preflash repetido (3.470 s), prueba focalizada (5.66 s) y hashes de
+fuentes/binario verificados. Respaldo actual en out/board-backups/
+feeding-animation-fix-20261026-135552/. App cargada solo en 0x10000;
+hashes de app, LittleFS, NVS, bootloader/particiones verificados antes del
+reinicio. VPET_READY: heap 82948/minimo 73328, manifest 1. Falta aceptacion
+visual de Eat; no se ejecuta comida por el usuario. El guardado de varios
+segundos no se optimiza en esta correccion. Detalle en el registro abajo.
 
 ## Alimentacion: Diagnostico Serie Cargado
 

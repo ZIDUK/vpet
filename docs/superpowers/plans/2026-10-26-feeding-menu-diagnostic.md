@@ -1,7 +1,7 @@
 # Alimentacion Permanece En FEED: Diagnostico
 
 Fecha: 2026-10-26. Estado: consumo capturado; salto de animacion reproducido
-y corregido localmente, carga y aceptacion visual de la correccion pendientes.
+y corregido, firmware cargado y arranque verificado; aceptacion visual pendiente.
 
 ## Evidencia Del Usuario
 
@@ -219,7 +219,40 @@ App.h de produccion cambian; el header modifica una llamada privada y no
 el contrato de persistencia. Binario/ELF: out/feeding-animation-fix/.
 SHA-256: fb787513780e50f23ea2bef36244d8b925b8f24d21b3408fd6e3c602901cfc41.
 
-La correccion esta preparada, NO instalada. Se solicita autorizacion nueva
-firmware-only conservando partida/graficos. Falta comprobar visualmente la
-animacion tras el nuevo despliegue. El tiempo bloqueante del guardado sigue
-siendo una limitacion: este arreglo no lo elimina ni certifica fluidez.
+En esta etapa la correccion estaba preparada, NO instalada. Se solicita
+autorizacion nueva firmware-only conservando partida/graficos. El tiempo
+bloqueante del guardado sigue siendo una limitacion: este arreglo no lo
+elimina ni certifica fluidez.
+
+## Despliegue Autorizado De La Correccion
+
+El usuario autoriza cargar la correccion conservando partida, Coleccion y
+graficos. Revision 81cee4b publicada. Se repite el build aislado en 3.470 s
+y la prueba tests/test_collection_app.py: 1 aprobada en 5.66 s. App.cpp y
+App.h coinciden con el checkout; main.cpp coincide con la revision publicada,
+excluyendo Hub/Creator concurrentes. SHA-256 del binario sin cambios:
+fb787513780e50f23ea2bef36244d8b925b8f24d21b3408fd6e3c602901cfc41.
+
+Respaldo nuevo de la placa 08f9e0d00788 en
+out/board-backups/feeding-animation-fix-20261026-135552/: LittleFS completo,
+NVS/particiones y firmware anterior, con checksums. LittleFS previo actual:
+MD5 df5b1bb87b42d67a903f45bb898a625d; SHA-256
+a9bc07c5cca7116b7fc98ee0af2c61855a47d52bc10371c25a79aaaa5749bf66.
+App anterior b12e37036b7b87b154c179a9d9be9381a2f7585abdd251a2dd2528daebdeab4a.
+
+Escritura unica en 0x10000 de 1110816 bytes, sin uploadfs ni borrado general.
+Escritura 61.0 s; se verifica digest de app y que LittleFS, NVS, bootloader
+y particiones permanezcan identicos ANTES del reinicio final. El juego puede
+volver a guardar normalmente despues del arranque. No se restaura ni altera
+la partida desde el agente.
+
+Arranque posterior VPET_READY: heap libre 82948, minimo 73328, flash
+16777216, LittleFS 11829248/12451840, manifest 1. Evidencia en
+out/feeding-animation-fix/board-ready.json y verification.json, ademas del
+informe de respaldo. La lectura USB confirma arranque, no TFT ni BLE.
+
+Se solicita al usuario probar MEAT una vez, solo despierto, sin pausa y con
+saciedad menor de 100, esperando el guardado. Si esta lleno, no repetir
+comida para forzar la prueba. Aceptacion visual de la animacion pendiente;
+el agente no alimenta, cambia mascota ni crea huevos. Puerto cerrado tras
+leer VPET_READY; no se deja un monitor aparentemente activo.
