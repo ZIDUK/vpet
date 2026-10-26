@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-26
 
-## Coleccion Visible Confirmada; Home En Pausa
+## Coleccion Visible Confirmada; Reanudacion De Home En Investigacion
 
 El usuario aporta IMG_4257/4258/4259: cuadricula de cuatro plazas, dos
 individuos (Firemon M y Flamemon F), ficha y Flamemon activo en Home.
@@ -14,11 +14,28 @@ estado previo a estas fotos.
 Nuevo reporte de Home sin cambiar fotogramas: usuario confirma "Pause Pet ON".
 App::tick conserva ese comportamiento de pausa mediante motion.alignClock,
 sin avanzar los fotogramas. Se indica poner OFF sin reiniciar ni flashear;
-reanudar fisicamente la animacion sigue pendiente de confirmacion. No se
-modifica la partida ni se despausa automaticamente por el usuario.
+el usuario responde que OFF no reanuda la animacion. No se considera resuelto
+por haber identificado inicialmente ON. No se modifica la partida ni se
+despausa automaticamente por el usuario.
 Observacion USB de 70.083 s: seis muestras, 17 entradas, heap libre estable
 82948/minimo 73372, sin reinicios adicionales ni fatal, BLE=0. No demuestra
 por si sola animacion. Evidencia: `out/home-pause-verification/observation.json`.
+
+Diagnostico posterior: respaldo nuevo de NVS/particiones y LittleFS actual en
+`out/board-backups/20261026-home-resume-diagnostic/`, sin escrituras flash;
+la lectura por bootloader requiere reinicio tecnico al terminar. LittleFS
+completo verificado por digest, incluyendo los archivos actuales de Coleccion.
+El lector LittleFS moderno y CollectionStore real confirman activo Flamemon,
+pausa ON, despierto, sin viaje ni accion pendiente, energia 0. La generacion
+anterior tiene pausa OFF. Esto acredita ambos guardados, no demuestra por
+que volvio a ON ni si hubo otra pulsacion. Se pide comprobar etiqueta actual
+y respuesta de NEXT. No se carga otro firmware ni se restaura el respaldo
+antiguo de solo assets: ahora existen partidas de Coleccion en el filesystem.
+La prueba host del App real cubre activar una reserva pausada y agotada,
+volver a Home y quitar pausa desde Opciones; no sustituye aceptacion fisica.
+89 pruebas focalizadas aprobadas en 37.31 s (App, persistencia, Arena,
+evolucion, aprendizaje, exploracion y sueno); advertencias existentes de
+Pillow. Solo se anaden pruebas y diagnostico, sin otra carga en placa.
 
 ## Coleccion: Motivo Del Bloqueo Cargado
 

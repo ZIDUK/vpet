@@ -267,6 +267,48 @@ int main() {
             assert(std::find(canvas.labels.begin(),canvas.labels.end(),"NOT AVAILABLE")==canvas.labels.end());
         }
     }
+    // Exercise the real menu flow with an exhausted, initially paused reserve.
+    {
+        Store motionLive,motionBackup; Settings motionSettings;
+        SettingsStore motionLegacy(motionLive,&motionBackup), motionReserve(motionBackup);
+        PetState fire,flame;
+        fire.restore(SpeciesId::Rookie,90,90,90,0,100,0); fire.profile=profile(); fire.rollDna(7);
+        flame.restore(SpeciesId::Champion,90,0,90,0,100,0); flame.profile=profile(); flame.rollDna(8);
+        flame.setCold(true);
+        assert(motionLegacy.save(fire,motionSettings) && motionReserve.save(flame,motionSettings));
+        Repository motionRepository; CollectionStore motionStore(motionRepository);
+        CollectionPanel motionPanel(motionStore,motionLegacy,profile,seed);
+        Renderer motionRenderer; Panels motionPanels; BleService motionBle;
+        App motionApp(motionRenderer,motionPanels,motionLegacy,motionBle,clockNow,&motionPanel);
+        uint32_t now=0; motionApp.begin(now);
+        auto input=[&](InputEvent event) { now+=50; motionApp.tick(now,event); };
+        for(int i=0;i<8;++i) input(InputEvent::Next);
+        input(InputEvent::Action);
+        for(int i=0;i<9;++i) input(InputEvent::Next);
+        input(InputEvent::Action); input(InputEvent::Action);
+        input(InputEvent::Next); input(InputEvent::Action);
+        assert(motionPanel.enabled());
+        input(InputEvent::Next); input(InputEvent::Action); input(InputEvent::Action);
+        input(InputEvent::Next); input(InputEvent::Action);
+        assert(motionPanel.state().active==1 && motionApp.ready());
+        input(InputEvent::Back);
+        input(InputEvent::Next); input(InputEvent::Action); // Options -> Back -> Home.
+        const int pausedChanges=motionRenderer.frameChanges;
+        for(int i=0;i<120;++i) input(InputEvent::None);
+        assert(motionRenderer.frameChanges==pausedChanges);
+        input(InputEvent::Action); // Reopen Options, retaining the Home cursor.
+        for(int i=0;i<9;++i) input(InputEvent::Next); // Collection.
+        for(int i=0;i<10;++i) input(InputEvent::Next);
+        input(InputEvent::Action); // Pause Pet ON -> OFF, through App persistence.
+        PetState resumed; Settings ignoredSettings;
+        assert(motionStore.readPet(motionPanel.state(),1,resumed,ignoredSettings) && !resumed.cold());
+        input(InputEvent::Next); input(InputEvent::Next); input(InputEvent::Action); // Options -> Back -> Home.
+        const int changes=motionRenderer.frameChanges;
+        for(int i=0;i<120;++i) input(InputEvent::None);
+        assert(motionApp.ready() && motionRenderer.species==SpeciesId::Champion);
+        assert(motionRenderer.tired);
+        assert(motionRenderer.frameChanges>changes+2);
+    }
     // The separate panel uses bounded text coordinates on the 240x135 surface.
     for(const auto& draw:canvas.textDraws) {
         assert(draw.x>=0 && draw.y>=0 && draw.y<128);

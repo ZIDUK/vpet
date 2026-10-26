@@ -62,3 +62,38 @@ la animacion; no hay cambio de firmware, reset solicitado ni escritura de
 partida por el agente. Observacion de 70.083 s con 17 entradas, heap libre
 82948/minimo 73372 y sin reinicios adicionales/fatal. La reanudacion visual
 permanece pendiente hasta confirmacion del usuario.
+
+## Reporte De OFF Sin Reanudacion
+
+El usuario indica que poner Pause Pet OFF no reanuda los fotogramas. El
+diagnostico inicial de pausa no basta para cerrar el fallo. No se aplica una
+despausa automatica ni se cambia firmware, reglas o partida.
+
+Respaldo nuevo `out/board-backups/20261026-home-resume-diagnostic/`:
+particiones/NVS y LittleFS completo de 12451840 bytes, sin escrituras flash.
+La conexion de lectura por bootloader implica reinicio tecnico al terminar.
+MD5 LittleFS `d9fa8df5a5e2389f199fc59d05381e7d`; SHA-256
+`b02665574709164d62fe31bd16638dfdf8ab3c95f3a161be726bb4803c9656fd`.
+Ya contiene Coleccion y no coincide con el respaldo anterior de solo assets.
+No se debe restaurar ese filesystem anterior para comprobar este fallo.
+
+El mklittlefs antiguo extrae assets pero omite la carpeta runtime Coleccion;
+no se utiliza su listado para concluir que falta la partida. Lector temporal
+littlefs-python 0.19.0, montaje explicito sin autoformato, contexto de solo
+lectura sobre copia en memoria y carga mediante CollectionStore real:
+`current.bin` secuencia 7 tiene Flamemon activo pausado; `previous.bin`
+secuencia 6 tiene pausa OFF. Ambas mascotas tienen energia 0. No hay sueno,
+viaje ni accion pendiente. No se publican identidades ni datos completos.
+
+Los dos guardados prueban una transicion OFF seguida de ON, no su causa.
+No se atribuye a doble pulsacion ni a un fallo de persistencia sin evidencia.
+Se pide foto de la etiqueta actual y respuesta de NEXT. La prueba host usa
+el App real para cambiar a una reserva pausada y agotada, comprobar Home
+sin fotogramas y reanudar tras OFF. Esta comprobacion sintetica no reproduce
+un fallo de reanudacion ni acredita que la placa ya este corregida.
+
+Verificacion de esta ampliacion: 89 pruebas focalizadas aprobadas en
+37.31 s, con 150 advertencias existentes de Pillow. Se cubren los siete
+consumidores de tests/app_stubs/Renderer.h. No cambia codigo de produccion;
+no se compila ni flashea un firmware nuevo. Cambios concurrentes de Hub y
+Creator, incluido su adaptador serie en main.cpp, quedan fuera de la entrega.
