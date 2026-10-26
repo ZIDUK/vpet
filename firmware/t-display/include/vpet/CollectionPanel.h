@@ -28,6 +28,8 @@ public:
                                 const RuntimeExperience* events, size_t count);
     virtual int chooseAuto(const practice::Fighter& fighter, uint8_t learnedMask) const;
     virtual bool advance(uint32_t elapsedMs, bool paused);
+    // RAM only: feeding must not run a filesystem checkpoint before first draw.
+    virtual bool accumulate(uint32_t elapsedMs, bool paused);
     virtual bool hatchReady() const;
     virtual bool timedEgg() const;
     virtual void open();

@@ -7,21 +7,56 @@
 #include <sys/time.h>
 #include <time.h>
 #include <algorithm>
+#include <new>
+#ifdef ARDUINO
+#include "vpet/FreeRtosSaveTask.h"
+#endif
 
 namespace vpet {
+namespace {
+#ifndef ARDUINO
+// Host harnesses can inject deferred execution; the default preserves their
+// synchronous storage fixtures without introducing threads into portable tests.
+class HostSaveTask final : public SaveTask {
+public:
+    bool start(Work work, void* context) override { work(context); done_ = true; return true; }
+    bool finished() const override { return done_; }
+    void reset() override { done_ = false; }
+    void wait() override {}
+private:
+    bool done_ = false;
+};
+#endif
+}
 
 App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock,
-         CollectionPanel* collection)
+         CollectionPanel* collection, SaveTask* saveTask)
     : renderer_(renderer),
       panels_(panels),
       settingsStore_(settingsStore),
       bluetooth_(bluetooth),
       collection_(collection),
+      saveTask_(saveTask),
       wallClock_(wallClock),
-      motion_(240, 135, 24, 88) {}
+      motion_(240, 135, 24, 88) {
+    if (!saveTask_) {
+#ifdef ARDUINO
+        ownedSaveTask_.reset(new (std::nothrow) FreeRtosSaveTask);
+#else
+        ownedSaveTask_.reset(new (std::nothrow) HostSaveTask);
+#endif
+        saveTask_ = ownedSaveTask_.get();
+    }
+}
+
+App::~App() {
+    if (foodSave_ && foodSave_->started) saveTask_->wait();
+}
 
 void App::begin(uint32_t nowMs) {
+    if (foodSave_) return;
     savePending_ = false;
+    foodRecovery_ = false;
     navigation_.setPanel(PanelId::Home);
     navigation_.setMenuIndex(0);
     practicing_=trainingActive_=false;
@@ -216,7 +251,7 @@ void App::applyDateTime() {
     }
 }
 
-void App::handlePanelInput(uint32_t nowMs, InputEvent event, uint32_t tickStartedMs) {
+void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
     if (panel==PanelId::Collection) {
         if (!collection_) { navigation_.setPanel(PanelId::Options,option_menu::collection); return; }
@@ -364,24 +399,28 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event, uint32_t tickStarte
             navigation_.setPanel(PanelId::Home);
             return;
         }
-        const PetState before = pet_;
+        std::unique_ptr<FoodSave> request(new (std::nothrow) FoodSave);
+        if (!request || !saveTask_) {
+            Serial.println("VPET_FEED_QUEUE rejected=memory");
+            panels_.drawStorageError(settings_.language.c_str());
+            return;
+        }
+        request->before = pet_;
         const FoodId food = navigation_.panelIndex() == 0 ? FoodId::Meat : FoodId::Protein;
         const FoodResult result=applyFood(pet_,food);
-        bool committed=false;
         if (result == FoodResult::Applied) {
-            committed=collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitFood(pet_);
-            if (committed) {
-                // Storage may block longer than the entire eating clip.
-                const uint32_t animationNowMs=nowMs+static_cast<uint32_t>(millis()-tickStartedMs);
-                motion_.startAction(Action::Feed, animationNowMs);
-                navigation_.setPanel(PanelId::Home);
-                settleStorage();
-            } else {
-                pet_ = before;
-            }
+            request->snapshot = pet_;
+            request->settings = settings_;
+            request->collection = collection_ && collection_->enabled();
+            foodSave_ = std::move(request);
+            motion_.startAction(Action::Feed, nowMs);
+            navigation_.setPanel(PanelId::Home);
+            panels_.invalidate();
+            Serial.println("VPET_FEED queued=1 committed=0");
+            return;
         }
         Serial.printf("VPET_FEED result=%u committed=%u hunger=%d energy=%d mood=%d\n",
-            static_cast<unsigned>(result),committed?1U:0U,pet_.hunger(),pet_.energy(),pet_.happiness());
+            static_cast<unsigned>(result),0U,pet_.hunger(),pet_.energy(),pet_.happiness());
         return;
     }
     if (panel == PanelId::Rest) {
@@ -492,8 +531,89 @@ void App::activate(uint32_t nowMs) {
     }
 }
 
+void App::drawHome(uint32_t nowMs) {
+    panels_.invalidate();
+    renderer_.draw({pet_,motion_,navigation_.menuIndex(),nowMs,
+        languageIsSpanish(settings_.language.c_str()),minuteOfDay(),
+        !pet_.dead() && !pet_.injured() && !pet_.cold() && pet_.sleep.tired(pet_.energy(),pet_.dna()[3],
+            explorationClock_.trusted(calendarNow()) ? minuteOfDay() : -1)});
+}
+
+void App::writeFood(void* context) {
+    auto& app = *static_cast<App*>(context);
+    auto& job = *app.foodSave_;
+    const uint32_t started = millis();
+    // Only this task may access persistence until the completion barrier.
+    job.committed = job.collection ? app.collection_->save(job.snapshot,job.settings)
+        : app.settingsStore_.save(static_cast<const PetState&>(job.snapshot),job.settings);
+    job.settled = job.committed && (job.collection ? !app.collection_->failed()
+        : app.settingsStore_.recoverPending());
+    job.durationMs = millis()-started;
+#ifdef ARDUINO
+    job.stackFreeBytes = uxTaskGetStackHighWaterMark(nullptr);
+    job.heapMin = ESP.getMinFreeHeap();
+#endif
+}
+
+void App::submitFood(uint32_t nowMs) {
+    if (!foodSave_ || foodSave_->started) return;
+    foodSave_->started = true;
+    if (!saveTask_->start(writeFood,this)) {
+        const bool checkpoint=foodSave_->careCheckpoint;
+        pet_ = foodSave_->before;
+        foodSave_.reset();
+        motion_.cancelAction(nowMs);
+        navigation_.setPanel(PanelId::Feeding);
+        if (checkpoint) {
+            savePending_=foodRecovery_=true;
+            lastSaveAttemptMs_=nowMs;
+        }
+        Serial.println("VPET_FEED_QUEUE rejected=executor");
+        panels_.drawStorageError(settings_.language.c_str());
+        return;
+    }
+    // Also handles an executor that completes before start() returns.
+    if (saveTask_->finished()) pollFood(nowMs,InputEvent::None);
+}
+
+void App::pollFood(uint32_t nowMs, InputEvent event) {
+    if (saveTask_->finished()) {
+        const bool committed = foodSave_->committed;
+        const bool settled = foodSave_->settled;
+        const uint32_t duration = foodSave_->durationMs;
+        const uint32_t stack = foodSave_->stackFreeBytes, heap = foodSave_->heapMin;
+        if (!committed) {
+            pet_ = foodSave_->before;
+            motion_.cancelAction(nowMs);
+            navigation_.setPanel(PanelId::Feeding);
+        }
+        saveTask_->reset();
+        foodSave_.reset();
+        savePending_ = !settled;
+        foodRecovery_ = !settled;
+        lastSaveAttemptMs_ = nowMs;
+        Serial.printf("VPET_FEED result=0 committed=%u hunger=%d energy=%d mood=%d\n",
+            committed?1U:0U,pet_.hunger(),pet_.energy(),pet_.happiness());
+        Serial.printf("VPET_FEED_SAVE duration_ms=%u settled=%u stack_free_bytes=%u heap_min=%u\n",
+            duration,settled?1U:0U,stack,heap);
+        if (!settled) panels_.drawStorageError(settings_.language.c_str());
+        return; // Never reinterpret an input pressed while saving as a new action.
+    }
+    if (event != InputEvent::None) lastInteractionMs_ = nowMs;
+    if (event == InputEvent::Next) navigation_.dispatch(event);
+    motion_.tick(nowMs);
+    motion_.consumeActionCompleted(); // Nutrition was applied once before queuing.
+    if (event != InputEvent::None || nowMs-lastRenderMs_ >= 33) {
+        lastRenderMs_ = nowMs;
+        drawHome(nowMs);
+    }
+}
+
 void App::tick(uint32_t nowMs, InputEvent event) {
-    const uint32_t tickStartedMs=millis();
+    if (foodSave_) {
+        pollFood(nowMs,event);
+        return;
+    }
     if (event==InputEvent::Action && navigation_.panel()==PanelId::Feeding) {
         Serial.printf("VPET_FEED input index=%u hunger=%d energy=%d mood=%d paused=%u asleep=%u dead=%u away=%u pending=%u storage=%u saving=%u training=%u practice=%u\n",
             static_cast<unsigned>(navigation_.panelIndex()),pet_.hunger(),pet_.energy(),pet_.happiness(),
@@ -506,10 +626,53 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         return;
     }
     if (savePending_) {
+        if (foodRecovery_) {
+            motion_.alignClock(nowMs);
+            if (nowMs-lastSaveAttemptMs_>=1000) {
+                if (saveState()) foodRecovery_=false;
+                lastSaveAttemptMs_=nowMs;
+            }
+            return; // Keep lastTickMs_: catch up the pending interval after recovery.
+        }
         if(pet_.exploration.away() || pet_.sleep.asleep) pet_.pauseCareClock(nowMs-lastTickMs_);
         lastTickMs_ = nowMs;
         motion_.alignClock(nowMs);
         if (nowMs - lastSaveAttemptMs_ >= 1000) saveState();
+        return;
+    }
+    // Food presentation must precede even a due collection-time checkpoint.
+    // Evaluate nutrition against current care, but defer its storage checkpoint.
+    if (navigation_.panel()==PanelId::Feeding && event==InputEvent::Action && navigation_.panelIndex()<2) {
+        lastInteractionMs_=nowMs;
+        const uint32_t presentationStarted=millis();
+        bool needsCareSave=false;
+        if (!pet_.cold() && !pet_.sleep.asleep && !pet_.exploration.away()) {
+            const uint32_t elapsed=nowMs-lastTickMs_;
+            if (collection_ && !collection_->accumulate(elapsed,false)) {
+                savePending_=true;
+                panels_.drawStorageError(settings_.language.c_str());
+                return;
+            }
+            lastTickMs_=nowMs;
+            const bool wasDead=pet_.dead();
+            pet_.tick(elapsed);
+            needsCareSave=pet_.dead()!=wasDead;
+            const auto call=pet_.updateCall(nowMs,kCareTimeScale,clockHour(),false,false);
+            needsCareSave=needsCareSave || call==CallUpdate::Missed;
+            if (!pet_.dead() && motion_.state()!=MotionState::Evolution && evolution_.evolve(pet_,kCareTimeScale)) {
+                motion_.setSpecies(pet_.species());
+                motion_.startEvolution(nowMs);
+                needsCareSave=true;
+            }
+        }
+        handlePanelInput(nowMs,event);
+        if (foodSave_) {
+            foodSave_->careCheckpoint=needsCareSave;
+            lastRenderMs_=nowMs;
+            drawHome(nowMs);
+            Serial.printf("VPET_FEED_PRESENT handler_to_frame_ms=%u\n",millis()-presentationStarted);
+            submitFood(nowMs);
+        } else if (needsCareSave) saveState();
         return;
     }
     const uint32_t elapsed = nowMs - lastTickMs_;
@@ -709,7 +872,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         } else if (navigation_.panel() == PanelId::Home) {
             navigation_.dispatch(event);
         } else {
-            handlePanelInput(nowMs, event, tickStartedMs);
+            handlePanelInput(nowMs, event);
         }
     }
 
@@ -740,17 +903,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             home.open(pet_,explorationClock_.trusted(calendarNow()));
             panels_.drawExploration(home,pet_,calendarNow(),nowMs,settings_.language.c_str(),true,navigation_.menuIndex());
         } else if (navigation_.panel() == PanelId::Home) {
-            panels_.invalidate();
-            renderer_.draw({
-                pet_,
-                motion_,
-                navigation_.menuIndex(),
-                nowMs,
-                languageIsSpanish(settings_.language.c_str()),
-                minuteOfDay(),
-                !pet_.dead() && !pet_.injured() && !pet_.cold() && pet_.sleep.tired(pet_.energy(),pet_.dna()[3],
-                    explorationClock_.trusted(calendarNow()) ? minuteOfDay() : -1)
-            });
+            drawHome(nowMs);
         } else {
             panels_.draw(
                 navigation_,
@@ -765,6 +918,9 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             );
         }
     }
+    // Present the first frame before waking the writer, which may contend with
+    // LittleFS reads or briefly stall both cores during flash operations.
+    submitFood(nowMs);
 }
 
 }  // namespace vpet

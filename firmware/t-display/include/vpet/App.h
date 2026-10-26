@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <memory>
 
 #include "vpet/Input.h"
 #include "vpet/BleService.h"
@@ -16,6 +17,7 @@
 #include "vpet/TrainingSession.h"
 #include "vpet/ExplorationSession.h"
 #include "vpet/CollectionPanel.h"
+#include "vpet/SaveTask.h"
 
 namespace vpet {
 
@@ -23,14 +25,19 @@ class App {
 public:
     using WallClock = uint64_t (*)();
     App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth,
-        WallClock wallClock = nullptr, CollectionPanel* collection = nullptr);
+        WallClock wallClock = nullptr, CollectionPanel* collection = nullptr, SaveTask* saveTask = nullptr);
+    ~App();
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
-    bool ready() const { return storageReady_ && !savePending_; }
+    bool ready() const { return storageReady_ && !savePending_ && !foodSave_; }
 
 private:
     void activate(uint32_t nowMs);
-    void handlePanelInput(uint32_t nowMs, InputEvent event, uint32_t tickStartedMs);
+    void handlePanelInput(uint32_t nowMs, InputEvent event);
+    void drawHome(uint32_t nowMs);
+    static void writeFood(void* context);
+    void submitFood(uint32_t nowMs);
+    void pollFood(uint32_t nowMs, InputEvent event);
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
@@ -52,6 +59,15 @@ private:
     SettingsStore& settingsStore_;
     BleService& bluetooth_;
     CollectionPanel* collection_;
+    struct FoodSave {
+        PetState before, snapshot;
+        Settings settings;
+        bool collection = false, started = false, committed = false, settled = false, careCheckpoint = false;
+        uint32_t durationMs = 0, stackFreeBytes = 0, heapMin = 0;
+    };
+    std::unique_ptr<FoodSave> foodSave_;
+    std::unique_ptr<SaveTask> ownedSaveTask_;
+    SaveTask* saveTask_;
     static constexpr uint32_t kCareTimeScale = 1;
 
     Settings settings_;
@@ -71,6 +87,7 @@ private:
     bool trainingActive_ = false;
     bool storageReady_ = false;
     bool savePending_ = false;
+    bool foodRecovery_ = false;
     uint32_t lastSaveAttemptMs_ = 0;
     uint32_t lastInjuryCheckpointMs_ = 0;
     uint32_t lastTickMs_ = 0;

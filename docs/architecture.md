@@ -1,5 +1,49 @@
 # Arquitectura de software
 
+## Alimentacion Con Guardado De Fondo: 2026-10-26
+
+`App` sigue siendo el unico propietario de la mascota viva, navegacion y TFT.
+Al aceptar MEAT/PROTEIN crea mediante RAII un trabajo con estado anterior,
+snapshot posterior y ajustes copiados. Dibuja Home/Eat antes de despertar el
+escritor, incluso si hay un checkpoint de tiempo vencido. `SaveTask` admite
+un trabajo; `FreeRtosSaveTask` lo ejecuta con notificacion en una tarea
+persistente de 8192 bytes de pila, creada al primer uso. No hay una cola
+creciente ni dependencias FreeRTOS en el dominio portable.
+
+Hasta la barrera acquire/release de finalizacion, solo el escritor accede a
+Collection/NVS. App avanza Motion y dibuja Home; NEXT mueve el cursor, mientras
+ACTION/Back no abren otras transacciones. Antes de evaluar comida se actualiza
+el cuidado a la hora del input y se acumula tiempo sin I/O; el intervalo de
+espera se recupera al volver al flujo normal, incluso tras fallos de guardado.
+El snapshot del worker es independiente de la mascota mostrada. La primera llamada tras
+completar descarta la tecla recibida durante el guardado.
+
+Un commit rechazado restaura la mascota anterior y muestra el error existente;
+el adaptador legacy usa el snapshot completo y su journal saveTx existente,
+para incluir evolucion y errores de cuidado ocurridos justo al alimentar.
+Un journal NVS aceptado pero pendiente de replay conserva el efecto y bloquea
+nuevos cambios hasta recuperarlo. Los reintentos se espacian un segundo usando
+un reloj independiente del cuidado retenido. Fallos de reserva/creacion de tarea no
+ejecutan un guardado sincrono de comida como alternativa; los cambios previos
+de cuidado que requieren checkpoint se conservan para su recuperacion.
+Destruir App espera al trabajo antes de liberar su contexto. `ready()` es falso mientras hay comida pendiente,
+lo que no equivale a afirmar que el almacenamiento esta danado.
+
+`CollectionStore::saveActive` incorpora opcionalmente el tiempo confiable de
+`CollectionPanel` al mismo candidato atomico: cooldown/incubacion y cuerpo se
+confirman juntos, sin un flush separado. Se conserva el formato VPCL, version,
+numeros de enums, CRC, generacion anterior y rename como punto de visibilidad.
+Las otras transacciones y el simulador mantienen sus adaptadores existentes.
+
+No es una garantia de duracion cero: assets y partidas usan la misma LittleFS,
+y la flash puede bloquear momentaneamente ambas CPU. No se precargan los 25
+fotogramas completos (133-162 KiB, incompatibles con el margen de RAM actual).
+Las trazas `VPET_FEED_PRESENT` y `VPET_FEED_SAVE` distinguen primer dibujo,
+duracion de persistencia, pila libre y minimo de heap. Corte de energia antes
+del commit puede perder la comida pendiente; no se acredita como guardada al
+encolarla. Pruebas host con ejecucion diferida y shim multihilo no certifican
+latencia/TFT/BLE reales. Estado de entrega en [el plan](superpowers/plans/2026-10-26-responsive-feeding.md).
+
 ## Coleccion Y Experiencias: Revision 2026-10-25
 
 La entrega agrega composicion `PetProfile`/`LearningState`, reglas de

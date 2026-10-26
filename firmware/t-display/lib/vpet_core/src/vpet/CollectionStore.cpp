@@ -365,11 +365,12 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
     state = *empty; return true;
 }
 bool CollectionStore::saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
-                                 const char* learningRef) {
+                                 const char* learningRef, uint32_t elapsedMs) {
     if (!current(state) || pet.profile.encode() != state.slots[state.active].profileRecord) return false;
     std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
     if (!scratch) { blocked_ = true; return false; }
     auto& candidate = *scratch; sharedFrom(candidate, pet);
+    advanceSlots(candidate,elapsedMs);
     auto& slot = candidate.slots[state.active]; slot.form = static_cast<uint8_t>(pet.species());
     if (learningRef && (!copyText(slot.learningRef, learningRef) || !fileKey(slot.learningRef))) return false;
     std::string body; if (!captureBody(pet, settings, body)) return false;
@@ -444,20 +445,25 @@ bool CollectionStore::commitEgg(CollectionState& state, const CollectionEggTrans
     if (!persist(state, candidate, replacements)) return false;
     childSlot = index; return true;
 }
+bool CollectionStore::advanceSlots(CollectionState& state, uint32_t elapsedMs) {
+    if (!elapsedMs) return false;
+    bool changed = false;
+    for (auto& slot : state.slots) if (slot.occupied && slot.cooldownMs) {
+        slot.cooldownMs -= std::min(slot.cooldownMs, elapsedMs); changed = true;
+    }
+    auto& active = state.slots[state.active];
+    if (active.form == 3 && active.incubationMs < active.incubationRequiredMs) {
+        active.incubationMs += std::min(active.incubationRequiredMs-active.incubationMs, elapsedMs); changed = true;
+    }
+    return changed;
+}
 bool CollectionStore::advance(CollectionState& state, uint32_t elapsedMs, bool paused) {
     if (!current(state)) return false;
     if (paused || !elapsedMs) return true;
     std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
     if (!scratch) { blocked_ = true; return false; }
-    auto& candidate = *scratch; bool changed = false;
-    for (auto& slot : candidate.slots) if (slot.occupied && slot.cooldownMs) {
-        slot.cooldownMs -= std::min(slot.cooldownMs, elapsedMs); changed = true;
-    }
-    auto& active = candidate.slots[candidate.active];
-    if (active.form == 3 && active.incubationMs < active.incubationRequiredMs) {
-        active.incubationMs += std::min(active.incubationRequiredMs-active.incubationMs, elapsedMs); changed = true;
-    }
-    if (!changed) return true;
+    auto& candidate = *scratch;
+    if (!advanceSlots(candidate,elapsedMs)) return true;
     const std::string* replacements[CollectionState::kSlots] = {};
     return persist(state, candidate, replacements);
 }

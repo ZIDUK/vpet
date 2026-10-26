@@ -46,7 +46,7 @@ public:
                  const PetProfile& missingActive = PetProfile(),
                  const PetProfile& missingBackup = PetProfile());
     bool saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
-                    const char* learningRef = nullptr);
+                    const char* learningRef = nullptr, uint32_t elapsedMs = 0);
     bool activate(CollectionState& state, size_t target, PetState& pet, Settings& settings,
                   const CollectionSwitchGuard& guard, bool confirmed);
     bool addFounder(CollectionState& state, const PetState& egg, const Settings& settings, bool confirmed);
@@ -60,6 +60,7 @@ public:
     bool advance(CollectionState& state, uint32_t elapsedMs, bool paused);
 
 private:
+    static bool advanceSlots(CollectionState& state, uint32_t elapsedMs);
     bool persist(CollectionState& state, const CollectionState& proposed,
                  const std::string* const replacements[CollectionState::kSlots]);
     bool readBody(const CollectionSlot& slot, std::string& body);

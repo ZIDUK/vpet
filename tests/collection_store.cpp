@@ -170,7 +170,11 @@ void eggs() {
     assert(state.slots[0].cooldownMs == 86399000 && state.slots[3].incubationMs == 0);
     assert(store.activate(state, 3, active, settings, CollectionSwitchGuard(), true));
     assert(store.advance(state, 1000, false) && state.slots[3].incubationMs == 1000);
-    assert(store.advance(state, 9000, true) && state.slots[3].incubationMs == 1000);
+    const int commits = repo.commits;
+    assert(store.saveActive(state,active,settings,nullptr,750));
+    assert(repo.commits==commits+1 && state.slots[3].incubationMs==1750);
+    assert(state.slots[0].cooldownMs==86400000-2750);
+    assert(store.advance(state, 9000, true) && state.slots[3].incubationMs == 1750);
     assert(store.readPet(state, 3, egg, settings) && egg.itemCount(1) == 2);
     assert(std::memcmp(egg.dna(), zeroDna, sizeof(zeroDna)) == 0);
     assert(egg.profile.petId() == profile(6, profile(2).petId(), profile(3).petId()).petId());
@@ -233,6 +237,16 @@ void failures() {
         if (!ok) assert(currentPet.profile.encode() == profileBefore);
         return ok;
     });
+    {
+        MemoryRepository parents=original; CollectionState family=initial; CollectionStore familyStore(parents);
+        CollectionEggTransaction tx; tx.id=92;
+        PetState egg; egg.profile=profile(8,profile(2).petId(),profile(3).petId());
+        size_t slot=99;
+        assert(familyStore.commitEgg(family,tx,egg,settings,slot,true));
+        rejectAtEveryIo(parents,family,[&](CollectionStore& store,CollectionState& state) {
+            return store.saveActive(state,changed,settings,nullptr,1500);
+        });
+    }
     rejectAtEveryIo(original, initial, [&](CollectionStore& store, CollectionState& state) {
         CollectionEggTransaction tx; tx.id = 91;
         PetState egg; egg.profile = profile(8, profile(2).petId(), profile(3).petId());

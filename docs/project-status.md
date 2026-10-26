@@ -2,6 +2,27 @@
 
 ## Estado vigente: 2026-10-26
 
+## Alimentacion Inmediata Y Guardado De Fondo: Preparado, Sin Cargar
+
+Implementado para MEAT/PROTEIN: primer dibujo Home/Eat antes de iniciar el
+escritor FreeRTOS, un snapshot pendiente como maximo y NEXT disponible mientras
+ACTION/Back no abren transacciones dependientes. No comparte mascota mutable
+con el worker ni considera guardada una accion encolada. Collection combina
+tiempo/cooldown/incubacion y cuerpo en un commit; legacy conserva el snapshot
+completo por saveTx para no perder evolucion/cuidado ocurridos al alimentar.
+Rechazo restaura estado y cancela Eat; journals aceptados pero sin replay
+completo bloquean nuevos cambios, con reintento espaciado y tiempo conservado.
+
+Suite aislada sin Creator: 2020 aprobadas en 292.43 s. Tras el ultimo ajuste
+de cancelacion se repiten 104 focalizadas: aprobadas en 58.78 s. No es una
+segunda suite completa sobre ese ajuste. Build aislado final aprobado en
+19.628 s: RAM estatica 52244 y app 1106637 bytes; tarea lazy de 8192 bytes.
+Nativas finales: 185 aprobadas en 0.933 s.
+Arquitectura y plan actualizados. La revision NO esta cargada: falta nueva
+autorizacion/validacion de primer frame, fluidez, pila/heap y BLE en hardware.
+No cambia Status, graficos ni schema. Corte de energia antes del commit puede
+perder la ultima comida pendiente. [Plan y evidencia](superpowers/plans/2026-10-26-responsive-feeding.md).
+
 ## Alimentacion: Animacion De MEAT Validada En Placa
 
 Captura real 20261026-132239: ACTION recibido en Feeding, result=0 y

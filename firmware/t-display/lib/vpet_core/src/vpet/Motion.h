@@ -47,6 +47,7 @@ public:
     void startEvolution(uint32_t nowMs);
     void startHatch(uint32_t nowMs);
     void wake(uint32_t nowMs);
+    void cancelAction(uint32_t nowMs) { actionCompleted_ = false; enterIdle(nowMs); }
     void tick(uint32_t nowMs);
     void setTired(bool tired, uint32_t nowMs) {
         tired_ = tired;

@@ -11,6 +11,8 @@ struct AppViewModel {
 struct Renderer {
     int invalidations=0, minute=720; uint8_t menuIndex=0; bool sleeping=false, tired=false;
     int frameChanges=0, lastFrame=-1;
+    int hunger=0, energy=0;
+    uint32_t ageSeconds=0;
     SpeciesId species=SpeciesId::Egg;
     MotionState motionState=MotionState::Idle;
     void invalidate() { ++invalidations; }
@@ -19,6 +21,7 @@ struct Renderer {
         if(lastFrame!=m.motion.frame()) ++frameChanges;
         lastFrame=m.motion.frame(); species=m.pet.species();
         motionState=m.motion.state();
+        hunger=m.pet.hunger(); energy=m.pet.energy(); ageSeconds=m.pet.ageSeconds();
     }
 };
 }

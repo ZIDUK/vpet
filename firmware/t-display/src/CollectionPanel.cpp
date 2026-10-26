@@ -58,9 +58,10 @@ bool CollectionPanel::flush() {
     pendingElapsed_=0; return true;
 }
 bool CollectionPanel::save(const PetState& pet, const Settings& settings) {
-    if (!enabled_ || failed_ || !flush() || !store_.saveActive(state_,pet,settings)) {
+    if (!enabled_ || failed_ || !store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_)) {
         error("Error al guardar",true); return false;
     }
+    pendingElapsed_=0;
     return true;
 }
 bool CollectionPanel::saveExperience(const PetState& pet, const Settings& settings,
@@ -77,16 +78,25 @@ int CollectionPanel::chooseAuto(const practice::Fighter& fighter, uint8_t learne
     practice::Fighter fixed=fighter; fixed.autoSelector=nullptr; fixed.autoContext=nullptr;
     return practice::choose(fixed);
 }
-bool CollectionPanel::advance(uint32_t elapsedMs, bool paused) {
+bool CollectionPanel::accumulate(uint32_t elapsedMs, bool paused) {
     if (!enabled_) return !failed_;
     if (failed_) return false;
     if (paused) return true;
     // Checkpoint only trusted powered-on deltas. begin/load always discard RAM
-    // remainder, so reboot can lose at most a minute and never grants time.
+    // remainder. Normally checkpoint once per minute; pending I/O can extend
+    // the unsaved interval. Reboot never grants time that was not committed.
     if (elapsedMs>std::numeric_limits<uint32_t>::max()-pendingElapsed_) {
-        if (!flush()) return false;
+        error("Tiempo pendiente fuera de rango",true); return false;
     }
     pendingElapsed_+=elapsedMs;
+    return true;
+}
+bool CollectionPanel::advance(uint32_t elapsedMs, bool paused) {
+    if (enabled_ && !paused && elapsedMs>std::numeric_limits<uint32_t>::max()-pendingElapsed_) {
+        if (!flush()) return false;
+    }
+    if (!accumulate(elapsedMs,paused)) return false;
+    if (!enabled_ || paused) return true;
     const auto& active=state_.slots[state_.active];
     const bool hatchDue=active.form==static_cast<uint8_t>(SpeciesId::Egg) && active.incubationRequiredMs &&
         pendingElapsed_>=active.incubationRequiredMs-active.incubationMs;
