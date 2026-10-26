@@ -97,3 +97,12 @@ Verificacion de esta ampliacion: 89 pruebas focalizadas aprobadas en
 consumidores de tests/app_stubs/Renderer.h. No cambia codigo de produccion;
 no se compila ni flashea un firmware nuevo. Cambios concurrentes de Hub y
 Creator, incluido su adaptador serie en main.cpp, quedan fuera de la entrega.
+
+## Aceptacion Fisica De Reanudacion
+
+El usuario confirma posteriormente: "si lo coloco off, ya se mueve".
+Se acepta la reanudacion de Home al desactivar Pause Pet en la placa, sin
+otro flasheo ni cambios de partida por el agente. No se atribuye una causa
+a la transicion OFF -> ON anterior y no se certifican sesiones largas ni
+ausencia de recurrencias. Este resultado sustituye el pendiente de
+reanudacion visual de las secciones historicas anteriores.

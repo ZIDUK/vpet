@@ -2,7 +2,14 @@
 
 ## Estado vigente: 2026-10-26
 
-## Coleccion Visible Confirmada; Reanudacion De Home En Investigacion
+## Coleccion Visible Y Reanudacion De Home Confirmadas
+
+Confirmacion fisica posterior del usuario: "si lo coloco off, ya se mueve".
+Queda verificada la reanudacion de Home al desactivar Pause Pet en la placa,
+sin otra carga de firmware ni despausa automatica por el agente. El origen
+de la transicion anterior OFF -> ON no quedo identificado; esta aceptacion
+no acredita ausencia de recurrencias ni sesiones largas. El diagnostico
+inferior conserva la secuencia de reportes y comprobaciones anteriores.
 
 El usuario aporta IMG_4257/4258/4259: cuadricula de cuatro plazas, dos
 individuos (Firemon M y Flamemon F), ficha y Flamemon activo en Home.
