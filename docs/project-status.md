@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-25
 
-## Coleccion, Aprendizaje Y Breeding: Entrega Local En Verificacion
+## Coleccion, Aprendizaje Y Breeding: Cargados En Placa
 
 Cuatro plazas contando huevos, mochila compartida sin sumar la reserva,
 fundador local confirmado y cruce determinista con mutacion acotada. Core
@@ -10,14 +10,24 @@ portable Python/C++, generacion de recibos, repositorio con fallos inyectados
 y UI de coleccion local. Simulador registra experiencias y consulta politica
 en AUTO; ESP32 conecta los mismos eventos, herencia y AUTO tras activar
 Coleccion. Politicas inmutables con GC que conserva ambas generaciones.
-Verificacion final: 2003 Python aprobadas (304.15 s), 185 nativas (1.37 s)
-y ESP32 compilado (18.15 s). RAM estatica 58068, app 1098693 bytes.
+Verificacion final aislada, sin Creator: 1984 Python aprobadas (295.99 s),
+185 nativas (0.544 s) y ESP32 compilado (8.739 s). RAM estatica 52228,
+app 1098849 bytes. La suite previa de 2003 incluia archivos locales de Creator.
 Advertencias existentes de Pillow/pytest y TOUCH_CS; sin fallos.
-Sin flash de esta revision ni nueva aceptacion fisica. Creator concurrente
+Firmware cargado el 2026-10-25, sin reemplazar LittleFS ni NVS. Respaldo
+completo de 16 MiB verificado; app instalada y filesystem original comprobados
+por digest. La primera carga detecto heap de 63892 bytes, por debajo del
+minimo de 65536: no se declaro correcta. Cache Training bajo demanda recupera
+5840 bytes estaticos sin reducir sus diez iconos, RGB565 ni reutilizacion.
+Segunda carga: `VPET_READY`, heap 69712/minimo 69636, manifest 1, BLE conectado.
+Observacion serial de 70 s: seis muestras, heap libre estable 69712, minimo
+64572, sin reinicios ni fatal; sin eventos de entrada, no certifica fluidez.
+Nueva aceptacion fisica de los flujos pendiente. Creator concurrente
 se conserva y sigue fuera de esta entrega. Ver [contrato y guion](collection-learning-breeding.md)
 y [plan verificable](superpowers/plans/2026-10-25-collection-learning-breeding.md).
-Evidencia local: `out/collection-verification/`; codigo funcional sin publicar
-en esta revision. Preferencias visibles por ahora en el simulador; las nuevas
+Codigo funcional publicado como `df96305` en origin/master; correccion de RAM
+y evidencia de carga en [registro de entrega](superpowers/plans/2026-10-25-collection-board-delivery.md).
+Preferencias visibles por ahora en el simulador; las nuevas
 vistas de firmware siguen pendientes de aceptacion fisica, no de compilacion.
 
 ## Entrega F1/F2 Cargada En Placa

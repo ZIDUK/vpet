@@ -59,17 +59,18 @@ separa funciones actuales, criterios aprobados y ampliaciones por implementar.
   conservados al evolucionar y guardar; migracion de partida/reserva, sin
   nueva interfaz de perfil. [Potencial por ADN](docs/growth-integration.md)
   con stats hasta 320 y EV por etapa 84/168/252. Usuario acepta legibilidad de Status.
-- Revision local aun sin flash: [coleccion, aprendizaje y breeding](docs/collection-learning-breeding.md),
+- Firmware cargado el 2026-10-25: [coleccion, aprendizaje y breeding](docs/collection-learning-breeding.md),
   cuatro plazas con huevos incluidos, mochila compartida y fundador confirmado.
   No equivale a cuatro paquetes graficos ni a recibir premios de terceros.
+  Arranque, BLE y digests comprobados; aceptacion de los nuevos flujos pendiente.
 - WiFi queda deshabilitado y fuera de la interfaz. P2P, rivales guardados,
   instalacion USB y TinyML siguen pendientes, no funciones disponibles en placa.
 - Arquitectura OO existente con dependencias concretas de Firemon aun por
   extraer en el adaptador de arte original. F1 ya resuelve definiciones,
   Motion y vistas por metadatos localmente; no es un instalador en placa.
   [Contrato y presupuesto](docs/content-definitions.md). Paquetes plug and play, nuevas mascotas de premio como huevos,
-  roster y breeding interno son requisitos, no funciones implementadas;
-  la capacidad de mascotas/huevos sigue por definir. [Direccion tecnica](docs/content-packages.md).
+  siguen pendientes de instalador. La coleccion local ya admite cuatro individuos,
+  huevos incluidos, y breeding interno. [Direccion tecnica](docs/content-packages.md).
 - Intro de arranque en la T-Display: logo `vPET`, llama, pet y estado `READY`,
   con una duracion aproximada de 2.2 segundos. El simulador reproduce la misma
   secuencia aproximada, con texto FIREMON en lugar del sprite final.

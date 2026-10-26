@@ -107,3 +107,14 @@ Pendiente fuera de la verificacion host: respaldo/restauracion completo de
 LittleFS con coleccion, autorizacion y carga, aceptacion visual, cortes reales,
 pico heap/pila, latencia de guardado y sesiones largas con BLE. No se accedio
 a USB ni se flasheo esta revision. No se publico el codigo funcional.
+
+## Entrega Posterior Autorizada
+
+El usuario solicito commit, push y flash. Codigo funcional publicado como
+`df96305` y firmware cargado el 2026-10-25, conservando LittleFS y NVS.
+La primera carga incumplio el margen de heap; la correccion reserva los diez
+iconos Training bajo demanda y los libera al invalidar Panels, sin reducir
+colores, cache ni cuadros. RAM estatica 52228; segunda carga aceptada por los
+controles de memoria. Las restricciones "no flash" y los pendientes anteriores
+describen la fase de implementacion, no esta entrega posterior. Evidencia,
+limites y pruebas finales en [registro de carga](2026-10-25-collection-board-delivery.md).

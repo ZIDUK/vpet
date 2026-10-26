@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <memory>
 
 class TFT_eSprite;
 
@@ -15,6 +16,7 @@ struct AssetStatus {
 class AssetStore {
 public:
     AssetStatus begin();
+    void releaseTrainingCache() { iconCache_.reset(); }
     bool drawFrame(
         TFT_eSprite& canvas,
         const char* path,
@@ -53,9 +55,10 @@ private:
         uint8_t width = 0, height = 0;
         uint32_t age = 0;
     };
-    // Training draws ten static icons per frame. Keep their decoded pixels
-    // separate from animated palettes so the 68px portrait cannot evict them.
-    CachedIcon iconCache_[10]{};
+    // Keep all ten decoded icons while Training is active, not during breeding
+    // or Home. Animated palettes cannot evict this separate cache.
+    static constexpr size_t kIconCacheCount = 10;
+    std::unique_ptr<CachedIcon[]> iconCache_;
     struct CachedPalette {
         char path[64]{};
         uint16_t width = 0;

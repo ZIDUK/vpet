@@ -83,6 +83,7 @@ void Panels::drawStorageError(const char* language) {
 }
 
 void Panels::invalidate() {
+    assets_.releaseTrainingCache();
     sceneKind_ = Scene::None;
     lastPanel_ = PanelId::Home;
     lastSpanish_ = true;

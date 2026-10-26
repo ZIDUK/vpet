@@ -1,9 +1,9 @@
 # Coleccion, Experiencia Y Reproduccion
 
-Revision local: 2026-10-25. Contrato implementado en esta rama, no desplegado
-en placa. Ver [diseno aprobado](superpowers/specs/2026-10-25-collection-learning-breeding-design.md)
+Revision: 2026-10-25. Firmware cargado y arranque verificado; nuevos flujos
+pendientes de aceptacion fisica. Ver [diseno aprobado](superpowers/specs/2026-10-25-collection-learning-breeding-design.md)
 y [plan y evidencia](superpowers/plans/2026-10-25-collection-learning-breeding.md).
-La ultima entrega fisica sigue siendo F1/F2; no confundir compilar con flashear.
+Ver [registro de carga y limites](superpowers/plans/2026-10-25-collection-board-delivery.md).
 
 ## Coleccion E Inventario
 

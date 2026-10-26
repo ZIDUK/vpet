@@ -1,6 +1,6 @@
 # Guia De Funciones Del Producto
 
-## Ampliacion Local 2026-10-25
+## Ampliacion 2026-10-25
 
 Opciones incorpora Coleccion: cuatro plazas totales con huevos incluidos,
 un individuo activo, mochila compartida y confirmaciones para migrar,
@@ -9,13 +9,14 @@ El simulador incluye Preferencias aprendidas por individuo y herencia
 conductual moderada. [Reglas y guion de video](collection-learning-breeding.md).
 El firmware tambien registra experiencias y usa AUTO aprendido despues de
 activar Coleccion; la consulta de Preferencias aun es solo del simulador.
-Esta ampliacion aun no esta flasheada; el resto de esta guia conserva su
-corte anterior y no debe usarse como certificacion de la nueva entrega.
+Esta ampliacion ya esta flasheada, con arranque, digests y BLE comprobados;
+la aceptacion visual y las sesiones prolongadas siguen pendientes. Ver
+[registro de entrega](superpowers/plans/2026-10-25-collection-board-delivery.md).
 
-Corte documental: 2026-10-24. Borrador de manual para la T-Display 240x135,
+Corte documental: 2026-10-25. Borrador de manual para la T-Display 240x135,
 basado en el codigo y los contratos actuales; no es una certificacion de
 lanzamiento. Base versionada inspeccionada: `f733c60`, mas la ficha evolutiva
-implementada localmente despues, F1 y F2a/F2b; aun no cambia el firmware cargado.
+implementada despues, F1/F2 y la entrega de coleccion/aprendizaje.
 El [estado vigente](project-status.md) y el
 [roadmap](superpowers/plans/2026-10-11-delivery-roadmap.md) separan
 implementacion, carga USB y aceptacion fisica. Pico es una plataforma legacy.
@@ -24,8 +25,8 @@ implementacion, carga USB y aceptacion fisica. Pico es una plataforma legacy.
 
 El [perfil individual F2a](individual-profile.md) ya implementado localmente
 guarda ID, sexo y padres desde huevo, y los conserva al evolucionar.
-No agrega una opcion, indicador visible de sexo ni breeding todavia.
-No anunciar esta migracion como disponible en la placa antes de desplegarla.
+El perfil no agrega ventajas de combate por sexo. La entrega posterior
+incorpora Coleccion y breeding local; no confundirlo con enlace entre boards.
 
 - Izquierdo corto: NEXT. Derecho corto: ACTION.
 - Izquierdo mantenido dos segundos: BACK. En Opciones se sale seleccionando
@@ -50,8 +51,8 @@ usar los indices del menu Pico para describir esta barra.
 | Arena / espadas | Combatir contra el rival interno con tecnicas equipadas y bolsa | La bolsa NO pausa actualmente el combate. Resultados decisivos guardados contribuyen a evolucion; abrir o retirarse no cuenta | [Arena y evolucion](superpowers/plans/2026-10-18-arena-evolution.md), [objetos](adopted-items.md) |
 | Descanso / foco | Apagar o encender luz; volver | Apagar inicia descanso, encender lo interrumpe. Abrir Rest no lo inicia. No contiene Backup ni Cold | [Descanso](sleep-routine.md), [Rest](rest-and-board-validation.md) |
 | Mochila / bolsa | Consultar existencias y usar objetos permitidos | Los BAT se usan en Arena; sin efecto util, dormido o sin stock no se consumen. Manual/Guia se gastan al completar entrenamiento valido | [Catalogo activo](adopted-items.md), [compatibilidad](items-and-rewards.md) |
-| Evolucion / libro | Consultar arbol y progreso hacia la siguiente evolucion | Ficha aprobada e implementada localmente: tiempo restante, requisitos actuales/objetivos y paginas con NEXT. ACTION/BACK vuelve al arbol. Aun no cargada en placa | [Detalle](evolution-progress.md) |
-| Opciones / engrane | Bluetooth, idioma, sonido, guardar/cargar, fecha/hora, EVOLVE, pausar crianza y volver | EVOLVE fuerza etapas para desarrollo; no demuestra progreso ganado. Pausar crianza no es dormir | Seccion siguiente y [conectividad](connectivity.md) |
+| Evolucion / libro | Consultar arbol y progreso hacia la siguiente evolucion | Ficha cargada con F1/F2: tiempo restante, requisitos actuales/objetivos y paginas con NEXT. ACTION/BACK vuelve al arbol; aceptacion especifica pendiente | [Detalle](evolution-progress.md) |
+| Opciones / engrane | Bluetooth, idioma, sonido, guardar/cargar, fecha/hora, EVOLVE, pausar crianza, Coleccion y volver | EVOLVE de desarrollo queda bloqueado al activar Coleccion. Pausar crianza no es dormir | Seccion siguiente y [conectividad](connectivity.md) |
 
 ## Opciones Del Engrane
 
@@ -63,8 +64,9 @@ usar los indices del menu Pico para describir esta barra.
 | Guardar | Solicita guardar el estado actual | No crea una copia exportable para el usuario |
 | Cargar | Lee la partida persistida | No confundir con reiniciar vida ni con importar otra mascota |
 | Fecha / Hora | Ajusta el calendario del juego | Tras perder el reloj sin alimentacion puede requerir ajuste; no hay RTC respaldado |
-| EVOLVE | Fuerza la siguiente forma; en la final puede iniciar otra vida | Herramienta de desarrollo que debe revisarse antes del lanzamiento; no usar para aparentar evolucion automatica en el video |
+| EVOLVE | En modo legacy fuerza formas para desarrollo; bloqueado con Coleccion activa | No usar para aparentar evolucion automatica ni reiniciar individuos de la coleccion |
 | Pausar crianza | Congela crianza y avance del descanso hasta reanudar | No recupera energia ni reemplaza una siesta |
+| Coleccion | Migrar con confirmacion, consultar cuatro plazas, crear fundador, activar mascota y cruzar adultos aptos | Un huevo ocupa una plaza; no instala paquetes, no regala objetos y congela individuos inactivos |
 | Volver | Sale de Opciones | Es la salida de este menu, no el hold BACK |
 
 ## Como Leer Las Senales
@@ -109,7 +111,8 @@ recuperacion y reinicio sigue abierta. [Reglas completas](sleep-routine.md).
   revision local F2b permite 84/168/252 EV por atributo en Firemon/Flamemon/
   Dragfiremon; cada gen define su techo visible, ya sin saturacion universal
   en 99. Los EV legacy superiores se conservan. [Reglas](growth-integration.md).
-  Esta revision aun no se ha cargado/aceptado en la placa.
+  Cargada con F1/F2; Status aceptado por el usuario. El balance completo
+  durante una vida real sigue pendiente de comprobar.
 - La evolucion normal requiere edad en la etapa y condiciones reales.
   Firemon pide 24 h, hambre/energia/animo >=55, salud >=75 y peso 8..14
   en firmware. Flamemon pide 36 h, 15 resultados decisivos en esa forma y
@@ -126,16 +129,16 @@ de usarlos como contrato publico, sin cambiar reglas al editar el manual.
 
 ## Lo Que Todavia No Se Debe Anunciar Como Disponible
 
-- Sexo, breeding/incubadora, enlaces de juego entre boards, rivales guardados,
-  limites variables por ADN y aprendizaje general: [programa propuesto](superpowers/plans/2026-10-23-social-genetics-learning-program.md), no implementado.
+- Enlaces de juego entre boards y rivales guardados siguen pendientes.
+  Sexo, potencial por ADN, breeding local y aprendizaje acotado ya existen;
+  no equivalen a inteligencia general ni a aprendizaje TinyML.
 - TinyML, app movil e instalacion de paquetes de comunidad: no disponibles.
 - Otra mascota de premio debe nacer como huevo con su propia vida, no cambiar
-  la apariencia del pet actual. Roster, capacidad de mascotas/huevos y breeding
-  interno son requisitos nuevos, aun sin implementar; no anunciar un maximo.
+  la apariencia del pet actual. El instalador y los premios externos siguen
+  pendientes; la coleccion local admite cuatro individuos contando huevos.
   [Arquitectura](architecture.md), [paquetes y huevos](content-packages.md).
 - Combate mas largo o pausado al abrir bolsa: sugerencia, no comportamiento actual.
-- Nueva ficha de Evolucion: aprobada e implementada localmente, todavia sin
-  carga ni aceptacion fisica de esta revision.
+- Nueva ficha de Evolucion: cargada; aceptacion fisica especifica pendiente.
 - Funcionamiento sin fallos durante noches/sesiones prolongadas, reconexion
   BLE sostenida o ausencia de duplicados bajo cortes reales: no certificados.
 

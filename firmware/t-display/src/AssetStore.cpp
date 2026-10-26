@@ -2,11 +2,12 @@
 
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
+#include <new>
 
 namespace vpet {
 
 AssetStatus AssetStore::begin() {
-    for (auto& entry : iconCache_) entry.path[0] = '\0';
+    releaseTrainingCache();
     for (auto& entry : paletteCache_) entry.path[0] = '\0';
     cacheAge_ = 0;
     AssetStatus status;
@@ -55,9 +56,10 @@ bool AssetStore::drawFrame(
 ) {
     if (visibleTop) *visibleTop = -1;
     const bool plainIcon = !flipHorizontal && tint < 0 && minLuma == 0 &&
-        strncmp(path, "/training/", 10) == 0 && strlen(path) < sizeof(iconCache_[0].path);
-    if (plainIcon) {
-        for (auto& entry : iconCache_) {
+        strncmp(path, "/training/", 10) == 0 && strlen(path) < sizeof(CachedIcon::path);
+    if (plainIcon && iconCache_) {
+        for (size_t i = 0; i < kIconCacheCount; ++i) {
+            auto& entry = iconCache_[i];
             if (!entry.path[0] || strcmp(entry.path, path) != 0) continue;
             entry.age = ++cacheAge_;
             for (uint16_t row = 0; row < entry.height; ++row) {
@@ -156,8 +158,12 @@ bool AssetStore::drawFrame(
 
     CachedIcon* icon = nullptr;
     if (plainIcon && frameCount == 1 && width <= 16 && height <= 16) {
+        if (!iconCache_) iconCache_.reset(new (std::nothrow) CachedIcon[kIconCacheCount]);
+    }
+    if (plainIcon && frameCount == 1 && width <= 16 && height <= 16 && iconCache_) {
         icon = &iconCache_[0];
-        for (auto& entry : iconCache_) {
+        for (size_t i = 0; i < kIconCacheCount; ++i) {
+            auto& entry = iconCache_[i];
             if (!entry.path[0]) { icon = &entry; break; }
             if (entry.age < icon->age) icon = &entry;
         }

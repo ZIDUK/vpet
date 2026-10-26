@@ -59,7 +59,14 @@ int main(int argc, char** argv) {
     const size_t beforeReload=assetOpens;
     assert(store.drawFrame(canvas,"/training/icon1.vpa",0,0,0));
     assert(assetOpens==beforeReload+1);
-    assert(sizeof(vpet::AssetStore)<13000);
+    assert(sizeof(vpet::AssetStore)<7500);
+    store.releaseTrainingCache();
+    const size_t beforeReleaseReload=assetOpens;
+    assert(store.drawFrame(canvas,"/training/icon1.vpa",0,0,0));
+    assert(assetOpens==beforeReleaseReload+1);
+    const size_t beforeReleasedCacheHit=assetOpens;
+    assert(store.drawFrame(canvas,"/training/icon1.vpa",0,0,0));
+    assert(assetOpens==beforeReleasedCacheHit);
     store.begin();
     const size_t beforeReset=assetOpens;
     assert(store.drawFrame(canvas,"/training/icon1.vpa",0,0,0));

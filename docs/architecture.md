@@ -1,14 +1,15 @@
 # Arquitectura de software
 
-## Coleccion Y Experiencias: Revision Local 2026-10-25
+## Coleccion Y Experiencias: Revision 2026-10-25
 
-La entrega local agrega composicion `PetProfile`/`LearningState`, reglas de
+La entrega agrega composicion `PetProfile`/`LearningState`, reglas de
 cruce portables y coleccion de cuatro individuos con mochila compartida.
 Adaptadores separados en simulador y ESP32, snapshots por cuerpo y commits
 de coleccion en filesystem; NVS legacy se conserva. No son subclases ni
 codigo nuevo por cada skin. [Contrato, limites y estado](collection-learning-breeding.md).
-La ultima carga fisica es F1/F2 del 2026-10-24, con Status aceptado por el
-usuario; las notas inferiores de F1/F2 sin cargar son historicas.
+La ultima carga fisica es coleccion/aprendizaje del 2026-10-25, con arranque,
+digests y BLE comprobados. Status conserva el diseno aceptado de F1/F2;
+las nuevas vistas siguen pendientes de aceptacion del usuario.
 El despliegue normal de LittleFS queda bloqueado para no borrar individuos;
 solo firmware compatible hasta disponer de actualizador preservando datos.
 
@@ -40,7 +41,7 @@ Revision: 2026-10-25. F1 implementa `PetDefinition`, resolucion
 por rol/accion/contexto y tablas generadas Python/C++; integra Motion,
 Renderer y Panels sin cambiar guardado o balance. Ver
 [definiciones de contenido](content-definitions.md). F1/F2 estan cargados desde
-el 2026-10-24; no hay instalador externo. La nueva coleccion permanece local.
+el 2026-10-24; no hay instalador externo. Coleccion se cargo el 2026-10-25.
 Consulta [estado y diferencias conocidas](project-status.md),
 [guia del producto](product-guide.md) y [paquetes](content-packages.md).
 F2b integra [crecimiento por ADN](growth-integration.md): `core.growth`
@@ -163,10 +164,10 @@ con arte compartido.
 Requisito del usuario del 2026-10-23: recibir otra mascota como huevo de
 premio, criar individuos diferentes con el mismo funcionamiento del motor
 y permitir breeding interno. No es un cambio de apariencia de la mascota
-actual. Objetivo solicitado de cuatro mascotas sujeto a presupuesto;
-plazas de huevos/incubacion aun por aprobar. Inventario compartido confirmado.
-`PetDefinition` y resolver de F1 ya existen localmente; el resto de la
-implementacion siguiente necesita especificacion/aprobacion por entrega.
+actual. La revision 2026-10-25 implementa cuatro plazas incluyendo huevos,
+inventario compartido y cruce local para la linea instalada. El contrato de
+coleccion al inicio de este documento prevalece sobre los nombres propuestos
+en la tabla siguiente; instalacion y huevos de proveedores siguen pendientes.
 
 Alternativas consideradas:
 
@@ -672,7 +673,9 @@ La placa no se considera desplegada solo porque `esptool` termino sin error.
 ## Cache de iconos Training (2026-10-16)
 
 AssetStore conserva diez iconos estaticos Training de hasta 16x16 en RGB565
-con mascara de opacidad, menos de 6 KiB estaticos adicionales. La cache LRU
+con mascara de opacidad. Desde 2026-10-25 esos 5840 bytes se reservan bajo
+demanda y se liberan al invalidar Panels; no permanecen en la RAM estatica.
+Una reserva fallida usa lectura directa sin perder el dibujo. La cache LRU
 es independiente de las ocho paletas existentes, no crece con las especies
 y se invalida al montar assets. No reserva otra pantalla ni cachea atlas
 animados completos. Las lecturas usan el ancho del bitmap para aprovechar

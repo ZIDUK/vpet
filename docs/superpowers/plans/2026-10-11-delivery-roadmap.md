@@ -4,9 +4,10 @@
 
 F1/F2 ya cargados el 2026-10-24; usuario confirma legibilidad de Status.
 Coleccion de cuatro plazas, mochila compartida, breeding y aprendizaje se
-implementan localmente en [este plan](2026-10-25-collection-learning-breeding.md).
-No cargados en placa; runtime ESP32 integrado con pruebas host aprobadas,
-2003 Python, 185 nativas y compilacion final correctas. La aceptacion fisica
+implementaron en [este plan](2026-10-25-collection-learning-breeding.md).
+Firmware cargado el 2026-10-25, digests y arranque comprobados; LittleFS
+preservado. Ver [entrega y correccion de RAM](2026-10-25-collection-board-delivery.md).
+Las pruebas host y compilacion estan registradas por revision; la aceptacion fisica
 sigue abierta. [Contrato y limites](../../collection-learning-breeding.md).
 Las notas inferiores de F1/F2 pendientes de carga son historicas.
 
@@ -20,7 +21,7 @@ Esta matriz conserva la aceptacion detallada de las funciones actuales.
 
 ## Estado real de entrega
 
-F1/F2a/F2b posteriores estan implementados localmente, no cargados: definiciones,
+F1/F2a/F2b estan cargados desde 2026-10-24: definiciones,
 [perfil individual y migracion](../../individual-profile.md), crecimiento por
 ADN y stats amplios. No confundir la matriz de placa anterior con esa revision.
 
