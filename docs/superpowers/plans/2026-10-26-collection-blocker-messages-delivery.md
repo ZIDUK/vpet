@@ -47,3 +47,18 @@ Repetir Enable desde el dispositivo y leer el motivo exacto o confirmar que
 la activacion termina. No se sustituye esta prueba por un arranque correcto,
 ni se deduce que el aviso previo fuera causado por sueno. Ninguna activacion,
 fundador, cruce o cambio de mascota ejecutado por el agente.
+
+## Evidencia Posterior Del Usuario
+
+Fotos IMG_4257/4258/4259 muestran cuadricula 2/4 con Firemon M y Flamemon F,
+ficha de Flamemon activo y Home con Flamemon. Confirman acceso real a la
+coleccion/ficha y cambio visible de activo, no breeding ni incubacion.
+El aviso anterior desaparecio segun el usuario; su condicion exacta no se
+identifico en ese instante y no se atribuye retrospectivamente a una pausa.
+
+Home inmovil posterior: el usuario confirma "Pause Pet ON". Ese estado
+congela tambien fotogramas, por diseno. Se solicita poner OFF y comprobar
+la animacion; no hay cambio de firmware, reset solicitado ni escritura de
+partida por el agente. Observacion de 70.083 s con 17 entradas, heap libre
+82948/minimo 73372 y sin reinicios adicionales/fatal. La reanudacion visual
+permanece pendiente hasta confirmacion del usuario.

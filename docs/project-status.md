@@ -2,6 +2,24 @@
 
 ## Estado vigente: 2026-10-26
 
+## Coleccion Visible Confirmada; Home En Pausa
+
+El usuario aporta IMG_4257/4258/4259: cuadricula de cuatro plazas, dos
+individuos (Firemon M y Flamemon F), ficha y Flamemon activo en Home.
+Esto confirma apertura de coleccion/ficha y cambio de activo en pantalla;
+no certifica breeding, huevos nuevos, sesiones largas ni todos los reinicios.
+Las notas de aceptacion pendiente de las entregas inferiores describen el
+estado previo a estas fotos.
+
+Nuevo reporte de Home sin cambiar fotogramas: usuario confirma "Pause Pet ON".
+App::tick conserva ese comportamiento de pausa mediante motion.alignClock,
+sin avanzar los fotogramas. Se indica poner OFF sin reiniciar ni flashear;
+reanudar fisicamente la animacion sigue pendiente de confirmacion. No se
+modifica la partida ni se despausa automaticamente por el usuario.
+Observacion USB de 70.083 s: seis muestras, 17 entradas, heap libre estable
+82948/minimo 73372, sin reinicios adicionales ni fatal, BLE=0. No demuestra
+por si sola animacion. Evidencia: `out/home-pause-verification/observation.json`.
+
 ## Coleccion: Motivo Del Bloqueo Cargado
 
 El usuario reporta "Not Available" tras la correccion de pila. En la ruta de

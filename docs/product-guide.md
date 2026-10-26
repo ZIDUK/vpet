@@ -78,8 +78,13 @@ usar los indices del menu Pico para describir esta barra.
 | Cargar | Lee la partida persistida | No confundir con reiniciar vida ni con importar otra mascota |
 | Fecha / Hora | Ajusta el calendario del juego | Tras perder el reloj sin alimentacion puede requerir ajuste; no hay RTC respaldado |
 | EVOLVE | En modo legacy fuerza formas para desarrollo; bloqueado con Coleccion activa | No usar para aparentar evolucion automatica ni reiniciar individuos de la coleccion |
-| Pausar crianza | Congela crianza y avance del descanso hasta reanudar | No recupera energia ni reemplaza una siesta |
+| Pausar crianza | Congela crianza, fotogramas/movimiento y avance del descanso hasta reanudar | No recupera energia ni reemplaza una siesta; poner OFF para reanudar |
 | Coleccion | Migrar con confirmacion, consultar cuatro plazas, crear fundador, activar mascota y cruzar adultos aptos | Un huevo ocupa una plaza; no instala paquetes, no regala objetos y congela individuos inactivos |
+
+La pausa es parte del estado de cada mascota y se conserva al guardarla o
+activarla desde Coleccion. Ver un vPet inmovil en Home con "Pause Pet ON"
+no significa que la placa este bloqueada. Opciones -> Pause Pet -> OFF
+reanuda su crianza y animacion; no requiere reinicio ni nueva carga.
 | Volver | Sale de Opciones | Es la salida de este menu, no el hold BACK |
 
 ## Como Leer Las Senales
