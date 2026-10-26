@@ -1,7 +1,7 @@
 # Alimentacion Permanece En FEED: Diagnostico
 
 Fecha: 2026-10-26. Estado: consumo capturado; salto de animacion reproducido
-y corregido, firmware cargado y arranque verificado; aceptacion visual pendiente.
+y corregido, firmware cargado y arranque verificado; MEAT aceptado visualmente.
 
 ## Evidencia Del Usuario
 
@@ -253,6 +253,43 @@ informe de respaldo. La lectura USB confirma arranque, no TFT ni BLE.
 
 Se solicita al usuario probar MEAT una vez, solo despierto, sin pausa y con
 saciedad menor de 100, esperando el guardado. Si esta lleno, no repetir
-comida para forzar la prueba. Aceptacion visual de la animacion pendiente;
+comida para forzar la prueba. En ese momento la aceptacion visual estaba pendiente;
 el agente no alimenta, cambia mascota ni crea huevos. Puerto cerrado tras
 leer VPET_READY; no se deja un monitor aparentemente activo.
+
+## Aceptacion Visual Del Usuario
+
+El 2026-10-26 el usuario responde "Si, aparece la animacion completa" a la
+comprobacion de FEED -> MEAT -> ACTION, con pausa OFF, despierto y saciedad
+menor de 100. Queda aceptada la presentacion completa de Eat en la placa
+con firmware 81cee4b; se cierra el fallo reportado de animacion de MEAT.
+La evidencia visual es la confirmacion del usuario, no una nueva captura
+USB ni una imagen tomada por el agente. No se ejecutan mas acciones en la
+placa. PROTEIN sigue cubierto por pruebas locales, no por esta aceptacion
+fisica; BLE y otros recorridos de Coleccion no se validan aqui.
+El guardado bloqueante de varios segundos sigue pendiente de optimizar.
+
+## Siguiente Problema: Respuesta Inmediata Y Persistencia
+
+Tras aceptar el clip completo, el usuario cuestiona la espera previa y
+propone guardar en una tarea de fondo. Se confirma en codigo que App espera
+persistActive antes de iniciar Eat; CollectionPanel::save puede guardar
+primero pendingElapsed mediante flush y despues saveActive. CollectionStore
+valida/reconstruye el registro completo y el repositorio sincroniza, verifica
+y copia la generacion anterior antes del rename. La captura mide el tick
+completo, no atribuye los 5 s a una fase especifica sin instrumentacion nueva.
+
+Recomendacion aun NO implementada: presentar Eat inmediatamente, usar una
+cola acotada y un unico escritor con snapshots inmutables y confirmacion de
+commit, agrupar tiempo/estado compatibles y mantener atomicas las operaciones
+de inventario, huevos y recompensas. No compartir PetState mutable con el
+worker ni declarar guardado un cambio solo encolado. Una perdida de energia
+antes del commit puede perder la ultima accion pendiente; hay que definir
+esa ventana y probar recuperacion, errores, duplicaciones y memoria.
+
+Una tarea FreeRTOS no garantiza fluidez por si sola: assets y partidas usan
+LittleFS y la flash principal puede bloquear accesos/cache durante sus
+operaciones. Medir fases y precargar los fotogramas necesarios con presupuesto
+de RAM antes de fijar el diseno. Sin nuevos cambios de firmware ni flasheo
+en esta consulta; la aceptacion del clip no cierra esta latencia.
+Referencia: [restricciones de concurrencia de flash en ESP32](https://docs.espressif.com/projects/esp-idf/en/v4.4.8/esp32/api-reference/storage/spi_flash_concurrency.html).

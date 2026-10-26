@@ -2,11 +2,12 @@
 
 ## Estado vigente: 2026-10-26
 
-## Alimentacion: Correccion De Animacion Cargada; Validacion Visual Pendiente
+## Alimentacion: Animacion De MEAT Validada En Placa
 
 Captura real 20261026-132239: ACTION recibido en Feeding, result=0 y
-committed=1; saciedad 96 -> 100, energia 18 y animo 0. El usuario sigue
-percibiendo FEED. Se observa un ciclo de 5094923 us; la animacion usaba
+committed=1; saciedad 96 -> 100, energia 18 y animo 0. En ese intento el
+usuario seguia percibiendo FEED. Se observa un ciclo de 5094923 us;
+la animacion usaba
 el timestamp anterior al guardado y podia agotarse en la espera. Regresion
 RED con demora de 5000 ms reproduce el salto; GREEN al iniciar Eat con
 el tiempo compensado desde el inicio de tick, sin alterar efectos de comida.
@@ -18,9 +19,11 @@ Build preflash repetido (3.470 s), prueba focalizada (5.66 s) y hashes de
 fuentes/binario verificados. Respaldo actual en out/board-backups/
 feeding-animation-fix-20261026-135552/. App cargada solo en 0x10000;
 hashes de app, LittleFS, NVS, bootloader/particiones verificados antes del
-reinicio. VPET_READY: heap 82948/minimo 73328, manifest 1. Falta aceptacion
-visual de Eat; no se ejecuta comida por el usuario. El guardado de varios
-segundos no se optimiza en esta correccion. Detalle en el registro abajo.
+reinicio. VPET_READY: heap 82948/minimo 73328, manifest 1. El usuario confirma
+el 2026-10-26: "Si, aparece la animacion completa" al probar MEAT. Se cierra
+el salto de Eat para esa comprobacion fisica; no acredita PROTEIN ni BLE.
+El agente no ejecuta comida por el usuario. El guardado de varios segundos
+no se optimiza en esta correccion. Detalle en el registro abajo.
 
 ## Alimentacion: Diagnostico Serie Cargado
 
