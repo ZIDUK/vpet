@@ -57,6 +57,9 @@ public:
     SpeciesId backupSpecies() const;
     bool swapOrPark(PetState& pet, Settings& settings);
     bool migratedDna() const { return migratedDna_; }
+    // Explicit migration only: recover journals, then export strict schema-3
+    // snapshots without assigning profiles, normalizing or replacing originals.
+    bool exportLegacySnapshots(std::string& active, std::string& backup, bool& backupPresent);
 
 private:
     bool recoverAll();

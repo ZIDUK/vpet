@@ -18,10 +18,10 @@ def test_pause_is_reachable_before_back_without_renumbering_old_options():
     assert getattr(options,'OPTION_PAUSE',None)==9
     session=OptionsSession()
     seen=[]
-    for _ in range(10):
+    for _ in range(11):
         seen.append(session.index)
         session.next()
-    assert seen==[0,1,2,3,4,5,6,7,9,8]
+    assert seen==[0,1,2,3,4,5,6,7,9,10,8]
     assert session.index==0
 
 

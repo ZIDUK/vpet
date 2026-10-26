@@ -1,6 +1,24 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-24
+## Estado vigente: 2026-10-25
+
+## Coleccion, Aprendizaje Y Breeding: Entrega Local En Verificacion
+
+Cuatro plazas contando huevos, mochila compartida sin sumar la reserva,
+fundador local confirmado y cruce determinista con mutacion acotada. Core
+portable Python/C++, generacion de recibos, repositorio con fallos inyectados
+y UI de coleccion local. Simulador registra experiencias y consulta politica
+en AUTO; ESP32 conecta los mismos eventos, herencia y AUTO tras activar
+Coleccion. Politicas inmutables con GC que conserva ambas generaciones.
+Verificacion final: 2003 Python aprobadas (304.15 s), 185 nativas (1.37 s)
+y ESP32 compilado (18.15 s). RAM estatica 58068, app 1098693 bytes.
+Advertencias existentes de Pillow/pytest y TOUCH_CS; sin fallos.
+Sin flash de esta revision ni nueva aceptacion fisica. Creator concurrente
+se conserva y sigue fuera de esta entrega. Ver [contrato y guion](collection-learning-breeding.md)
+y [plan verificable](superpowers/plans/2026-10-25-collection-learning-breeding.md).
+Evidencia local: `out/collection-verification/`; codigo funcional sin publicar
+en esta revision. Preferencias visibles por ahora en el simulador; las nuevas
+vistas de firmware siguen pendientes de aceptacion fisica, no de compilacion.
 
 ## Entrega F1/F2 Cargada En Placa
 

@@ -372,6 +372,29 @@ bool SettingsStore::hasBackup() const {
     return backup_ != nullptr && backup_->getInt("schema", 0) != 0;
 }
 
+bool SettingsStore::exportLegacySnapshots(std::string& active, std::string& backup, bool& backupPresent) {
+    if (!recoverAll()) return false;
+    if (backup_ && !SettingsStore(*backup_).recoverPending()) return false;
+    const auto capture = [](KeyValueStore& source, std::string& result) {
+        storage::SnapshotStore snapshot;
+        for (const auto key : storage::kSnapshotKeys)
+            snapshot.ints[key] = source.getInt(key, -1);
+        for (const auto key : {"techM3", "techM4"}) snapshot.ints[key] = source.getInt(key, 0);
+        for (const auto key : {"language", "adoptBag", "expState", "sleepState", "petProfile"})
+            snapshot.strings[key] = source.getString(key, "");
+        const auto encoded = storage::encodeSnapshot(snapshot);
+        storage::SnapshotStore checked;
+        if (encoded.empty() || !storage::decodeSnapshot(encoded, checked)) return false;
+        result = encoded;
+        return true;
+    };
+    std::string nextActive, nextBackup;
+    const bool present = backup_ && backup_->getInt("schema", 0) != 0;
+    if (!capture(store_, nextActive) || (present && !capture(*backup_, nextBackup))) return false;
+    active = std::move(nextActive); backup = std::move(nextBackup); backupPresent = present;
+    return true;
+}
+
 SpeciesId SettingsStore::backupSpecies() const {
     if (!hasBackup()) return SpeciesId::Egg;
     return static_cast<SpeciesId>(backup_->getInt("species", static_cast<int>(SpeciesId::Egg)));

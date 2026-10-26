@@ -35,6 +35,11 @@ class ExplorationSession:
         if not result:
             self.message = "blocked"
             return
+        if claim:
+            route = ("patio", "jornada", "noche").index(result["route"])
+            score = 50 if result["good"] else -50
+            score += min(30, result["ev"] * 10 + result["mastery"] * 5)
+            self.pet.learning.record(self.pet.learning.next_sequence, 2, 0, route, max(-100, min(100, score)))
         try:
             saved = self.save(self.pet)
         except (OSError, ValueError):

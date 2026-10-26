@@ -187,4 +187,5 @@ def test_option_icons_match_each_setting():
         "Evolve",
         "Back",
         "Rest",
+        "Pedia",
     )

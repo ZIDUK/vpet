@@ -262,9 +262,9 @@ def draw_options(target, pet, session, current_datetime):
     """Draw the main options list."""
     spanish = pet.language == "ES"
     labels = (
-        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER", "PAUSAR CRIANZA")
+        ("BLE", "IDIOMA", "SONIDO", "GUARDAR", "CARGAR", "FECHA", "HORA", "EVO", "VOLVER", "PAUSAR CRIANZA", "COLECCION")
         if spanish
-        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK", "PAUSE PET")
+        else ("BLE", "LANGUAGE", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVOLVE", "BACK", "PAUSE PET", "COLLECTION")
     )
     _panel(target, "OPTIONS")
     year, month, day, hour, minute = current_datetime
@@ -279,8 +279,11 @@ def draw_options(target, pet, session, current_datetime):
         "",
         "",
         ("SI" if pet.cold else "NO") if spanish else ("ON" if pet.cold else "OFF"),
+        "",
     )
-    for position,index in enumerate(OPTION_ORDER):
+    selected_position = OPTION_ORDER.index(session.index)
+    start = max(0, min(selected_position - 4, len(OPTION_ORDER) - 10))
+    for position,index in enumerate(OPTION_ORDER[start:start + 10]):
         label=labels[index]
         y = 16 + position * 9
         if index == session.index:

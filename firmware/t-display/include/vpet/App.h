@@ -15,13 +15,15 @@
 #include "vpet/PracticeSession.h"
 #include "vpet/TrainingSession.h"
 #include "vpet/ExplorationSession.h"
+#include "vpet/CollectionPanel.h"
 
 namespace vpet {
 
 class App {
 public:
     using WallClock = uint64_t (*)();
-    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock = nullptr);
+    App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth,
+        WallClock wallClock = nullptr, CollectionPanel* collection = nullptr);
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
     bool ready() const { return storageReady_ && !savePending_; }
@@ -36,6 +38,11 @@ private:
     void toggleSleep(uint32_t nowMs);
     bool saveState();
     bool settleStorage();
+    bool persistActive();
+    bool persistExperience(const RuntimeExperience* events, size_t count);
+    static int autoChoice(void* context, const practice::Fighter& fighter, int fallback);
+    void activeChanged(uint32_t nowMs);
+    CollectionSwitchGuard collectionGuard() const;
     uint64_t calendarNow() const;
     void openExploration();
     void explorationInput(InputEvent event);
@@ -44,6 +51,7 @@ private:
     Panels& panels_;
     SettingsStore& settingsStore_;
     BleService& bluetooth_;
+    CollectionPanel* collection_;
     static constexpr uint32_t kCareTimeScale = 1;
 
     Settings settings_;

@@ -697,6 +697,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
                 ("EVO", ""),
                 ("BACK", ""),
                 (tr(pet,"options.pause"), tr(pet,"options.on" if getattr(pet,"cold",False) else "options.off")),
+                ("COLECCION" if spanish else "COLLECTION", ""),
             )
             current = options_session.index % OPTION_COUNT
             start = option_window_start(OPTION_ORDER.index(current))

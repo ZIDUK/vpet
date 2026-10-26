@@ -42,7 +42,7 @@ int main(int argc,char** argv) {
         key(InputEvent::Action);
         assert(storage.load(p,settings)==LoadResult::Loaded && !p.cold());
         assert(p.careMistakes()==0 && p.callReason()==CallReason::Hunger);
-        key(InputEvent::Next); key(InputEvent::Action); // Back after Pause.
+        key(InputEvent::Next); key(InputEvent::Next); key(InputEvent::Action); // Collection, then Back.
         for(int i=0;i<6;++i) key(InputEvent::Next);
         key(InputEvent::Action); key(InputEvent::Next); key(InputEvent::Action);
         assert(storage.load(p,settings)==LoadResult::Loaded && p.species()==SpeciesId::Rookie && !p.sleep.asleep);

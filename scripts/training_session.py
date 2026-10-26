@@ -323,7 +323,7 @@ class TrainingSession:
             return True
         try:
             summary = batch_commit(self.pet, stat, self._reps_completed,
-                                       self.save)
+                                       self.save, learn=True)
         except BatchSaveError as exc:
             self.message = "NO SE GUARDO"
             self.state = STATE_ERROR

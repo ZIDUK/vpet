@@ -72,6 +72,7 @@ class Pet:
     """Holds pet state: stats, age, species, line, lifecycle state."""
 
     def __init__(self, species=DEFAULT_SPECIES, line=DEFAULT_LINE, state=None):
+        self._learning = None
         self.profile = PetProfile()
         self.species = species      # current form: "sproutspore", "sprouto", "thornback", "hydravine"
         self.line = line            # evolution line: "sprout_line"
@@ -386,7 +387,7 @@ class Pet:
             return "started"
         return "none"
 
-    def complete_hatch(self, next_species, entropy=None):
+    def complete_hatch(self, next_species, entropy=None, preserve_dna=False):
         """Complete the hatch: transition to LIVE with the new species."""
         self.state = STATE_LIVE
         self.species = next_species
@@ -395,14 +396,26 @@ class Pet:
             self.stats[stat] = min(100, self.stats[stat] + 15)
         self.hatch_started_at = None
         self.reset_after_evolution()
-        if not self.has_dna():
+        if not self.has_dna() and not preserve_dna:
             if entropy is None:
                 entropy = int(time.monotonic() * 1000) & 0xFFFFFFFF
             self.roll_dna(entropy)
 
+    @property
+    def learning(self):
+        # The preserved Pico path does not import desktop codecs unless enabled.
+        if self._learning is None:
+            from core.learning import LearningState
+            self._learning = LearningState()
+        return self._learning
+
+    @learning.setter
+    def learning(self, value):
+        self._learning = value
+
     def to_dict(self):
         """Serialise for save file."""
-        return {
+        data = {
             "profile": self.profile.encode(),
             "species": self.species,
             "line": self.line,
@@ -441,9 +454,16 @@ class Pet:
             "exploration": self.exploration.to_dict(),
             "sleep": self.sleep.to_dict(),
         }
+        if self._learning is not None:
+            data["learning"] = self._learning.encode()
+        return data
 
     def load_from_dict(self, d):
         profile = PetProfile.decode(d.get("profile", ""))
+        learning = None
+        if "learning" in d:
+            from core.learning import LearningState
+            learning = LearningState.decode(d["learning"])
         from core.adopted_items import load_stock
         self.adopted_inventory, self.item_reward_cursor = load_stock(
             d.get('adopted_items'), missing='adopted_items' not in d)
@@ -451,6 +471,7 @@ class Pet:
         self.exploration = Exploration(d.get("exploration"))
         self.sleep = SleepRoutine(d.get("sleep"))
         self.profile = profile
+        self._learning = learning
         self.cold = d.get("cold",False) is True
         self.species = d.get("species", self.species)
         self.line = d.get("line", self.line)

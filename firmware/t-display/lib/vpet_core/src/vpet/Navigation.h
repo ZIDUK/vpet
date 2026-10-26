@@ -19,6 +19,7 @@ enum class PanelId : uint8_t {
     Options,
     DateTime,
     Exploration,
+    Collection,
 };
 
 struct EvolutionNode {

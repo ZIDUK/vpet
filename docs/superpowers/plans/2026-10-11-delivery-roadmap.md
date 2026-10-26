@@ -1,5 +1,15 @@
 # Roadmap vigente de vPet
 
+## Actualizacion 2026-10-25
+
+F1/F2 ya cargados el 2026-10-24; usuario confirma legibilidad de Status.
+Coleccion de cuatro plazas, mochila compartida, breeding y aprendizaje se
+implementan localmente en [este plan](2026-10-25-collection-learning-breeding.md).
+No cargados en placa; runtime ESP32 integrado con pruebas host aprobadas,
+2003 Python, 185 nativas y compilacion final correctas. La aceptacion fisica
+sigue abierta. [Contrato y limites](../../collection-learning-breeding.md).
+Las notas inferiores de F1/F2 pendientes de carga son historicas.
+
 Actualizado: 2026-10-24. Prioridad: cerrar calidad y aceptacion de T-Display
 antes de ampliar el juego. El [roadmap anterior](2026-10-11-delivery-roadmap-history-through-2026-10-16.md)
 se conserva como historia; sus cifras y checkboxes no son el backlog actual.

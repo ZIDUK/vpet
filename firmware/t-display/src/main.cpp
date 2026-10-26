@@ -11,6 +11,9 @@
 #include "vpet/NvsKeyValueStore.h"
 #include "vpet/SettingsStore.h"
 #include "vpet/ProfileRandom.h"
+#include "vpet/CollectionPanel.h"
+#include "vpet/LittleFsCollectionRepository.h"
+#include "vpet/LittleFsLearningRepository.h"
 
 namespace {
 TFT_eSPI display;
@@ -27,8 +30,14 @@ vpet::PetProfile newProfile() {
     return profileRandom.next();
 }
 vpet::SettingsStore settingsStore(stateStore, &backupStore, newProfile);
+uint32_t collectionSeed() { return esp_random(); }
+vpet::LittleFsCollectionRepository collectionRepository;
+vpet::CollectionStore collectionStore(collectionRepository);
+vpet::LittleFsLearningRepository learningRepository;
+vpet::LearningRuntime learningRuntime(learningRepository);
+vpet::CollectionPanel collectionPanel(collectionStore, settingsStore, newProfile, collectionSeed, &framebuffer, &assets, &learningRuntime);
 vpet::BleService bluetooth;
-vpet::App app(renderer, panels, settingsStore, bluetooth);
+vpet::App app(renderer, panels, settingsStore, bluetooth, nullptr, &collectionPanel);
 vpet::AssetStatus startupAssets;
 bool readyReported = false;
 uint32_t lastRuntimeMs=0;
@@ -149,6 +158,13 @@ void setup() {
     reportHeap("after_assets");
     startupAssets = status;
     drawBootIntro(status);
+    // An unmounted collection volume must never look like an absent collection
+    // and resume writes against the stale legacy NVS save.
+    if (!status.mounted) {
+        panels.drawStorageError("ES");
+        Serial.println("VPET_FATAL code=COLLECTION_FS_UNAVAILABLE");
+        while (true) delay(1000);
+    }
     if (!buttons.begin()) {
         Serial.println("VPET_FATAL code=INPUT_TASK_ALLOCATION");
         display.fillScreen(TFT_BLACK);

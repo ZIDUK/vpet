@@ -1,5 +1,17 @@
 # Arquitectura de software
 
+## Coleccion Y Experiencias: Revision Local 2026-10-25
+
+La entrega local agrega composicion `PetProfile`/`LearningState`, reglas de
+cruce portables y coleccion de cuatro individuos con mochila compartida.
+Adaptadores separados en simulador y ESP32, snapshots por cuerpo y commits
+de coleccion en filesystem; NVS legacy se conserva. No son subclases ni
+codigo nuevo por cada skin. [Contrato, limites y estado](collection-learning-breeding.md).
+La ultima carga fisica es F1/F2 del 2026-10-24, con Status aceptado por el
+usuario; las notas inferiores de F1/F2 sin cargar son historicas.
+El despliegue normal de LittleFS queda bloqueado para no borrar individuos;
+solo firmware compatible hasta disponer de actualizador preservando datos.
+
 ## Portal Local vPet Hub
 
 `scripts/hub_server.py` sirve `web/hub/` en loopback. El cliente consulta
@@ -16,7 +28,7 @@ publico, autenticidad, presupuesto y recuperacion transaccional.
 ## Plataforma vigente
 
 La plataforma principal es la LILYGO TTGO T-Display clasica con ESP32,
-pantalla ST7789 de 240x135 y 16 MB de flash. El firmware es C++ sobre Arduino,
+pantalla ST7789 de 240x135 y 16 MB de flash. El firmware es C++17 sobre Arduino,
 compilado con PlatformIO y renderizado con TFT_eSPI.
 
 La implementacion Pico W/CircuitPython permanece disponible como compatibilidad
@@ -24,20 +36,21 @@ legada. No define la arquitectura principal ni el formato de despliegue actual.
 
 ## Flujo de datos
 
-Revision: 2026-10-23. F1 implementa localmente `PetDefinition`, resolucion
+Revision: 2026-10-25. F1 implementa `PetDefinition`, resolucion
 por rol/accion/contexto y tablas generadas Python/C++; integra Motion,
 Renderer y Panels sin cambiar guardado o balance. Ver
-[definiciones de contenido](content-definitions.md). Sin carga a placa ni
-instalador externo. Separar esta base ejecutable del roster/Hub propuestos.
+[definiciones de contenido](content-definitions.md). F1/F2 estan cargados desde
+el 2026-10-24; no hay instalador externo. La nueva coleccion permanece local.
 Consulta [estado y diferencias conocidas](project-status.md),
 [guia del producto](product-guide.md) y [paquetes](content-packages.md).
-F2b integra localmente [crecimiento por ADN](growth-integration.md): `core.growth`
+F2b integra [crecimiento por ADN](growth-integration.md): `core.growth`
 y `vpet/Growth.h` alimentan Pet/PetState, Training, ganancias, penalizaciones,
 combate y vistas. Stats derivados uint16, EV persistido compatible y schema sin
 cambios. El [piloto](growth-pilot.md) conserva baseline legacy para comparar.
-No se ha cargado esta integracion en placa. F2a agrega localmente
+F2a agrega
 [perfil individual](individual-profile.md): identidad/sexo/padres por composicion,
-entropia inyectada y migracion de partida/reserva. Coleccion y breeding pendientes.
+entropia inyectada y migracion de partida/reserva. La coleccion, aprendizaje y
+breeding se describen en el [contrato local](collection-learning-breeding.md).
 La [vista Archify de 2026-10-05](../.archify/architecture-vpet-20261005/review-2/vpet-architecture.html)
 es una instantanea historica, no representa las entregas posteriores ni
 prueba que la arquitectura objetivo este implementada.
@@ -58,14 +71,21 @@ firmware/t-display/include/generated/catalog.h
           v
 firmware.bin + littlefs.bin
           |
-          | scripts/deploy_tdisplay.py
+          | scripts/deploy_tdisplay.py --firmware-only
           v
-ESP32 app partition + LittleFS
+ESP32 app partition (LittleFS instalado se conserva)
+
+CollectionPanel + LearningRuntime
+          |
+          | generaciones y referencias a politicas confirmadas
+          v
+LittleFS /collection/ (datos propios, no son assets generados)
 ```
 
-`make sim` consume el arte generado para T-Display. `make deploy` ejecuta el
-mismo build antes de compilar y cargar la placa. Esto mantiene paridad visual
-sin hacer de los directorios generados una fuente editable.
+`make sim` consume el arte generado para T-Display. `make deploy-firmware`
+ejecuta pruebas y build antes de cargar solo firmware compatible. Reemplazar
+`littlefs.bin` queda bloqueado: borraria los datos nuevos. Se requiere un
+actualizador de assets preservando coleccion antes de habilitar esa ruta.
 
 ## Capas
 
@@ -94,6 +114,10 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
 | `PetState` | Estadisticas, inventario gastable, acciones, descubrimientos y evolucion |
 | `PetProfile` | ID individual, sexo y referencias de padres; no rutas de assets, ADN ni experiencia |
+| `CollectionStore` | Cuatro cuerpos por separado, inventario compartido y recibos atomicos sin modificar NVS legacy |
+| `CollectionPanel` | Confirmaciones, seleccion de individuo/padres y coordinacion con App; no modifica Status |
+| `LearningState` / `LearningRuntime` | Politica portable y eventos confirmados por individuo; herencia limitada y AUTO legal |
+| Repositorios LittleFS | Generaciones, blobs inmutables y GC conservador; sin formatear ni reemplazar assets |
 | `ProfileRandom` | Adaptador ESP32: siembra mbedTLS antes de RF/ADC, genera perfiles sin activar radio |
 | `PetDefinition` | Nombres, clips, rutas y contextos; responsabilidad del resolver sin plugins |
 | `Motion` | Idle, caminar/volar, acciones y sueno; frames/intervalos/loops declarados con overrides legacy |

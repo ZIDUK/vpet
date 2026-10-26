@@ -62,6 +62,8 @@ from scripts.practice_session import PracticeSession
 from scripts.practice_renderer import render_practice
 from scripts.training_session import TrainingSession
 from scripts.training_renderer import render_training
+from scripts.collection_session import CollectionSession
+from scripts.collection_renderer import render_collection
 
 
 def parse_args():
@@ -146,6 +148,7 @@ def main():
             practice = PracticeSession(pet, services.save)
             menu_index = battle_index
     options_session = None
+    collection_session = None
     frame_number = 0
     rendered_frames = 0
     boot_started = time.monotonic() - (3 if args.practice or args.training else 0)
@@ -172,6 +175,14 @@ def main():
                 elif event.key in practice_keys:
                     # Require release even when an activity has just returned to Home.
                     continue
+                elif collection_session is not None:
+                    command = {pygame.K_n: "next", pygame.K_a: "action", pygame.K_b: "back"}.get(event.key)
+                    previous = pet.profile.pet_id
+                    if command and not collection_session.input(command):
+                        collection_session = None
+                        panel_mode = None
+                    if previous != pet.profile.pet_id:
+                        motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                 elif practice is not None or training is not None:
                     practice_keys.add(event.key)
                     command = {pygame.K_n: "next", pygame.K_a: "action", pygame.K_b: "back"}.get(event.key)
@@ -207,7 +218,8 @@ def main():
                         menu_index = (next_tdisplay_menu(pet.species, menu_index)
                                       if profile.name == "tdisplay"
                                       else (menu_index + 1) % len(menu_icons))
-                elif event.key == pygame.K_a and pet.is_live:
+                elif event.key == pygame.K_a and (pet.is_live or
+                        (profile.name == "tdisplay" and menu_index == options_index)):
                     if profile.name == "tdisplay" and pet.sleep.asleep and panel_mode is None and menu_index == rest_index:
                         panel_mode = "rest"
                         inventory_index = 0
@@ -274,7 +286,10 @@ def main():
                             motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
                     elif panel_mode == "options":
                         staying = options_session.action(pet, services)
-                        if options_session.message == "EVOLVED":
+                        if options_session.message == "COLLECTION":
+                            collection_session = CollectionSession(pet, services)
+                            panel_mode = "collection"
+                        elif options_session.message == "EVOLVED":
                             motion.start_evolution(
                                 pygame.time.get_ticks() / 1000,
                                 SPARKMON_EVOLUTION_FRAME_COUNT
@@ -322,7 +337,7 @@ def main():
                             pygame.time.get_ticks() / 1000,
                             hour=clock_hour(services.get_datetime()),
                         )
-                elif event.key == pygame.K_e and pet.is_live and not pet.exploration.away and not pet.sleep.asleep:
+                elif event.key == pygame.K_e and pet.is_live and not pet.exploration.away and not pet.sleep.asleep and services.collection is None:
                     if evolution.force(pet):
                         motion.start_evolution(
                             pygame.time.get_ticks() / 1000,
@@ -342,7 +357,7 @@ def main():
                     else:
                         panel_mode = None
                         exploration_menu = None
-                elif event.key == pygame.K_r:
+                elif event.key == pygame.K_r and services.collection is None:
                     pet = Pet()
                     pet.start_hatch()
                     motion = PetMotion(pygame.time.get_ticks() / 1000, **motion_kwargs)
@@ -367,6 +382,11 @@ def main():
             continue
 
         now_ms = pygame.time.get_ticks()
+        if profile.name == "tdisplay" and services.collection is not None:
+            if services.advance_collection(pet, sleep_elapsed_ms):
+                motion = PetMotion(now_ms / 1000, **motion_kwargs)
+            if services.is_incubating(pet):
+                pet.hatch_started_at = time.monotonic()
         if practice is not None:
             practice.tick(now_ms)
         busy = ((training is not None and training.state == "session")
@@ -375,7 +395,7 @@ def main():
             last_interaction_ms = now_ms
         elif now_ms - last_interaction_ms >= 10000:
             if practice is not None or training is not None or panel_mode is not None:
-                practice = training = options_session = exploration_menu = None
+                practice = training = options_session = exploration_menu = collection_session = None
                 panel_mode = None
                 pet.last_decay = time.monotonic()
                 motion = PetMotion(now_ms / 1000, **motion_kwargs)
@@ -428,8 +448,11 @@ def main():
             motion.last_update=motion.last_frame=now
             motion.state_until+=paused_seconds
         if not getattr(pet,'cold',False) and pet.is_hatching and pet.hatch_progress(HATCH_DURATION_SECONDS) >= 1:
-            pet.complete_hatch("baby")
-            motion = PetMotion(now, **motion_kwargs)
+            if profile.name != "tdisplay":
+                pet.complete_hatch("baby")
+                motion = PetMotion(now, **motion_kwargs)
+            elif services.complete_hatch(pet):
+                motion = PetMotion(now, **motion_kwargs)
         if not pet.exploration.away and motion.state == MOTION_IDLE and services.evolve_and_save(pet, evolution):
             motion.start_evolution(
                 now,
@@ -455,7 +478,7 @@ def main():
                     EGG_HATCH_FRAME_COUNT - 1,
                     int((elapsed - break_at) / EGG_HATCH_DURATION_SECONDS * EGG_HATCH_FRAME_COUNT),
                 )
-        frame = render_frame(
+        frame = render_collection(build_dir, collection_session) if collection_session is not None else render_frame(
             build_dir,
             pet,
             menu_index,

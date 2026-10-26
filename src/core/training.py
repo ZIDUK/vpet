@@ -294,7 +294,7 @@ def batch_apply(pet, stat, reps):
             "training_sessions_added": int(reps)}
 
 
-def batch_commit(pet, stat, reps, save):
+def batch_commit(pet, stat, reps, save, learn=False):
     """Atomic transaction: apply ``reps`` training sessions to ``pet``
     and persist through ``save`` in one step. If the save callback
     returns a falsy value, the pet is restored from a snapshot taken
@@ -308,6 +308,9 @@ def batch_commit(pet, stat, reps, save):
     summary = batch_apply(pet, stat, reps)
     if summary["reps"] == 0:
         return summary
+    if learn or getattr(pet, "_learning", None) is not None:
+        reward = max(-100, min(100, summary["ev_added"] * 10 - summary["energy_charged"]))
+        pet.learning.record(pet.learning.next_sequence, 0, 0, training_index_for(stat), reward)
     if save(pet):
         return summary
     pet.load_from_dict(snapshot)

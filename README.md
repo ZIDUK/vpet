@@ -14,7 +14,7 @@ Portal local: [vPet Hub](docs/vpet-hub.md), catalogo animado e importacion de
 definiciones F1. Arranque: `.venv-platformio/bin/python scripts/hub_server.py`.
 No instala paquetes ni modifica partidas; el transporte USB esta pendiente.
 
-Resumen actualizado el 2026-10-24. Consulta la [guia por opcion](docs/product-guide.md),
+Resumen actualizado el 2026-10-25. Consulta la [guia por opcion](docs/product-guide.md),
 el [estado y evidencia](docs/project-status.md) y el
 [roadmap vigente](docs/superpowers/plans/2026-10-11-delivery-roadmap.md).
 El [programa consolidado de entregas](docs/superpowers/plans/2026-10-23-consolidated-delivery-program.md)
@@ -35,8 +35,8 @@ separa funciones actuales, criterios aprobados y ampliaciones por implementar.
   15 batallas en esa forma y al menos 60% de victorias acumuladas).
   La placa usa scale 1; el sim usa 600. Arena aporta resultados decisivos.
   Nueva ficha de Evolucion aprobada e implementada localmente: tiempo
-  restante, requisitos actuales/objetivos y paginas con NEXT. Pendiente de
-  cargar y aceptar fisicamente. [Contrato](docs/evolution-progress.md).
+  restante, requisitos actuales/objetivos y paginas con NEXT. Incluida en F1/F2;
+  aceptacion fisica especifica pendiente. [Contrato](docs/evolution-progress.md).
 - Alimentar ofrece Carne y Proteina ilimitadas. Mochila conserva objetos legacy
   y consumibles adoptados, con stock guardado en NVS y bolsa de Arena.
 - Entrenamiento y cinco tecnicas en sim y firmware: Firemon equipa 2,
@@ -55,12 +55,15 @@ separa funciones actuales, criterios aprobados y ampliaciones por implementar.
 - NVS schema 3: ADN/EV, especie, barras, edad, stageAge, CM, call, comidas,
   entrenos, batallas, wins/losses, peso, DP, proteina, inventario e idioma.
   Schema 1 migra con ceros. El anillo de eventos de cria es solo RAM.
-- F2a local: [identidad, sexo y parentesco](docs/individual-profile.md)
+- F1/F2 cargados el 2026-10-24: [identidad, sexo y parentesco](docs/individual-profile.md)
   conservados al evolucionar y guardar; migracion de partida/reserva, sin
-  nueva interfaz ni flasheo. F2b local: [potencial por ADN](docs/growth-integration.md)
-  con stats hasta 320 y EV por etapa 84/168/252, tambien sin cargar.
-- WiFi queda deshabilitado y fuera de la interfaz. Breeding, P2P, rivales
-  guardados y TinyML siguen pendientes, no funciones disponibles en placa.
+  nueva interfaz de perfil. [Potencial por ADN](docs/growth-integration.md)
+  con stats hasta 320 y EV por etapa 84/168/252. Usuario acepta legibilidad de Status.
+- Revision local aun sin flash: [coleccion, aprendizaje y breeding](docs/collection-learning-breeding.md),
+  cuatro plazas con huevos incluidos, mochila compartida y fundador confirmado.
+  No equivale a cuatro paquetes graficos ni a recibir premios de terceros.
+- WiFi queda deshabilitado y fuera de la interfaz. P2P, rivales guardados,
+  instalacion USB y TinyML siguen pendientes, no funciones disponibles en placa.
 - Arquitectura OO existente con dependencias concretas de Firemon aun por
   extraer en el adaptador de arte original. F1 ya resuelve definiciones,
   Motion y vistas por metadatos localmente; no es un instalador en placa.
@@ -114,20 +117,24 @@ make bootstrap-pio
 | `make sim` | Genera recursos T-Display y abre el simulador 240x135 |
 | `make test` | Ejecuta las pruebas Python |
 | `make native-test` | Prueba la logica C++ portable |
-| `make firmware` | Compila el firmware ESP32 y LittleFS |
+| `make firmware` | Genera recursos y compila el firmware ESP32 |
 | `make preflight` | Detecta la placa y valida capacidad sin escribirla |
-| `make deploy` | Pruebas, build, backup, carga y diagnostico serial |
+| `make deploy-firmware` | Pruebas, build, backup critico y carga de firmware; conserva LittleFS |
+| `make deploy` | Requiere `DEPLOY_ARGS=--firmware-only`; no permite reemplazar LittleFS |
 | `make sim-pico` | Abre el simulador legado 128x128 |
 | `make deploy-pico` | Despliega la version CircuitPython conservada |
 
 Para indicar un puerto manualmente:
 
 ```bash
-make deploy PORT=/dev/cu.usbserial-57040013171
+make deploy-firmware PORT=/dev/cu.usbserial-57040013171
 ```
 
 No se ejecuta `erase_flash` durante un despliegue normal. NVS y los datos de la
-mascota se conservan.
+mascota se conservan. Los assets instalados deben ser compatibles; no usar
+`uploadfs` para actualizarlos si hay coleccion. El respaldo critico legacy no
+equivale a un respaldo completo de coleccion y politicas; ver las precauciones
+del [contrato de persistencia](docs/collection-learning-breeding.md).
 
 ## Controles
 

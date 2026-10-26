@@ -66,12 +66,15 @@ int main(int argc,char** argv) {
             const char* before=es ? (mode=="cold"?"PAUSAR CRIANZA  SI":"PAUSAR CRIANZA  NO") :
                                    (mode=="cold"?"PAUSE PET  ON":"PAUSE PET  OFF");
             assert(std::find(canvas.labels.begin(),canvas.labels.end(),before)!=canvas.labels.end());
-            assert(std::find(canvas.labels.begin(),canvas.labels.end(),"BACK")!=canvas.labels.end());
+            assert(std::find(canvas.labels.begin(),canvas.labels.end(),es?"COLECCION":"COLLECTION")!=canvas.labels.end());
             canvas.labels.clear(); pet.setCold(!pet.cold());
             panels.draw(navigation,pet,vpet::BleStatus::Off,clock,es?"ES":"EN",false);
             const char* after=es ? (mode=="cold"?"PAUSAR CRIANZA  NO":"PAUSAR CRIANZA  SI") :
                                   (mode=="cold"?"PAUSE PET  OFF":"PAUSE PET  ON");
             assert(std::find(canvas.labels.begin(),canvas.labels.end(),after)!=canvas.labels.end());
+            navigation.setPanel(vpet::PanelId::Options,vpet::option_menu::back);
+            panels.draw(navigation,pet,vpet::BleStatus::Off,clock,es?"ES":"EN",false);
+            assert(std::find(canvas.labels.begin(),canvas.labels.end(),"BACK")!=canvas.labels.end());
         }
     } else {
         const bool bedtime=mode=="bedtime" || mode=="bedtime-low";

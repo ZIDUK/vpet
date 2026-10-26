@@ -5,13 +5,14 @@ PY ?= $(if $(wildcard .venv-platformio/bin/python),.venv-platformio/bin/python,p
 PORT ?=
 UPLOAD_SPEED ?= 115200
 SIM_ARGS ?=
+DEPLOY_ARGS ?=
 SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 /usr/bin/python3; do \
 	if [ -x "$$p" ] || command -v "$$p" >/dev/null 2>&1; then \
 		"$$p" -c 'import pygame, PIL' >/dev/null 2>&1 && echo "$$p" && break; \
 	fi; \
 done)
 
-.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-pico sim sim-practice sim-training sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-firmware deploy-pico sim sim-practice sim-training sim-pico sim-record test clean all
 
 help:
 	@echo "vPet dev workflow"
@@ -22,7 +23,8 @@ help:
 	@echo "  make firmware     Compile the native ESP32 firmware"
 	@echo "  make native-test  Test portable firmware logic on this Mac"
 	@echo "  make preflight    Detect board and check memory without writing"
-	@echo "  make deploy       Build + test + verified deploy + serial startup check"
+	@echo "  make deploy-firmware Build + test + firmware-only deploy; preserve collection/assets"
+	@echo "  make deploy       Requires explicit DEPLOY_ARGS=--firmware-only; full FS replacement blocked"
 	@echo "  make deploy-pico  Deploy the preserved CircuitPython build"
 	@echo "  make sim          Run the vPet in a pygame window on Mac (no Pico needed)"
 	@echo "  make sim-practice Run Firemon practice/Tech preview in pygame"
@@ -54,7 +56,10 @@ firmware: build-tdisplay bootstrap-pio
 	.venv-platformio/bin/pio run -d firmware/t-display -e tdisplay
 
 deploy: test native-test firmware
-	.venv-platformio/bin/python scripts/deploy_tdisplay.py --port "$(PORT)" --upload-speed "$(UPLOAD_SPEED)"
+	.venv-platformio/bin/python scripts/deploy_tdisplay.py --port "$(PORT)" --upload-speed "$(UPLOAD_SPEED)" $(DEPLOY_ARGS)
+
+deploy-firmware: DEPLOY_ARGS=--firmware-only
+deploy-firmware: deploy
 
 preflight: firmware
 	.venv-platformio/bin/python scripts/deploy_tdisplay.py --preflight --port "$(PORT)"

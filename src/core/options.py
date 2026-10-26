@@ -10,7 +10,8 @@ OPTION_TIME = 6
 OPTION_EVOLVE = 7
 OPTION_BACK = 8
 OPTION_PAUSE = 9
-OPTION_ORDER = (0,1,2,3,4,5,6,7,9,8)
+OPTION_COLLECTION = 10
+OPTION_ORDER = (0,1,2,3,4,5,6,7,9,10,8)
 OPTION_COUNT = len(OPTION_ORDER)
 OPTION_WINDOW = 3
 OPTION_ICONS = (
@@ -24,6 +25,7 @@ OPTION_ICONS = (
     "Evolve",
     "Back",
     "Rest",
+    "Pedia",
 )
 
 def option_window_start(index, count=OPTION_COUNT, size=OPTION_WINDOW):
@@ -135,13 +137,16 @@ class OptionsSession:
             self.field = 0
             self.mode = "time"
         elif self.index == OPTION_EVOLVE:
-            self.message = "EVOLVED" if not getattr(pet,'cold',False) and not getattr(getattr(pet,'sleep',None),'asleep',False) and force_next_form(pet) else "NO EVO"
+            collection = getattr(services, "collection", None)
+            self.message = "EVOLVED" if collection is None and not getattr(pet,'cold',False) and not getattr(getattr(pet,'sleep',None),'asleep',False) and force_next_form(pet) else "NO EVO"
         elif self.index == OPTION_PAUSE:
             before=getattr(pet,'cold',False)
             pet.cold=not before
             if not services.save(pet):
                 pet.cold=before
                 self.message="SAVE ERROR"
+        elif self.index == OPTION_COLLECTION:
+            self.message = "COLLECTION"
         elif self.index == OPTION_BACK:
             return False
         return True

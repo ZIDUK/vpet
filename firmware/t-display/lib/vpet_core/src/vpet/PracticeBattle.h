@@ -10,6 +10,9 @@ namespace practice {
 static constexpr uint32_t kImpactMs = 1200;
 
 struct Fighter {
+    using AutoSelector = int (*)(void*, const Fighter&, int);
+    AutoSelector autoSelector = nullptr;
+    void* autoContext = nullptr;
     int stats[6] = {25, 20, 24, 20, 22, 20};
     int hp = 90, mp = 30, maxHp = 90, maxMp = 30;
     uint8_t mastery[techniques::kCount] = {};
@@ -49,6 +52,10 @@ inline int choose(const Fighter& f, int order = -1) {
         }
         if (order == i) score += 10 + f.bond / 2;
         if (score > bestScore) { bestScore = score; best = i; }
+    }
+    if (order<0 && f.autoSelector) {
+        const int learned=f.autoSelector(f.autoContext,f,best);
+        if (learned==2 || f.valid(learned)) return learned;
     }
     return best;
 }

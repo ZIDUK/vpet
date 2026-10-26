@@ -18,6 +18,8 @@ class PracticeSession:
             pet.techniques.mastery, pet.dna[3] % 3, pet.techniques.bond,
             element="fire" if pet.species in ("rookie", "champion", "ultimate") else "neutral"))
         if self.battle is not None:
+            self.battle.player.learning = pet._learning
+            self.battle.player.learning_context = 0
             rank = adult_rank(pet.species)
             if rank:
                 value = stat_value(8, pet.ev_limit() // 2, rank)
@@ -54,9 +56,17 @@ class PracticeSession:
             progress.mastery[i] = min(100, progress.mastery[i] + count)
         progress.bond = min(100, progress.bond + 1)
         reward = award_victory_item(self.pet) if self.battle.result == 'VICTORIA' else None
+        # Summarize executed techniques only after the terminal result is known.
+        survival = 100 * self.battle.player.hp // max(1, self.battle.player.max_hp)
+        outcome = 50 if self.battle.result == 'VICTORIA' else -50
+        for action, count in enumerate(self.battle.uses):
+            if count:
+                score = max(-100, min(100, outcome + survival // 4 - count * (4 if action == 2 else 1)))
+                self.pet.learning.record(self.pet.learning.next_sequence, 1, 0, action, score)
         if not self.save(self.pet):
             self.pet.__dict__.clear()
             self.pet.__dict__.update(snapshot)
+            self.battle.player.learning = self.pet._learning
             self.message = 'ERROR AL GUARDAR'
             return False
         self.awarded, self.reward_item = True, reward
@@ -159,7 +169,11 @@ class PracticeSession:
             snapshot = copy.deepcopy(self.pet.__dict__)
             learned = progress.learned(self.tech, self.pet.species)
             if self.training and self.index == 0:
+                previous_mastery = progress.mastery[self.tech]
                 ok = progress.train(self.pet, self.tech)
+                if ok:
+                    reward = min(100, 10 + (progress.mastery[self.tech] - previous_mastery) * 10)
+                    self.pet.learning.record(self.pet.learning.next_sequence, 1, 1, self.tech, reward)
                 if not ok:
                     self.message = "FALTA ENERGIA" if self.pet.get("e") < 4 else "PET NO APTO"
                 elif not learned:

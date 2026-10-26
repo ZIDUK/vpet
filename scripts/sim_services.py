@@ -36,15 +36,125 @@ class SimulatorServices:
         self.connected_ssid = None
         self.wifi_status = "OFF"
         self.storage_blocked = False
+        self.collection = None
+        self._collection_elapsed_ms = 0
+
+    @property
+    def collection_repository(self):
+        from scripts.collection_store import CollectionRepository
+        return CollectionRepository(self.save_path.with_name(self.save_path.stem + "_collection"))
+
+    def enable_collection(self, pet, confirmed=False):
+        if not confirmed or self.storage_blocked:
+            return False
+        if self.collection is not None:
+            return True
+        from core.collection import Collection
+        try:
+            candidate = Collection.from_pet(pet)
+            candidate.clock_offset = self._clock_offset
+            if not self.collection_repository.commit(candidate):
+                return False
+            self.collection = candidate
+            return True
+        except (ValueError, OSError) as error:
+            from scripts.collection_store import CollectionCommitUncertain
+            if isinstance(error, CollectionCommitUncertain):
+                self.storage_blocked = True
+            return False
+
+    def _collection_transaction(self, pet, operation):
+        if self.collection is None or self.storage_blocked:
+            return False
+        from core.collection import Collection
+        try:
+            candidate = Collection.decode(self.collection.encode())
+            candidate.storage_generation = self.collection.storage_generation
+            candidate.capture(pet)
+            candidate.clock_offset = self._clock_offset
+            hatched = candidate.advance_ms(self._collection_elapsed_ms, paused=pet.cold)
+            operation(candidate)
+            target = candidate.current()
+            if not self.collection_repository.commit(candidate):
+                return False
+            self.collection = candidate
+            self._collection_elapsed_ms = 0
+            if hatched or target.profile != pet.profile:
+                if target.is_egg and not candidate.slots[candidate.active]["incubation_ms"]:
+                    target.start_hatch()
+                pet.__dict__.clear()
+                pet.__dict__.update(target.__dict__)
+            return True
+        except (ValueError, OSError) as error:
+            from scripts.collection_store import CollectionCommitUncertain
+            if isinstance(error, CollectionCommitUncertain):
+                self.storage_blocked = True
+            return False
+
+    def add_founder(self, pet, confirmed=False):
+        if not confirmed:
+            return False
+        def add(candidate):
+            candidate.require_idle(pet)
+            random = os.urandom(20)
+            words = tuple(int.from_bytes(random[i:i+4], "big") for i in range(0, 16, 4))
+            candidate.founder(words, int.from_bytes(random[16:], "big"),
+                              confirmed=True, sequence=candidate.sequence + 1)
+        return self._collection_transaction(pet, add)
+
+    def switch_individual(self, pet, index, confirmed=False, busy=False):
+        if not confirmed:
+            return False
+        return self._collection_transaction(
+            pet, lambda candidate: candidate.switch(candidate.current(), index, confirmed=True, busy=busy))
+
+    def breed_individuals(self, pet, first, second, confirmed=False):
+        if not confirmed:
+            return False
+        def breed(candidate):
+            candidate.require_idle(pet)
+            random = os.urandom(20)
+            words = tuple(int.from_bytes(random[i:i+4], "big") for i in range(0, 16, 4))
+            candidate.breed(first, second, words, int.from_bytes(random[16:], "big"),
+                            confirmed=True, sequence=candidate.sequence + 1)
+        return self._collection_transaction(pet, breed)
+
+    def is_incubating(self, pet):
+        return bool(self.collection is not None and pet.is_egg and
+                    self.collection.slots[self.collection.active]["incubation_ms"])
+
+    def advance_collection(self, pet, elapsed_ms):
+        if self.collection is None or pet.cold or self.storage_blocked:
+            return False
+        if type(elapsed_ms) is not int or not 0 <= elapsed_ms <= 86400000:
+            return False
+        self._collection_elapsed_ms = min(86400000, self._collection_elapsed_ms + elapsed_ms)
+        remaining = self.collection.slots[self.collection.active]["incubation_ms"]
+        if self._collection_elapsed_ms < 60000 and (not remaining or self._collection_elapsed_ms < remaining):
+            return False
+        was_egg = pet.is_egg
+        saved = self._collection_transaction(pet, lambda _: None)
+        return saved and was_egg and not pet.is_egg
 
     def evolve_and_save(self, pet, evolution):
-        if getattr(pet,'cold',False):
+        if getattr(pet,'cold',False) or self.is_incubating(pet):
             return False
         if not evolution.check(pet)[0]:
             return False
         before = copy.deepcopy(pet.__dict__)
         if not evolution.evolve(pet):
             return False
+        if self.save(pet):
+            return True
+        pet.__dict__.clear()
+        pet.__dict__.update(before)
+        return False
+
+    def complete_hatch(self, pet):
+        if self.storage_blocked or pet.cold or not pet.is_hatching or self.is_incubating(pet):
+            return False
+        before = copy.deepcopy(pet.__dict__)
+        pet.complete_hatch("baby", preserve_dna=self.collection is not None)
         if self.save(pet):
             return True
         pet.__dict__.clear()
@@ -60,6 +170,8 @@ class SimulatorServices:
     def save(self, pet):
         if self.storage_blocked:
             return False
+        if self.collection is not None:
+            return self._collection_transaction(pet, lambda _: None)
         temporary = None
         try:
             self.save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,6 +246,18 @@ class SimulatorServices:
         before = copy.deepcopy(pet.__dict__)
         previous_offset = self._clock_offset
         try:
+            collection = self.collection_repository.load()
+            if collection is not None:
+                target = collection.current()
+                if target.is_egg and not collection.slots[collection.active]["incubation_ms"]:
+                    target.start_hatch()
+                pet.__dict__.clear()
+                pet.__dict__.update(target.__dict__)
+                self.collection = collection
+                self._clock_offset = collection.clock_offset
+                self._collection_elapsed_ms = 0
+                self.storage_blocked = False
+                return True
             with self.save_path.open(encoding="utf-8") as stream:
                 data = json.load(stream)
             if not isinstance(data, dict):

@@ -1,10 +1,11 @@
 # Coleccion, Aprendizaje Y Breeding Local
 
 Fecha: 2026-10-25.
-Estado: alcance autorizado; contrato detallado propuesto para revision previa
-a modificar partidas. El usuario aprobo aprendizaje, breeding y coleccion
-de hasta cuatro mascotas con inventario compartido. Los valores piloto y
-la politica de migracion siguientes no se presentan como implementados.
+Estado: alcance y reglas iniciales de coleccion aprobados. El usuario confirma
+cuatro plazas incluyendo huevos, mochila activa como stock compartido sin
+sumar la reserva y huevo fundador local tras confirmacion, sin objetos nuevos.
+El contrato de implementacion usa los pilotos acotados descritos abajo;
+la aprobacion no equivale a implementacion, migracion ejecutada ni flash.
 
 ## Base Inspeccionada
 
@@ -62,7 +63,7 @@ Propuesta de migracion: stock ACTIVO como mochila compartida inicial. La
 reserva legacy se conserva completa y sin cambios como archivo de recuperacion;
 su inventario no se suma ni se reclama automaticamente, porque no existe una
 procedencia fiable para distinguir unidades independientes de una copia previa.
-Esta politica requiere aceptacion explicita antes de ejecutar la migracion.
+El usuario aprobo explicitamente esta politica en la revision del diseno.
 
 ### Migracion
 
@@ -196,10 +197,9 @@ ni crea otro huevo con una semilla nueva.
 
 Migrar la reserva permite conservar un segundo individuo si ya existe. Si
 solo hay uno, no prometer breeding inmediatamente utilizable ni crear una
-mascota de premio falsa. Decision propuesta para revisar: permitir un huevo
-fundador local SOLO tras una orden explicita del usuario, con ID nuevo y
-mochila inicial vacia; o mantener alta de nuevos huevos exclusivamente por
-futuros premios/recepciones autorizadas. No implementar ambas rutas sin elegir.
+mascota de premio falsa. Decision aprobada: permitir un huevo fundador local
+SOLO tras una orden explicita del usuario, con ID nuevo y mochila inicial
+vacia. No presentarlo como premio de proveedor ni como paquete instalado.
 
 ## Descomposicion Y Pruebas De Aceptacion
 
@@ -226,6 +226,6 @@ futuros premios/recepciones autorizadas. No implementar ambas rutas sin elegir.
 
 No cambia Creator, no usa una subclase por especie, no concede stock al nacer
 ni aprende de eventos no confirmados. La reserva no se destruye. El inventario
-legacy y el origen de un segundo fundador requieren decision antes de migrar.
+legacy y el origen de un segundo fundador fueron aprobados explicitamente.
 Los tres subproyectos necesitan planes ejecutables separados con interfaces,
 pruebas RED/GREEN y revision; este documento no declara su implementacion.

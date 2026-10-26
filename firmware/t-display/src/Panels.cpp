@@ -607,7 +607,7 @@ void Panels::drawOptionsChip(
         case BleStatus::Error: bluetooth = "ERR"; break;
         case BleStatus::Off: break;
     }
-    const char* shortLabels[] = {"BT", "LANG", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK", copy::pausePet(spanish)};
+    const char* shortLabels[] = {"BT", "LANG", "SOUND", "SAVE", "LOAD", "DATE", "TIME", "EVO", "BACK", copy::pausePet(spanish), spanish ? "COLECCION" : "COLLECTION"};
     const char* extras[] = {
         bluetooth,
         language,
@@ -619,6 +619,7 @@ void Panels::drawOptionsChip(
         "",
         "",
         cold ? copy::on(spanish) : copy::off(spanish),
+        "",
     };
     const char* icons[] = {
         "/ui/icons/bluetooth.vpa",
@@ -631,7 +632,11 @@ void Panels::drawOptionsChip(
         "/ui/icons/evolve.vpa",
         "/ui/icons/back.vpa",
         "/ui/icons/rest.vpa",
+        "/ui/icons/pedia.vpa",
     };
+    static_assert(sizeof(shortLabels) / sizeof(shortLabels[0]) == Navigation::kOptionCount, "Option labels");
+    static_assert(sizeof(extras) / sizeof(extras[0]) == Navigation::kOptionCount, "Option extras");
+    static_assert(sizeof(icons) / sizeof(icons[0]) == Navigation::kOptionCount, "Option icons");
     const uint8_t chip = index % Navigation::kOptionCount;
     const uint8_t current = selected % Navigation::kOptionCount;
     const uint8_t start = inventoryWindowStart(Navigation::kOptionCount, option_menu::slot(current));

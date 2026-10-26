@@ -1,5 +1,17 @@
 # Guia De Funciones Del Producto
 
+## Ampliacion Local 2026-10-25
+
+Opciones incorpora Coleccion: cuatro plazas totales con huevos incluidos,
+un individuo activo, mochila compartida y confirmaciones para migrar,
+crear fundador, activar mascota o cruzar padres aptos. No concede items.
+El simulador incluye Preferencias aprendidas por individuo y herencia
+conductual moderada. [Reglas y guion de video](collection-learning-breeding.md).
+El firmware tambien registra experiencias y usa AUTO aprendido despues de
+activar Coleccion; la consulta de Preferencias aun es solo del simulador.
+Esta ampliacion aun no esta flasheada; el resto de esta guia conserva su
+corte anterior y no debe usarse como certificacion de la nueva entrega.
+
 Corte documental: 2026-10-24. Borrador de manual para la T-Display 240x135,
 basado en el codigo y los contratos actuales; no es una certificacion de
 lanzamiento. Base versionada inspeccionada: `f733c60`, mas la ficha evolutiva

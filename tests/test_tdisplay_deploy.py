@@ -38,6 +38,7 @@ def test_first_deploy_reads_flash_before_upload(tmp_path):
         runner=runner,
         build_report=BuildReport(100, 1000, 100, 1000, 100, 1000),
         telemetry_reader=lambda *_: ReadyTelemetry(100000, 80000, 16 << 20, 100, 1000, "1"),
+        firmware_only=True,
     )
 
     read_index = next(i for i, call in enumerate(runner.calls) if "read_flash" in call)

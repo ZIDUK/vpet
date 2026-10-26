@@ -95,7 +95,14 @@ def deploy(
     runner=subprocess.run,
     build_report=None,
     telemetry_reader=read_ready,
+    firmware_only=False,
 ):
+    if not firmware_only:
+        raise RuntimeError(
+            "COLLECTION_FILESYSTEM_PROTECTED: full LittleFS replacement could erase "
+            "individuals and learning. Use --firmware-only with compatible installed assets. "
+            "A data-preserving asset updater is required before replacing LittleFS."
+        )
     board = board or detect_board(port, runner=runner)
     if board.flash_size != 16 * 1024 * 1024:
         raise RuntimeError(f"Expected 16 MB flash, detected {board.flash_size} bytes")
@@ -113,7 +120,6 @@ def deploy(
         "--upload-port", board.port,
     ]
     _run(runner, [*common, "-t", "upload"])
-    _run(runner, [*common, "-t", "uploadfs"])
     telemetry = telemetry_reader(board.port, READY_TIMEOUT_SECONDS)
     _fail_on_diagnostics(report, telemetry)
     print(
@@ -129,7 +135,11 @@ def main():
     parser.add_argument("--port")
     parser.add_argument("--upload-speed", type=int, default=115200)
     parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--firmware-only", action="store_true",
+                        help="Preserve installed assets and all collection data")
     args = parser.parse_args()
+    if not args.preflight and not args.firmware_only:
+        parser.error("COLLECTION_FILESYSTEM_PROTECTED: use --firmware-only; asset replacement requires a data-preserving updater")
     board = detect_board(args.port)
     report = inspect_build()
     _fail_on_diagnostics(report)
@@ -140,7 +150,7 @@ def main():
         f"static_ram={report.static_ram_used}/{report.static_ram_capacity}"
     )
     if not args.preflight:
-        deploy(args.port, args.upload_speed, board=board, build_report=report)
+        deploy(args.port, args.upload_speed, board=board, build_report=report, firmware_only=True)
 
 
 if __name__ == "__main__":

@@ -6,31 +6,40 @@
 #include <Arduino.h>
 #include <sys/time.h>
 #include <time.h>
+#include <algorithm>
 
 namespace vpet {
 
-App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock)
+App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleService& bluetooth, WallClock wallClock,
+         CollectionPanel* collection)
     : renderer_(renderer),
       panels_(panels),
       settingsStore_(settingsStore),
       bluetooth_(bluetooth),
+      collection_(collection),
       wallClock_(wallClock),
       motion_(240, 135, 24, 88) {}
 
 void App::begin(uint32_t nowMs) {
     savePending_ = false;
+    navigation_.setPanel(PanelId::Home);
+    navigation_.setMenuIndex(0);
+    practicing_=trainingActive_=false;
     lastInteractionMs_ = nowMs;
     lastTickMs_ = nowMs;
     lastRenderMs_ = nowMs - 50;
-    storageReady_=settingsStore_.load(pet_, settings_) != LoadResult::Unsupported;
+    const auto collectionLoad=collection_ ? collection_->load(pet_,settings_) : CollectionLoad::Missing;
+    const bool useLegacy=collectionLoad==CollectionLoad::Missing;
+    storageReady_=useLegacy ? settingsStore_.load(pet_, settings_) != LoadResult::Unsupported :
+        collectionLoad==CollectionLoad::Loaded;
     if (!storageReady_) {
         Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
         panels_.drawStorageError(settings_.language.c_str());
         return;
     }
-    if ((settingsStore_.needsLifeRestart() && !settingsStore_.restartLifeIfNeeded(pet_, settings_)) ||
+    if (useLegacy && ((settingsStore_.needsLifeRestart() && !settingsStore_.restartLifeIfNeeded(pet_, settings_)) ||
         (settingsStore_.migratedDna() && !settingsStore_.save(pet_, settings_)) ||
-        !settingsStore_.recoverPending()) {
+        !settingsStore_.recoverPending())) {
         storageReady_ = false;
         Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
         panels_.drawStorageError(settings_.language.c_str());
@@ -54,7 +63,7 @@ void App::begin(uint32_t nowMs) {
 bool App::saveState() {
     lastSaveAttemptMs_ = lastTickMs_;
     if (explorationClock_.trusted(calendarNow())) pet_.exploration.clockCheckpoint=calendarNow();
-    if (settingsStore_.save(pet_, settings_)) return settleStorage();
+    if (persistActive()) return settleStorage();
     savePending_ = true;
     Serial.println("VPET_SAVE_PENDING");
     panels_.drawStorageError(settings_.language.c_str());
@@ -65,6 +74,54 @@ uint64_t App::calendarNow() const {
     if (wallClock_) return wallClock_();
     const time_t now=time(nullptr);
     return now<0 ? 0 : static_cast<uint64_t>(now);
+}
+
+bool App::persistActive() {
+    if (collection_ && collection_->enabled()) {
+        const bool committed=collection_->save(pet_,settings_);
+        if (!committed) savePending_=true;
+        return committed;
+    }
+    if (collection_ && collection_->failed()) { savePending_=true; return false; }
+    return settingsStore_.save(pet_,settings_);
+}
+bool App::persistExperience(const RuntimeExperience* events, size_t count) {
+    if (collection_ && collection_->enabled() && count) {
+        const bool committed=collection_->saveExperience(pet_,settings_,events,count);
+        if (!committed) savePending_=true;
+        return committed;
+    }
+    return persistActive();
+}
+int App::autoChoice(void* context, const practice::Fighter& fighter, int fallback) {
+    auto* app=static_cast<App*>(context);
+    if (!app || !app->collection_ || !app->collection_->enabled()) return fallback;
+    uint8_t learned=0;
+    for (int i=0;i<techniques::kCount;++i)
+        if (app->pet_.practice.learned(i,app->pet_.techniqueStage())) learned|=1u<<i;
+    return app->collection_->chooseAuto(fighter,learned);
+}
+
+CollectionSwitchGuard App::collectionGuard() const {
+    CollectionSwitchGuard guard;
+    guard.training=trainingActive_; guard.arena=practicing_ || pet_.pendingAction()!=Action::None;
+    guard.journey=pet_.exploration.away(); guard.sleeping=pet_.sleep.asleep; guard.paused=pet_.cold();
+    guard.pendingJournal=savePending_; guard.storageError=!storageReady_;
+    return guard;
+}
+
+void App::activeChanged(uint32_t nowMs) {
+    trainingActive_=practicing_=false;
+    training_=TrainingSession(); practice_=PracticeSession();
+    lastInjuryCheckpointMs_=lastExplorationCheckpointMs_=nowMs;
+    eggStartedMs_=nowMs;
+    explorationClock_.begin(calendarNow(),pet_.exploration.clockCheckpoint);
+    pet_.rebaseCareClock(nowMs);
+    motion_.setSpecies(pet_.species()); motion_.alignClock(nowMs);
+    motion_.wake(nowMs);
+    if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
+    navigation_.setCurrentSpecies(pet_.species());
+    panels_.invalidate(); renderer_.invalidate();
 }
 
 void App::openExploration() {
@@ -95,7 +152,13 @@ void App::explorationInput(InputEvent event) {
     else if(op==Operation::Acknowledge) pet_.exploration.acknowledge();
     if(!applied) return;
     pet_.exploration.clockCheckpoint=now;
-    if(!settingsStore_.save(pet_,settings_)) {
+    RuntimeExperience experience{2,0,0,0};
+    if (op==Operation::Claim) {
+        const auto& reward=pet_.exploration.receipt;
+        experience.action=static_cast<uint8_t>(reward.route);
+        experience.reward=(reward.good?50:-50)+std::min(30,int(reward.ev)*10+int(reward.mastery)*5);
+    }
+    if(!persistExperience(&experience,op==Operation::Claim?1:0)) {
         pet_=before;
         exploration_.saveFailed=true;
         Serial.println("VPET_EXPLORE_SAVE_REJECTED");
@@ -109,7 +172,7 @@ void App::explorationInput(InputEvent event) {
 
 bool App::settleStorage() {
     lastSaveAttemptMs_ = lastTickMs_;
-    savePending_ = !settingsStore_.recoverPending();
+    savePending_ = collection_ && collection_->enabled() ? collection_->failed() : !settingsStore_.recoverPending();
     if (savePending_) {
         Serial.println("VPET_SAVE_PENDING");
         panels_.drawStorageError(settings_.language.c_str());
@@ -155,6 +218,14 @@ void App::applyDateTime() {
 
 void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
+    if (panel==PanelId::Collection) {
+        if (!collection_) { navigation_.setPanel(PanelId::Options,option_menu::collection); return; }
+        const bool close=collection_->input(event,pet_,settings_,collectionGuard());
+        if (collection_->changedActive()) activeChanged(nowMs);
+        if (collection_->failed()) { storageReady_=false; panels_.drawStorageError(settings_.language.c_str()); return; }
+        if (close) { navigation_.setPanel(PanelId::Options,option_menu::collection); panels_.invalidate(); }
+        return;
+    }
     if (panel == PanelId::EvolutionDetail && event == InputEvent::Next) {
         const auto progress = evolution_progress::forPet(pet_, navigation_.panelIndex());
         navigation_.setEvolutionDetailPage((navigation_.evolutionDetailPage() + 1) % progress.pages());
@@ -187,7 +258,9 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 saveState();
                 break;
             case 4:
-                if (settingsStore_.load(pet_, settings_) != LoadResult::Loaded) {
+                if ((collection_ && collection_->enabled() ?
+                     collection_->load(pet_,settings_)!=CollectionLoad::Loaded :
+                     settingsStore_.load(pet_, settings_) != LoadResult::Loaded)) {
                     storageReady_ = false;
                     Serial.println("VPET_STORAGE_RECOVERY_BLOCKED");
                     panels_.drawStorageError(settings_.language.c_str());
@@ -204,11 +277,13 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
             case 5: beginDateTime(true); break;
             case 6: beginDateTime(false); break;
             case 7: {
+                if (collection_ && collection_->enabled()) return;
                 if (pet_.sleep.asleep) return;
                 if(pet_.exploration.away()) { openExploration(); return; }
                 const bool fromEgg = pet_.species() == SpeciesId::Egg;
                 if (evolution_.force(pet_)) {
-                    if (fromEgg && !pet_.hasDna()) pet_.rollDna(esp_random() ^ nowMs);
+                    if (fromEgg && !pet_.hasDna() && !(collection_ && collection_->enabled()))
+                        pet_.rollDna(esp_random() ^ nowMs);
                     motion_.setSpecies(pet_.species());
                     motion_.alignClock(nowMs);
                     if (pet_.species() == SpeciesId::Egg) {
@@ -225,10 +300,14 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
             case option_menu::pause: {
                 const PetState before=pet_;
                 pet_.setCold(!pet_.cold());
-                if(!settingsStore_.save(pet_,settings_)) pet_=before;
+                if(!persistActive()) pet_=before;
                 else settleStorage();
                 break;
             }
+            case option_menu::collection:
+                if (collection_) { collection_->open(); navigation_.setPanel(PanelId::Collection); }
+                else panels_.drawStorageError(settings_.language.c_str());
+                break;
         }
         return;
     }
@@ -261,7 +340,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         const ItemUseResult result = pet_.useItem(navigation_.panelIndex());
         if (result == ItemUseResult::Used) {
             if (selected>=8) {
-                if (!settingsStore_.commitConsumables(pet_)) {
+                if (!(collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitConsumables(pet_))) {
                     pet_=before;
                     Serial.println("VPET_ITEM_SAVE_FAILED");
                 } else settleStorage();
@@ -288,7 +367,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         const PetState before = pet_;
         const FoodId food = navigation_.panelIndex() == 0 ? FoodId::Meat : FoodId::Protein;
         if (applyFood(pet_, food) == FoodResult::Applied) {
-            if (settingsStore_.commitFood(pet_)) {
+            if (collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitFood(pet_)) {
                 motion_.startAction(Action::Feed, nowMs);
                 navigation_.setPanel(PanelId::Home);
                 settleStorage();
@@ -352,7 +431,7 @@ void App::toggleSleep(uint32_t nowMs) {
     const PetState before=pet_;
     if (pet_.sleep.asleep) pet_.sleep.stop();
     else pet_.sleep.start(explorationClock_.trusted(calendarNow()) ? calendarNow() : 0,pet_.dna()[3]);
-    if (!settingsStore_.save(pet_,settings_)) { pet_=before; return; }
+    if (!persistActive()) { pet_=before; return; }
     if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
     else motion_.wake(nowMs);
     settleStorage();
@@ -368,6 +447,9 @@ void App::activate(uint32_t nowMs) {
         return;
     }
     if (pet_.dead()) {
+        if (collection_ && collection_->enabled()) {
+            collection_->open(); navigation_.setPanel(PanelId::Collection); return;
+        }
         pet_.resetToEgg();
         motion_.setSpecies(SpeciesId::Egg);
         motion_.alignClock(nowMs);
@@ -417,6 +499,11 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     }
     const uint32_t elapsed = nowMs - lastTickMs_;
     lastTickMs_ = nowMs;
+    if (collection_ && !collection_->advance(elapsed,pet_.cold())) {
+        savePending_=true;
+        panels_.drawStorageError(settings_.language.c_str());
+        return;
+    }
     const bool busy = (trainingActive_ && training_.state == TrainingSession::State::Session)
         || (practicing_ && (practice_.page == PracticeSession::Page::Arena ||
             practice_.page == PracticeSession::Page::Bag) &&
@@ -435,11 +522,27 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     if (practicing_) {
         const PetState beforePet=pet_;
         const PracticeSession beforeSession=practice_;
+        practice_.battle.player.autoSelector=autoChoice;
+        practice_.battle.player.autoContext=this;
         practice_.tick(pet_, nowMs);
         if (!practice_.battle.result || beforeSession.battle.result)
             practicing_ = practice_.input(pet_, event, nowMs);
         if (practice_.dirty) {
-            const bool committed=settingsStore_.save(pet_,settings_);
+            RuntimeExperience experiences[techniques::kCount]; size_t count=0;
+            if (practice_.awarded && !beforeSession.awarded) {
+                const int survival=100*practice_.battle.player.hp/std::max(1,practice_.battle.player.maxHp);
+                const int outcome=practice_.battle.result==1?50:-50;
+                for (int i=0;i<techniques::kCount;++i) if (practice_.battle.uses[i]) {
+                    const int score=outcome+survival/4-practice_.battle.uses[i]*(i==2?4:1);
+                    experiences[count++]={1,0,static_cast<uint8_t>(i),std::max(-100,std::min(100,score))};
+                }
+            } else if (beforeSession.page==PracticeSession::Page::Detail && beforeSession.cursor==0 &&
+                       beforeSession.technique<techniques::kCount) {
+                const auto technique=beforeSession.technique;
+                const int delta=int(pet_.practice.mastery[technique])-beforePet.practice.mastery[technique];
+                experiences[count++]={1,1,technique,std::max(-100,std::min(100,10+delta*10))};
+            }
+            const bool committed=persistExperience(experiences,count);
             practice_.finishSave(pet_,beforePet,beforeSession,committed);
             if (!committed) practicing_=true;
             else if (!settleStorage()) return;
@@ -462,7 +565,9 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             return;
         }
         if (training_.dirty && training_.needsRollback) {
-            if (!settingsStore_.save(pet_,settings_)) {
+            const int score=int(training_.lastSummary.evAdded)*10-training_.lastSummary.energyCharged;
+            const RuntimeExperience experience{0,0,trainingIndexFor(training_.chosenStat),std::max(-100,std::min(100,score))};
+            if (!persistExperience(&experience,1)) {
                 training_.rollbackFromSnapshot(pet_);
             } else settleStorage();
             training_.dirty = false;
@@ -532,12 +637,14 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     if (pet_.species() == SpeciesId::Egg && !pet_.cold()) {
         constexpr uint32_t kEggLifeMs = 2000;
         constexpr uint32_t kEggHatchMs = 800;
-        if (motion_.state() != MotionState::Hatch && nowMs - eggStartedMs_ >= kEggLifeMs - kEggHatchMs) {
+        const bool collectionEgg=collection_ && collection_->enabled() && collection_->timedEgg();
+        const bool readyToHatch=collectionEgg ? collection_->hatchReady() : nowMs-eggStartedMs_>=kEggLifeMs;
+        if (!collectionEgg && motion_.state() != MotionState::Hatch && nowMs - eggStartedMs_ >= kEggLifeMs - kEggHatchMs) {
             motion_.startHatch(nowMs);
         }
-        if (nowMs - eggStartedMs_ >= kEggLifeMs) {
+        if (readyToHatch) {
             pet_.evolveTo(SpeciesId::Baby);
-            if (!pet_.hasDna()) pet_.rollDna(esp_random() ^ nowMs);
+            if (!(collection_ && collection_->enabled()) && !pet_.hasDna()) pet_.rollDna(esp_random() ^ nowMs);
             motion_.setSpecies(SpeciesId::Baby);
             motion_.alignClock(nowMs);
             if (!saveState()) return;
@@ -602,12 +709,14 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     } else if (panel == PanelId::Home && pet_.exploration.away()) intervalMs = 70;
     if (panel == PanelId::Status || panel == PanelId::Inventory || panel == PanelId::Feeding || panel == PanelId::EvolutionTree ||
         panel == PanelId::EvolutionDetail || panel == PanelId::Rest ||
-        panel == PanelId::Options) {
+        panel == PanelId::Options || panel == PanelId::Collection) {
         intervalMs = panel == PanelId::Status ? 100 : 1000;
     }
     if (event != InputEvent::None || nowMs - lastRenderMs_ >= intervalMs) {
         lastRenderMs_ = nowMs;
-        if (navigation_.panel() == PanelId::Exploration) {
+        if (navigation_.panel()==PanelId::Collection && collection_) {
+            renderer_.invalidate(); panels_.invalidate(); collection_->draw(settings_.language.c_str());
+        } else if (navigation_.panel() == PanelId::Exploration) {
             renderer_.invalidate();
             panels_.drawExploration(exploration_,pet_,calendarNow(),nowMs,settings_.language.c_str());
         } else if (navigation_.panel() == PanelId::Home && pet_.exploration.away()) {
@@ -635,8 +744,8 @@ void App::tick(uint32_t nowMs, InputEvent event) {
                 dateMenu_,
                 settings_.language.c_str(),
                 settings_.soundEnabled,
-                settingsStore_.hasBackup(),
-                settingsStore_.backupSpecies(),
+                collection_ && collection_->enabled() ? false : settingsStore_.hasBackup(),
+                collection_ && collection_->enabled() ? SpeciesId::Egg : settingsStore_.backupSpecies(),
                 nowMs
             );
         }

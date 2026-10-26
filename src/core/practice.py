@@ -46,6 +46,12 @@ def choose(fighter, requested=AUTO):
         return 2, "RECUPERA"  # universal defensive fallback avoids a deadlock
     chosen = -max(scores)[1]
     if requested == AUTO:
+        policy = getattr(fighter, "learning", None)
+        if policy is not None:
+            mask = sum(1 << i for i in range(len(TECHNIQUES)) if fighter.valid(i))
+            learned = policy.choose(1, getattr(fighter, "learning_context", 0), mask, chosen)
+            if learned >= 0:
+                chosen = learned
         reason = "A SU CRITERIO"
     elif chosen == requested:
         reason = "SIGUE ORDEN"
