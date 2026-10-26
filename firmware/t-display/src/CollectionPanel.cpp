@@ -49,7 +49,7 @@ CollectionLoad CollectionPanel::load(PetState& pet, Settings& settings) {
 }
 
 void CollectionPanel::error(const char* message, bool storage) {
-    message_=message; page_=Page::Error; cursor_=0;
+    message_=message; page_=Page::Error; cursor_=0; blockReason_=BlockReason::None;
     if (storage) failed_=true;
 }
 bool CollectionPanel::flush() {
@@ -101,7 +101,7 @@ bool CollectionPanel::hatchReady() const {
     return egg.incubationMs>=egg.incubationRequiredMs;
 }
 void CollectionPanel::open() {
-    changedActive_=false; cursor_=0; parentA_=255;
+    changedActive_=false; cursor_=0; parentA_=255; blockReason_=BlockReason::None;
     page_=failed_ ? Page::Error : enabled_ ? Page::List : Page::Migration;
 }
 void CollectionPanel::refreshParents(const PetState& pet) {
@@ -265,8 +265,17 @@ bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings,
     if (event==InputEvent::Next) { cursor_=1-cursor_; return false; }
     if (event!=InputEvent::Action) return false;
     if (!cursor_) { page_=enabled_?Page::List:Page::Migration; cursor_=enabled_ && selected_<7?selected_:0; return false; }
-    if (guard.blocked() || pet.pendingAction()!=Action::None || pet.cold() || pet.sleep.asleep || pet.exploration.away()) {
-        error("Sesion activa o pausa"); return false;
+    BlockReason blocked=BlockReason::None;
+    if (guard.storageError) blocked=BlockReason::Storage;
+    else if (guard.pendingJournal) blocked=BlockReason::PendingSave;
+    else if (pet.sleep.asleep || guard.sleeping) blocked=BlockReason::Sleeping;
+    else if (pet.cold() || guard.paused) blocked=BlockReason::Paused;
+    else if (pet.exploration.away() || guard.journey) blocked=BlockReason::Exploring;
+    else if (guard.training) blocked=BlockReason::Training;
+    else if (pet.pendingAction()!=Action::None) blocked=BlockReason::Action;
+    else if (guard.arena) blocked=BlockReason::Battle;
+    if (blocked!=BlockReason::None) {
+        error("Operacion bloqueada"); blockReason_=blocked; return false;
     }
     const auto confirmation=page_;
     if (confirmation==Page::ConfirmMigration) migrate(pet,settings);

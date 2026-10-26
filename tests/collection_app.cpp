@@ -233,6 +233,40 @@ int main() {
     conflict.open(); conflict.input(InputEvent::Action,conflictA,settings,{}); confirm(conflict,conflictA,settings);
     assert(conflict.failed() && conflictRepo.durable.empty());
     assert(conflictLive.writes+conflictBack.writes==conflictWrites);
+    // Blocked activation must explain its actual cause in both languages,
+    // without touching the legacy save, allocating identities or committing.
+    Repository blockedRepository; CollectionStore blockedStore(blockedRepository);
+    CollectionPanel blockedPanel(blockedStore,legacy,profile,seed,&canvas,&assets);
+    const char* reasonsEn[]={"Pet is asleep","Care is paused","Pet is exploring",
+        "Training active","Battle active","Action in progress","Save pending","Storage blocked"};
+    const char* reasonsEs[]={"Esta dormido","Crianza pausada","Esta explorando",
+        "Entrenamiento activo","Batalla activa","Accion en curso","Guardado pendiente","Almacen bloqueado"};
+    for(int cause=0;cause<8;++cause) {
+        PetState blockedPet; blockedPet.restore(SpeciesId::Rookie,90,90,90,0,100,0);
+        CollectionSwitchGuard guard;
+        if(cause==0) blockedPet.sleep.asleep=true;
+        if(cause==1) blockedPet.setCold(true);
+        if(cause==2) assert(blockedPet.exploration.start(blockedPet,ExploreRoute::Patio,CombatStat::Hp,1));
+        if(cause==3) guard.training=true;
+        if(cause==4) guard.arena=true;
+        if(cause==5) assert(blockedPet.beginAction(Action::Feed));
+        if(cause==6) guard.pendingJournal=true;
+        if(cause==7) guard.storageError=true;
+        const int writes=live.writes+backup.writes; const auto identities=allocation;
+        blockedPanel.open();
+        blockedPanel.input(InputEvent::Action,blockedPet,settings,guard);
+        blockedPanel.input(InputEvent::Next,blockedPet,settings,guard);
+        blockedPanel.input(InputEvent::Action,blockedPet,settings,guard);
+        assert(blockedPanel.page()==CollectionPanel::Page::Error && !blockedPanel.failed());
+        assert(blockedRepository.durable.empty() && blockedRepository.commits==0);
+        assert(writes==live.writes+backup.writes && identities==allocation);
+        for(const auto language:{"ES","EN"}) {
+            canvas.labels.clear(); blockedPanel.draw(language);
+            const char* expectedReason=!std::strcmp(language,"ES")?reasonsEs[cause]:reasonsEn[cause];
+            assert(std::find(canvas.labels.begin(),canvas.labels.end(),expectedReason)!=canvas.labels.end());
+            assert(std::find(canvas.labels.begin(),canvas.labels.end(),"NOT AVAILABLE")==canvas.labels.end());
+        }
+    }
     // The separate panel uses bounded text coordinates on the 240x135 surface.
     for(const auto& draw:canvas.textDraws) {
         assert(draw.x>=0 && draw.y>=0 && draw.y<128);

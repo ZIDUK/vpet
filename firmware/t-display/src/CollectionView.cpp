@@ -69,7 +69,7 @@ void CollectionPanel::draw(const char* language) {
     else if (page_==Page::ConfirmBreed) title=es?"CONFIRMAR CRUCE":"CONFIRM BREED";
     else if (page_==Page::Parents) title=parentA_==255 ?
         (es?"ELIGE PRIMER VPET":"CHOOSE FIRST VPET"):(es?"ELIGE PAREJA":"CHOOSE PARTNER");
-    else if (page_==Page::Error) title="ERROR";
+    else if (page_==Page::Error && blockReason_==BlockReason::None) title="ERROR";
     canvas_->fillSprite(bg); canvas_->setTextDatum(TL_DATUM);
     canvas_->fillRect(0,0,240,21,surface); text(7,3,title,ink,2);
     char value[32];
@@ -175,8 +175,20 @@ void CollectionPanel::draw(const char* language) {
         button(125,109,1,"save",egg?(es?"CREAR":"CREATE"):(es?"ACTIVAR":"SELECT"));
     } else {
         portraitForm(previewForm_,8,29,64);
-        text(84,45,es?message_:(failed_?"STORAGE ERROR":"NOT AVAILABLE"),gold);
-        text(84,76,failed_?(es?"REINICIAR":"RESTART"):(es?"VOLVER":"BACK"),muted);
+        if (blockReason_!=BlockReason::None) {
+            const char* reasonsEs[]={"","Esta dormido","Crianza pausada","Esta explorando",
+                "Entrenamiento activo","Batalla activa","Accion en curso","Guardado pendiente","Almacen bloqueado"};
+            const char* reasonsEn[]={"","Pet is asleep","Care is paused","Pet is exploring",
+                "Training active","Battle active","Action in progress","Save pending","Storage blocked"};
+            const char* hintsEs[]={"","Enciende la luz","Desactiva la pausa","Espera su regreso",
+                "Finaliza la sesion","Finaliza la batalla","Espera un momento","Espera un momento","Revisa el guardado"};
+            const char* hintsEn[]={"","Turn on the light","Resume care","Wait for return",
+                "Finish the session","Finish the battle","Wait a moment","Wait a moment","Check saved data"};
+            const auto reason=static_cast<uint8_t>(blockReason_);
+            text(84,45,(es?reasonsEs:reasonsEn)[reason],gold);
+            text(84,63,(es?hintsEs:hintsEn)[reason],ink);
+        } else text(84,45,es?message_:(failed_?"STORAGE ERROR":"NOT AVAILABLE"),gold);
+        text(84,84,failed_?(es?"REINICIAR":"RESTART"):(es?"VOLVER":"BACK"),muted);
         button(198,36,0,"back");
     }
     canvas_->pushSprite(0,0);

@@ -158,6 +158,23 @@ de coleccion. Ninguna prueba host equivale a tolerancia fisica certificada.
 
 ## Guion De Demostracion
 
+### Bloqueos De Activacion
+
+La confirmacion de Coleccion conserva la proteccion de sesion: no se activa
+durante sueno, pausa de crianza, exploracion, entrenamiento, batalla, otra
+accion pendiente, guardado pendiente o almacenamiento bloqueado. Antes el
+firmware EN resumia estos motivos como "Not Available". La revision de
+mensajes conserva la restriccion y muestra el motivo ES/EN y una indicacion:
+encender luz, reanudar crianza, esperar regreso/final de sesion o revisar
+guardado. No despierta, despausa, cancela viajes ni confirma automaticamente.
+Si el usuario prefiere mantener el descanso, puede activar al despertar.
+
+Prueba del controlador real: ocho causas, ambos idiomas, limites de pantalla,
+sin commits, escrituras NVS ni nuevas identidades al rechazar. Ver estado de
+esta revision y su despliegue en `docs/project-status.md`.
+
+### Recorrido
+
 1. Opciones -> Coleccion: explicar cuatro plazas, incluyendo huevos.
 2. Activar coleccion con confirmacion; mostrar mochila sin stock adicional.
 3. Nuevo huevo -> confirmar: mostrar identidad independiente, no una skin.

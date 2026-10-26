@@ -2,6 +2,19 @@
 
 ## Estado vigente: 2026-10-26
 
+## Coleccion: Motivo Del Bloqueo, Preparado Sin Cargar
+
+El usuario reporta "Not Available" tras la correccion de pila. En la ruta de
+confirmacion ese aviso generico corresponde a una proteccion de sesion; aun
+no se ha confirmado que condicion estaba activa en su mascota. Se precisa
+el motivo y accion ES/EN sin relajar las restricciones de sueno, pausa,
+viaje, entrenamiento, batalla, accion pendiente o guardado/almacenamiento.
+24 pruebas focalizadas aprobadas, con ocho causas del controlador real en
+ambos idiomas y ninguna escritura ni identidad nueva al bloquear. Native:
+185 aprobadas; ESP32 compilado en 9.320 s. Sin cambios de assets, Status,
+schema o reglas de evolucion. No se ha cargado esta revision: se solicita
+autorizacion para firmware-only. La placa conserva la correccion de pila.
+
 ## Activacion De Coleccion: Correccion Cargada
 
 El usuario acepta visualmente el rediseno pero detecta reinicio al confirmar

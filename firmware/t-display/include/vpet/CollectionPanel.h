@@ -43,6 +43,8 @@ public:
     const CollectionState& state() const { return state_; }
 
 private:
+    enum class BlockReason : uint8_t { None, Sleeping, Paused, Exploring, Training,
+        Battle, Action, PendingSave, Storage };
     bool flush();
     bool migrate(PetState& pet, Settings& settings);
     bool founder(const PetState& pet, const Settings& settings);
@@ -68,6 +70,7 @@ private:
     Page page_ = Page::Migration;
     uint8_t cursor_ = 0, selected_ = 0, parentA_ = 255;
     uint8_t parentMask_ = 0, previewForm_ = 3;
+    BlockReason blockReason_ = BlockReason::None;
     uint32_t pendingElapsed_ = 0;
     bool enabled_ = false, failed_ = false, changedActive_ = false;
     const char* message_ = "";
