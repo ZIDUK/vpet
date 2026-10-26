@@ -16,7 +16,7 @@ public:
     using SeedGenerator = uint32_t (*)();
     enum class Page : uint8_t {
         Migration, List, Detail, Parents, ConfirmMigration, ConfirmFounder,
-        ConfirmSwitch, ConfirmBreed, Error
+        ConfirmSwitch, ConfirmBreed, Error, Preferences
     };
     CollectionPanel(CollectionStore& store, SettingsStore& legacy, ProfileGenerator profiles,
                     SeedGenerator seeds, TFT_eSprite* canvas = nullptr, AssetStore* assets = nullptr,
@@ -31,6 +31,7 @@ public:
     virtual bool hatchReady() const;
     virtual bool timedEgg() const;
     virtual void open();
+    void setPreview(const PetState& pet) { previewForm_=static_cast<uint8_t>(pet.species()); }
     // True means close; changedActive asks App to rebase all runtime clocks.
     virtual bool input(InputEvent event, PetState& pet, Settings& settings,
                        const CollectionSwitchGuard& guard);
@@ -48,8 +49,14 @@ private:
     bool eligible(const PetState& pet, size_t a, size_t b);
     bool breed(const PetState& pet, const Settings& settings);
     void error(const char* message, bool storage = false);
-    void row(uint8_t index, int y, const char* label, bool selected);
-    void portrait(uint8_t slot, int x, int y, int size);
+    void beginParents(const PetState& pet, uint8_t first=255);
+    void refreshParents(const PetState& pet);
+    void text(int x, int y, const char* label, uint16_t color, int font=1);
+    void centered(int x, int y, const char* label, uint16_t color);
+    void button(int x, int width, uint8_t index, const char* icon, const char* label="");
+    void icon(const char* name, int x, int y, int size=16);
+    void portraitForm(uint8_t form, int x, int y, int size, bool flip=false, bool muted=false);
+    void portrait(uint8_t slot, int x, int y, int size, bool flip=false, bool muted=false);
     CollectionStore& store_;
     SettingsStore& legacy_;
     ProfileGenerator profiles_;
@@ -60,6 +67,7 @@ private:
     CollectionState state_;
     Page page_ = Page::Migration;
     uint8_t cursor_ = 0, selected_ = 0, parentA_ = 255;
+    uint8_t parentMask_ = 0, previewForm_ = 3;
     uint32_t pendingElapsed_ = 0;
     bool enabled_ = false, failed_ = false, changedActive_ = false;
     const char* message_ = "";

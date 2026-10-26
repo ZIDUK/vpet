@@ -14,10 +14,6 @@
 
 namespace vpet {
 namespace {
-const char* form(uint8_t value) {
-    const char* labels[] = {"FIREMON", "FLAMEMON", "DRAGFIREMON", "HUEVO", "SPARKMON"};
-    return value < 5 ? labels[value] : "?";
-}
 breeding::Parent parent(const PetState& pet, const CollectionSlot& slot) {
     breeding::Parent p;
     p.pet_id=pet.profile.petId(); p.sex=pet.profile.sex()==Sex::Male ? "M" : "F";
@@ -108,6 +104,21 @@ void CollectionPanel::open() {
     changedActive_=false; cursor_=0; parentA_=255;
     page_=failed_ ? Page::Error : enabled_ ? Page::List : Page::Migration;
 }
+void CollectionPanel::refreshParents(const PetState& pet) {
+    parentMask_=0;
+    for (uint8_t a=0;a<4;++a) for (uint8_t b=a+1;b<4;++b) {
+        if (parentA_!=255 && parentA_!=a && parentA_!=b) continue;
+        if (eligible(pet,a,b)) parentMask_|=parentA_==255 ? (1u<<a)|(1u<<b) : 1u<<(parentA_==a?b:a);
+        if (failed_) return;
+    }
+}
+void CollectionPanel::beginParents(const PetState& pet, uint8_t first) {
+    page_=Page::Parents; parentA_=first; message_="";
+    refreshParents(pet);
+    if (failed_) return;
+    cursor_=0;
+    while (cursor_<4 && !(parentMask_&(1u<<cursor_))) ++cursor_;
+}
 bool CollectionPanel::migrate(PetState& pet, Settings& settings) {
     std::string active, backup; bool present=false;
     if (!legacy_.exportLegacySnapshots(active,backup,present)) {
@@ -196,14 +207,20 @@ bool CollectionPanel::breed(const PetState& pet, const Settings& settings) {
 
 bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings, const CollectionSwitchGuard& guard) {
     changedActive_=false;
+    setPreview(pet);
     if (event==InputEvent::None) return false;
     if (event==InputEvent::Back) {
         if (page_==Page::List || page_==Page::Migration || page_==Page::Error) return true;
+        if (page_==Page::Parents && parentA_!=255) { beginParents(pet); return false; }
         page_=enabled_?Page::List:Page::Migration; cursor_=enabled_ && selected_<7?selected_:0; parentA_=255; return false;
     }
     if (page_==Page::Error) return event==InputEvent::Action;
     if (page_==Page::Migration) {
-        if (event==InputEvent::Action) { page_=Page::ConfirmMigration; cursor_=0; }
+        if (event==InputEvent::Next) cursor_=1-cursor_;
+        else if (event==InputEvent::Action) {
+            if (cursor_==1) return true;
+            page_=Page::ConfirmMigration; cursor_=0;
+        }
         return false;
     }
     if (page_==Page::List) {
@@ -212,26 +229,33 @@ bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings,
             if (cursor_==6) return true;
             selected_=cursor_; cursor_=0;
             if (selected_<4 && state_.slots[selected_].occupied) page_=Page::Detail;
-            else if (selected_==5) { page_=Page::Parents; parentA_=255; }
+            else if (selected_==5) beginParents(pet);
             else page_=Page::ConfirmFounder;
         }
         return false;
     }
     if (page_==Page::Detail) {
-        if (event==InputEvent::Next) cursor_=(cursor_+1)%3;
+        if (event==InputEvent::Next) cursor_=(cursor_+1)%4;
         else if (event==InputEvent::Action) {
             if (cursor_==2) { page_=Page::List; cursor_=selected_; }
-            else if (cursor_==1) { parentA_=selected_; page_=Page::Parents; cursor_=0; }
-            else { page_=Page::ConfirmSwitch; cursor_=0; }
+            else if (cursor_==1) beginParents(pet,selected_);
+            else if (cursor_==3) { page_=Page::Preferences; cursor_=0; }
+            else if (selected_!=state_.active) { page_=Page::ConfirmSwitch; cursor_=0; }
         }
         return false;
     }
+    if (page_==Page::Preferences) {
+        if (event==InputEvent::Action) { page_=Page::Detail; cursor_=3; }
+        return false;
+    }
     if (page_==Page::Parents) {
-        if (event==InputEvent::Next) cursor_=(cursor_+1)%5;
+        if (event==InputEvent::Next) {
+            do { cursor_=(cursor_+1)%5; } while (cursor_!=4 && !(parentMask_&(1u<<cursor_)));
+        }
         else if (event==InputEvent::Action) {
             if (cursor_==4) { page_=Page::List; cursor_=0; parentA_=255; }
-            else if (state_.slots[cursor_].occupied) {
-                if (parentA_==255) parentA_=cursor_;
+            else if (parentMask_&(1u<<cursor_)) {
+                if (parentA_==255) { parentA_=cursor_; refreshParents(pet); }
                 else if (eligible(pet,parentA_,cursor_)) { selected_=cursor_; page_=Page::ConfirmBreed; cursor_=0; }
                 else if (!failed_) error("Padres no elegibles");
             }
@@ -263,75 +287,4 @@ bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings,
     return false;
 }
 
-void CollectionPanel::row(uint8_t, int y, const char* label, bool selected) {
-    const uint16_t fill=selected?TFT_YELLOW:TFT_DARKGREY;
-    canvas_->fillRect(6,y,228,18,fill);
-    canvas_->setTextColor(selected?TFT_BLACK:TFT_WHITE,fill);
-    canvas_->drawString(label,10,y+4,1);
-}
-void CollectionPanel::portrait(uint8_t index, int x, int y, int size) {
-    if (!assets_ || index>=4 || !state_.slots[index].occupied) return;
-    const auto species=static_cast<SpeciesId>(state_.slots[index].form);
-    const auto& clip=content::builtinDefinition().clip(species,content::Action::Idle);
-    assets_->drawFrameScaled(*canvas_,clip.path,0,x,y,size,size,false,-1,0,clip.canvas);
-}
-void CollectionPanel::draw(const char* language) {
-    if (!canvas_) return;
-    canvas_->fillSprite(TFT_BLACK); canvas_->setTextDatum(TL_DATUM);
-    canvas_->setTextColor(TFT_WHITE,TFT_BLACK);
-    const bool es=language && !std::strcmp(language,"ES");
-    char line[38]; std::snprintf(line,sizeof(line),"%s  %u/4",es?"COLECCION":"COLLECTION",unsigned(state_.count()));
-    canvas_->drawString(line,8,5,2);
-    if (page_==Page::List || page_==Page::Parents) {
-        for (uint8_t i=0;i<4;++i) {
-            const auto& slot=state_.slots[i]; const auto profile=slot.profile();
-            std::snprintf(line,sizeof(line),"%u %s %s %s",unsigned(i+1),slot.occupied?form(slot.form):"---",
-                slot.occupied?(profile.sex()==Sex::Male?"M":"F"):"",slot.occupied && i==state_.active?"*":"");
-            row(i,26+i*20,line,cursor_==i);
-            portrait(i,212,27+i*20,16);
-        }
-        canvas_->setTextColor(TFT_WHITE,TFT_BLACK);
-        if (page_==Page::Parents) {
-            canvas_->drawString(parentA_==255?"PADRE A":"PADRE B",8,112,1);
-            if (cursor_==4) row(4,110,"< VOLVER",true);
-        } else {
-            const char* commands[]={"+ FUNDADOR","CRUZAR","<"};
-            for (uint8_t i=0;i<3;++i) {
-                canvas_->setTextColor(cursor_==i+4?TFT_YELLOW:TFT_WHITE,TFT_BLACK);
-                canvas_->drawString(commands[i],8+i*94,112,1);
-            }
-        }
-    } else if (page_==Page::Detail) {
-        portrait(selected_,8,29,64);
-        const auto& slot=state_.slots[selected_]; const auto profile=slot.profile();
-        canvas_->drawString(form(slot.form),80,30,1);
-        canvas_->drawString(profile.petId().substr(0,16).c_str(),80,46,1);
-        canvas_->drawString(profile.petId().substr(16).c_str(),80,58,1);
-        std::snprintf(line,sizeof(line),"%s  %s",profile.sex()==Sex::Male?"M":"F",selected_==state_.active?"ACTIVO":"");
-        canvas_->drawString(line,80,74,1);
-        if (slot.cooldownMs) { std::snprintf(line,sizeof(line),"Espera %lum",static_cast<unsigned long>((slot.cooldownMs+59999)/60000)); canvas_->drawString(line,80,90,1); }
-        if (slot.form==3 && slot.incubationRequiredMs) { std::snprintf(line,sizeof(line),"Incuba %lum",static_cast<unsigned long>((slot.incubationRequiredMs-slot.incubationMs+59999)/60000)); canvas_->drawString(line,80,94,1); }
-        const char* actions[]={"ACTIVAR","PADRE","<"};
-        for (uint8_t i=0;i<3;++i) {
-            canvas_->setTextColor(cursor_==i?TFT_YELLOW:TFT_WHITE,TFT_BLACK);
-            canvas_->drawString(actions[i],8+i*90,116,1);
-        }
-    } else if (page_==Page::Error) {
-        canvas_->drawString(message_,8,48,1);
-        canvas_->drawString(failed_?"Reiniciar para recuperar":"< VOLVER",8,82,1);
-    } else if (page_==Page::Migration) {
-        canvas_->drawString("Activo + reserva legacy",8,40,1);
-        canvas_->drawString("Mochila: solo activo",8,60,1);
-        row(0,97,"MIGRAR...",true);
-    } else {
-        const char* action=page_==Page::ConfirmMigration?"Migrar activo y reserva?":
-            page_==Page::ConfirmFounder?"Crear huevo fundador?":
-            page_==Page::ConfirmSwitch?"Cambiar mascota activa?":"Confirmar cruce?";
-        canvas_->drawString(action,8,39,1);
-        if (page_==Page::ConfirmFounder) canvas_->drawString("Sin objetos nuevos",8,62,1);
-        if (page_==Page::ConfirmBreed) canvas_->drawString("Huevo 30m / espera 24h",8,62,1);
-        row(0,86,"CANCELAR",cursor_==0); row(1,108,"CONFIRMAR",cursor_==1);
-    }
-    canvas_->pushSprite(0,0);
-}
 }  // namespace vpet

@@ -31,7 +31,7 @@ def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path):
         "-I", str(ROOT / "firmware/t-display/include"), "-I", str(CORE),
         str(ROOT / "tests/esp32_learning_app.cpp"),
         *[str(ROOT / "firmware/t-display/src" / (name + ".cpp")) for name in (
-            "App", "CollectionPanel", "LearningRuntime", "LittleFsLearningRepository", "LittleFsCollectionRepository")],
+            "App", "CollectionPanel", "CollectionView", "LearningRuntime", "LittleFsLearningRepository", "LittleFsCollectionRepository")],
         *[str(CORE / "vpet" / (name + ".cpp")) for name in (
             "CollectionStore", "SettingsStore", "PetState", "Nutrition", "PracticeBattle",
             "Motion", "Navigation", "Evolution", "DateTimeMenu")],

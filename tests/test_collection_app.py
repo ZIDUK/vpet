@@ -15,6 +15,7 @@ def test_collection_app_runtime_and_transactions(tmp_path):
         str(ROOT / "tests/collection_app.cpp"),
         str(ROOT / "firmware/t-display/src/App.cpp"),
         str(ROOT / "firmware/t-display/src/CollectionPanel.cpp"),
+        str(ROOT / "firmware/t-display/src/CollectionView.cpp"),
         str(ROOT / "firmware/t-display/src/LearningRuntime.cpp"),
         *[str(CORE / (name + ".cpp")) for name in (
             "CollectionStore", "PetState", "Nutrition", "SettingsStore", "PracticeBattle",

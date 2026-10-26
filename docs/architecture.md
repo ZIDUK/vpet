@@ -13,6 +13,13 @@ las nuevas vistas siguen pendientes de aceptacion del usuario.
 El despliegue normal de LittleFS queda bloqueado para no borrar individuos;
 solo firmware compatible hasta disponer de actualizador preservando datos.
 
+Revision visual 2026-10-26: `CollectionView.cpp` dibuja la presentacion de
+coleccion y `CollectionPanel.cpp` conserva seleccion y transacciones. No hay
+otro framebuffer ni cambios de persistencia; se reutilizan los clips instalados
+de Training y el retrato del huevo. La consulta de preferencias en placa usa
+solo la politica activa ya residente; las politicas de reserva no se cargan.
+La bienvenida visible no ejecuta la migracion por abrirla.
+
 ## Portal Local vPet Hub
 
 `scripts/hub_server.py` sirve `web/hub/` en loopback. El cliente consulta

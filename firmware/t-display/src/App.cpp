@@ -305,7 +305,7 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 break;
             }
             case option_menu::collection:
-                if (collection_) { collection_->open(); navigation_.setPanel(PanelId::Collection); }
+                if (collection_) { collection_->setPreview(pet_); collection_->open(); navigation_.setPanel(PanelId::Collection); }
                 else panels_.drawStorageError(settings_.language.c_str());
                 break;
         }
@@ -448,7 +448,7 @@ void App::activate(uint32_t nowMs) {
     }
     if (pet_.dead()) {
         if (collection_ && collection_->enabled()) {
-            collection_->open(); navigation_.setPanel(PanelId::Collection); return;
+            collection_->setPreview(pet_); collection_->open(); navigation_.setPanel(PanelId::Collection); return;
         }
         pet_.resetToEgg();
         motion_.setSpecies(SpeciesId::Egg);

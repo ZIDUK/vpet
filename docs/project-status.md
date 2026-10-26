@@ -1,6 +1,29 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-25
+## Estado vigente: 2026-10-26
+
+## Coleccion Visual: Cargada En Placa
+
+Redisenada con cuatro plazas ilustradas, ficha grande, preferencias y seleccion
+visual de dos padres antes de confirmar el huevo. Bienvenida con la mascota
+actual y "Tu coleccion" en lugar de "Migrar"; abrirla no activa la coleccion.
+No cambian reglas de breeding, ADN, inventario ni persistencia. Presentacion
+separada en `CollectionView.cpp`, sin otro framebuffer ni assets nuevos.
+
+2038 pruebas Python y 185 nativas aprobadas; firmware compilado: RAM estatica
+52236 bytes (+8), app 1102817 bytes. La suite incluye Creator concurrente
+solo como pruebas; sus cambios siguen fuera de esta entrega. Firmware nuevo
+cargado con autorizacion expresa, respaldo critico y de app nuevos, mas copia
+completa anterior de LittleFS comprobada contra el dispositivo. Digests de
+firmware y LittleFS coinciden despues de cargar; no se reemplazo el filesystem
+ni se borro NVS. Arranque `VPET_READY`: heap libre 90888/minimo 88220,
+manifest 1. No se activo la coleccion, creo huevos ni cruzo mascotas por el
+usuario. Aceptacion visual de esta revision y flujos reales siguen pendientes.
+Observacion serie de 70 s: seis muestras, heap libre estable 90888 y minimo
+85732; sin reinicios adicionales ni fatal. BLE=0, sin eventos de entrada:
+no acredita radio, navegacion ni fluidez de Coleccion.
+Ver [plan y evidencia](superpowers/plans/2026-10-26-visual-collection.md)
+y [manual](product-guide.md).
 
 ## Coleccion, Aprendizaje Y Breeding: Cargados En Placa
 

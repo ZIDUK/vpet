@@ -5,6 +5,29 @@ pendientes de aceptacion fisica. Ver [diseno aprobado](superpowers/specs/2026-10
 y [plan y evidencia](superpowers/plans/2026-10-25-collection-learning-breeding.md).
 Ver [registro de carga y limites](superpowers/plans/2026-10-25-collection-board-delivery.md).
 
+## Revision De Interfaz 2026-10-26
+
+El usuario confirma que la placa aun muestra "Migrar"; no se interpreta como
+aceptacion de la conservacion de progreso ni como autorizacion para migrarlo.
+La nueva bienvenida dice "Activar coleccion" y muestra la mascota actual;
+mantiene la confirmacion explicita y las mismas reglas de inventario/reserva.
+Cuatro plazas visibles, ficha sin ID hexadecimal y seleccion de padres en
+dos pasos. Navegar, ver ambos padres y cancelar no generan descendencia.
+
+La vista C++ se separa en `CollectionView.cpp`; `CollectionPanel.cpp` conserva
+el controlador y las transacciones. Se reutilizan clips Training de 68px y el
+retrato instalado de huevo, sin ampliar LittleFS ni reservar otro framebuffer.
+Los candidatos se comprueban al seleccionar, no en cada dibujo. No se cambian
+ADN, edades, costes ni requisitos de reproduccion.
+
+Preferencias en placa usa la politica activa residente. Para un individuo
+en reserva se muestran datos no disponibles, sin cargar otra politica ni
+atribuir preferencias inexistentes. El simulador puede consultar las politicas
+de los individuos inactivos. Guion: plazas -> ficha -> primer padre -> pareja
+-> confirmar cruce; el huevo mostrado no predice sexo, aspecto ni ADN del hijo.
+La carga visual se autoriza expresamente tras la galeria; comprobar el estado
+real de carga y aceptacion en [estado del proyecto](project-status.md).
+
 ## Coleccion E Inventario
 
 - Cuatro plazas totales: un huevo ocupa la misma plaza que un adulto.

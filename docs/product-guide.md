@@ -23,6 +23,19 @@ implementacion, carga USB y aceptacion fisica. Pico es una plataforma legacy.
 
 ## Controles Y Disponibilidad
 
+Revision visual 2026-10-26: Coleccion muestra cuatro plazas con sus criaturas,
+marca de activa y sexo M/F. Una plaza vacia o el comando Huevo abre una
+confirmacion; no crea un individuo al seleccionarla. La ficha permite activar,
+elegir padre, consultar preferencias y volver. En el cruce primero se fija un
+padre y luego la pareja elegible; ambos son visibles antes de confirmar.
+La bienvenida "Activar coleccion" reemplaza el termino tecnico "Migrar".
+En firmware la bienvenida abre una confirmacion predeterminada en Cancelar.
+No activar ni crear huevos solo para grabar un video sin explicar ese efecto.
+Preferencias en placa muestra la politica de la mascota activa; los individuos
+en reserva no cargan otra politica para esta consulta. El simulador conserva
+la consulta de todas las politicas. La carga y aceptacion visual se registran
+por separado en el estado del proyecto.
+
 El [perfil individual F2a](individual-profile.md) ya implementado localmente
 guarda ID, sexo y padres desde huevo, y los conserva al evolucionar.
 El perfil no agrega ventajas de combate por sexo. La entrega posterior
