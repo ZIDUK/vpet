@@ -2,6 +2,24 @@
 
 ## Estado vigente: 2026-10-26
 
+## Coleccion: Guardado Y Cambio Aceptados; Alimentacion En Diagnostico
+
+IMG_4260 muestra 2/4: Firemon M activo y Flamemon F. Tras solicitar guardar,
+reiniciar y comparar, el usuario confirma conservacion de individuos, activo,
+progreso y mochila. Tambien confirma stats propios al cambiar de mascota y
+cantidades iguales en la mochila compartida. No acredita aun cuatro plazas,
+fundador, cruce, herencia, incubacion ni cooldown en placa.
+
+Durante la preparacion de padres reporta que confirmar MEAT permanece en
+FEED sin animacion; IMG_4262 muestra el selector, no los valores de cuidado.
+No se atribuye a pausa, saciedad ni guardado sin esos datos. El App real
+con Coleccion sintetica si inicia Eat y avanza fotogramas al aceptar carne
+y proteina en Firemon/Flamemon; rechazar por saciedad/ciclo o pausa mantiene
+FEED sin mutacion. La etiqueta UNLIMITED actual no explica esos rechazos.
+Se solicita Status y pausa actual. Sin cambios de produccion, reglas de
+alimentacion, partida ni firmware instalado. Ver
+[diagnostico acotado](superpowers/plans/2026-10-26-feeding-menu-diagnostic.md).
+
 ## Coleccion Visible Y Reanudacion De Home Confirmadas
 
 Confirmacion fisica posterior del usuario: "si lo coloco off, ya se mueve".

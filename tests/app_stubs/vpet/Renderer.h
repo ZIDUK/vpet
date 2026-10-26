@@ -12,11 +12,13 @@ struct Renderer {
     int invalidations=0, minute=720; uint8_t menuIndex=0; bool sleeping=false, tired=false;
     int frameChanges=0, lastFrame=-1;
     SpeciesId species=SpeciesId::Egg;
+    MotionState motionState=MotionState::Idle;
     void invalidate() { ++invalidations; }
     void draw(const AppViewModel& m) {
         menuIndex=m.menuIndex; minute=m.minuteOfDay; sleeping=m.pet.sleep.asleep; tired=m.tired;
         if(lastFrame!=m.motion.frame()) ++frameChanges;
         lastFrame=m.motion.frame(); species=m.pet.species();
+        motionState=m.motion.state();
     }
 };
 }
