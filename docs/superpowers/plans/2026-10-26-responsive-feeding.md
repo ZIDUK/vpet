@@ -101,3 +101,15 @@ other gameplay transactions remain synchronous. A queued action is not durable.
 - Manual MEAT/PROTEIN presentation, runtime writer telemetry, full animation
   and BLE remain pending. No feeding, pet switching or rewards were performed
   by the agent. No physical acceptance is inferred from successful flashing.
+
+## User Visual Acceptance
+
+- Asked to test FEED -> MEAT once, awake, pause OFF and satiety below 100,
+  and confirm immediate eating with the complete animation without pauses.
+  User replied "ahora si". Record qualitative visual acceptance for MEAT;
+  this does not certify PROTEIN, numeric latency or memory under save load.
+- Capture out/responsive-feeding/feeding-capture-20261026-184635.json closed
+  after 180.061 s, before the response arrived: zero feeding inputs/results,
+  zero presentation/save metrics, zero commands sent and no fatal lines.
+  Do not infer writer stack/heap margin from idle runtime or startup figures.
+  No extra meal or restart requested merely to obtain telemetry.

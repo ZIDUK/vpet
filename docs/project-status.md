@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-26
 
-## Alimentacion Inmediata Y Guardado De Fondo: Cargado, Validacion Pendiente
+## Alimentacion Inmediata Y Guardado De Fondo: Respuesta Visual Aceptada
 
 Implementado para MEAT/PROTEIN: primer dibujo Home/Eat antes de iniciar el
 escritor FreeRTOS, un snapshot pendiente como maximo y NEXT disponible mientras
@@ -25,7 +25,11 @@ Respaldo actual: out/board-backups/responsive-feeding-20261026-183627/.
 App escrita solo en 0x10000; hashes de app, LittleFS, NVS, bootloader y
 particiones verificados antes del reinicio. VPET_READY: heap 82520/minimo
 72936, flash 16 MiB, manifest 1. Estas medidas preceden la creacion lazy
-del worker: faltan primer frame, fluidez, pila/heap bajo carga y BLE en placa.
+del worker. Ante la pregunta por inicio inmediato y animacion sin pausas en
+FEED -> MEAT, el usuario confirma "ahora si". Aceptacion visual cualitativa,
+no medida de latencia. La captura 20261026-184635 duro 180.061 s y no registro
+entradas ni resultados de comida; la respuesta llego despues del cierre.
+Siguen pendientes tiempos numericos, pila/heap durante guardado, PROTEIN y BLE.
 No cambia Status, graficos ni schema. Corte de energia antes del commit puede
 perder la ultima comida pendiente. [Plan y evidencia](superpowers/plans/2026-10-26-responsive-feeding.md).
 
