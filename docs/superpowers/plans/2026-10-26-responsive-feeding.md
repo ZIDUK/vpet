@@ -81,3 +81,23 @@ other gameplay transactions remain synchronous. A queued action is not durable.
   heap/stack margin remain unverified for the new task.
 - Final native suite: 185 passed in 0.933 s. Architecture and current project
   status reflect that this revision is prepared, not deployed.
+
+## Approved Firmware-Only Deployment: 2026-10-26
+
+- User explicitly approved loading and validating the background-save firmware,
+  preserving saves, Collection and graphics. Code revision: 0752e79; Creator
+  main.cpp changes remain outside the isolated build and this deployment.
+- Fresh isolated PlatformIO build passed in 3.218 s. Ten relevant sources,
+  including committed main.cpp, match HEAD. The rebuilt binary matches the
+  approved SHA-256 above. Two focused App/task tests passed in 6.34 s.
+- Fresh board backup: out/board-backups/responsive-feeding-20261026-183627/.
+  Verified full current LittleFS, NVS/partition area and previous application
+  before writing. Previous application SHA-256 matches firmware 81cee4b.
+- Only 1113216 application bytes at 0x10000 were replaced. App digest verified;
+  LittleFS, NVS, bootloader and partition digests unchanged before restart.
+- Startup VPET_READY: free heap 82520, minimum 72936, flash 16777216,
+  filesystem 11829248/12451840, manifest 1. This precedes lazy writer creation;
+  it does not validate worker stack or heap margin during a real save.
+- Manual MEAT/PROTEIN presentation, runtime writer telemetry, full animation
+  and BLE remain pending. No feeding, pet switching or rewards were performed
+  by the agent. No physical acceptance is inferred from successful flashing.
