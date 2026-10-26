@@ -329,7 +329,10 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
     const auto result = load(*scratch);
     if (result == CollectionLoad::Loaded) { state = *scratch; return true; }
     if (result != CollectionLoad::Missing) return false;
-    PetState pet; Settings settings;
+    std::unique_ptr<PetState> individual(new (std::nothrow) PetState);
+    if (!individual) { blocked_ = true; return false; }
+    auto& pet = *individual;
+    Settings settings;
     if (!restore(active, pet, settings)) { blocked_ = true; return false; }
     if (!pet.profile.assigned()) pet.profile = missingActive;
     if (!pet.profile.assigned()) return false;
@@ -356,14 +359,17 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
         }
     }
     // A caller's stale RAM metadata must never turn migration into an overwrite.
-    CollectionState empty;
-    if (!persist(empty, candidate, replacements)) return false;
-    state = empty; return true;
+    std::unique_ptr<CollectionState> empty(new (std::nothrow) CollectionState);
+    if (!empty) { blocked_ = true; return false; }
+    if (!persist(*empty, candidate, replacements)) return false;
+    state = *empty; return true;
 }
 bool CollectionStore::saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
                                  const char* learningRef) {
     if (!current(state) || pet.profile.encode() != state.slots[state.active].profileRecord) return false;
-    CollectionState candidate = state; sharedFrom(candidate, pet);
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch; sharedFrom(candidate, pet);
     auto& slot = candidate.slots[state.active]; slot.form = static_cast<uint8_t>(pet.species());
     if (learningRef && (!copyText(slot.learningRef, learningRef) || !fileKey(slot.learningRef))) return false;
     std::string body; if (!captureBody(pet, settings, body)) return false;
@@ -378,7 +384,9 @@ bool CollectionStore::activate(CollectionState& state, size_t target, PetState& 
     if (target == state.active) return true;
     PetState next; Settings ignored;
     if (!readPet(state, target, next, ignored) || next.pendingAction()!=Action::None || next.exploration.away()) return false;
-    CollectionState candidate = state; sharedFrom(candidate, pet); applyShared(candidate, next);
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch; sharedFrom(candidate, pet); applyShared(candidate, next);
     candidate.active = target;
     std::string body; if (!captureBody(pet, settings, body)) return false;
     candidate.slots[state.active].form = static_cast<uint8_t>(pet.species());
@@ -394,7 +402,9 @@ bool CollectionStore::addFounder(CollectionState& state, const PetState& egg, co
     if (!confirmed || !current(state) || !egg.profile.assigned() || !egg.profile.parentA().empty() ||
         egg.species() != SpeciesId::Egg || !idle(egg) || identityExists(state, egg.profile)) return false;
     const auto index = emptySlot(state); if (index == CollectionState::kSlots) return false;
-    CollectionState candidate = state; auto& slot = candidate.slots[index];
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch; auto& slot = candidate.slots[index];
     slot.occupied = true; slot.setProfile(egg.profile);
     std::string body; if (!captureBody(egg, settings, body)) return false;
     const std::string* replacements[CollectionState::kSlots] = {}; replacements[index] = &body;
@@ -420,7 +430,9 @@ bool CollectionStore::commitEgg(CollectionState& state, const CollectionEggTrans
     PetState parent; Settings ignored;
     if (!readPet(state, tx.parentA, parent, ignored) || !parentEligible(parent) ||
         !readPet(state, tx.parentB, parent, ignored) || !parentEligible(parent)) return false;
-    CollectionState candidate = state; auto& slot = candidate.slots[index];
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch; auto& slot = candidate.slots[index];
     slot.occupied = true; slot.setProfile(egg.profile); slot.breedingId = tx.id; slot.seed = tx.seed;
     slot.rulesVersion = tx.rulesVersion; slot.incubationRequiredMs = tx.incubationMs;
     copyText(slot.learningRef, tx.learningRef);
@@ -435,7 +447,9 @@ bool CollectionStore::commitEgg(CollectionState& state, const CollectionEggTrans
 bool CollectionStore::advance(CollectionState& state, uint32_t elapsedMs, bool paused) {
     if (!current(state)) return false;
     if (paused || !elapsedMs) return true;
-    CollectionState candidate = state; bool changed = false;
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch; bool changed = false;
     for (auto& slot : candidate.slots) if (slot.occupied && slot.cooldownMs) {
         slot.cooldownMs -= std::min(slot.cooldownMs, elapsedMs); changed = true;
     }

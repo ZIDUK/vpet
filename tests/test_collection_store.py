@@ -57,4 +57,6 @@ def test_collection_host_stack_frames_are_bounded(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     rows = (tmp_path / "stack.su").read_text().splitlines()
     frames = [(line.split("\t")[0], int(line.split("\t")[1])) for line in rows]
-    assert frames and max(size for _, size in frames) <= 3072, frames
+    # These frames nest under App, the panel, snapshot decoders and libc on an
+    # 8 KiB ESP32 loop stack. A 3 KiB per-function allowance was not sufficient.
+    assert frames and max(size for _, size in frames) <= 1024, frames

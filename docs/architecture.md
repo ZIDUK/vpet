@@ -20,6 +20,14 @@ de Training y el retrato del huevo. La consulta de preferencias en placa usa
 solo la politica activa ya residente; las politicas de reserva no se cargan.
 La bienvenida visible no ejecuta la migracion por abrirla.
 
+Correccion de pila 2026-10-26: las transacciones de `CollectionStore` reservan
+los metadatos candidatos en heap mediante RAII y comprueban el fallo de reserva.
+La migracion tampoco mantiene un individuo temporal en pila. El guardado
+anidado agotaba los 8 KiB de loopTask en hardware aunque cada frame individual
+pasaba el limite antiguo de host. El limite de regresion ahora es 1024 bytes
+por frame; esto no sustituye validar la ruta completa en la placa. Serializado,
+schema, journals y momento de commit permanecen iguales.
+
 ## Portal Local vPet Hub
 
 `scripts/hub_server.py` sirve `web/hub/` en loopback. El cliente consulta

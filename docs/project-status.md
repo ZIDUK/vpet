@@ -2,6 +2,21 @@
 
 ## Estado vigente: 2026-10-26
 
+## Activacion De Coleccion: Correccion Cargada
+
+El usuario acepta visualmente el rediseno pero detecta reinicio al confirmar
+Enable. Captura serie y backtrace confirman desbordamiento de pila loopTask
+durante la serializacion en CollectionStore::migrate. Se reducen temporales
+de pila con RAII; no se cambian datos, reglas ni schema. Prueba preventiva
+de host pasa de 3072 a 1024 bytes por frame; migracion Xtensa 2384 -> 304.
+33 pruebas focalizadas, 2038 Python completas y 185 nativas aprobadas;
+compilacion ESP32 con RAM estatica 52236 y app 1102745 bytes. Respaldo critico
+y app nuevos verificados. Usuario autoriza firmware corregido, cargado sin
+activar Coleccion por el: `VPET_READY`, heap libre 90896/minimo 87524,
+manifest 1. Validacion fisica de la activacion sigue pendiente; un arranque
+correcto no acredita aun resuelto el flujo que fallaba.
+Ver [diagnostico y entrega](superpowers/plans/2026-10-26-collection-enable-stack.md).
+
 ## Coleccion Visual: Cargada En Placa
 
 Redisenada con cuatro plazas ilustradas, ficha grande, preferencias y seleccion
