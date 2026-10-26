@@ -2,6 +2,18 @@
 
 ## Estado vigente: 2026-10-26
 
+## Alimentacion: Diagnostico Serie Preparado, Sin Cargar
+
+El usuario vuelve a confirmar que ACTION permanece en FEED. Los valores
+reportados (salud 100, saciedad 6, energia/animo 0, pausa OFF) no explican
+rechazo por saciedad. Se prepara instrumentacion acotada de App: entrada,
+guardas, FoodResult y resultado del commit, sin cambiar reglas ni interfaz.
+La captura USB anterior ya habia terminado y no registro el nuevo intento.
+El binario de diagnostico compila en copia aislada, sin cambios concurrentes
+de Hub/Creator: RAM 52236, app 1104181 bytes. Autorizacion de carga solicitada;
+no esta instalado y no se presenta como correccion del fallo. Ver
+[registro y lectura de trazas](superpowers/plans/2026-10-26-feeding-menu-diagnostic.md).
+
 ## Coleccion: Guardado Y Cambio Aceptados; Alimentacion En Diagnostico
 
 IMG_4260 muestra 2/4: Firemon M activo y Flamemon F. Tras solicitar guardar,

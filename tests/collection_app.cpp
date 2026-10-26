@@ -311,7 +311,7 @@ int main() {
     }
     // Accepted food must animate with Collection; rejected food must not mutate it.
     for (const auto species : {SpeciesId::Rookie, SpeciesId::Champion}) {
-        for (int scenario=0;scenario<6;++scenario) {
+        for (int scenario=0;scenario<7;++scenario) {
             Store foodLegacy; SettingsStore foodSettings(foodLegacy); Settings settings;
             PetState hungry;
             hungry.restore(species,70,70,90,0,100,0); hungry.profile=profile(); hungry.rollDna(17);
@@ -335,7 +335,28 @@ int main() {
             if (protein) input(InputEvent::Next);
             const auto before=foodRepository.durable;
             const int changes=foodRenderer.frameChanges;
+            foodRepository.fail=scenario==6;
+            Serial.output.clear();
             input(InputEvent::Action);
+            assert(Serial.output.find("VPET_FEED input index=")!=std::string::npos);
+            const int result=accepted?0:(scenario==2?6:4);
+            const std::string outcome="VPET_FEED result="+std::to_string(result)+
+                " committed="+(accepted && scenario!=6?"1":"0");
+            assert(Serial.output.find(outcome)!=std::string::npos);
+            if (scenario==6) {
+                assert(!foodApp.ready() && foodRepository.durable==before);
+                assert(foodRenderer.motionState!=MotionState::Eat);
+                Serial.output.clear(); input(InputEvent::Action);
+                assert(Serial.output.find("saving=1")!=std::string::npos);
+                assert(Serial.output.find("VPET_FEED result=")==std::string::npos);
+                foodRepository.fail=false;
+                assert(foodStore.load(state)==CollectionLoad::Loaded);
+                PetState unchanged; Settings ignored;
+                assert(foodStore.readPet(state,0,unchanged,ignored));
+                assert(unchanged.hunger()==6 && unchanged.energy()==0 && unchanged.happiness()==0);
+                assert(foodLegacy.writes==0);
+                continue;
+            }
             assert(foodApp.ready());
             PetState fed; Settings ignored;
             assert(foodStore.readPet(foodPanel.state(),0,fed,ignored));

@@ -366,8 +366,11 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         }
         const PetState before = pet_;
         const FoodId food = navigation_.panelIndex() == 0 ? FoodId::Meat : FoodId::Protein;
-        if (applyFood(pet_, food) == FoodResult::Applied) {
-            if (collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitFood(pet_)) {
+        const FoodResult result=applyFood(pet_,food);
+        bool committed=false;
+        if (result == FoodResult::Applied) {
+            committed=collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitFood(pet_);
+            if (committed) {
                 motion_.startAction(Action::Feed, nowMs);
                 navigation_.setPanel(PanelId::Home);
                 settleStorage();
@@ -375,6 +378,8 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 pet_ = before;
             }
         }
+        Serial.printf("VPET_FEED result=%u committed=%u hunger=%d energy=%d mood=%d\n",
+            static_cast<unsigned>(result),committed?1U:0U,pet_.hunger(),pet_.energy(),pet_.happiness());
         return;
     }
     if (panel == PanelId::Rest) {
@@ -486,6 +491,13 @@ void App::activate(uint32_t nowMs) {
 }
 
 void App::tick(uint32_t nowMs, InputEvent event) {
+    if (event==InputEvent::Action && navigation_.panel()==PanelId::Feeding) {
+        Serial.printf("VPET_FEED input index=%u hunger=%d energy=%d mood=%d paused=%u asleep=%u dead=%u away=%u pending=%u storage=%u saving=%u training=%u practice=%u\n",
+            static_cast<unsigned>(navigation_.panelIndex()),pet_.hunger(),pet_.energy(),pet_.happiness(),
+            pet_.cold()?1U:0U,pet_.sleep.asleep?1U:0U,pet_.dead()?1U:0U,pet_.exploration.away()?1U:0U,
+            static_cast<unsigned>(pet_.pendingAction()),storageReady_?1U:0U,savePending_?1U:0U,
+            trainingActive_?1U:0U,practicing_?1U:0U);
+    }
     if (!storageReady_) {
         if (nowMs-lastRenderMs_>=1000) begin(nowMs);
         return;

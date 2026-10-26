@@ -72,3 +72,59 @@ de ACTION, consumo, rechazo de comida o resultado de guardado durante el intento
 
 Sigue pendiente observar una pulsacion real y comparar cuidado antes/despues.
 No se cambia firmware, limites, graficos ni partida para encubrir el fallo.
+
+## Instrumentacion Preparada, No Instalada
+
+El usuario confirma de nuevo que queda en FEED. La captura anterior ya
+habia terminado: esa respuesta no se presenta como accion capturada por USB.
+Se inspeccionan Navigation, BoardInput y la cola, sin atribuirles un defecto
+no reproducido. Se prepara una revision exclusivamente de diagnostico.
+
+App emite VPET_FEED input al recibir ACTION con panel interno Feeding,
+antes de sus retornos por almacenamiento o actividad. Incluye indice,
+saciedad/energia/animo y flags de pausa, sueno, muerte, viaje, accion,
+almacenamiento, guardado, entrenamiento y practica. Al llegar a applyFood,
+emite VPET_FEED result y committed con valores finales o rollback.
+No incluye ID, parentesco, ADN ni contenido completo de la partida; solo
+sale por USB local. No se anaden comandos entrantes, WiFi o acciones nuevas.
+
+Interpretacion de FoodResult, sin renumerar enums:
+
+| result | Motivo |
+| --- | --- |
+| 0 | Applied: debe seguir committed=1 para iniciar Eat |
+| 1 | Alimento invalido |
+| 2 | Huevo |
+| 3 | Muerto |
+| 4 | Pausa |
+| 5 | Energia sin margen para proteina |
+| 6 | Limite del ciclo de comida |
+| 7 | Dormido |
+
+Applied con committed=0 identifica rechazo/fallo de persistencia, no una
+comida completada. Input sin result se interpreta con flags y ruta real;
+indice 2 es Volver y no debe aplicar comida. Si solo aparece VPET_INPUT y
+no VPET_FEED input, comprobar panel interno y ruta previa, sin atribuirlo
+automaticamente a Nutrition. Ausencia de VPET_INPUT no prueba rechazo de comida.
+
+Prueba RED: falta de VPET_FEED input confirmada en 5.34 s antes de cambiar
+App; GREEN focalizado 4.98 s tras instrumentar. Esta RED verifica capacidad
+de diagnostico nueva, no reproduce la causa del fallo fisico. Incluye comida
+aceptada y rechazos de pausa/ciclo; se amplia tambien a fallo de repositorio
+con rollback y otra entrada durante guardado pendiente, sin segunda comida.
+
+Build aislado desde HEAD 34e4e0b mas App instrumentado, con cabecera generada
+TrainingArtwork existente. main.cpp de la copia coincide con HEAD, SHA-256
+2ba7d11a8e8a7f7de7c8e25d0439b625af1fe8f40e68400cf78010b93a37879f;
+no incluye el adaptador Hub concurrente del checkout. Build tdisplay aprobado
+en 17.526 s: RAM estatica 52236, app 1104181 bytes, particiones 16 MiB.
+Binario y ELF conservados en out/feeding-diagnostic/. SHA-256 del binario:
+b12e37036b7b87b154c179a9d9be9381a2f7585abdd251a2dd2528daebdeab4a.
+Nativas: 185 aprobadas en 0.503 s; focalizadas previas 89 en 37.63 s con
+150 advertencias existentes de Pillow. Verificacion final con las catorce
+combinaciones y fallo de repositorio: 89 focalizadas aprobadas en 36.05 s,
+con las mismas 150 advertencias. Sin cambios de Status ni assets.
+
+Carga solicitada expresamente, pendiente de respuesta. No se instala sin
+confirmacion y respaldo actual, ni se reemplaza LittleFS. Este diagnostico
+no se anuncia como correccion ni como prueba fisica de consumo.
