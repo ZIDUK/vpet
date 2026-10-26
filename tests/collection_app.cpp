@@ -24,6 +24,7 @@ struct Repository : vpet::CollectionRepository {
     std::string durable, pending;
     uint64_t sequence=0;
     bool fail=false;
+    uint32_t nextCommitDelayMs=0;
     int commits=0;
     vpet::CollectionRead size(size_t& bytes) override {
         bytes=durable.size(); return bytes?vpet::CollectionRead::Present:vpet::CollectionRead::Missing;
@@ -45,6 +46,7 @@ struct Repository : vpet::CollectionRepository {
         std::memcpy(out,pending.data()+at,n); return true;
     }
     bool commit(uint64_t next) override {
+        simulatedMillis+=nextCommitDelayMs; nextCommitDelayMs=0;
         durable=pending; pending.clear(); sequence=next; ++commits; return true;
     }
     void abort() override { pending.clear(); }
@@ -311,7 +313,7 @@ int main() {
     }
     // Accepted food must animate with Collection; rejected food must not mutate it.
     for (const auto species : {SpeciesId::Rookie, SpeciesId::Champion}) {
-        for (int scenario=0;scenario<7;++scenario) {
+        for (int scenario=0;scenario<9;++scenario) {
             Store foodLegacy; SettingsStore foodSettings(foodLegacy); Settings settings;
             PetState hungry;
             hungry.restore(species,70,70,90,0,100,0); hungry.profile=profile(); hungry.rollDna(17);
@@ -328,14 +330,17 @@ int main() {
             CollectionPanel foodPanel(foodStore,foodSettings,profile,seed);
             Renderer foodRenderer; Panels foodPanels; BleService foodBle;
             App foodApp(foodRenderer,foodPanels,foodSettings,foodBle,clockNow,&foodPanel);
-            uint32_t now=0; foodApp.begin(now); assert(foodApp.ready());
-            auto input=[&](InputEvent event) { now+=50; foodApp.tick(now,event); };
+            uint32_t now=scenario==8?0xfffff000U:0; foodApp.begin(now); assert(foodApp.ready());
+            auto input=[&](InputEvent event) {
+                now+=50; simulatedMillis=now; foodApp.tick(now,event); now=simulatedMillis;
+            };
             input(InputEvent::Next); input(InputEvent::Action);
             assert(foodPanels.lastPanel==PanelId::Feeding);
             if (protein) input(InputEvent::Next);
             const auto before=foodRepository.durable;
             const int changes=foodRenderer.frameChanges;
             foodRepository.fail=scenario==6;
+            if (scenario>=7) foodRepository.nextCommitDelayMs=5000;
             Serial.output.clear();
             input(InputEvent::Action);
             assert(Serial.output.find("VPET_FEED input index=")!=std::string::npos);

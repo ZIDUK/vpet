@@ -216,7 +216,7 @@ void App::applyDateTime() {
     }
 }
 
-void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
+void App::handlePanelInput(uint32_t nowMs, InputEvent event, uint32_t tickStartedMs) {
     const PanelId panel = navigation_.panel();
     if (panel==PanelId::Collection) {
         if (!collection_) { navigation_.setPanel(PanelId::Options,option_menu::collection); return; }
@@ -371,7 +371,9 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
         if (result == FoodResult::Applied) {
             committed=collection_ && collection_->enabled() ? persistActive() : settingsStore_.commitFood(pet_);
             if (committed) {
-                motion_.startAction(Action::Feed, nowMs);
+                // Storage may block longer than the entire eating clip.
+                const uint32_t animationNowMs=nowMs+static_cast<uint32_t>(millis()-tickStartedMs);
+                motion_.startAction(Action::Feed, animationNowMs);
                 navigation_.setPanel(PanelId::Home);
                 settleStorage();
             } else {
@@ -491,6 +493,7 @@ void App::activate(uint32_t nowMs) {
 }
 
 void App::tick(uint32_t nowMs, InputEvent event) {
+    const uint32_t tickStartedMs=millis();
     if (event==InputEvent::Action && navigation_.panel()==PanelId::Feeding) {
         Serial.printf("VPET_FEED input index=%u hunger=%d energy=%d mood=%d paused=%u asleep=%u dead=%u away=%u pending=%u storage=%u saving=%u training=%u practice=%u\n",
             static_cast<unsigned>(navigation_.panelIndex()),pet_.hunger(),pet_.energy(),pet_.happiness(),
@@ -706,7 +709,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         } else if (navigation_.panel() == PanelId::Home) {
             navigation_.dispatch(event);
         } else {
-            handlePanelInput(nowMs, event);
+            handlePanelInput(nowMs, event, tickStartedMs);
         }
     }
 

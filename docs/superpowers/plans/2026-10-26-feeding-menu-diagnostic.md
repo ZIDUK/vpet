@@ -1,6 +1,7 @@
 # Alimentacion Permanece En FEED: Diagnostico
 
-Fecha: 2026-10-26. Estado: diagnostico cargado; causa fisica aun abierta.
+Fecha: 2026-10-26. Estado: consumo capturado; salto de animacion reproducido
+y corregido localmente, carga y aceptacion visual de la correccion pendientes.
 
 ## Evidencia Del Usuario
 
@@ -169,3 +170,56 @@ del directorio de respaldo. El agente no alimento, despauso ni cambio mascota
 en nombre del usuario. Falta coordinar una captura de ACTION en MEAT; un arranque
 correcto no cierra el fallo. No se deja un monitor aparentemente activo
 despues de cerrar su ventana de lectura.
+
+## Intento Real Capturado Y Correccion Del Reloj
+
+El usuario confirma estar listo y recibe indicacion despues de abrir USB.
+Captura de 68.251 s en
+out/feeding-diagnostic/feeding-capture-20261026-132239.json. El puerto vuelve
+a mostrar POWERON_RESET y arranque; reset solicitado false no significa
+ausencia de arranque observado. Sin comandos USB enviados por el agente.
+
+Se reciben eventos fisicos y el intento:
+
+```text
+VPET_FEED input index=0 hunger=96 energy=18 mood=0 paused=0 asleep=0 dead=0 away=0 pending=0 storage=1 saving=0 training=0 practice=0
+VPET_FEED result=0 committed=1 hunger=100 energy=18 mood=0
+```
+
+La captura acredita comida aceptada y confirmada en almacenamiento; no
+permite seguir explicandolo como rechazo por saciedad o pausa en ese intento.
+El usuario responde "Sigue en FEED". No se deduce una captura de pantalla
+Home a partir de esos registros. Loop maximo del intervalo: 5094923 us;
+un intervalo anterior alcanzo 6334286 us. Heap minimo observado 56184,
+sin fatal ni reinicio adicional entre muestras; BLE=0 no prueba radio.
+
+App iniciaba Motion::startAction(Feed, nowMs) DESPUES de persistir usando
+nowMs tomado antes del tick. Al siguiente tick el tiempo de almacenamiento
+contaba como tiempo de la animacion. Un primer frame seguido de un salto
+a Idle explica una animacion imperceptible; no se confunde con efecto doble.
+
+Prueba RED real de comportamiento: Repository sintetico inyecta 5000 ms en
+un commit. La asercion de seguir en Eat tras 500 ms de presentacion falla
+antes del arreglo (6.19 s). Correccion: medir millis() al entrar en tick y
+compensar nowMs con el tiempo real transcurrido al iniciar Eat despues del
+commit. Solo cambia el reloj de presentacion de alimentacion; no NVS,
+inventario, ADN, pausas ni reglas de nutricion. La resta uint32 conserva
+el contrato cuando millis desborda; no se agregan temporizadores persistidos.
+
+GREEN focalizado 5.66 s. Dieciocho combinaciones de Firemon/Flamemon cubren
+alimentacion normal, cuidado agotado, rechazo, fallo de repositorio, guardado
+lento y rollover. El guardado sigue aplicando el efecto UNA vez y la
+finalizacion del clip no lo repite. Suite focalizada final: 89 aprobadas en
+38.21 s con 150 advertencias existentes de Pillow; nativas 185 en 0.503 s.
+No se ejecuta una nueva suite Python completa. git diff --check sin errores.
+
+Build aislado de la correccion, sin Hub/Creator, aprobado en 7.925 s:
+RAM 52236, app 1104233 bytes (+52 frente al diagnostico). Solo App.cpp y
+App.h de produccion cambian; el header modifica una llamada privada y no
+el contrato de persistencia. Binario/ELF: out/feeding-animation-fix/.
+SHA-256: fb787513780e50f23ea2bef36244d8b925b8f24d21b3408fd6e3c602901cfc41.
+
+La correccion esta preparada, NO instalada. Se solicita autorizacion nueva
+firmware-only conservando partida/graficos. Falta comprobar visualmente la
+animacion tras el nuevo despliegue. El tiempo bloqueante del guardado sigue
+siendo una limitacion: este arreglo no lo elimina ni certifica fluidez.

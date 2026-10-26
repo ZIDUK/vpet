@@ -2,7 +2,22 @@
 
 ## Estado vigente: 2026-10-26
 
-## Alimentacion: Diagnostico Serie Cargado; Captura Manual Pendiente
+## Alimentacion: Consumo Capturado; Correccion De Animacion Sin Cargar
+
+Captura real 20261026-132239: ACTION recibido en Feeding, result=0 y
+committed=1; saciedad 96 -> 100, energia 18 y animo 0. El usuario sigue
+percibiendo FEED. Se observa un ciclo de 5094923 us; la animacion usaba
+el timestamp anterior al guardado y podia agotarse en la espera. Regresion
+RED con demora de 5000 ms reproduce el salto; GREEN al iniciar Eat con
+el tiempo compensado desde el inicio de tick, sin alterar efectos de comida.
+Incluye rollover uint32 y dos adultos, consumo unico y rollback previos.
+89 focalizadas (38.21 s), 185 nativas (0.503 s) y build aislado (7.925 s)
+aprobados; RAM 52236 y app 1104233 bytes. No cambia assets, Status ni schema.
+La correccion aun NO esta cargada; autorizacion solicitada y aceptacion
+visual pendientes. El guardado de varios segundos no se optimiza en esta
+correccion. Detalle en el registro de diagnostico enlazado abajo.
+
+## Alimentacion: Diagnostico Serie Cargado
 
 El usuario vuelve a confirmar que ACTION permanece en FEED. Los valores
 reportados (salud 100, saciedad 6, energia/animo 0, pausa OFF) no explican
@@ -16,7 +31,7 @@ particiones/NVS y app anterior en out/board-backups/feeding-diagnostic-20261026-
 Carga solo en 0x10000, digest de app verificado, LittleFS/NVS/bootloader y
 particiones identicos antes de arrancar. VPET_READY: heap 82948/minimo 73320,
 manifest 1. El agente no ejecuta comida por el usuario. El diagnostico
-ya esta instalado; no es una correccion ni acredita consumo fisico. Ver
+ya esta instalado; el intento posterior capturado se describe arriba. Ver
 [registro y lectura de trazas](superpowers/plans/2026-10-26-feeding-menu-diagnostic.md).
 
 ## Coleccion: Guardado Y Cambio Aceptados; Alimentacion En Diagnostico

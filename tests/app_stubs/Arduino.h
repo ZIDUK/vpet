@@ -12,3 +12,5 @@ struct SerialMock {
 };
 extern SerialMock Serial;
 inline uint32_t esp_random() { return 42; }
+inline uint32_t simulatedMillis = 0;
+inline uint32_t millis() { return simulatedMillis; }

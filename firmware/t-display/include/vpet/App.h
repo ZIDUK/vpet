@@ -30,7 +30,7 @@ public:
 
 private:
     void activate(uint32_t nowMs);
-    void handlePanelInput(uint32_t nowMs, InputEvent event);
+    void handlePanelInput(uint32_t nowMs, InputEvent event, uint32_t tickStartedMs);
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
