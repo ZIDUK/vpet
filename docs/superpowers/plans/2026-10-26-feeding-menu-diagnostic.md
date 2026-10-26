@@ -1,6 +1,6 @@
 # Alimentacion Permanece En FEED: Diagnostico
 
-Fecha: 2026-10-26. Estado: abierto; valores recibidos, intento no capturado.
+Fecha: 2026-10-26. Estado: diagnostico cargado; causa fisica aun abierta.
 
 ## Evidencia Del Usuario
 
@@ -128,3 +128,44 @@ con las mismas 150 advertencias. Sin cambios de Status ni assets.
 Carga solicitada expresamente, pendiente de respuesta. No se instala sin
 confirmacion y respaldo actual, ni se reemplaza LittleFS. Este diagnostico
 no se anuncia como correccion ni como prueba fisica de consumo.
+
+## Carga Autorizada Y Verificada
+
+El usuario responde "Si, cargar el diagnostico" para revision 607efbb,
+solo firmware, conservando partida, Coleccion y graficos. Esta seccion
+sustituye el pendiente de autorizacion/carga de los apartados historicos.
+No cambia Status ni las reglas de alimentacion. Creator/Hub siguen fuera.
+
+Build preflash aislado repetido en 3.260 s con los mismos 52236 bytes RAM
+y 1104181 bytes app. App.cpp de la copia coincide con el checkout aprobado;
+binario SHA-256 b12e37036b7b87b154c179a9d9be9381a2f7585abdd251a2dd2528daebdeab4a.
+Prueba focalizada nueva aprobada en 5.59 s. Las 89 focalizadas y 185 nativas
+anteriores son de la misma revision; no se presenta una nueva suite completa.
+
+Placa verificada ESP32, 16 MiB, ID 08f9e0d00788. Respaldo NUEVO en
+out/board-backups/feeding-diagnostic-20261026-131129/: critical.bin (particiones
+y NVS), littlefs-before.bin completo de 12451840 bytes y firmware-before.bin
+de 1110368 bytes. Checksums locales y comprobacion contra flash antes de
+escribir. El LittleFS actual se reconstruye desde copia previa leyendo los
+bloques cambiados y verificando MD5 de TODA la particion; no se restaura esa
+copia ni se descartan cambios recientes de Coleccion.
+
+SHA-256 de LittleFS actual:
+68146ac45346657eeeeb84f6a39eb14b25e229e2ae4cbc33e52de2f0ef98e6eb.
+La app anterior coincide con dabc2e7:
+b9c75006b52e6ac078edd4dbf462a0796826635374b81c4dd11ecd7274b098f5.
+No se borra ningun respaldo previo ni se publica contenido de partidas.
+
+Write_flash escribe solo 1110752 bytes de aplicacion en 0x10000 (61.1 s).
+No hay erase_flash/uploadfs ni escritura de bootloader/tabla/NVS. Se compara
+el digest de app y se comprueba que LittleFS, NVS y todo 0..0x10000 siguen
+identicos ANTES del reinicio final; despues puede haber checkpoints normales
+del juego. Al fallar una comprobacion no se declara entrega correcta.
+
+Arranque confirmado VPET_READY: heap libre 82948, minimo 73320, flash 16 MiB,
+filesystem 11829248/12451840, manifest 1. Cumple minimos de heap de arranque.
+Evidencia local: out/feeding-diagnostic/board-ready.json y verification.json
+del directorio de respaldo. El agente no alimento, despauso ni cambio mascota
+en nombre del usuario. Falta coordinar una captura de ACTION en MEAT; un arranque
+correcto no cierra el fallo. No se deja un monitor aparentemente activo
+despues de cerrar su ventana de lectura.

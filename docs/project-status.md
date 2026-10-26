@@ -2,16 +2,21 @@
 
 ## Estado vigente: 2026-10-26
 
-## Alimentacion: Diagnostico Serie Preparado, Sin Cargar
+## Alimentacion: Diagnostico Serie Cargado; Captura Manual Pendiente
 
 El usuario vuelve a confirmar que ACTION permanece en FEED. Los valores
 reportados (salud 100, saciedad 6, energia/animo 0, pausa OFF) no explican
 rechazo por saciedad. Se prepara instrumentacion acotada de App: entrada,
 guardas, FoodResult y resultado del commit, sin cambiar reglas ni interfaz.
 La captura USB anterior ya habia terminado y no registro el nuevo intento.
-El binario de diagnostico compila en copia aislada, sin cambios concurrentes
-de Hub/Creator: RAM 52236, app 1104181 bytes. Autorizacion de carga solicitada;
-no esta instalado y no se presenta como correccion del fallo. Ver
+El usuario autoriza firmware-only 607efbb. Build aislado repetido en 3.260 s,
+sin Hub/Creator concurrentes: RAM 52236, app 1104181 bytes. Prueba focalizada
+preflash aprobada en 5.59 s. Respaldo nuevo completo de LittleFS actual,
+particiones/NVS y app anterior en out/board-backups/feeding-diagnostic-20261026-131129/.
+Carga solo en 0x10000, digest de app verificado, LittleFS/NVS/bootloader y
+particiones identicos antes de arrancar. VPET_READY: heap 82948/minimo 73320,
+manifest 1. El agente no ejecuta comida por el usuario. El diagnostico
+ya esta instalado; no es una correccion ni acredita consumo fisico. Ver
 [registro y lectura de trazas](superpowers/plans/2026-10-26-feeding-menu-diagnostic.md).
 
 ## Coleccion: Guardado Y Cambio Aceptados; Alimentacion En Diagnostico
