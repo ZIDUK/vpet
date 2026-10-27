@@ -2,6 +2,22 @@
 
 ## Estado vigente: 2026-10-26
 
+## Mochila, Luz Y Comidas Seguidas: Correccion Preparada, Sin Cargar
+
+El usuario reporta espera en Mochila, al cambiar luz y al volver a alimentar.
+La primera correccion solo adelantaba Eat y bloqueaba otra transaccion durante
+el guardado; Mochila/luz seguian sincronas. Se prepara `CareSave` compartido para
+las tres rutas y menos I/O en Coleccion, sin colas ilimitadas ni consumo doble.
+Prueba de archivo con dos mascotas: 56 -> 9 aperturas y 81 -> 5 seeks; conserva
+CRC, generacion anterior, sync y rename atomico. No equivale a una aceleracion
+fisica medida. No cambia reglas de comida, schema, graficos ni Status.
+Suite final aislada sin Creator: 2021 aprobadas en 305.91 s; 54 focalizadas
+en 29.74 s y 185 nativas en 1.793 s. Revision independiente sin hallazgos
+accionables. Build final: 7.670 s, RAM estatica 53284 y app 1106513 bytes.
+Bin/ELF en out/responsive-care. Pendiente autorizacion de nueva carga y
+medicion de respuesta repetida, heap/pila y BLE; la capacidad sigue siendo
+un escritor, sin cola de consumos. [Plan](superpowers/plans/2026-10-26-responsive-care.md).
+
 ## Alimentacion Inmediata Y Guardado De Fondo: Respuesta Visual Aceptada
 
 Implementado para MEAT/PROTEIN: primer dibujo Home/Eat antes de iniciar el

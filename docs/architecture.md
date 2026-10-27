@@ -1,5 +1,39 @@
 # Arquitectura de software
 
+## Cuidado Responsivo Y Menos I/O: Revision Preparada 2026-10-26
+
+La ampliacion de la base de alimentacion inferior reutiliza `CareSave` para
+comida, items de Mochila y luz. Cada trabajo copia estado anterior, snapshot,
+ajustes y panel/cursor de origen. Mochila presenta la cantidad actualizada;
+luz presenta Home y el nuevo estado de sueno antes de iniciar el mismo worker.
+No se inventa otra animacion ni assets. Se conserva capacidad de un trabajo:
+ACTION/Back no ejecutan otra transaccion mientras el commit esta pendiente.
+Por eso mover el guardado a un hilo no garantizaba comidas seguidas sin espera.
+
+`prepareCare` actualiza el cuidado y sueno hasta el input sin persistir aun,
+y acumula tiempo de Coleccion en RAM. Al terminar el worker, el flujo normal
+recupera el intervalo transcurrido bajo el estado de sueno resultante. Rechazo
+restaura mascota, Motion y panel de origen; un journal aceptado pero pendiente
+conserva el efecto y bloquea acciones hasta recuperar. Items legacy usan ahora
+el mismo snapshot completo `saveTx`; los journals `itemTx` previos siguen
+recuperandose por el adaptador existente, sin cambios de schema.
+
+`LittleFsCollectionRepository` mantiene un descriptor de lectura durante una
+vista, invalidado en cada `size()` y antes del cambio de generacion. Dos buffers
+fijos de 512 bytes evitan el buffer implicito de libc; cursores explicitos evitan
+seek/ftell por bloque contiguo. La transicion lectura -> escritura de staging
+siempre posiciona el stream C. Se evita prellenar/sincronizar staging con ceros
+antes de sobrescribirlo y se elimina una validacion `current()` duplicada en
+`saveActive`: `persist` conserva la comprobacion durable antes de `begin`.
+Readback completo, CRC, backup anterior, sync y rename atomico se conservan.
+
+Regresion host de dos mascotas: 56 -> 9 aperturas y 81 -> 5 seeks por guardado.
+Son conteos de operaciones, no una medida de milisegundos en ESP32. Las trazas
+`VPET_CARE` identifican Item/Light; `VPET_FEED` conserva su formato previo.
+Esta revision requiere nueva carga y validacion fisica; no acredita fluidez
+entre comidas ni margen heap/pila hasta medirlo en la placa.
+Ver [plan](superpowers/plans/2026-10-26-responsive-care.md).
+
 ## Alimentacion Con Guardado De Fondo: 2026-10-26
 
 `App` sigue siendo el unico propietario de la mascota viva, navegacion y TFT.

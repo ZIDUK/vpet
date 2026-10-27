@@ -8,7 +8,7 @@ namespace vpet {
 
 // Uses the already-mounted ESP32 LittleFS POSIX/VFS path. Construction performs
 // no IO, mounting, formatting, recovery, migration or startup registration.
-// One writer, called serially by the owning loop. Do not instantiate concurrent
+// One writer, called serially by the owning save task. Do not instantiate concurrent
 // writers for the same directory. External learning blobs need their own adapter.
 // Max 24 KiB each for current/previous/pending (72 KiB total); begin requires a
 // 192 KiB operational budget including these files. A failed preparation may
@@ -33,10 +33,16 @@ public:
     void abort() override;
 
 private:
+    bool closeCurrent();
     bool syncPrepared();
     bool freeBudget() const;
     std::string directory_;
     std::FILE* prepared_ = nullptr;
+    std::FILE* current_ = nullptr;
+    size_t currentBytes_ = 0;
+    size_t currentPosition_ = 0, preparedPosition_ = 0;
+    bool preparedReading_ = false;
+    char readBuffer_[512], writeBuffer_[512];
     size_t preparedBytes_ = 0;
     uint64_t expectedSequence_ = 0;
     bool dirty_ = false;

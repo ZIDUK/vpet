@@ -366,7 +366,9 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
 }
 bool CollectionStore::saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
                                  const char* learningRef, uint32_t elapsedMs) {
-    if (!current(state) || pet.profile.encode() != state.slots[state.active].profileRecord) return false;
+    // persist() performs the durable sequence/CRC check once before begin().
+    if (blocked_ || state.active>=CollectionState::kSlots || !state.slots[state.active].occupied ||
+        pet.profile.encode() != state.slots[state.active].profileRecord) return false;
     std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
     if (!scratch) { blocked_ = true; return false; }
     auto& candidate = *scratch; sharedFrom(candidate, pet);

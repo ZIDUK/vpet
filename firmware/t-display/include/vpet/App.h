@@ -29,15 +29,18 @@ public:
     ~App();
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
-    bool ready() const { return storageReady_ && !savePending_ && !foodSave_; }
+    bool ready() const { return storageReady_ && !savePending_ && !careSave_; }
 
 private:
     void activate(uint32_t nowMs);
     void handlePanelInput(uint32_t nowMs, InputEvent event);
     void drawHome(uint32_t nowMs);
-    static void writeFood(void* context);
-    void submitFood(uint32_t nowMs);
-    void pollFood(uint32_t nowMs, InputEvent event);
+    void drawPendingCare(uint32_t nowMs);
+    void rollbackCare(uint32_t nowMs);
+    bool prepareCare(uint32_t nowMs, bool& needsSave);
+    static void writeCare(void* context);
+    void submitCare(uint32_t nowMs);
+    void pollCare(uint32_t nowMs, InputEvent event);
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
@@ -59,13 +62,18 @@ private:
     SettingsStore& settingsStore_;
     BleService& bluetooth_;
     CollectionPanel* collection_;
-    struct FoodSave {
+    enum class CareKind { Food, Item, Light };
+    struct CareSave {
         PetState before, snapshot;
         Settings settings;
+        CareKind kind = CareKind::Food;
+        PanelId origin = PanelId::Feeding;
+        uint8_t originIndex = 0;
         bool collection = false, started = false, committed = false, settled = false, careCheckpoint = false;
         uint32_t durationMs = 0, stackFreeBytes = 0, heapMin = 0;
     };
-    std::unique_ptr<FoodSave> foodSave_;
+    std::unique_ptr<CareSave> careSave_;
+    std::unique_ptr<CareSave> prepareSave(CareKind kind, PanelId origin, uint8_t index);
     std::unique_ptr<SaveTask> ownedSaveTask_;
     SaveTask* saveTask_;
     static constexpr uint32_t kCareTimeScale = 1;
@@ -87,7 +95,7 @@ private:
     bool trainingActive_ = false;
     bool storageReady_ = false;
     bool savePending_ = false;
-    bool foodRecovery_ = false;
+    bool careRecovery_ = false;
     uint32_t lastSaveAttemptMs_ = 0;
     uint32_t lastInjuryCheckpointMs_ = 0;
     uint32_t lastTickMs_ = 0;

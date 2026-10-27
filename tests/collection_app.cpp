@@ -584,6 +584,164 @@ int main() {
         assert(saved.careMistakes()==(missed?1:0));
         assert(saved.meals()==(task.reject?0:1));
     }
+    // Items and lights present their new state before any writer is released.
+    for(bool useCollection : {false,true}) for(int operation=0;operation<3;++operation)
+    for(int failure=0;failure<3;++failure) {
+        Store kv; SettingsStore settingsStore(kv); Settings settings; PetState pet;
+        pet.restore(SpeciesId::Champion,70,40,70,0,100,0);
+        pet.profile=profile(); pet.rollDna(9); pet.restoreItems(0,2,0,0,0,0);
+        const bool waking=operation==2;
+        if(waking) pet.sleep.start(clockNow(),pet.dna()[3]);
+        assert(settingsStore.save(pet,settings));
+        Repository repository; CollectionStore store(repository); CollectionState state;
+        std::string snapshot; assert(CollectionStore::capture(pet,settings,snapshot));
+        if(useCollection) assert(store.migrate(state,snapshot));
+        CollectionPanel panel(store,settingsStore,profile,seed);
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,settingsStore,ble,clockNow,useCollection?&panel:nullptr,&task);
+        uint32_t now=0; simulatedMillis=now; app.begin(now);
+        auto input=[&](InputEvent event,uint32_t delta=50) {
+            now+=delta; simulatedMillis=now; app.tick(now,event);
+        };
+        for(int i=0;i<(operation==0?6:5);++i) input(InputEvent::Next);
+        input(InputEvent::Action);
+        const int writes=kv.writes, commits=repository.commits;
+        const auto durable=repository.durable;
+        task.onStart=[&] {
+            if(operation==0) assert(panels.lastPanel==PanelId::Inventory && panels.itemCount==1);
+            else assert(renderer.sleeping==!waking);
+        };
+        task.reject=failure==1;
+        input(InputEvent::Action);
+        assert(kv.writes==writes && repository.commits==commits);
+        assert(task.starts==1);
+        if(task.reject) {
+            assert(app.ready() && panels.errors>0 && !task.work);
+            input(InputEvent::Back);
+            if(operation) assert(renderer.sleeping==waking);
+            continue;
+        }
+        assert(!app.ready());
+        const int reads=kv.reads;
+        for(int i=0;i<6;++i) input(i%2?InputEvent::Action:InputEvent::None);
+        assert(task.starts==1 && kv.writes==writes && kv.reads==reads);
+        if(operation==0) assert(panels.itemCount==1);
+        else assert(renderer.sleeping==!waking);
+        PetState reloaded; Settings ignored;
+        if(useCollection) {
+            CollectionStore reboot(repository); CollectionState previous;
+            assert(reboot.load(previous)==CollectionLoad::Loaded);
+            assert(reboot.readPet(previous,0,reloaded,ignored));
+        } else assert(settingsStore.load(reloaded,ignored)==LoadResult::Loaded);
+        assert(reloaded.itemCount(1)==2 && reloaded.sleep.asleep==waking);
+        repository.fail=failure==2; kv.rejectCommit=failure==2;
+        task.complete(); input(InputEvent::Action);
+        assert(task.starts==1);
+        if(failure==2) {
+            assert(panels.errors>0 && repository.durable==durable && kv.writes==writes);
+            continue;
+        }
+        assert(app.ready());
+        if(useCollection) {
+            assert(repository.commits==commits+1 && kv.writes==writes);
+            CollectionStore reboot(repository); CollectionState saved;
+            assert(reboot.load(saved)==CollectionLoad::Loaded);
+            assert(reboot.readPet(saved,0,reloaded,ignored));
+        } else assert(settingsStore.load(reloaded,ignored)==LoadResult::Loaded);
+        assert(reloaded.itemCount(1)==(operation==0?1:2));
+        assert(reloaded.sleep.asleep==(operation? !waking:waking));
+        if(operation==0) assert(reloaded.energy()>pet.energy());
+    }
+    // Adopted care stock uses the full legacy journal too. Accepted but unsettled
+    // writes never roll back or reapply the item during recovery.
+    for(int fault=0;fault<4;++fault) {
+        Store kv; SettingsStore settingsStore(kv); Settings settings; PetState pet;
+        pet.restore(SpeciesId::Champion,70,40,70,0,100,0); pet.profile=profile(); pet.rollDna(7);
+        pet.restoreItems(0,0,0,0,0,0);
+        uint8_t apple=0;
+        for(uint8_t i=0;i<adopted::kCount;++i) {
+            pet.adoptedStock.set(i,0);
+            if(!std::strcmp(adopted::kItems[i].id,"blue_apple")) apple=i;
+        }
+        pet.adoptedStock.set(apple,2);
+        assert(settingsStore.save(pet,settings));
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,settingsStore,ble,clockNow,nullptr,&task);
+        uint32_t now=0; app.begin(now);
+        auto input=[&](InputEvent event,uint32_t delta=50) {
+            now+=delta; simulatedMillis=now; app.tick(now,event);
+        };
+        for(int i=0;i<6;++i) input(InputEvent::Next);
+        input(InputEvent::Action); input(InputEvent::Action);
+        assert(!app.ready() && panels.panelIndex==8+apple && panels.selectedStock==1);
+        kv.rejectCommit=fault==0; kv.foodFault=fault;
+        kv.writesBeforeFailure=0; // This item changes only one persisted integer.
+        task.complete(); input(InputEvent::Action);
+        assert(!app.ready() && panels.errors>0 && task.starts==1);
+        kv.rejectCommit=false; kv.replayFault=false; kv.foodFault=0;
+        input(InputEvent::None,1000);
+        assert(app.ready() && task.starts==1);
+        PetState saved; Settings ignored;
+        assert(settingsStore.load(saved,ignored)==LoadResult::Loaded);
+        assert(saved.adoptedStock.count(apple)==(fault?1:2));
+        assert(saved.happiness()==(fault?90:70));
+    }
+    // Consecutive eligible meals need not wait for the previous Eat clip to end;
+    // the single durable writer must have completed before a second consumption.
+    for(bool useCollection : {false,true}) {
+        Store kv; SettingsStore settingsStore(kv); Settings settings; PetState pet;
+        pet.restore(SpeciesId::Champion,40,70,70,0,100,0); pet.profile=profile(); pet.rollDna(7);
+        assert(settingsStore.save(pet,settings));
+        Repository repository; CollectionStore store(repository); CollectionState state;
+        std::string snapshot; assert(CollectionStore::capture(pet,settings,snapshot));
+        if(useCollection) assert(store.migrate(state,snapshot));
+        CollectionPanel panel(store,settingsStore,profile,seed);
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,settingsStore,ble,clockNow,useCollection?&panel:nullptr,&task);
+        uint32_t now=0; app.begin(now);
+        auto input=[&](InputEvent event) { now+=50; simulatedMillis=now; app.tick(now,event); };
+        input(InputEvent::Next);
+        for(int meal=1;meal<=3;++meal) {
+            input(InputEvent::Action); input(InputEvent::Action);
+            assert(!app.ready() && task.starts==meal && renderer.motionState==MotionState::Eat);
+            task.complete(); input(InputEvent::None);
+            assert(app.ready());
+        }
+        PetState saved; Settings ignored;
+        if(useCollection) {
+            CollectionStore reboot(repository); CollectionState persisted;
+            assert(reboot.load(persisted)==CollectionLoad::Loaded);
+            assert(reboot.readPet(persisted,0,saved,ignored));
+        } else assert(settingsStore.load(saved,ignored)==LoadResult::Loaded);
+        assert(saved.hunger()==100 && saved.meals()==3);
+        input(InputEvent::Action); input(InputEvent::Action);
+        assert(!app.ready() && task.starts==4); // Existing rules allow one overfeed per cycle.
+        task.complete(); input(InputEvent::None);
+        input(InputEvent::Action); input(InputEvent::Action);
+        assert(app.ready() && task.starts==4); // The next full-satiety meal is blocked.
+    }
+    // A long light-save interval is caught up under the new sleep state, not
+    // discarded or credited twice. Turning lights on catches up awake care.
+    for(bool waking : {false,true}) {
+        Store kv; SettingsStore settingsStore(kv); Settings settings; PetState pet;
+        pet.restore(SpeciesId::Champion,70,40,70,0,100,0); pet.profile=profile(); pet.rollDna(3);
+        if(waking) pet.sleep.start(clockNow(),pet.dna()[3]);
+        assert(settingsStore.save(pet,settings));
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,settingsStore,ble,clockNow,nullptr,&task);
+        uint32_t now=0; app.begin(now);
+        auto input=[&](InputEvent event,uint32_t delta=50) {
+            now+=delta; simulatedMillis=now; app.tick(now,event);
+        };
+        for(int i=0;i<5;++i) input(InputEvent::Next);
+        input(InputEvent::Action); input(InputEvent::Action);
+        input(InputEvent::None,300000);
+        assert(!app.ready()); task.complete(); input(InputEvent::None);
+        input(InputEvent::None);
+        assert(app.ready() && renderer.sleeping==!waking);
+        assert(renderer.hunger==(waking?60:70));
+        assert(renderer.energy==(waking?30:41));
+    }
     // The separate panel uses bounded text coordinates on the 240x135 surface.
     for(const auto& draw:canvas.textDraws) {
         assert(draw.x>=0 && draw.y>=0 && draw.y<128);

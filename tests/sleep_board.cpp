@@ -91,6 +91,9 @@ int main(int argc,char** argv) {
     key(InputEvent::Action);
     kv.fail=true; key(InputEvent::Action); kv.fail=false;
     assert(storage.load(p,settings)==LoadResult::Loaded && !p.sleep.asleep);
+    // Deferred care failure restores Rest and blocks new transactions until the
+    // existing rate-limited storage recovery has completed.
+    ms+=1000; app.tick(ms,InputEvent::None); assert(app.ready());
     key(InputEvent::Action); key(InputEvent::Action);
     assert(storage.load(p,settings)==LoadResult::Loaded && p.sleep.asleep);
     assert(!p.beginAction(Action::Training));

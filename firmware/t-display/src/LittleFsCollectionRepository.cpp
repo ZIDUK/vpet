@@ -32,23 +32,21 @@ CollectionRead probe(const std::string& path, size_t& bytes) {
     if (!S_ISREG(info.st_mode) || info.st_size < 0) return CollectionRead::Error;
     bytes = static_cast<size_t>(info.st_size); return CollectionRead::Present;
 }
-std::FILE* openFile(const std::string& path, const char* mode) {
+std::FILE* openFile(const std::string& path, const char* mode, char* buffer=nullptr, size_t bytes=0) {
     auto* file = std::fopen(path.c_str(), mode);
-    // Avoid libc's per-stream block buffers on the small ESP32 heap.
-    if (file) std::setvbuf(file, nullptr, _IONBF, 0);
+    // Never allocate libc's default per-stream block buffers on ESP32.
+    if (file && std::setvbuf(file, buffer, buffer ? _IOFBF : _IONBF, bytes)) {
+        std::fclose(file); return nullptr;
+    }
     return file;
+}
+bool seekFile(std::FILE* file, size_t offset, size_t& position, bool force=false) {
+    if (offset > static_cast<size_t>(std::numeric_limits<long>::max())) return false;
+    if ((force || position!=offset) && std::fseek(file,static_cast<long>(offset),SEEK_SET)) return false;
+    position=offset; return true;
 }
 bool syncFile(std::FILE* file) {
     return std::fflush(file) == 0 && ::fsync(::fileno(file)) == 0;
-}
-bool readRange(const std::string& path, size_t offset, void* data, size_t bytes) {
-    size_t total = 0;
-    if (probe(path, total) != CollectionRead::Present || offset > total || bytes > total-offset ||
-        offset > static_cast<size_t>(std::numeric_limits<long>::max())) return false;
-    auto* file = openFile(path, "rb"); if (!file) return false;
-    const bool ok = std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0 &&
-        std::fread(data, 1, bytes, file) == bytes;
-    const bool closed = std::fclose(file) == 0; return ok && closed;
 }
 // This envelope check is deliberately streaming; core validates every body and
 // metadata field separately. A future version never becomes an empty repository.
@@ -101,7 +99,9 @@ LittleFsCollectionRepository::LittleFsCollectionRepository(const char* path) : d
 LittleFsCollectionRepository::~LittleFsCollectionRepository() { abort(); }
 
 CollectionRead LittleFsCollectionRepository::size(size_t& bytes) {
-    if (directory_.empty()) return CollectionRead::Error;
+    // Each core load/current check starts a fresh read view. Never cache across
+    // size probes, so stale sequence and externally damaged files are rechecked.
+    if (!closeCurrent() || directory_.empty()) return CollectionRead::Error;
     const auto result = probe(directory_+"/current.bin", bytes);
     if (result != CollectionRead::Missing) return result;
     size_t previous = 0;
@@ -111,7 +111,23 @@ CollectionRead LittleFsCollectionRepository::size(size_t& bytes) {
     bytes = 0; return CollectionRead::Missing;
 }
 bool LittleFsCollectionRepository::read(size_t offset, void* data, size_t bytes) {
-    return !directory_.empty() && readRange(directory_+"/current.bin", offset, data, bytes);
+    if (directory_.empty()) return false;
+    if (!current_) {
+        const auto path=directory_+"/current.bin";
+        if (probe(path,currentBytes_)!=CollectionRead::Present) return false;
+        current_=openFile(path,"rb",readBuffer_,sizeof(readBuffer_));
+    }
+    if (!current_ || offset>currentBytes_ || bytes>currentBytes_-offset ||
+        !seekFile(current_,offset,currentPosition_)) return false;
+    const auto count=std::fread(data,1,bytes,current_);
+    currentPosition_+=count;
+    return count==bytes;
+}
+bool LittleFsCollectionRepository::closeCurrent() {
+    if (!current_) return true;
+    const bool closed=std::fclose(current_)==0;
+    current_=nullptr; currentBytes_=currentPosition_=0;
+    return closed;
 }
 bool LittleFsCollectionRepository::freeBudget() const {
     size_t occupied = 0;
@@ -140,17 +156,24 @@ bool LittleFsCollectionRepository::begin(uint64_t expectedSequence, size_t bytes
          currentSequence != expectedSequence))) return false;
     if (::mkdir(directory_.c_str(), 0700) && (errno != EEXIST || !directoryExists(directory_))) return false;
     if (!freeBudget()) return false;
-    prepared_ = openFile(directory_+"/pending.bin", "w+b"); if (!prepared_) return false;
+    prepared_ = openFile(directory_+"/pending.bin", "w+b",writeBuffer_,sizeof(writeBuffer_));
+    if (!prepared_) return false;
     preparedBytes_ = bytes; expectedSequence_ = expectedSequence; dirty_ = true;
-    if (std::fseek(prepared_, static_cast<long>(bytes-1), SEEK_SET) || std::fputc(0, prepared_) == EOF || !syncPrepared()) {
-        abort(); return false;
-    }
+    preparedPosition_=0; preparedReading_=false;
+    // Staging is not visible. Avoid zero-filling/syncing an entire generation
+    // before overwriting it; complete readback and CRC still precede publication.
     return true;
 }
 bool LittleFsCollectionRepository::write(size_t offset, const void* data, size_t bytes) {
     if (!prepared_ || offset > preparedBytes_ || bytes > preparedBytes_-offset) return false;
     dirty_ = true;
-    return std::fseek(prepared_, static_cast<long>(offset), SEEK_SET) == 0 && std::fwrite(data, 1, bytes, prepared_) == bytes;
+    // C update streams require a positioning operation between input and output,
+    // even when the requested byte offset is already the logical cursor.
+    if (!seekFile(prepared_,offset,preparedPosition_,preparedReading_)) return false;
+    preparedReading_=false;
+    const auto count=std::fwrite(data,1,bytes,prepared_);
+    preparedPosition_+=count;
+    return count==bytes;
 }
 bool LittleFsCollectionRepository::syncPrepared() {
     if (!prepared_ || (dirty_ && !syncFile(prepared_))) return false;
@@ -158,7 +181,11 @@ bool LittleFsCollectionRepository::syncPrepared() {
 }
 bool LittleFsCollectionRepository::readPrepared(size_t offset, void* data, size_t bytes) {
     if (!prepared_ || offset > preparedBytes_ || bytes > preparedBytes_-offset || !syncPrepared()) return false;
-    return std::fseek(prepared_, static_cast<long>(offset), SEEK_SET) == 0 && std::fread(data, 1, bytes, prepared_) == bytes;
+    if (!seekFile(prepared_,offset,preparedPosition_)) return false;
+    preparedReading_=true;
+    const auto count=std::fread(data,1,bytes,prepared_);
+    preparedPosition_+=count;
+    return count==bytes;
 }
 bool LittleFsCollectionRepository::commit(uint64_t nextSequence) {
     if (!prepared_ || expectedSequence_ == std::numeric_limits<uint64_t>::max() ||
@@ -178,6 +205,7 @@ bool LittleFsCollectionRepository::commit(uint64_t nextSequence) {
     preparedBytes_ = 0; expectedSequence_ = 0; dirty_ = false; return true;
 }
 void LittleFsCollectionRepository::abort() {
+    closeCurrent();
     if (prepared_) { std::fclose(prepared_); prepared_ = nullptr; }
     // Only this object's staging attempt is disposable. Construction/read never
     // cleans or recovers files, and neither durable generation is deleted here.
