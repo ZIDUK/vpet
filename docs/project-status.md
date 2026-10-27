@@ -1,8 +1,8 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-26
+## Estado vigente: 2026-10-27
 
-## Mochila, Luz Y Comidas Seguidas: Correccion Preparada, Sin Cargar
+## Mochila, Luz Y Comidas Seguidas: Cargada, Medicion Pendiente
 
 El usuario reporta espera en Mochila, al cambiar luz y al volver a alimentar.
 La primera correccion solo adelantaba Eat y bloqueaba otra transaccion durante
@@ -14,9 +14,16 @@ fisica medida. No cambia reglas de comida, schema, graficos ni Status.
 Suite final aislada sin Creator: 2021 aprobadas en 305.91 s; 54 focalizadas
 en 29.74 s y 185 nativas en 1.793 s. Revision independiente sin hallazgos
 accionables. Build final: 7.670 s, RAM estatica 53284 y app 1106513 bytes.
-Bin/ELF en out/responsive-care. Pendiente autorizacion de nueva carga y
-medicion de respuesta repetida, heap/pila y BLE; la capacidad sigue siendo
-un escritor, sin cola de consumos. [Plan](superpowers/plans/2026-10-26-responsive-care.md).
+El usuario autoriza firmware-only 643ca42. Build preflash repetido: 3.544 s;
+12 focalizadas aprobadas en 13.59 s. Fuentes aisladas y SHA coinciden, sin
+Creator. Respaldo actual: out/board-backups/responsive-care-20261026-194021/.
+App escrita solo en 0x10000; hashes verificados, LittleFS, NVS, bootloader y
+particiones identicos antes del reinicio. Al retomar el 2026-10-27 se confirma
+el proceso completado, sin volver a cargar. VPET_READY: heap 80892/minimo
+71368, flash 16 MiB, manifest 1. Bin/ELF en out/responsive-care.
+Pendiente medicion manual de respuesta repetida y heap/pila durante guardado;
+BLE no validado en esta revision. La capacidad sigue siendo un escritor,
+sin cola de consumos. [Plan](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Inmediata Y Guardado De Fondo: Respuesta Visual Aceptada
 

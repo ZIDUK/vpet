@@ -1,6 +1,6 @@
 # Arquitectura de software
 
-## Cuidado Responsivo Y Menos I/O: Revision Preparada 2026-10-26
+## Cuidado Responsivo Y Menos I/O: Revision Cargada 2026-10-27
 
 La ampliacion de la base de alimentacion inferior reutiliza `CareSave` para
 comida, items de Mochila y luz. Cada trabajo copia estado anterior, snapshot,
@@ -30,8 +30,8 @@ Readback completo, CRC, backup anterior, sync y rename atomico se conservan.
 Regresion host de dos mascotas: 56 -> 9 aperturas y 81 -> 5 seeks por guardado.
 Son conteos de operaciones, no una medida de milisegundos en ESP32. Las trazas
 `VPET_CARE` identifican Item/Light; `VPET_FEED` conserva su formato previo.
-Esta revision requiere nueva carga y validacion fisica; no acredita fluidez
-entre comidas ni margen heap/pila hasta medirlo en la placa.
+Firmware 643ca42 cargado con hashes verificados y partida/graficos conservados;
+no acredita fluidez entre comidas ni margen heap/pila hasta medirlo en la placa.
 Ver [plan](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Con Guardado De Fondo: 2026-10-26

@@ -69,3 +69,24 @@ timing. Power loss before commit can lose the latest pending action.
   this correction has been flashed, and no board input/save/reward was performed
   by the agent. Runtime save latency, repeated response, heap/stack and BLE remain
   unverified for this correction.
+
+## Approved Firmware-Only Deployment And Resume
+
+- User approved loading and measuring this correction, preserving saves,
+  Collection and graphics. Repeated isolated build passed in 3.544 s and 12
+  focused tests in 13.59 s. Eleven relevant source/test files match commit
+  643ca42, including main.cpp without concurrent Creator changes.
+- Fresh backup out/board-backups/responsive-care-20261026-194021/ contains full
+  current LittleFS, NVS/partitions and previous app, each digest-verified before
+  writing. Previous app SHA matches responsive feeding b7a877ac... .
+- Only 1113088 app bytes at 0x10000 were written. New SHA matches 804d3c8c...;
+  LittleFS, NVS, bootloader and partitions unchanged before restart. The process
+  completed during the interruption; on 2026-10-27 resume its output and backup
+  report were checked, with no second flash.
+- USB startup on resume: heap free 80892, minimum 71368, flash 16777216,
+  filesystem 11829248/12451840, manifest 1. This precedes lazy task creation.
+  Opening the monitor observed POWERON_RESET; no gameplay commands were sent.
+- Capture out/responsive-care/care-capture-20261027-054159.json was opened for
+  user-operated lights, a useful backpack item and eligible repeated meals.
+  Runtime latency/stack/heap and visual acceptance remain pending until that
+  capture or the user supplies evidence; BLE=0 is not a radio validation.
