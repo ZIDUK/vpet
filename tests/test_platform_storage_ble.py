@@ -29,7 +29,8 @@ def adapter_host(tmp_path_factory):
 
 @pytest.mark.parametrize("case", [
     "profile_pending", "profile_reboot_old", "profile_reboot_new", "profile_mirror_reboot",
-    "nvs_nonempty", "nvs_empty", "nvs_failures", "nvs_namespace",
+    "nvs_nonempty", "nvs_empty", "nvs_failures", "nvs_namespace", "nvs_typed_read",
+    "care_pending_old", "care_pending_new",
     "nvs_pending", "nvs_pending_empty", "nvs_pending_int", "nvs_rejected", "nvs_handle_ownership",
     "settings_pending", "settings_pending_reboot_old", "settings_pending_reboot_new",
     "settings_mirror_pending", "settings_mirror_reboot", "settings_clear_pending",

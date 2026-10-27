@@ -57,6 +57,7 @@ void App::begin(uint32_t nowMs) {
     if (careSave_) return;
     savePending_ = false;
     careRecovery_ = false;
+    deferredCareMs_ = 0;
     navigation_.setPanel(PanelId::Home);
     navigation_.setMenuIndex(0);
     practicing_=trainingActive_=false;
@@ -563,12 +564,17 @@ void App::rollbackCare(uint32_t nowMs) {
 }
 
 bool App::prepareCare(uint32_t nowMs, bool& needsSave) {
-    const uint32_t elapsed=nowMs-lastTickMs_;
-    if (collection_ && !collection_->accumulate(elapsed,pet_.cold())) {
+    const uint32_t rawElapsed=nowMs-lastTickMs_;
+    if (rawElapsed>UINT32_MAX-deferredCareMs_) {
+        storageReady_=false; panels_.drawStorageError(settings_.language.c_str()); return false;
+    }
+    if (collection_ && !collection_->accumulate(rawElapsed,pet_.cold())) {
         savePending_=true;
         panels_.drawStorageError(settings_.language.c_str());
         return false;
     }
+    const uint32_t elapsed=rawElapsed+deferredCareMs_;
+    deferredCareMs_=0;
     lastTickMs_=nowMs;
     if (pet_.cold() || pet_.exploration.away()) {
         pet_.pauseCareClock(elapsed);
@@ -608,9 +614,9 @@ void App::writeCare(void* context) {
     auto& job = *app.careSave_;
     const uint32_t started = millis();
     // Only this task may access persistence until the completion barrier.
-    job.committed = job.collection ? app.collection_->save(job.snapshot,job.settings)
+    job.committed = job.collection ? app.collection_->saveCare(job.snapshot,job.settings)
         : app.settingsStore_.save(static_cast<const PetState&>(job.snapshot),job.settings);
-    job.settled = job.committed && (job.collection ? !app.collection_->failed()
+    job.settled = job.committed && (job.collection ? app.collection_->settleCare()
         : app.settingsStore_.recoverPending());
     job.durationMs = millis()-started;
 #ifdef ARDUINO
@@ -696,7 +702,9 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (careRecovery_) {
             motion_.alignClock(nowMs);
             if (nowMs-lastSaveAttemptMs_>=1000) {
-                if (saveState()) careRecovery_=false;
+                const bool compact=collection_ && collection_->enabled() && collection_->compactCare();
+                const bool recovered=compact ? collection_->recoverCare(pet_,settings_) : saveState();
+                if (recovered) { careRecovery_=false; savePending_=false; }
                 lastSaveAttemptMs_=nowMs;
             }
             return; // Keep lastTickMs_: catch up the pending interval after recovery.
@@ -734,13 +742,23 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         } else if (needsCareSave) saveState();
         return;
     }
-    const uint32_t elapsed = nowMs - lastTickMs_;
+    const uint32_t rawElapsed = nowMs - lastTickMs_;
+    if (rawElapsed>UINT32_MAX-deferredCareMs_) {
+        storageReady_=false; panels_.drawStorageError(settings_.language.c_str()); return;
+    }
+    const uint32_t elapsed=rawElapsed+deferredCareMs_;
     lastTickMs_ = nowMs;
-    if (collection_ && !collection_->advance(elapsed,pet_.cold())) {
+    if (collection_ && !collection_->advance(rawElapsed,pet_.cold())) {
+        // Collection already owns this delta, but pet/sleep processing has not
+        // run. Catch it up once, without crediting Collection elapsed again.
+        deferredCareMs_=elapsed;
         savePending_=true;
+        careRecovery_=collection_->enabled() && collection_->compactCare();
+        lastSaveAttemptMs_=nowMs;
         panels_.drawStorageError(settings_.language.c_str());
         return;
     }
+    deferredCareMs_=0;
     const bool busy = (trainingActive_ && training_.state == TrainingSession::State::Session)
         || (practicing_ && (practice_.page == PracticeSession::Page::Arena ||
             practice_.page == PracticeSession::Page::Bag) &&

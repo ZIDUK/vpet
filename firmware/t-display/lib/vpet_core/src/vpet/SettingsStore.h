@@ -9,6 +9,7 @@
 namespace vpet {
 
 enum class StoreCommit : uint8_t { Rejected, Pending, Committed };
+enum class StoreRead : uint8_t { Missing, Present, Error };
 
 class KeyValueStore {
 public:
@@ -16,6 +17,11 @@ public:
     virtual int32_t getInt(const char* key, int32_t fallback) = 0;
     virtual bool putInt(const char* key, int32_t value) = 0;
     virtual std::string getString(const char* key, const char* fallback) = 0;
+    virtual StoreRead readString(const char* key, std::string& value) {
+        const auto found=getString(key,"\x01");
+        if (found=="\x01") return StoreRead::Missing;
+        value=found; return StoreRead::Present;
+    }
     virtual bool putString(const char* key, const char* value) = 0;
     virtual StoreCommit commitString(const char* key, const char* value) {
         return putString(key, value) ? StoreCommit::Committed : StoreCommit::Rejected;

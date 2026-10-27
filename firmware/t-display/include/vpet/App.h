@@ -99,6 +99,7 @@ private:
     uint32_t lastSaveAttemptMs_ = 0;
     uint32_t lastInjuryCheckpointMs_ = 0;
     uint32_t lastTickMs_ = 0;
+    uint32_t deferredCareMs_ = 0;
     uint32_t lastInteractionMs_ = 0;
     uint32_t lastRenderMs_ = 0;
     uint32_t eggStartedMs_ = 0;

@@ -1,5 +1,42 @@
 # Arquitectura de software
 
+## Journal Compacto De Cuidado: 2026-10-27
+
+El usuario aprobo separar comida, items y luz del checkpoint completo. Con
+Coleccion habilitada, el worker de capacidad uno llama `saveCare`, que reemplaza
+atomicamente una sola clave NVS `vpet_state/colCare`. Guarda el snapshot absoluto
+de la mascota activa y los ajustes, incluida la mochila compartida; no reaplica
+incrementos de comida ni descuentos de items al recuperar. El limite es 3950
+bytes por registro y 3800 por snapshot, dentro de la particion NVS existente de
+20 KiB. Falta de espacio, lectura fallida o escritura rechazada no acreditan una
+accion nueva. `Pending` conserva el efecto pero bloquea acciones dependientes
+hasta `sync` y readback; la recuperacion no emite un segundo consumo.
+
+El registro VPCJ1 enlaza generacion base VPCL v1, revision monotona, slot,
+identidad, tiempo acumulado encendido y CRC. El arranque valida el archivo base
+antes de superponer el journal. Identidad, perfil y forma deben coincidir; un
+registro futuro, corrupto, sin base o de otra mascota bloquea, sin migracion
+silenciosa desde legacy. Los lectores y escritores estructurales comparan la
+huella del journal esperado: una vista antigua no puede sustituir cuidado ya
+aceptado aunque no cambien stock ni metadatos de Coleccion.
+
+El cuidado normal comprueba solo el encabezado base de 24 bytes y el journal;
+no escribe el archivo completo. Cambiar mascota, crear/cruzar huevos, guardar
+experiencias, guardar manualmente o evolucionar siguen siendo checkpoints
+completos. Estos fusionan snapshot, mochila y temporizadores antes de publicar
+la siguiente generacion; el journal anterior queda obsoleto, sin requerir una
+segunda escritura para borrarlo. Incubacion y cooldown acumulan solo tiempo
+encendido confirmado, sin duplicarlo al reiniciar ni tras una recuperacion.
+Los fallos transitorios del journal se distinguen del bloqueo del archivo base.
+
+No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
+modo sin Coleccion conserva el guardado legacy existente. Para volver a un
+firmware sin soporte del journal debe completarse primero un checkpoint total;
+de otro modo ese firmware no veria el ultimo cuidado. NVS tambien escribe flash
+y puede hacer garbage collection: eliminar escrituras LittleFS por accion no
+certifica fluidez en hardware. Esta revision requiere nueva validacion fisica
+y autorizacion de carga separada. Ver [plan](superpowers/plans/2026-10-27-compact-care-journal.md).
+
 ## Cuidado Responsivo Y Menos I/O: Revision Cargada 2026-10-27
 
 La ampliacion de la base de alimentacion inferior reutiliza `CareSave` para
@@ -37,7 +74,8 @@ heap bajo carga fue 44364 bytes y la pila libre minima del worker 3648 bytes.
 El renderer sigue leyendo clips desde LittleFS durante el guardado de la misma
 coleccion; la contencion explica una hipotesis coherente, pero aun no hay
 desglose de fases que atribuya todo el tiempo a un unico punto. La propuesta de
-un journal compacto separado de checkpoints completos no esta implementada.
+un journal compacto separado de checkpoints completos se desarrolla en la
+revision documentada arriba, todavia sin aceptacion fisica.
 Ver [plan](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Con Guardado De Fondo: 2026-10-26

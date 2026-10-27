@@ -2,6 +2,32 @@
 
 ## Estado vigente: 2026-10-27
 
+## Guardado Compacto: Validado Localmente, Pendiente De Carga
+
+El usuario aprobo el redisenio tras rechazar la fluidez de 643ca42. Comida,
+Mochila y luz usan un journal absoluto acotado en NVS cuando Coleccion esta
+habilitada, sin reescribir el archivo completo por accion. Hay overlay al
+arrancar, fusion en checkpoints estructurales y recuperacion de escrituras
+pendientes sin repetir consumos ni tiempo de incubacion/cooldown. Se comprueban
+generacion, slot, identidad, perfil, forma, revision y CRC; lecturas fallidas y
+registros corruptos/futuros bloquean sin reemplazar la partida.
+
+Validacion aislada sin Creator: 2027 pruebas completas aprobadas en 310.10 s,
+57 focalizadas en 16.45 s y 185 nativas en 2.970 s. Revision independiente
+final sin hallazgos pendientes tras corregir vista estructural obsoleta y
+tiempo de cuidado diferido. Build 7.768 s: RAM estatica 53404, app 1114965 y
+bin 1121536 bytes. Bin/ELF y registro local: out/compact-care/.
+SHA-256 del firmware:
+`ce2734a17a52599679d48ae18a2fb1e010a8575fa71ff5505f180851acdf4cfc`.
+
+No se ha cargado esta revision. La placa mantiene 643ca42, cuya fluidez fue
+rechazada. No se crean mascotas, consumen items ni restauran respaldos por el
+agente. Creator queda fuera de la entrega. Tampoco se certifican tiempos de
+respuesta, memoria bajo carga, radio BLE ni fluidez hasta medirlos en hardware.
+El modo legacy sin Coleccion y los checkpoints estructurales siguen usando
+su ruta completa; un downgrade requiere un checkpoint total previo.
+[Plan y pruebas](superpowers/plans/2026-10-27-compact-care-journal.md).
+
 ## Mochila, Luz Y Comidas Seguidas: Cargada, Fluidez Rechazada En Placa
 
 El usuario reporta espera en Mochila, al cambiar luz y al volver a alimentar.
@@ -32,8 +58,9 @@ acredita un margen amplio. BLE=0, sin validacion de radio.
 El usuario confirma que comienza la animacion y luego queda quieta en luz,
 MEAT y Mochila. Se rechaza la fluidez de 643ca42: reducir aperturas en host
 no elimino las pausas reales. La partida no se restaura ni se repiten consumos
-por el agente. Siguiente propuesta, aun no implementada/autorizada: persistencia
-compacta transaccional de cuidado, separada de checkpoints completos de Coleccion.
+por el agente. El usuario aprobo despues persistencia compacta transaccional
+de cuidado, separada de checkpoints completos de Coleccion; ver estado vigente
+arriba. Esa aprobacion de implementacion no autoriza una nueva carga.
 [Plan y evidencia](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Inmediata Y Guardado De Fondo: Respuesta Visual Aceptada

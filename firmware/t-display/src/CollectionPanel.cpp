@@ -45,7 +45,7 @@ CollectionLoad CollectionPanel::load(PetState& pet, Settings& settings) {
     if (learning_ && !learning_->load(state_.slots[state_.active])) {
         error("Politica no disponible",true); return CollectionLoad::Error;
     }
-    enabled_=true; failed_=false; return CollectionLoad::Loaded;
+    enabled_=true; failed_=careFailed_=careUnsettled_=false; return CollectionLoad::Loaded;
 }
 
 void CollectionPanel::error(const char* message, bool storage) {
@@ -53,16 +53,38 @@ void CollectionPanel::error(const char* message, bool storage) {
     if (storage) failed_=true;
 }
 bool CollectionPanel::flush() {
-    if (!pendingElapsed_) return !failed_;
-    if (!store_.advance(state_,pendingElapsed_,false)) { error("Error al guardar",true); return false; }
-    pendingElapsed_=0; return true;
+    if (!pendingElapsed_) return !failed();
+    if (failed()) return false;
+    if (!store_.advance(state_,pendingElapsed_,false)) {
+        if (store_.compactCare() && !store_.blocked()) careFailed_=true;
+        else error("Error al guardar",true);
+        return false;
+    }
+    pendingElapsed_=0; return settleCare();
 }
 bool CollectionPanel::save(const PetState& pet, const Settings& settings) {
-    if (!enabled_ || failed_ || !store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_)) {
+    if (!enabled_ || failed() || !store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_)) {
         error("Error al guardar",true); return false;
     }
     pendingElapsed_=0;
     return true;
+}
+bool CollectionPanel::saveCare(const PetState& pet, const Settings& settings) {
+    if (!store_.compactCare()) return save(pet,settings);
+    if (!enabled_ || failed_ || careUnsettled_ || !store_.saveCare(state_,pet,settings,pendingElapsed_)) {
+        careFailed_=true; return false;
+    }
+    pendingElapsed_=0; careUnsettled_=true; careFailed_=false; return true;
+}
+bool CollectionPanel::settleCare() {
+    if (!store_.compactCare()) return !failed_;
+    careUnsettled_=!store_.settleCare(); careFailed_=careUnsettled_;
+    return !failed_ && !careFailed_;
+}
+bool CollectionPanel::recoverCare(const PetState& pet, const Settings& settings) {
+    if (!store_.compactCare()) return save(pet,settings);
+    if (careUnsettled_) return settleCare();
+    return saveCare(pet,settings) && settleCare();
 }
 bool CollectionPanel::saveExperience(const PetState& pet, const Settings& settings,
                                     const RuntimeExperience* events, size_t count) {

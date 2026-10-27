@@ -2,6 +2,7 @@
 
 #include "vpet/Collection.h"
 #include "vpet/SettingsStore.h"
+#include "vpet/CareJournal.h"
 
 namespace vpet {
 
@@ -31,7 +32,7 @@ class CollectionStore {
 public:
     static constexpr size_t kMaxRecordBytes = 24 * 1024;
     static constexpr size_t kMaxSnapshotBytes = 3800;
-    explicit CollectionStore(CollectionRepository& repository) : repository_(repository) {}
+    explicit CollectionStore(CollectionRepository& repository, CareJournal* care=nullptr) : repository_(repository), care_(care) {}
 
     CollectionLoad load(CollectionState& state);
     bool blocked() const { return blocked_; }
@@ -47,6 +48,9 @@ public:
                  const PetProfile& missingBackup = PetProfile());
     bool saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
                     const char* learningRef = nullptr, uint32_t elapsedMs = 0);
+    bool saveCare(CollectionState& state, const PetState& pet, const Settings& settings, uint32_t elapsedMs=0);
+    bool compactCare() const { return care_!=nullptr; }
+    bool settleCare() { return !care_ || care_->settle(); }
     bool activate(CollectionState& state, size_t target, PetState& pet, Settings& settings,
                   const CollectionSwitchGuard& guard, bool confirmed);
     bool addFounder(CollectionState& state, const PetState& egg, const Settings& settings, bool confirmed);
@@ -66,6 +70,10 @@ private:
     bool readBody(const CollectionSlot& slot, std::string& body);
     bool current(const CollectionState& state);
     CollectionRepository& repository_;
+    CareJournal* care_;
+    bool careApplied_ = false;
+    uint32_t viewToken_ = 0, baseCrc_ = 0;
+    uint64_t viewSequence_ = 0;
     bool blocked_ = false;
 };
 

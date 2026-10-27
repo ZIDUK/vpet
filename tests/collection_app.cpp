@@ -33,7 +33,7 @@ struct Store : vpet::KeyValueStore {
     vpet::StoreCommit commitString(const char* k,const char* v) override {
         if(rejectCommit) return vpet::StoreCommit::Rejected;
         const auto result=KeyValueStore::commitString(k,v);
-        if(foodFault && (std::string(k)=="foodTx" || std::string(k)=="saveTx") && result!=vpet::StoreCommit::Rejected) {
+        if(foodFault && (std::string(k)=="foodTx" || std::string(k)=="saveTx" || std::string(k)=="colCare") && result!=vpet::StoreCommit::Rejected) {
             replayFault=true; return vpet::StoreCommit::Pending;
         }
         return result;
@@ -96,8 +96,101 @@ void confirm(vpet::CollectionPanel& panel,vpet::PetState& p,vpet::Settings& s) {
     panel.input(vpet::InputEvent::Action,p,s,{});
 }
 
+void compactCareActions() {
+    using namespace vpet;
+    for(int operation=0;operation<4;++operation) for(int fault=0;fault<3;++fault) {
+        Store kv; SettingsStore legacy(kv); Settings settings; PetState pet;
+        pet.restore(SpeciesId::Champion,40,40,70,0,100,0); pet.profile=profile(); pet.rollDna(9);
+        pet.restoreItems(0,2,0,0,0,0);
+        const bool waking=operation==3;
+        if(waking) pet.sleep.start(clockNow(),pet.dna()[3]);
+        assert(legacy.save(pet,settings));
+        Repository repository; CareJournal journal(kv); CollectionStore store(repository,&journal);
+        CollectionState state; std::string snapshot; assert(CollectionStore::capture(pet,settings,snapshot));
+        assert(store.migrate(state,snapshot));
+        CollectionPanel panel(store,legacy,profile,seed);
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,legacy,ble,clockNow,&panel,&task);
+        uint32_t now=0; simulatedMillis=0; app.begin(now); assert(app.ready());
+        auto input=[&](InputEvent event,uint32_t delta=50) {
+            now+=delta; simulatedMillis=now; app.tick(now,event);
+        };
+        for(int i=0;i<(operation==0?1:operation==1?6:5);++i) input(InputEvent::Next);
+        input(InputEvent::Action);
+        const auto base=repository.durable; const auto commits=repository.commits; const int writes=kv.writes;
+        input(InputEvent::Action);
+        assert(!app.ready() && task.starts==1 && kv.writes==writes && repository.durable==base);
+        if(operation==0) assert(renderer.motionState==MotionState::Eat && renderer.lastFrame==0);
+        const auto frames=renderer.frameChanges;
+        for(int i=0;i<6;++i) input(InputEvent::Action);
+        if(operation==0) assert(renderer.frameChanges>frames);
+        kv.rejectCommit=fault==1; kv.foodFault=fault==2?1:0;
+        task.complete(); input(InputEvent::Action);
+        assert(repository.durable==base && repository.commits==commits);
+        assert(app.ready()==(fault==0));
+        assert(kv.writes==writes+(fault==1?0:1));
+        if(fault) {
+            input(InputEvent::Action,1000); assert(!app.ready() && task.starts==1);
+            kv.rejectCommit=false; kv.foodFault=0; kv.replayFault=false;
+            const int recoveryWrites=kv.writes;
+            input(InputEvent::None,1000); assert(app.ready() && task.starts==1);
+            assert(kv.writes==recoveryWrites+(fault==1?1:0));
+        }
+        CareJournal rebootJ(kv); CollectionStore reboot(repository,&rebootJ); PetState saved; Settings ignored;
+        assert(reboot.load(state)==CollectionLoad::Loaded && reboot.readPet(state,0,saved,ignored));
+        assert(saved.hunger()==(operation==0 && fault!=1?60:40));
+        assert(saved.meals()==(operation==0 && fault!=1?1:0));
+        assert(saved.itemCount(1)==(operation==1 && fault!=1?1:2));
+        assert(saved.sleep.asleep==(operation>=2 && fault!=1?!waking:waking));
+        assert(repository.durable==base);
+        if(operation==0 && !fault) {
+            input(InputEvent::Action); input(InputEvent::Action);
+            assert(!app.ready() && task.starts==2); task.complete(); input(InputEvent::None);
+            assert(app.ready() && repository.commits==commits && kv.writes==writes+2);
+            assert(reboot.load(state)==CollectionLoad::Loaded && reboot.readPet(state,0,saved,ignored));
+            assert(saved.hunger()==80 && saved.meals()==2);
+        }
+    }
+}
+void compactTimerRecovery() {
+    using namespace vpet;
+    for(bool activeEgg : {false,true}) for(bool pending : {false,true}) {
+        Store kv; SettingsStore legacy(kv); Settings settings; PetState a,b;
+        a.restore(SpeciesId::Champion,90,90,90,0,100,0); a.profile=profile(); a.rollDna(9);
+        b=a; b.profile=profile();
+        Repository repository; CareJournal journal(kv); CollectionStore store(repository,&journal);
+        CollectionState state; std::string first,second;
+        assert(CollectionStore::capture(a,settings,first) && CollectionStore::capture(b,settings,second));
+        assert(store.migrate(state,first,&second));
+        const uint32_t words[]={9876,1,2,3};
+        PetState egg; egg.profile=PetProfile::fromWords(words,a.profile.petId(),b.profile.petId());
+        CollectionEggTransaction tx; tx.id=123; size_t child=99;
+        assert(store.commitEgg(state,tx,egg,settings,child,true));
+        if(activeEgg) assert(store.activate(state,child,a,settings,{},true));
+        CollectionPanel panel(store,legacy,profile,seed);
+        Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+        App app(renderer,panels,legacy,ble,clockNow,&panel,&task);
+        simulatedMillis=0; app.begin(0); assert(app.ready());
+        const int commits=repository.commits;
+        kv.rejectCommit=!pending; kv.foodFault=pending?1:0;
+        simulatedMillis=60000; app.tick(60000,InputEvent::None); assert(!app.ready());
+        assert(panel.state().slots[child].incubationMs==(activeEgg && pending?60000:0));
+        app.tick(61000,InputEvent::None); assert(!app.ready());
+        kv.rejectCommit=false; kv.foodFault=0; kv.replayFault=false;
+        app.tick(62000,InputEvent::None); assert(app.ready());
+        assert(panel.state().slots[child].incubationMs==(activeEgg?60000:0));
+        assert(repository.commits==commits);
+        CareJournal rebootJ(kv); CollectionStore reboot(repository,&rebootJ);
+        assert(reboot.load(state)==CollectionLoad::Loaded && state.slots[child].incubationMs==(activeEgg?60000:0));
+        simulatedMillis=63000; app.tick(63000,InputEvent::None);
+        assert(renderer.ageSeconds==63);
+        assert(panel.state().slots[0].cooldownMs==86400000-60000);
+    }
+}
 int main() {
     using namespace vpet;
+    compactCareActions();
+    compactTimerRecovery();
     assert(Navigation::kMenuCount == 9);
     assert(option_menu::count == 11);
     const uint8_t expected[] = {0,1,2,3,4,5,6,7,9,10,8};

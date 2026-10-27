@@ -32,7 +32,8 @@ vpet::PetProfile newProfile() {
 vpet::SettingsStore settingsStore(stateStore, &backupStore, newProfile);
 uint32_t collectionSeed() { return esp_random(); }
 vpet::LittleFsCollectionRepository collectionRepository;
-vpet::CollectionStore collectionStore(collectionRepository);
+vpet::CareJournal careJournal(stateStore);
+vpet::CollectionStore collectionStore(collectionRepository,&careJournal);
 vpet::LittleFsLearningRepository learningRepository;
 vpet::LearningRuntime learningRuntime(learningRepository);
 vpet::CollectionPanel collectionPanel(collectionStore, settingsStore, newProfile, collectionSeed, &framebuffer, &assets, &learningRuntime);

@@ -183,7 +183,11 @@ CollectionLoad CollectionStore::load(CollectionState& state) {
     const auto fail = [this](CollectionLoad result) { blocked_ = true; return result; };
     size_t bytes = 0; const auto present = repository_.size(bytes);
     if (present == CollectionRead::Error) return fail(CollectionLoad::Error);
-    if (present == CollectionRead::Missing) { blocked_ = false; return CollectionLoad::Missing; }
+    if (present == CollectionRead::Missing) {
+        if (care_ && care_->load()!=CareLoad::Missing) return fail(CollectionLoad::Error);
+        careApplied_=false; viewSequence_=0; viewToken_=baseCrc_=0;
+        blocked_ = false; return CollectionLoad::Missing;
+    }
     if (bytes < kHeaderBytes+kMetadataBytes || bytes > kMaxRecordBytes) return fail(CollectionLoad::Corrupt);
     char header[kHeaderBytes];
     if (!repository_.read(0, header, sizeof(header))) return fail(CollectionLoad::Error);
@@ -211,6 +215,28 @@ CollectionLoad CollectionStore::load(CollectionState& state) {
         if (!readBody(slot, body)) return fail(CollectionLoad::Error);
         if (!bodyMatches(slot, body)) return fail(CollectionLoad::Corrupt);
     }
+    careApplied_=false;
+    if (care_) {
+        const auto result=care_->load();
+        if (result==CareLoad::Future) return fail(CollectionLoad::Future);
+        if (result==CareLoad::Corrupt) return fail(CollectionLoad::Corrupt);
+        if (result==CareLoad::Error) return fail(CollectionLoad::Error);
+        if (result==CareLoad::Loaded) {
+            const auto& record=care_->record();
+            if (record.base>next.sequence) return fail(CollectionLoad::Corrupt);
+            if (record.base==next.sequence) {
+                std::unique_ptr<PetState> individual(new (std::nothrow) PetState);
+                if (!individual) return fail(CollectionLoad::Error);
+                auto& pet=*individual; Settings settings;
+                const auto& slot=next.slots[next.active];
+                if (record.active!=next.active || record.identity!=slot.profile().petId() ||
+                    !restore(record.snapshot,pet,settings) || pet.profile.encode()!=slot.profileRecord ||
+                    static_cast<uint8_t>(pet.species())!=slot.form) return fail(CollectionLoad::Corrupt);
+                sharedFrom(next,pet); advanceSlots(next,record.elapsedMs); careApplied_=true;
+            }
+        }
+    }
+    viewSequence_=next.sequence; viewToken_=checksum(metadata(next)); baseCrc_=number(header+20,4);
     state = next; blocked_ = false; return CollectionLoad::Loaded;
 }
 
@@ -248,20 +274,28 @@ bool CollectionStore::readBody(const CollectionSlot& slot, std::string& body) {
 }
 bool CollectionStore::current(const CollectionState& state) {
     if (blocked_) return false;
+    if (care_ && viewSequence_!=state.sequence) return false;
+    const auto expectedCare=care_?care_->fingerprint():0;
+    const bool expectedPresent=care_ && care_->present();
     std::unique_ptr<CollectionState> durable(new (std::nothrow) CollectionState);
     if (!durable) { blocked_ = true; return false; }
-    return load(*durable) == CollectionLoad::Loaded && metadata(state) == metadata(*durable);
+    if (load(*durable)!=CollectionLoad::Loaded) return false;
+    if (care_ && (expectedCare!=care_->fingerprint() || expectedPresent!=care_->present())) {
+        blocked_=true; return false;
+    }
+    return metadata(state)==metadata(*durable);
 }
 bool CollectionStore::readPet(const CollectionState& state, size_t slot, PetState& pet, Settings& settings) {
     if (slot >= CollectionState::kSlots || !state.slots[slot].occupied || !current(state)) return false;
     std::string body; PetState next; Settings nextSettings;
-    if (!readBody(state.slots[slot], body)) { blocked_ = true; return false; }
+    if (careApplied_ && slot==state.active) body=care_->record().snapshot;
+    else if (!readBody(state.slots[slot], body)) { blocked_ = true; return false; }
     if (!restore(body, next, nextSettings)) { blocked_ = true; return false; }
     applyShared(state, next); pet = next; settings = nextSettings; return true;
 }
 
 bool CollectionStore::persist(CollectionState& state, const CollectionState& proposed,
-                              const std::string* const replacements[CollectionState::kSlots]) {
+                              const std::string* const supplied[CollectionState::kSlots]) {
     if (blocked_ || state.sequence == std::numeric_limits<uint64_t>::max()) return false;
     std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(proposed));
     if (!scratch) { blocked_ = true; return false; }
@@ -270,6 +304,16 @@ bool CollectionStore::persist(CollectionState& state, const CollectionState& pro
         // Missing load leaves its argument untouched, so this scratch serves as
         // the initial probe without another metadata-sized frame on the stack.
         if (load(*scratch) != CollectionLoad::Missing) return false;
+    }
+    const std::string* replacements[CollectionState::kSlots];
+    std::copy(supplied,supplied+CollectionState::kSlots,replacements);
+    std::string mergedBody;
+    if (careApplied_ && !replacements[state.active]) {
+        std::unique_ptr<PetState> individual(new (std::nothrow) PetState);
+        if (!individual) return false;
+        auto& pet=*individual; Settings settings;
+        if (!restore(care_->record().snapshot,pet,settings) || !captureBody(pet,settings,mergedBody)) return false;
+        replacements[state.active]=&mergedBody;
     }
     auto& candidate = *scratch;
     candidate.sequence = state.sequence+1;
@@ -318,6 +362,8 @@ bool CollectionStore::persist(CollectionState& state, const CollectionState& pro
         verified = crcUpdate(verified, chunk, n); at += n;
     }
     if (verified != crc || !repository_.commit(candidate.sequence)) return fail();
+    careApplied_=false; viewSequence_=candidate.sequence; viewToken_=checksum(metadata(candidate));
+    baseCrc_=number(header.data()+20,4);
     state = candidate; return true;
 }
 
@@ -379,6 +425,30 @@ bool CollectionStore::saveActive(CollectionState& state, const PetState& pet, co
     const std::string* replacements[CollectionState::kSlots] = {};
     replacements[state.active] = &body;
     return persist(state, candidate, replacements);
+}
+bool CollectionStore::saveCare(CollectionState& state, const PetState& pet, const Settings& settings,
+                               uint32_t elapsedMs) {
+    if (!care_) return saveActive(state,pet,settings,nullptr,elapsedMs);
+    if (blocked_ || state.active>=CollectionState::kSlots || !state.slots[state.active].occupied ||
+        !state.sequence || state.sequence!=viewSequence_ || checksum(metadata(state))!=viewToken_ ||
+        pet.profile.encode()!=state.slots[state.active].profileRecord) return false;
+    // Revalidate the base header without rereading/writing the complete collection.
+    size_t bytes=0; char header[kHeaderBytes];
+    if (repository_.size(bytes)!=CollectionRead::Present || bytes<kHeaderBytes ||
+        !repository_.read(0,header,sizeof(header)) || std::memcmp(header,"VPCL",4) ||
+        number(header+4,4)!=1 || number(header+8,8)!=state.sequence ||
+        number(header+16,4)!=bytes-kHeaderBytes || number(header+20,4)!=baseCrc_) return false;
+    const uint32_t previous=careApplied_?care_->record().elapsedMs:0;
+    if (static_cast<uint8_t>(pet.species())!=state.slots[state.active].form || elapsedMs>UINT32_MAX-previous)
+        return saveActive(state,pet,settings,nullptr,elapsedMs);
+    std::unique_ptr<CollectionState> candidate(new (std::nothrow) CollectionState(state));
+    if (!candidate) return false;
+    sharedFrom(*candidate,pet); advanceSlots(*candidate,elapsedMs);
+    CareRecord record; record.base=state.sequence; record.active=state.active;
+    record.identity=pet.profile.petId(); record.elapsedMs=previous+elapsedMs;
+    if (!capture(pet,settings,record.snapshot) || !care_->save(std::move(record))) return false;
+    state=*candidate; careApplied_=true; viewToken_=checksum(metadata(state));
+    return true;
 }
 bool CollectionStore::activate(CollectionState& state, size_t target, PetState& pet, Settings& settings,
                                const CollectionSwitchGuard& guard, bool confirmed) {
@@ -466,6 +536,11 @@ bool CollectionStore::advance(CollectionState& state, uint32_t elapsedMs, bool p
     if (!scratch) { blocked_ = true; return false; }
     auto& candidate = *scratch;
     if (!advanceSlots(candidate,elapsedMs)) return true;
+    if (care_) {
+        PetState pet; Settings settings;
+        if (!readPet(state,state.active,pet,settings)) return false;
+        return saveCare(state,pet,settings,elapsedMs);
+    }
     const std::string* replacements[CollectionState::kSlots] = {};
     return persist(state, candidate, replacements);
 }

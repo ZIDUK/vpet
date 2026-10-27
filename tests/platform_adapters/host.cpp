@@ -1,4 +1,5 @@
 #include "vpet/NvsKeyValueStore.h"
+#include "vpet/CareJournal.h"
 #include "vpet/BleService.h"
 #include "vpet/StateSnapshot.h"
 #include "Arduino.h"
@@ -260,6 +261,20 @@ int main(int argc, char** argv) {
     CHECK(argc == 2);
     const std::string test = argv[1];
     using namespace vpet;
+    if(test=="care_pending_old" || test=="care_pending_new") {
+        NvsKeyValueStore adapter("pet"); CareJournal journal(adapter);
+        CHECK(journal.load()==CareLoad::Missing);
+        CareRecord record; record.base=1; record.identity=std::string(32,'1'); record.snapshot="before\n";
+        CHECK(journal.save(record) && journal.settle());
+        storage_stub::failCommit=true; storage_stub::persistFailedCommit=test=="care_pending_new";
+        record.snapshot="after\n";
+        CHECK(journal.save(record) && !journal.settled() && !journal.settle());
+        CHECK(!journal.save(record));
+        storage_stub::reboot(); NvsKeyValueStore fresh("pet"); CareJournal reboot(fresh);
+        CHECK(reboot.load()==CareLoad::Loaded);
+        CHECK(reboot.record().snapshot==(test=="care_pending_new"?"after\n":"before\n"));
+        return 0;
+    }
     if(test.compare(0,8,"profile_")==0) { profilePending(test); return 0; }
     if (test.compare(0, 5, "swap_") == 0) {
         swapPending(test);
@@ -271,7 +286,29 @@ int main(int argc, char** argv) {
     }
     if (test.compare(0, 4, "nvs_") == 0) {
         NvsKeyValueStore store("pet");
-        if (test == "nvs_nonempty") {
+        if (test == "nvs_typed_read") {
+            std::string value="unchanged";
+            CHECK(store.readString("missing",value)==StoreRead::Missing && value=="unchanged");
+            CHECK(store.putString("empty",""));
+            CHECK(store.readString("empty",value)==StoreRead::Present && value.empty());
+            CHECK(store.putString("colCare",std::string(3950,'x').c_str()));
+            CHECK(store.readString("colCare",value)==StoreRead::Present && value.size()==3950);
+            storage_stub::failGet=true;
+            CHECK(store.readString("colCare",value)==StoreRead::Error && value.size()==3950);
+            storage_stub::failGet=false;
+            CHECK(store.putInt("wrong_type",1));
+            CHECK(store.readString("wrong_type",value)==StoreRead::Error);
+            CHECK(store.readString(nullptr,value)==StoreRead::Error);
+            storage_stub::failCommit=true;
+            CHECK(store.commitString("colCare","next")==StoreCommit::Pending);
+            CHECK(store.readString("colCare",value)==StoreRead::Error);
+            storage_stub::failCommit=false; CHECK(store.sync());
+            CHECK(store.readString("colCare",value)==StoreRead::Present && value=="next");
+            CHECK(store.putString("large",std::string(4000,'x').c_str()));
+            CHECK(store.readString("large",value)==StoreRead::Error && value=="next");
+            storage_stub::failOpen=true;
+            CHECK(store.readString("colCare",value)==StoreRead::Error && value=="next");
+        } else if (test == "nvs_nonempty") {
             CHECK(store.putString("journal", "pending"));
             CHECK(store.getString("journal", "missing") == "pending");
         } else if (test == "nvs_empty") {

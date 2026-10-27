@@ -337,6 +337,175 @@ void filesystem() {
     for (const auto name : {"previous.bin", "pending.bin"}) std::remove((root+"/"+name).c_str());
     assert(rmdir(root.c_str()) == 0); assert(rmdir(directory) == 0);
 }
+struct CareKv : KeyValueStore {
+    std::string record;
+    int writes=0;
+    bool reject=false, pending=false, syncFails=false, readFails=false;
+    int32_t getInt(const char*,int32_t fallback) override { return fallback; }
+    std::string getString(const char* key,const char* fallback) override {
+        return !std::strcmp(key,"colCare") && !record.empty()?record:fallback;
+    }
+    bool putInt(const char*,int32_t) override { return false; }
+    StoreRead readString(const char* key,std::string& value) override {
+        return readFails?StoreRead::Error:KeyValueStore::readString(key,value);
+    }
+    bool putString(const char* key,const char* value) override {
+        return commitString(key,value)==StoreCommit::Committed;
+    }
+    StoreCommit commitString(const char* key,const char* value) override {
+        assert(!std::strcmp(key,"colCare"));
+        if(reject) return StoreCommit::Rejected;
+        record=value; ++writes;
+        return pending?StoreCommit::Pending:StoreCommit::Committed;
+    }
+    bool sync() override { return !syncFails; }
+};
+void compactCare() {
+    MemoryRepository repo; CollectionState state; auto active=pet(2);
+    initialize(repo,state,active);
+    CareKv kv; CareJournal journal(kv); CollectionStore store(repo,&journal);
+    assert(store.load(state)==CollectionLoad::Loaded);
+    const auto bytes=repo.durable; const int commits=repo.commits;
+    const auto sequence=state.sequence;
+    active.setHunger(60); active.setEnergy(20); active.setHappiness(30);
+    assert(store.saveCare(state,active,Settings(),1500));
+    assert(repo.commits==commits && repo.durable==bytes && state.sequence==sequence);
+    assert(kv.writes==1 && kv.record.size()<4000 && store.settleCare());
+    CareJournal rebootJournal(kv); CollectionStore reboot(repo,&rebootJournal);
+    CollectionState restored; PetState saved; Settings settings;
+    assert(reboot.load(restored)==CollectionLoad::Loaded);
+    assert(reboot.readPet(restored,0,saved,settings));
+    assert(saved.hunger()==60 && saved.energy()==20 && saved.happiness()==30);
+    active.setEnergy(45); active.restoreItems(3,1,1,1,2,1);
+    assert(store.saveCare(state,active,settings,500));
+    assert(repo.commits==commits && kv.writes==2);
+    assert(reboot.load(restored)==CollectionLoad::Loaded && reboot.readPet(restored,0,saved,settings));
+    assert(saved.energy()==45 && saved.itemCount(1)==1);
+    assert(store.readPet(state,1,saved,settings) && saved.itemCount(1)==1);
+    // An explicit structural checkpoint merges the journal before advancing base.
+    assert(store.advance(state,1000,false));
+    assert(store.saveActive(state,active,settings));
+    assert(state.sequence>sequence);
+    assert(reboot.load(restored)==CollectionLoad::Loaded && reboot.readPet(restored,0,saved,settings));
+    assert(saved.energy()==45 && saved.itemCount(1)==1);
+}
+void compactFaults() {
+    MemoryRepository original; CollectionState initial; auto active=pet(2);
+    initialize(original,initial,active); Settings settings;
+    for (int fault=0;fault<5;++fault) {
+        auto repo=original; auto state=initial; CareKv kv; CareJournal journal(kv);
+        CollectionStore store(repo,&journal); assert(store.load(state)==CollectionLoad::Loaded);
+        auto changed=active; changed.setEnergy(25); changed.restoreItems(3,1,1,1,2,1);
+        const auto before=repo.durable;
+        if(fault==0) kv.reject=true;
+        if(fault==1) kv.readFails=true;
+        if(fault==2) repo.failAt=repo.operations;
+        if(fault==3) repo.failAt=repo.operations+1;
+        if(fault==4) kv.pending=true;
+        const bool accepted=store.saveCare(state,changed,settings,500);
+        assert(accepted==(fault==4) && repo.durable==before);
+        if(accepted) {
+            kv.syncFails=true; assert(!store.settleCare());
+            assert(!store.saveCare(state,changed,settings,500));
+            kv.syncFails=false; assert(store.settleCare());
+        } else assert(state.stock[1]==2 && kv.writes==0);
+        kv.reject=kv.readFails=false; repo.failAt=-1;
+        CareJournal recoveredJournal(kv); CollectionStore recovered(repo,&recoveredJournal);
+        CollectionState loaded; PetState saved;
+        assert(recovered.load(loaded)==CollectionLoad::Loaded && recovered.readPet(loaded,0,saved,settings));
+        assert(saved.itemCount(1)==(accepted?1:2));
+    }
+    auto repo=original; auto state=initial; CareKv kv; CareJournal j(kv), staleJ(kv);
+    CollectionStore store(repo,&j), stale(repo,&staleJ); CollectionState old;
+    assert(store.load(state)==CollectionLoad::Loaded && stale.load(old)==CollectionLoad::Loaded);
+    active.setEnergy(25); assert(store.saveCare(state,active,settings));
+    assert(!stale.saveActive(old,active,settings));
+    assert(!stale.saveActive(old,active,settings));
+    assert(!stale.saveCare(old,active,settings));
+    const auto valid=kv.record;
+    CareRecord record; assert(CareJournal::decode(valid,record)==CareLoad::Loaded);
+    for (int fault=0;fault<7;++fault) {
+        auto bad=record;
+        if(fault==0) bad.base++;
+        if(fault==1) bad.identity=profile(42).petId();
+        if(fault==2) bad.active=1;
+        if(fault==3) bad.snapshot="not a snapshot\n";
+        if(fault==4) { auto other=active; other.profile=profile(42); bad.snapshot=capture(other); }
+        if(fault==5) { auto other=active; other.restore(SpeciesId::Champion,80,80,80,0,100,125); bad.snapshot=capture(other); }
+        kv.record=CareJournal::encode(bad);
+        if(fault==6) kv.record[4]='2';
+        CareJournal brokenJ(kv); CollectionStore broken(repo,&brokenJ); CollectionState unchanged;
+        assert(broken.load(unchanged)!=CollectionLoad::Loaded && broken.blocked());
+        assert(!broken.migrate(unchanged,capture(active)) && unchanged.count()==0);
+    }
+    for(size_t at=0;at<valid.size();at+=97) {
+        kv.record=valid.substr(0,at);
+        if(!at) kv.record="corrupt";
+        CareJournal broken(kv); assert(broken.load()==CareLoad::Corrupt);
+    }
+    kv.record=valid; CareJournal orphan(kv); MemoryRepository missing;
+    CollectionStore noBase(missing,&orphan); CollectionState empty;
+    assert(noBase.load(empty)==CollectionLoad::Error && !noBase.migrate(empty,capture(active)));
+    // Cut every filesystem operation during a structural merge. The care
+    // receipt remains authoritative whether old or new base survives.
+    auto founder=pet(9); founder.restore(SpeciesId::Egg,90,90,90,0,100,0);
+    auto probe=repo; CareKv probeKv; probeKv.record=valid; CareJournal probeJ(probeKv);
+    CollectionStore trial(probe,&probeJ); CollectionState trialState;
+    assert(trial.load(trialState)==CollectionLoad::Loaded); probe.operations=0;
+    assert(trial.addFounder(trialState,founder,settings,true));
+    const int operations=probe.operations;
+    for(int cut=0;cut<operations;++cut) {
+        auto interrupted=repo; CareKv cutKv; cutKv.record=valid; CareJournal cutJ(cutKv);
+        CollectionStore writer(interrupted,&cutJ); CollectionState view;
+        assert(writer.load(view)==CollectionLoad::Loaded); interrupted.operations=0; interrupted.failAt=cut;
+        const bool committed=writer.addFounder(view,founder,settings,true);
+        interrupted.failAt=-1; CareJournal restartJ(cutKv); CollectionStore restart(interrupted,&restartJ);
+        PetState saved;
+        assert(restart.load(view)==CollectionLoad::Loaded && restart.readPet(view,0,saved,settings));
+        assert(saved.energy()==25 && view.count()==(committed?3:2) && cutKv.record==valid);
+    }
+    // A founder checkpoint with no explicit active replacement must merge care.
+    assert(store.load(state)==CollectionLoad::Loaded);
+    auto egg=pet(9); egg.restore(SpeciesId::Egg,90,90,90,0,100,0);
+    assert(store.addFounder(state,egg,settings,true));
+    assert(!stale.saveCare(old,active,settings));
+    CareJournal afterJ(kv); CollectionStore after(repo,&afterJ); PetState saved;
+    assert(after.load(state)==CollectionLoad::Loaded && after.readPet(state,0,saved,settings));
+    assert(saved.energy()==25 && state.count()==3);
+    const int commits=repo.commits;
+    assert(after.saveCare(state,saved,settings,500));
+    assert(repo.commits==commits && afterJ.record().elapsedMs==500);
+    // Evolution is a structural boundary, not a foreign-form overlay.
+    saved.restore(SpeciesId::Champion,70,25,90,0,100,125);
+    assert(after.saveCare(state,saved,settings)); assert(repo.commits==commits+1);
+    CareJournal evolvedJ(kv); CollectionStore evolved(repo,&evolvedJ);
+    assert(evolved.load(state)==CollectionLoad::Loaded && evolved.readPet(state,0,saved,settings));
+    assert(saved.species()==SpeciesId::Champion);
+}
+void compactTimers() {
+    MemoryRepository repo; auto active=pet(2); CollectionState state; initialize(repo,state,active);
+    CareKv kv; CareJournal journal(kv); CollectionStore store(repo,&journal); Settings settings;
+    assert(store.load(state)==CollectionLoad::Loaded);
+    CollectionEggTransaction tx; tx.id=91;
+    PetState egg; egg.profile=profile(8,profile(2).petId(),profile(3).petId()); size_t child=99;
+    assert(store.commitEgg(state,tx,egg,settings,child,true));
+    assert(store.activate(state,child,active,settings,{},true));
+    const int commits=repo.commits;
+    for(int cycle=1;cycle<=3;++cycle) {
+        assert(store.saveCare(state,active,settings,1500));
+        assert(store.advance(state,500,false));
+        assert(state.slots[child].incubationMs==2000U*cycle);
+        assert(state.slots[0].cooldownMs==86400000U-2000U*cycle);
+        assert(store.load(state)==CollectionLoad::Loaded);
+        assert(state.slots[child].incubationMs==2000U*cycle);
+    }
+    assert(repo.commits==commits);
+    assert(store.advance(state,10000,true) && state.slots[child].incubationMs==6000);
+    assert(store.saveActive(state,active,settings));
+    assert(store.load(state)==CollectionLoad::Loaded && state.slots[child].incubationMs==6000);
+    assert(store.advance(state,1000,false) && state.slots[child].incubationMs==7000);
+    assert(store.load(state)==CollectionLoad::Loaded && state.slots[child].incubationMs==7000);
+}
 int main(int argc, char** argv) {
     assert(argc == 2); const std::string name = argv[1];
     if (name == "roundtrip") roundtrip();
@@ -346,6 +515,9 @@ int main(int argc, char** argv) {
     else if (name == "failures") failures();
     else if (name == "corruption") corruption();
     else if (name == "filesystem") filesystem();
+    else if (name == "compact") compactCare();
+    else if (name == "compact_faults") compactFaults();
+    else if (name == "compact_timers") compactTimers();
     else return 2;
     std::cout << name << " passed\n";
 }

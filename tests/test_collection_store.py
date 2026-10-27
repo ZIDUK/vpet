@@ -24,7 +24,7 @@ def collection_binary(tmp_path_factory):
     return binary
 
 
-@pytest.mark.parametrize("case", ["roundtrip", "migration", "switch", "eggs", "failures", "corruption", "filesystem"])
+@pytest.mark.parametrize("case", ["roundtrip", "migration", "switch", "eggs", "failures", "corruption", "filesystem", "compact", "compact_faults", "compact_timers"])
 def test_collection_repository(collection_binary, case):
     result = subprocess.run([str(collection_binary), case], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr

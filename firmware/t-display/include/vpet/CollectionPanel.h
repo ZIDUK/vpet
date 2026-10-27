@@ -24,6 +24,10 @@ public:
     virtual ~CollectionPanel() = default;
     virtual CollectionLoad load(PetState& pet, Settings& settings);
     virtual bool save(const PetState& pet, const Settings& settings);
+    virtual bool saveCare(const PetState& pet, const Settings& settings);
+    virtual bool settleCare();
+    virtual bool recoverCare(const PetState& pet, const Settings& settings);
+    bool compactCare() const { return store_.compactCare(); }
     virtual bool saveExperience(const PetState& pet, const Settings& settings,
                                 const RuntimeExperience* events, size_t count);
     virtual int chooseAuto(const practice::Fighter& fighter, uint8_t learnedMask) const;
@@ -39,7 +43,7 @@ public:
                        const CollectionSwitchGuard& guard);
     virtual void draw(const char* language);
     bool enabled() const { return enabled_; }
-    bool failed() const { return failed_; }
+    bool failed() const { return failed_ || careFailed_; }
     bool changedActive() const { return changedActive_; }
     Page page() const { return page_; }
     const CollectionState& state() const { return state_; }
@@ -75,6 +79,7 @@ private:
     BlockReason blockReason_ = BlockReason::None;
     uint32_t pendingElapsed_ = 0;
     bool enabled_ = false, failed_ = false, changedActive_ = false;
+    bool careFailed_ = false, careUnsettled_ = false;
     const char* message_ = "";
 };
 }  // namespace vpet

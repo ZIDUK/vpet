@@ -16,6 +16,7 @@ public:
     int32_t getInt(const char* key, int32_t fallback) override;
     bool putInt(const char* key, int32_t value) override;
     std::string getString(const char* key, const char* fallback) override;
+    StoreRead readString(const char* key, std::string& value) override;
     bool putString(const char* key, const char* value) override;
     StoreCommit commitString(const char* key, const char* value) override;
     bool sync() override;

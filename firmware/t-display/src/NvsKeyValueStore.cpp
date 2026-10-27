@@ -34,6 +34,21 @@ std::string NvsKeyValueStore::getString(const char* key, const char* fallback) {
     return ensureOpen() ? preferences_.getString(key, fallback).c_str() : fallback;
 }
 
+StoreRead NvsKeyValueStore::readString(const char* key, std::string& value) {
+    if (pending_ || !key || !ensureOpen()) return StoreRead::Error;
+    nvs_handle_t handle;
+    if (nvs_open(namespace_,NVS_READONLY,&handle)!=ESP_OK) return StoreRead::Error;
+    size_t bytes=0;
+    const auto result=nvs_get_str(handle,key,nullptr,&bytes);
+    if (result==ESP_ERR_NVS_NOT_FOUND) { nvs_close(handle); return StoreRead::Missing; }
+    if (result!=ESP_OK || !bytes || bytes>4000) { nvs_close(handle); return StoreRead::Error; }
+    std::string next(bytes,'\0');
+    const bool ok=nvs_get_str(handle,key,&next[0],&bytes)==ESP_OK && bytes==next.size() && next.back()=='\0';
+    nvs_close(handle);
+    if (!ok) return StoreRead::Error;
+    next.pop_back(); value=std::move(next); return StoreRead::Present;
+}
+
 bool NvsKeyValueStore::putString(const char* key, const char* value) {
     return commitString(key, value) == StoreCommit::Committed;
 }
