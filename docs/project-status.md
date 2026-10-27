@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-27
 
-## Mochila, Luz Y Comidas Seguidas: Cargada, Medicion Pendiente
+## Mochila, Luz Y Comidas Seguidas: Cargada, Fluidez Rechazada En Placa
 
 El usuario reporta espera en Mochila, al cambiar luz y al volver a alimentar.
 La primera correccion solo adelantaba Eat y bloqueaba otra transaccion durante
@@ -21,9 +21,20 @@ App escrita solo en 0x10000; hashes verificados, LittleFS, NVS, bootloader y
 particiones identicos antes del reinicio. Al retomar el 2026-10-27 se confirma
 el proceso completado, sin volver a cargar. VPET_READY: heap 80892/minimo
 71368, flash 16 MiB, manifest 1. Bin/ELF en out/responsive-care.
-Pendiente medicion manual de respuesta repetida y heap/pila durante guardado;
-BLE no validado en esta revision. La capacidad sigue siendo un escritor,
-sin cola de consumos. [Plan](superpowers/plans/2026-10-26-responsive-care.md).
+Captura real 20261027-054159: luz presenta en 134/142 ms y guarda en
+5924/7016 ms; item presenta en 211 ms y guarda en 4175 ms; dos MEAT presentan
+en 84 ms y guardan en 6963/6636 ms. Son tiempos desde el handler, no desde el
+contacto fisico del boton. Cinco commits settled=1, cero comandos enviados por
+el agente; una secuencia de arranque al abrir USB y ninguna linea fatal.
+Pila libre minima del worker 3648 bytes, heap minimo 44364; loop maximo
+3122339 us. La pila no se agoto en esta captura, pero el heap bajo carga no
+acredita un margen amplio. BLE=0, sin validacion de radio.
+El usuario confirma que comienza la animacion y luego queda quieta en luz,
+MEAT y Mochila. Se rechaza la fluidez de 643ca42: reducir aperturas en host
+no elimino las pausas reales. La partida no se restaura ni se repiten consumos
+por el agente. Siguiente propuesta, aun no implementada/autorizada: persistencia
+compacta transaccional de cuidado, separada de checkpoints completos de Coleccion.
+[Plan y evidencia](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Inmediata Y Guardado De Fondo: Respuesta Visual Aceptada
 

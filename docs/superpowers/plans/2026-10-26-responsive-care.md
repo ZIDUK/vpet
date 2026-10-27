@@ -90,3 +90,38 @@ timing. Power loss before commit can lose the latest pending action.
   user-operated lights, a useful backpack item and eligible repeated meals.
   Runtime latency/stack/heap and visual acceptance remain pending until that
   capture or the user supplies evidence; BLE=0 is not a radio validation.
+
+## Physical Validation Failed: 2026-10-27
+
+The user reports that lights, MEAT and items start their presentation but then
+freeze while saving. Capture closed normally after 207.612 s; zero commands
+sent, one observed startup when opening USB and no fatal lines. Five user-driven
+saves committed and settled; no assistant-driven meals/items or save restoration.
+
+| Operation | Handler To First Draw (ms) | Save (ms) | Free Worker Stack (bytes) |
+| --- | ---: | ---: | ---: |
+| Light | 134 | 5924 | 3952 |
+| Light | 142 | 7016 | 3872 |
+| Item, index 1 | 211 | 4175 | 3872 |
+| MEAT | 84 | 6963 | 3648 |
+| MEAT | 84 | 6636 | 3648 |
+
+Minimum heap 44364, recovered free heap 72644; maximum reported loop 3122339 us.
+No stack exhaustion observed, but do not claim a validated broad memory margin.
+BLE was disabled. Numeric presentation is handler-to-render, not button debounce
+or camera-measured display latency. The rejection overrides earlier acceptance
+of the previous first-frame-only change: this revision is NOT a fluidity fix.
+
+App continues rendering and loading LittleFS clips while the worker rewrites
+the complete collection generation. This establishes shared storage use and
+measured stalls, not a phase-level proof of the sole bottleneck. Do not claim
+that host open/seek reductions or another task priority alone solve it.
+
+Proposed next design, not implemented or flashed: durable bounded care journal
+separate from full Collection checkpoints, covering pet identity, base generation,
+shared quantities and absolute post-action state. Recovery must reject stale or
+foreign records, replay idempotently, survive failure at each commit boundary,
+check the existing 20 KiB NVS budget and preserve legacy journal compatibility.
+Collection changes/switches/breeding/evolution require explicit synchronization
+barriers. Ordinary care must not merely be left volatile until a manual save.
+Request design approval before changing persistence contracts or flashing again.

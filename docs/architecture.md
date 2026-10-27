@@ -30,8 +30,14 @@ Readback completo, CRC, backup anterior, sync y rename atomico se conservan.
 Regresion host de dos mascotas: 56 -> 9 aperturas y 81 -> 5 seeks por guardado.
 Son conteos de operaciones, no una medida de milisegundos en ESP32. Las trazas
 `VPET_CARE` identifican Item/Light; `VPET_FEED` conserva su formato previo.
-Firmware 643ca42 cargado con hashes verificados y partida/graficos conservados;
-no acredita fluidez entre comidas ni margen heap/pila hasta medirlo en la placa.
+Firmware 643ca42 cargado con hashes verificados y partida/graficos conservados.
+La prueba fisica posterior rechaza la fluidez: primeros dibujos de 84-211 ms,
+guardados de 4175-7016 ms y ciclos de loop de hasta 3122339 us. El minimo de
+heap bajo carga fue 44364 bytes y la pila libre minima del worker 3648 bytes.
+El renderer sigue leyendo clips desde LittleFS durante el guardado de la misma
+coleccion; la contencion explica una hipotesis coherente, pero aun no hay
+desglose de fases que atribuya todo el tiempo a un unico punto. La propuesta de
+un journal compacto separado de checkpoints completos no esta implementada.
 Ver [plan](superpowers/plans/2026-10-26-responsive-care.md).
 
 ## Alimentacion Con Guardado De Fondo: 2026-10-26
