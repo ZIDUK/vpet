@@ -3,6 +3,7 @@
 #undef main
 #include "vpet/LittleFsCollectionRepository.h"
 #include "vpet/LittleFsLearningRepository.h"
+#include "posix_littlefs32.h"
 
 uint64_t learningWall=1791979200;
 uint64_t learningClock() { return learningWall; }
@@ -34,7 +35,8 @@ struct BattleStorageFaults : vpet::CollectionRepository {
 void compactBattle(const std::string& root, const std::string& fault) {
     using namespace vpet;
     const bool training=fault.find("training_")==0;
-    const std::string failure=training?fault.substr(9):fault;
+    const bool exploring=fault.find("explore_")==0;
+    const std::string failure=training?fault.substr(9):exploring?fault.substr(8):fault;
     Store kv; SettingsStore legacy(kv); Settings settings; PetState original;
     original.restore(SpeciesId::Rookie,90,90,90,0,100,0);
     original.profile=profile(); original.rollDna(42);
@@ -51,18 +53,24 @@ void compactBattle(const std::string& root, const std::string& fault) {
     App app(renderer,panels,legacy,ble,learningClock,&panel);
     uint32_t ms=0; app.begin(ms); assert(app.ready());
     auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
-    for(int i=0;i<(training?2:4);++i) key(InputEvent::Next);
+    for(int i=0;i<(training?2:exploring?3:4);++i) key(InputEvent::Next);
     key(InputEvent::Action);
-    key(training?InputEvent::Action:InputEvent::Next); key(InputEvent::Action);
+    key((training || exploring)?InputEvent::Action:InputEvent::Next); key(InputEvent::Action);
+    PetState beforeClaim;
+    if(exploring) {
+        assert(store.readPet(panel.state(),0,beforeClaim,settings) && beforeClaim.exploration.away());
+        learningWall+=1800;
+    }
     // A rejected policy preparation must retain a retryable terminal result.
     faults.fail=failure!="collection";
     storageFaults.reject=failure=="collection";
     if(failure=="unreadable") faults.onFailure=[&]() { storageFaults.unreadable=true; };
-    if(training) { ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None); }
+    if(exploring) key(InputEvent::Action);
+    else if(training) { ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None); }
     else for(int i=0;i<128 && !panels.arenaResult;++i) {
         ms+=1500; app.tick(ms,InputEvent::None);
     }
-    assert((training || panels.arenaResult) && app.ready()==(failure!="unreadable"));
+    assert((training || exploring || panels.arenaResult) && app.ready()==(failure!="unreadable"));
     assert(learning.policy()->last_sequence()==0);
     storageFaults.unreadable=storageFaults.reject=false;
     if(failure=="unreadable") {
@@ -71,6 +79,20 @@ void compactBattle(const std::string& root, const std::string& fault) {
     }
     PetState saved; assert(store.readPet(panel.state(),panel.state().active,saved,settings));
     assert(saved.battles()==0);
+    if(exploring) {
+        assert(saved.exploration.away() && !saved.exploration.hasReceipt());
+        assert(saved.energy()==beforeClaim.energy() && saved.evAt(CombatStat::Off)==beforeClaim.evAt(CombatStat::Off));
+        faults.fail=false;
+        key(InputEvent::Action);
+        assert(app.ready() && learning.policy()->last_sequence()==1);
+        assert(store.readPet(panel.state(),0,saved,settings));
+        assert(!saved.exploration.away() && saved.exploration.hasReceipt());
+        key(InputEvent::Action); key(InputEvent::None);
+        assert(learning.policy()->last_sequence()==1);
+        app.begin(ms); assert(app.ready() && learning.policy()->last_sequence()==1);
+        assert(store.readPet(panel.state(),0,saved,settings) && !saved.exploration.away());
+        return;
+    }
     if(training) {
         assert(saved.evAt(CombatStat::Off)==0 && saved.energy()==original.energy());
         faults.fail=false;

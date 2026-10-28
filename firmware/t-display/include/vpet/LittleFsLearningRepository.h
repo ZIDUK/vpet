@@ -11,9 +11,10 @@ public:
     explicit LittleFsLearningRepository(const char* directory="/littlefs/collection/policies");
     bool read(const std::string& owner, const char* ref, std::string& record) override;
     bool prepare(const std::string& owner, const LearningState& policy, std::string& ref) override;
+    bool inspect() { return collect(false); }
     const char* failureReason() const override { return failureReason_; }
 private:
-    bool collect();
+    bool collect(bool cleanup=true);
     std::string directory_;
     const char* failureReason_ = "none";
 };

@@ -5,6 +5,7 @@
 scope-approved por el reporte explicito del usuario del 2026-10-28: bloqueo
 SAVE PENDING al combatir, BACK de Mochila sin salida y Status 4/4 poco legible.
 Ampliacion explicita del mismo dia: SAVE PENDING tambien al entrenar.
+Segundo reporte: tambien al regresar de exploracion.
 Es aprobacion del alcance; no se inventa aprobacion del documento ni aceptacion
 fisica. El alcance de carga/commit/push continua la solicitud previa del usuario.
 
@@ -62,6 +63,31 @@ reiniciar la placa. No concede el resultado rechazado.
 Si la lectura sigue fallando, conserva el bloqueo y reintenta validacion.
 Registrar por USB la fase de rechazo sin volcar la partida.
 
+### REQ-GAME-PLAY-005
+
+Al rechazar la adquisicion de un regreso de exploracion, restaurar el viaje
+previo sin conceder recompensa ni aprendizaje. Usar la misma recuperacion
+validada que combate y entrenamiento, no otra ruta independiente. Permitir
+reintentar la recogida solo tras validar la vista durable previa; lecturas
+fallidas conservan el bloqueo. No cancelar viajes ni crear premios de prueba.
+El diagnostico compartido identifica contexto, fase y resultado de recuperacion.
+
+### REQ-GAME-PLAY-006
+
+Los blobs de aprendizaje nuevos deben usar nombres de hasta 32 bytes, limite
+del volumen instalado. La referencia compacta deriva del sobre completo (ID,
+secuencia, contenido), conserva CRC y valida bytes existentes ante colision.
+Seguir leyendo referencias legacy sin renombrar partidas ni formatear LittleFS.
+HUB STORAGE solo consulta generaciones/presupuesto, no limpia ni guarda; se
+rechaza si App no esta lista. No habilita importacion ni instalacion USB.
+
+### REQ-GAME-PLAY-007
+
+Propuesto, no implementado: medir y reducir la espera de CLAIM y Save del reloj
+sin quitar comprobaciones de durabilidad ni repetir premios. Separar tiempo de
+respuesta visual y commit, conservar recuperacion ante corte y comprobar margen
+de memoria. El usuario confirma la recogida pero reporta lentitud en ambos flujos.
+
 ## Criterios De Aceptacion
 
 ### AC-GAME-PLAY-001
@@ -91,6 +117,28 @@ Con App y almacenamiento real en host, rechazar politica o Coleccion durante
 entrenamiento no altera energia/EV guardados ni secuencia de aprendizaje.
 Lectura indisponible mantiene bloqueo hasta recuperar. Una nueva sesion publica
 un unico resultado, conservado al reiniciar. Validacion fisica queda separada.
+
+### AC-GAME-PLAY-005
+
+Con App, journal compacto, Coleccion y politica reales en host, rechazos de
+politica o Coleccion al recoger no conceden el regreso. La lectura fallida
+bloquea hasta recuperacion. Un reintento publica una sola experiencia y recibo;
+reconocer el resumen y reiniciar no vuelven a concederlo. Una captura USB debe
+identificar la fase inicial antes de afirmar que la causa fisica esta resuelta.
+
+### AC-GAME-PLAY-006
+
+Con rename limitado a basenames de 32 bytes, preparar y confirmar experiencias
+de entrenamiento, combate y exploracion funciona, incluso con 270 eventos y
+reinicio. Leer blobs legacy y compactos valida el propietario y CRC; inspeccion
+no elimina huerfanos. En placa, confirmar una recogida sin policy_publish.
+
+### AC-GAME-PLAY-007
+
+Registrar tiempos por fase de CLAIM y Save del reloj en placa antes y despues
+del cambio, con regresiones de reloj, premios y reinicio conservadas. Definir el
+presupuesto de respuesta en su plan antes de declarar aceptacion de fluidez.
+Las pruebas funcionales actuales no prueban latencia; pendiente de implementacion.
 
 ## Contratos Y Compatibilidad
 

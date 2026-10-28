@@ -180,7 +180,8 @@ void setup() {
 }
 
 void serviceHubLink() {
-    // Consult only. STATUS reports capacity; every other HUB verb is refused
+    // Consult only. STATUS reports capacity; STORAGE validates without cleanup.
+    // Every other HUB verb is refused
     // so a browser cannot install a package or rewrite the save through USB.
     static char line[48];
     static uint8_t used = 0;
@@ -209,6 +210,15 @@ void serviceHubLink() {
                 startupAssets.mounted ? LittleFS.totalBytes() : 0,
                 startupAssets.version.length() ? startupAssets.version.c_str() : "none"
             );
+        } else if (strcmp(line, "HUB STORAGE") == 0) {
+            if (!app.ready()) {
+                Serial.println("HUB ERR code=BUSY");
+            } else {
+                const bool valid=learningRepository.inspect();
+                Serial.printf("HUB STORAGE valid=%u stage=%s heap_free=%u heap_largest=%u fs_used=%u fs_total=%u\n",
+                    valid?1U:0U,learningRepository.failureReason(),ESP.getFreeHeap(),ESP.getMaxAllocHeap(),
+                    LittleFS.usedBytes(),LittleFS.totalBytes());
+            }
         } else if (strncmp(line, "HUB ", 4) == 0) {
             Serial.println("HUB ERR code=UNSUPPORTED");
         }

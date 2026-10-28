@@ -21,9 +21,15 @@ bool ownerValid(const std::string& owner) {
     return owner.size()==32 && owner!=std::string(32,'0') &&
         owner.find_first_not_of("0123456789abcdef")==std::string::npos;
 }
+bool compactRefValid(const std::string& ref) {
+    return ref.size()==26 && ref[0]=='P' && ref[17]=='.' &&
+        ref.substr(1,16).find_first_not_of("0123456789abcdef")==std::string::npos &&
+        ref.substr(18).find_first_not_of("0123456789abcdef")==std::string::npos;
+}
 bool refValid(const std::string& owner,const std::string& ref) {
-    return ownerValid(owner) && ref.size()<=64 && ref.size()>43 && ref.compare(0,34,"L"+owner+".")==0 &&
-        ref.find_first_not_of("L0123456789abcdef.")==std::string::npos && ref.find("..") == std::string::npos;
+    return ownerValid(owner) && (compactRefValid(ref) ||
+        (ref.size()<=64 && ref.size()>43 && ref.compare(0,34,"L"+owner+".")==0 &&
+         ref.find_first_not_of("L0123456789abcdef.")==std::string::npos && ref.find("..") == std::string::npos));
 }
 uint32_t checksum(const std::string& data) {
     uint32_t crc=0xffffffffu;
@@ -32,6 +38,15 @@ uint32_t checksum(const std::string& data) {
         for (int i=0;i<8;++i) crc=(crc>>1)^((crc&1)?0xedb88320u:0);
     }
     return ~crc;
+}
+std::string compactKey(const std::string& envelope) {
+    // Hash the full owner-bound envelope, including its sequence. Always verify
+    // existing bytes on a collision; hashes are identity hints, not authority.
+    uint64_t hash=14695981039346656037ULL;
+    for (const unsigned char c:envelope) hash=(hash^c)*1099511628211ULL;
+    char key[27];
+    std::snprintf(key,sizeof(key),"P%016llx.%08x",static_cast<unsigned long long>(hash),checksum(envelope));
+    return key;
 }
 std::FILE* openFile(const std::string& path,const char* mode) {
     auto* file=std::fopen(path.c_str(),mode);
@@ -112,6 +127,7 @@ bool LittleFsLearningRepository::read(const std::string& owner,const char* refer
     if (!readFile(directory_+"/"+ref,envelope) || envelope.compare(0,38,"VPR1\n"+owner+"\n")) return false;
     char crc[9]; std::snprintf(crc,sizeof(crc),"%08x",checksum(envelope));
     if (ref.substr(ref.size()-9)!="."+std::string(crc)) return false;
+    if (compactRefValid(ref) && compactKey(envelope)!=ref) return false;
     record=envelope.substr(38);
     return record.size()<=LearningState::MAX_ENCODED_SIZE;
 }
@@ -125,8 +141,7 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
     const std::string encoded=policy.encode();
     if (encoded.empty() || encoded.size()>LearningState::MAX_ENCODED_SIZE) return false;
     const std::string envelope="VPR1\n"+owner+"\n"+encoded;
-    char suffix[28]; std::snprintf(suffix,sizeof(suffix),".%llx.%08x",static_cast<unsigned long long>(policy.last_sequence()),checksum(envelope));
-    const std::string next="L"+owner+suffix;
+    const std::string next=compactKey(envelope);
     if (!refValid(owner,next)) return false;
     const std::string final=directory_+"/"+next;
     struct stat info;
@@ -153,7 +168,7 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
     ref=next; failureReason_="none"; return true;
 }
 
-bool LittleFsLearningRepository::collect() {
+bool LittleFsLearningRepository::collect(bool cleanup) {
     // Read-only validation of BOTH complete generations precedes any deletion.
     // A future/corrupt generation blocks cleanup, preserving all possible refs.
     const auto slash=directory_.find_last_of('/');
@@ -181,15 +196,19 @@ bool LittleFsLearningRepository::collect() {
         struct stat info;
         const std::string path=directory_+"/"+name;
         if (::stat(path.c_str(),&info) || !S_ISREG(info.st_mode) || info.st_size<0) { ok=false; break; }
-        const bool own=name.size()>34 && name[0]=='L' && refValid(name.substr(1,32),name);
+        const bool own=compactRefValid(name) ||
+            (name.size()>34 && name[0]=='L' && refValid(name.substr(1,32),name));
         if ((own && !protectedRefs.count(name)) || name==".pending") {
-            if (std::remove(path.c_str())) { ok=false; break; }
+            if (cleanup && std::remove(path.c_str())) { ok=false; break; }
         } else {
             if (static_cast<uint64_t>(info.st_size)>kStorageBudgetBytes-retainedBytes) { ok=false; break; }
             retainedBytes+=static_cast<size_t>(info.st_size);
         }
     }
     const bool closed=::closedir(directory)==0;
-    return ok && closed && retainedBytes+2*kMaxBlobBytes<=kStorageBudgetBytes && directorySync(directory_);
+    const bool valid=ok && closed && retainedBytes+2*kMaxBlobBytes<=kStorageBudgetBytes &&
+        (!cleanup || directorySync(directory_));
+    if (valid) failureReason_="none";
+    return valid;
 }
 }  // namespace vpet

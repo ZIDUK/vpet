@@ -50,6 +50,7 @@ private:
     bool settleStorage();
     bool persistActive();
     bool persistExperience(const RuntimeExperience* events, size_t count);
+    bool recoverRejectedExperience(const char* context);
     static int autoChoice(void* context, const practice::Fighter& fighter, int fallback);
     void activeChanged(uint32_t nowMs);
     CollectionSwitchGuard collectionGuard() const;

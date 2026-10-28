@@ -119,7 +119,23 @@ pantalla de error, permite ACTION para reintentar el resultado retenido o BACK
 para descartarlo. Un rechazo no concede EV ni aprendizaje ni consume recursos;
 un resultado confirmado solo se publica una vez. La bandera RAM solo cubre
 experiencias rechazadas, no cuidados aceptados pendientes. El registro
-`VPET_TRAINING_SAVE_REJECTED` identifica la fase de almacenamiento fallida.
+`VPET_EXPERIENCE_SAVE_REJECTED context=training` identifica la fase fallida.
+
+El regreso de exploracion usa el mismo controlador de recuperacion despues de
+restaurar el viaje al rechazarse Claim. Permite recoger de nuevo tras validar
+la misma vista durable, sin cancelar el viaje ni duplicar premio/aprendizaje.
+El log compartido incluye context=exploration_claim, stage y recovered. Estos
+cambios resuelven el bloqueo posterior al rechazo; no prueban la causa inicial
+de un fallo de escritura en placa sin capturar dicho rechazo por USB.
+
+La captura posterior de CLAIM identifica policy_publish. El volumen instalado
+tiene name_max=32, aunque el SDK permita 64; los nombres legacy de politicas
+superan ese limite. Nuevas publicaciones usan claves de 26 bytes derivadas del
+sobre completo (FNV64 y CRC32); no son firmas ni prueba de autenticidad.
+El lector valida ID, contenido y checksum, acepta nombres antiguos y compactos,
+y nunca sobrescribe bytes distintos ante colision. GC protege ambas generaciones.
+No cambia el schema NVS ni se reformatea el volumen. HUB STORAGE valida en modo
+solo lectura sin GC cuando App esta lista; STATUS conserva su protocolo.
 
 No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
 modo sin Coleccion conserva el guardado legacy existente. Para volver a un

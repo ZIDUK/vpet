@@ -5,11 +5,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <string>
+#include "posix_littlefs32.h"
 #include "vpet/LearningRuntime.h"
 #include "vpet/LittleFsLearningRepository.h"
 #include "vpet/LittleFsCollectionRepository.h"
 
 using namespace vpet;
+
 
 struct FailingRepository : LearningRepository {
     LearningRepository& base;
@@ -55,7 +57,16 @@ int main(int argc,char** argv) {
     pet.addEv(CombatStat::Off,6); pet.setEnergy(88);
     assert(runtime.commit(store,collection,pet,settings,&training,1));
     const std::string first=collection.slots[0].learningRef;
-    assert(!first.empty() && first.size()<=64 && runtime.policy()->last_sequence()==1);
+    assert(first.size()==26 && runtime.policy()->last_sequence()==1);
+    // Keep reads of legacy owner/sequence references without rewriting saves.
+    const std::string legacy="L"+pet.profile.petId()+".1"+first.substr(first.size()-9);
+    {
+        std::ifstream source(root+"/collection/policies/"+first,std::ios::binary);
+        std::ofstream target(root+"/collection/policies/"+legacy,std::ios::binary);
+        target << source.rdbuf();
+    }
+    std::string legacyRecord; assert(files.read(pet.profile.petId(),legacy.c_str(),legacyRecord));
+    assert(legacyRecord==runtime.policy()->encode());
     LearningRuntime reboot(files); assert(reboot.load(collection.slots[0]));
     assert(reboot.policy()->estimate(0,0,0).mean==58);
     PetState restored; Settings ignored;
@@ -72,6 +83,9 @@ int main(int argc,char** argv) {
     auto candidate=std::unique_ptr<LearningState>(new LearningState(*runtime.policy()));
     assert(candidate->record(2,0,0,0,-40)); std::string orphan;
     assert(files.prepare(pet.profile.petId(),*candidate,orphan));
+    assert(files.inspect());
+    std::string orphanRecord;
+    assert(files.read(pet.profile.petId(),orphan.c_str(),orphanRecord));
     assert(reboot.load(collection.slots[0]) && reboot.policy()->last_sequence()==1);
     assert(runtime.commit(store,collection,pet,settings,&training,1));
     assert(runtime.policy()->last_sequence()==2);
@@ -153,6 +167,8 @@ int main(int argc,char** argv) {
     { std::ofstream unused(orphanPath); unused << "unreferenced"; }
     auto* previous=std::fopen((root+"/collection/previous.bin").c_str(),"r+b"); assert(previous);
     assert(std::fputc('?',previous)!=EOF); assert(!std::fclose(previous));
+    assert(!files.inspect());
+    assert(std::string(files.failureReason())=="policy_collect_previous");
     assert(!files.prepare(pet.profile.petId(),*runtime.policy(),rejected));
     struct stat orphanInfo; assert(!::stat(orphanPath.c_str(),&orphanInfo));
     // Corrupt policy bytes never reset to an empty policy or grant a new receipt.

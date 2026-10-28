@@ -16,6 +16,12 @@ Spec: [SPEC-GAME-PLAYABILITY-001](../specs/2026-10-28-battle-retry-inventory-sta
 
 ## Trazas
 
+- REQ-GAME-PLAY-007 (propuesto): medir fases en placa; `tests/test_exploration_app.py::test_actual_app_exploration_clock_and_transactions` y las regresiones de experiencia son guardas funcionales, no benchmarks de latencia.
+
+- REQ-GAME-PLAY-006: `tests/test_esp32_learning_runtime.py::test_policy_files_atomic_refs_and_runtime_recovery`, `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes`, con `tests/posix_littlefs32.h`.
+
+- REQ-GAME-PLAY-005: `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes` (explore_policy, explore_collection, explore_unreadable).
+
 - REQ-GAME-PLAY-004: `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes` (training_policy, training_collection, training_unreadable).
 
 - REQ-GAME-PLAY-001: `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes`.
@@ -36,6 +42,72 @@ no aparece SAVE PENDING en esa captura. Se observa inicio de exploracion.
 No acredita recuperacion del fallo original ni autoriza cancelar el viaje.
 
 ## Evidencia Final
+
+### Ampliacion Exploracion
+
+Nuevo reporte: SAVE PENDING al regresar de exploracion. Regresion explore_policy
+falla antes del cambio: App queda bloqueada tras restaurar el viaje rechazado.
+Los tres consumidores de experiencia comparten ahora recoverRejectedExperience
+despues de su rollback; solo libera el bloqueo tras validar la vista durable.
+El log VPET_EXPERIENCE_SAVE_REJECTED incluye context, stage y recovered.
+No se cambian reglas de premios ni se cancela el viaje del usuario.
+
+Captura anterior al cambio: out/board-backups/20261028-exploration-live.log,
+120 s de observacion sin comandos, sin entradas ni regreso capturado.
+No identifica el fallo inicial de escritura. Verificacion local y despliegue
+de esta ampliacion pendientes.
+
+### Causa Fisica Capturada Y Correccion De Nombres
+
+En out/board-backups/20261028-exploration-fixed-live.log, el usuario pulsa CLAIM:
+VPET_EXPERIENCE_SAVE_REJECTED context=exploration_claim stage=policy_publish
+recovered=1, repetido tres veces. Confirma NOT SAVE RETRY; la recuperacion evita
+el bloqueo global pero el primer rechazo sigue presente.
+
+Lectura de 8192 bytes en 0x410000, sin escrituras, conservada en
+out/board-backups/20261028-learning-superblocks.bin. El superbloque littlefs
+declara version 0x20000, bloque 4096, 3040 bloques y name_max=32 (0x20 en offset
+0x20 del primer bloque). El SDK permite 64 pero el volumen formateado conserva
+32. Los nombres anteriores L+owner+secuencia+CRC tienen al menos 44 bytes.
+Referencia de formato: https://github.com/littlefs-project/littlefs/blob/master/SPEC.md.
+
+La regresion con rename limitado a 32 bytes falla al primer commit con la
+implementacion anterior; no es una deduccion basada solo en el simulador.
+Se publican claves de 26 bytes P+FNV64(sobre)+punto+CRC32(sobre). El sobre sigue
+ligado al propietario y secuencia; hashes no autentican ni permiten sobreescribir
+un contenido distinto. Se comprueban bytes antes de reutilizar un archivo.
+Lectura legacy, GC de referencias de ambas generaciones y checksums preservados.
+
+HUB STORAGE agrega diagnostico de solo lectura; inspect no borra huerfanos ni
+sincroniza directorios. Los errores compartidos incluyen errno ademas de fase.
+Verificacion final: 2109 Python aprobadas (359.93 s, 13278 advertencias), 185
+nativas, 20 focalizadas de aprendizaje/Hub, build tdisplay correcto, app 1121077
+y RAM estatica 53916 bytes. La regresion real de App tambien ejecuta rename con
+limite de 32, no solo la prueba aislada del repositorio.
+
+Carga firmware-only completada. SHA256
+f8ace78761aac07f6501b9f68566740e1fc724aecb2b921a642686fb3daac73b.
+Registro out/board-backups/20261028-learning-namefix-deploy.log: heap libre
+78836/minimo 67892, FS 11845632/12451840, manifest=1. Respaldo fresco NVS
+20261028-learning-namefix-critical.bin (24576 bytes, SHA256
+df4ace1fc8a0b19d2078ad4951921b745bf8eb5824f9e37b11899e9ba8bb0a37).
+
+Prueba fisica out/board-backups/20261028-learning-namefix-live.log:
+HUB STORAGE valid=1 stage=none; una consulta de solo lectura enviada por el
+agente, ningun comando de juego. CLAIM del usuario produce VPET_EXPLORE away=0
+receipt=1 route=0 sin policy_publish. El usuario confirma que recoge y vuelve a
+Home, pero reporta demora en CLAIM y Save del reloj. Pico de loop 7419575 us
+alrededor de Claim, no una medicion aislada del handler; otro de 7210016 us sin
+fase identificada. Minimo de heap posterior 26264 bytes: no cierra rendimiento.
+Las comidas medidas siguen confirmando en 341-453 ms, no equivalen a CLAIM.
+
+REQ-GAME-PLAY-007 queda propuesto: applyDateTime llama saveState sincrono y Claim
+confirma experiencia/Coleccion en el hilo principal. Medir fases y disenar una
+mejora segura separada; no afirmar que ya se acelero ni ocultar el error.
+La aceptacion fisica de CLAIM cierra el fallo de nombres en ese recorrido, no
+certifica todos los casos de combate/entrenamiento ni cortes de energia.
+Un firmware anterior que solo lee nombres L no puede abrir referencias P;
+no hacer downgrade sin un plan compatible. No se borra ni resetea aprendizaje.
 
 ### Ampliacion Entrenamiento
 
