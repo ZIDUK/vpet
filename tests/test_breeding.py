@@ -208,6 +208,18 @@ def test_cpp_dna_parity_many_seeds_and_parent_genomes(breeding_binary):
     assert rows == [" ".join(map(str, (iv_source_mask(s), *offspring_dna(a, b, s)))) for a, b, s in cases]
 
 
+def test_sex_locus_inheritance_weights_parent_iv_sum(breeding_binary):
+    from core.breeding import offspring_sex
+    cases = [(seed, "M", 60, "F", 30) for seed in range(10000)]
+    cases += [(seed, "F", 0, "M", 0) for seed in range(64)]
+    payload = "".join("%d %s %d %s %d\n" % case for case in cases)
+    rows = subprocess.check_output([str(breeding_binary), "sex"], input=payload, text=True).splitlines()
+    assert rows == [offspring_sex(a, sa, b, sb, seed)
+                    for seed, a, sa, b, sb in cases]
+    assert 6500 < rows[:10000].count("M") < 6850
+    assert set(rows[10000:]) == {"M", "F"}
+
+
 def cpp_parent(values):
     # std::quoted preserves literal whitespace and only escapes quotes/backslashes.
     def quoted(value):

@@ -117,5 +117,19 @@ inline std::array<uint8_t, 4> offspring_dna(const std::array<uint8_t, 4>& a,
     return result;
 }
 
+inline std::string offspring_sex(const std::string& sexA, uint8_t ivSumA,
+                                 const std::string& sexB, uint8_t ivSumB,
+                                 uint32_t seed) {
+    if ((sexA != "M" && sexA != "F") || (sexB != "M" && sexB != "F") ||
+        ivSumA > 90 || ivSumB > 90) return "";
+    uint32_t total = static_cast<uint32_t>(ivSumA) + ivSumB;
+    if (!total) { total = 2; ivSumA = 1; }
+    detail::Stream stream(seed);
+    const uint32_t threshold = static_cast<uint32_t>(-total) % total;
+    uint32_t draw = stream.draw();
+    while (draw < threshold) draw = stream.draw();
+    return draw % total >= ivSumA ? sexB : sexA;
+}
+
 }  // namespace breeding
 }  // namespace vpet

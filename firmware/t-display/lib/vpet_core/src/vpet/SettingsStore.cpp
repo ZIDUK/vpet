@@ -74,6 +74,10 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
             store_.getInt("dead", 0) != 0,
             static_cast<uint32_t>(store_.getInt("injuredMs", 0) < 0 ? 0 : store_.getInt("injuredMs", 0))
         );
+        pet.restoreSurvival(
+            static_cast<uint32_t>(store_.getInt("hunCritMs", 0) < 0 ? 0 : store_.getInt("hunCritMs", 0)),
+            static_cast<uint32_t>(store_.getInt("eneCritMs", 0) < 0 ? 0 : store_.getInt("eneCritMs", 0))
+        );
         if (store_.getInt("nutVer", 0) >= 1) {
             const int hungerRemainder = store_.getInt("nutHunRem", 0);
             const int trainingRemainder = store_.getInt("nutTrainRem", 0);
@@ -105,6 +109,12 @@ LoadResult SettingsStore::load(PetState& pet, Settings& settings) {
             static_cast<uint8_t>(store_.getInt("evBrn", 0)),
         };
         pet.restoreDna(dna);
+        const int locus = store_.getInt("dna4", pet.profile.assigned() ?
+            (pet.profile.sex() == Sex::Male ? 1 : 2) : 0);
+        if (locus == 1 || locus == 2) {
+            pet.setSexLocus(locus == 1 ? Sex::Male : Sex::Female);
+            pet.profile.setSex(locus == 1 ? Sex::Male : Sex::Female);
+        }
         pet.restoreEv(ev);
     }
     migratedDna_ = false;
@@ -141,6 +151,8 @@ bool SettingsStore::save(PetState& pet, const Settings& settings) {
         candidate.profile=profiles_();
         if (!candidate.profile.assigned()) return false;
     }
+    if (candidate.sexLocus() == Sex::Unknown && candidate.profile.assigned())
+        candidate.setSexLocus(candidate.profile.sex());
     storage::SnapshotStore captured(&store_);
     SettingsStore writer(captured);
     if (!writer.writeSnapshot(candidate, settings)) return false;
@@ -218,11 +230,14 @@ bool SettingsStore::writeSnapshot(const PetState& pet, const Settings& settings)
     ok = store_.putInt("injuries", pet.injuries()) && ok;
     ok = store_.putInt("injuredMs", pet.injuredMs()) && ok;
     ok = store_.putInt("dead", pet.dead() ? 1 : 0) && ok;
+    ok = store_.putInt("hunCritMs", pet.hungerCriticalMs()) && ok;
+    ok = store_.putInt("eneCritMs", pet.energyCriticalMs()) && ok;
     ok = store_.putInt("cold", pet.cold() ? 1 : 0) && ok;
     ok = store_.putInt("dna0", pet.dna()[0]) && ok;
     ok = store_.putInt("dna1", pet.dna()[1]) && ok;
     ok = store_.putInt("dna2", pet.dna()[2]) && ok;
     ok = store_.putInt("dna3", pet.dna()[3]) && ok;
+    ok = store_.putInt("dna4", pet.dna()[4]) && ok;
     ok = store_.putInt("evHp", pet.evAt(CombatStat::Hp)) && ok;
     ok = store_.putInt("evMp", pet.evAt(CombatStat::Mp)) && ok;
     ok = store_.putInt("evOff", pet.evAt(CombatStat::Off)) && ok;
@@ -382,6 +397,11 @@ bool SettingsStore::exportLegacySnapshots(std::string& active, std::string& back
         for (const auto key : {"techM3", "techM4"}) snapshot.ints[key] = source.getInt(key, 0);
         for (const auto key : {"language", "adoptBag", "expState", "sleepState", "petProfile"})
             snapshot.strings[key] = source.getString(key, "");
+        PetProfile profile;
+        if (!profile.decode(snapshot.strings["petProfile"])) return false;
+        const int fallbackLocus = profile.sex() == Sex::Male ? 1 :
+            profile.sex() == Sex::Female ? 2 : 0;
+        snapshot.ints["dna4"] = source.getInt("dna4", fallbackLocus);
         const auto encoded = storage::encodeSnapshot(snapshot);
         storage::SnapshotStore checked;
         if (encoded.empty() || !storage::decodeSnapshot(encoded, checked)) return false;

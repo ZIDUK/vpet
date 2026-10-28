@@ -131,3 +131,26 @@ def offspring_dna(a, b, seed):
             value = max(0, min(15, value + (1 if draw & 32 else -1)))
         result[locus // 2] |= value << shift
     return bytes(result)
+
+
+def offspring_sex(sex_a, iv_sum_a, sex_b, iv_sum_b, seed):
+    """Choose one parent's sex locus with probability proportional to IV sum.
+
+    The random draw uses rejection sampling, so the bounded choice has no
+    modulo bias. A zero total is treated as an even parental contribution.
+    """
+    if sex_a not in ("M", "F") or sex_b not in ("M", "F"):
+        raise ValueError("Expected parental sex loci M/F")
+    if any(type(value) is not int or not 0 <= value <= 90
+           for value in (iv_sum_a, iv_sum_b)):
+        raise ValueError("Expected six-IV sums in range 0..90")
+    stream = _Stream(seed)
+    total = iv_sum_a + iv_sum_b
+    if total == 0:
+        total = 2
+        iv_sum_a = 1
+    limit = (1 << 32) - ((1 << 32) % total)
+    draw = stream.draw()
+    while draw >= limit:
+        draw = stream.draw()
+    return sex_b if draw % total >= iv_sum_a else sex_a

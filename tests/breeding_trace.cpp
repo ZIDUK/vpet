@@ -12,6 +12,7 @@ using vpet::breeding::Parent;
 using vpet::breeding::check_pair;
 using vpet::breeding::iv_source_mask;
 using vpet::breeding::offspring_dna;
+using vpet::breeding::offspring_sex;
 
 static_assert(std::is_same<decltype(offspring_dna(std::array<uint8_t, 4>{},
               std::array<uint8_t, 4>{}, uint32_t{})), std::array<uint8_t, 4>>::value,
@@ -37,6 +38,15 @@ int main(int argc, char** argv) {
         while (read_parent(a)) {
             if (!read_parent(b)) return 2;
             std::cout << check_pair(a, b) << '\n';
+        }
+        return std::cin.eof() ? 0 : 2;
+    }
+    if (std::string(argv[1]) == "sex") {
+        uint64_t seed; std::string sexA, sexB; unsigned sumA, sumB;
+        while (std::cin >> seed >> sexA >> sumA >> sexB >> sumB) {
+            if (seed > UINT32_MAX || sumA > 90 || sumB > 90) return 2;
+            std::cout << offspring_sex(sexA, static_cast<uint8_t>(sumA), sexB,
+                static_cast<uint8_t>(sumB), static_cast<uint32_t>(seed)) << '\n';
         }
         return std::cin.eof() ? 0 : 2;
     }

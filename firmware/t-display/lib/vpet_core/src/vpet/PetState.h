@@ -16,6 +16,7 @@ enum class Action : uint8_t { None, Feed, Training, Battle, Rest };
 enum class ItemUseResult : uint8_t { Used, Empty, Blocked, Back };
 enum class CallReason : uint8_t { None = 0, Hunger = 1, Strength = 2, Lights = 3 };
 enum class CallUpdate : uint8_t { None, Started, Missed };
+static constexpr uint32_t kSurvivalGraceMs = 43200000U;
 enum class CombatStat : uint8_t { Hp, Mp, Off, Def, Spd, Brn };
 enum class CareEventType : uint8_t {
     Feed = 1,
@@ -117,11 +118,16 @@ public:
     void noteWake(uint8_t hour);
     void restoreOverfeed(bool usedThisCycle, uint8_t count);
     void restoreInjury(bool injured, uint8_t injuries, bool dead, uint32_t elapsedMs = 0);
+    void restoreSurvival(uint32_t hungerMs, uint32_t energyMs);
+    uint32_t hungerCriticalMs() const { return hungerCriticalMs_; }
+    uint32_t energyCriticalMs() const { return energyCriticalMs_; }
     uint32_t injuredMs() const { return injured_ ? injuredMs_ : 0; }
     void record(CareEventType type, uint8_t value);
     CareSnapshot snapshot() const;
     void rollDna(uint32_t entropy);
     void restoreDna(const uint8_t dna[4]);
+    void setSexLocus(Sex sex) { if (sex == Sex::Male || sex == Sex::Female) dna_[4] = sex == Sex::Male ? 1 : 2; }
+    Sex sexLocus() const { return dna_[4] == 1 ? Sex::Male : dna_[4] == 2 ? Sex::Female : Sex::Unknown; }
     void restoreEv(const uint8_t ev[6]);
     const uint8_t* dna() const { return dna_; }
     bool hasDna() const;
@@ -243,6 +249,8 @@ private:
     bool injured_ = false;
     uint8_t injuries_ = 0;
     uint32_t injuredMs_ = 0;
+    uint32_t hungerCriticalMs_ = 0;
+    uint32_t energyCriticalMs_ = 0;
     bool dead_ = false;
     bool cold_ = false;
     bool lastBattleWon_ = false;
@@ -259,7 +267,7 @@ private:
     CareEvent events_[32] = {};
     uint8_t eventIndex_ = 0;
     uint8_t eventCount_ = 0;
-    uint8_t dna_[4] = {};
+    uint8_t dna_[5] = {};
     uint8_t ev_[6] = {};
 };
 

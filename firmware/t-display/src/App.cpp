@@ -881,7 +881,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             if ((complete || pet_.sleep.elapsed/300!=checkpoint) && !saveState()) return;
         }
     }
-    if (pet_.dead() != wasDead || (pet_.injured() && !pet_.cold() && nowMs - lastInjuryCheckpointMs_ >= 60000)) {
+    if (pet_.dead() != wasDead || (!pet_.cold() &&
+        (pet_.injured() || (!pet_.sleep.asleep &&
+         (pet_.hungerCriticalMs() || pet_.energyCriticalMs()))) &&
+        nowMs - lastInjuryCheckpointMs_ >= 60000)) {
         lastInjuryCheckpointMs_ = nowMs;
         if (!saveState()) return;
     }

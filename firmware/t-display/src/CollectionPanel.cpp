@@ -215,13 +215,20 @@ bool CollectionPanel::breed(const PetState& pet, const Settings& settings) {
     std::unique_ptr<PetState> loaded(new (std::nothrow) PetState); Settings ignored;
     if (!loaded) { error("Memoria no disponible",true); return false; }
     std::array<uint8_t,4> dnaA,dnaB;
+    uint8_t ivSumA=0,ivSumB=0;
     if (!store_.readPet(state_,parentA_,*loaded,ignored)) { error("Error al leer padres",true); return false; }
     std::copy(loaded->dna(),loaded->dna()+4,dnaA.begin());
+    for (uint8_t stat=0;stat<6;++stat) ivSumA=static_cast<uint8_t>(ivSumA+loaded->ivAt(static_cast<CombatStat>(stat)));
     if (!store_.readPet(state_,selected_,*loaded,ignored)) { error("Error al leer padres",true); return false; }
     std::copy(loaded->dna(),loaded->dna()+4,dnaB.begin());
+    for (uint8_t stat=0;stat<6;++stat) ivSumB=static_cast<uint8_t>(ivSumB+loaded->ivAt(static_cast<CombatStat>(stat)));
     const auto dna=breeding::offspring_dna(dnaA,dnaB,static_cast<uint32_t>(tx.seed));
-    const auto identity=profiles_();
     const auto a=state_.slots[parentA_].profile(), b=state_.slots[selected_].profile();
+    auto identity=profiles_();
+    const auto sex=breeding::offspring_sex(a.sex()==Sex::Male?"M":"F",ivSumA,
+        b.sex()==Sex::Male?"M":"F",ivSumB,static_cast<uint32_t>(tx.seed));
+    if (sex.empty()) { error("ADN no disponible"); return false; }
+    identity.setSex(sex=="M"?Sex::Male:Sex::Female);
     *loaded=PetState();
     const std::string profileRecord="1:"+identity.petId()+":"+
         (identity.sex()==Sex::Male?"M":"F")+":"+a.petId()+":"+b.petId();
@@ -233,7 +240,8 @@ bool CollectionPanel::breed(const PetState& pet, const Settings& settings) {
         }
         std::snprintf(tx.learningRef,sizeof(tx.learningRef),"%s",inheritedRef.c_str());
     }
-    loaded->restoreDna(dna.data()); loaded->restoreItems(0,0,0,0,0,0); loaded->adoptedStock=AdoptedInventory();
+    loaded->restoreDna(dna.data()); loaded->setSexLocus(identity.sex());
+    loaded->restoreItems(0,0,0,0,0,0); loaded->adoptedStock=AdoptedInventory();
     size_t child=0;
     if (!store_.commitEgg(state_,tx,*loaded,settings,child,true)) { error("Cruce no guardado",store_.blocked()); return false; }
     page_=Page::List; cursor_=child; parentA_=255; return true;

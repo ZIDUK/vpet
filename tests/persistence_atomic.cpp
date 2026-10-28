@@ -139,6 +139,31 @@ void injury_continuity() {
     std::cout << "injury: continuity and legacy default\n";
 }
 
+void survival_continuity() {
+    Fault f; Store kv(f); Settings settings;
+    auto p = pet(SpeciesId::Rookie, 0);
+    p.sleep.asleep=false;
+    p.setEnergy(0);
+    p.tick(43199000);
+    assert(!p.dead() && p.hungerCriticalMs()==43199000U && p.energyCriticalMs()==43199000U);
+    assert(SettingsStore(kv).save(p,settings));
+    PetState restored;
+    assert(SettingsStore(kv).load(restored,settings)==LoadResult::Loaded);
+    restored.sleep.asleep=false;
+    assert(restored.hungerCriticalMs()==43199000U && restored.energyCriticalMs()==43199000U);
+    restored.setHunger(1); restored.setEnergy(1);
+    restored.tick(1000); assert(!restored.dead());
+    assert(restored.hungerCriticalMs()==0 && restored.energyCriticalMs()==0);
+    restored.setHunger(0); restored.setEnergy(0); restored.sleep.asleep=true;
+    restored.tick(kSurvivalGraceMs, true); assert(!restored.dead() && restored.hungerCriticalMs()==0 && restored.energyCriticalMs()==0);
+    restored.sleep.asleep=false;
+    restored.tick(kSurvivalGraceMs-1); assert(!restored.dead());
+    restored.tick(1); assert(restored.dead());
+    kv.ints.erase("hunCritMs"); kv.ints.erase("eneCritMs");
+    assert(SettingsStore(kv).load(restored,settings)==LoadResult::Loaded);
+    assert(restored.hungerCriticalMs()==0 && restored.energyCriticalMs()==0);
+}
+
 void invalid_journals() {
     Fault f; Store kv(f), backup(f); Settings settings;
     auto original = pet(SpeciesId::Rookie, 60);
@@ -229,6 +254,7 @@ int main(int argc, char** argv) {
     if (which == "save" || which == "all") save_cuts();
     if (which == "swap" || which == "all") { swap_cuts(false); swap_cuts(true); }
     if (which == "injury" || which == "all") injury_continuity();
+    if (which == "survival" || which == "all") survival_continuity();
     if (which == "invalid" || which == "all") invalid_journals();
     if (which == "recovery" || which == "all") { recovery_cuts(false); recovery_cuts(true); first_save_and_limits(); }
 }

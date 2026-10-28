@@ -85,6 +85,43 @@ def test_no_decay_before_period(fake_time):
     assert p.get("h") == 70
 
 
+def test_survival_grace_rescue_sleep_and_save_roundtrip(fake_time):
+    from core.pet import Pet, SURVIVAL_GRACE_MS
+    p = Pet(state="live")
+    p.stats["h"] = 0
+    p.tick_survival(SURVIVAL_GRACE_MS - 1)
+    assert not p.dead
+    assert p.hunger_critical_ms == SURVIVAL_GRACE_MS - 1
+    p.stats["h"] = 1
+    p.tick_survival(1000)
+    assert p.hunger_critical_ms == 0
+    p.stats["e"] = 0
+    p.sleep.asleep = True
+    p.tick_survival(SURVIVAL_GRACE_MS, sleeping=True)
+    assert p.energy_critical_ms == 0
+    p.sleep.asleep = False
+    p.tick_survival(SURVIVAL_GRACE_MS)
+    assert p.dead
+    restored = Pet()
+    restored.load_from_dict(p.to_dict())
+    assert restored.dead
+    assert restored.energy_critical_ms == SURVIVAL_GRACE_MS
+
+
+def test_survival_pauses_in_cold_and_keeps_injury_rule(fake_time):
+    from core.pet import Pet, SURVIVAL_GRACE_MS
+    p = Pet(state="live")
+    p.cold = True
+    p.stats["h"] = 0
+    p.tick_survival(SURVIVAL_GRACE_MS)
+    assert p.hunger_critical_ms == 0
+    p.cold = False
+    p.injured = True
+    p.injured_ms = 21600000 - 1
+    p.tick_survival(1)
+    assert p.dead
+
+
 def test_to_dict_roundtrip(fake_time):
     from core.pet import Pet
     p1 = Pet(state="live")

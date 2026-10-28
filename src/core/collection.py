@@ -148,15 +148,18 @@ class Collection:
         retry = self._command(sequence, "breeding", confirmed)
         if retry is not None:
             return retry
-        from core.breeding import check_pair, offspring_dna
+        from core.breeding import check_pair, offspring_dna, offspring_sex
         if not check_pair(self.parent(a), self.parent(b)):
             raise ValueError("Parents are not eligible")
         first, second = self.pet_at(a), self.pet_at(b)
         child = Pet(line=first.line)
-        child.profile = PetProfile.from_words(words, first.profile.pet_id, second.profile.pet_id)
+        sex = offspring_sex(first.profile.sex, sum(first.iv_at(k) for k in ("hp", "mp", "off", "def", "spd", "brn")),
+                            second.profile.sex, sum(second.iv_at(k) for k in ("hp", "mp", "off", "def", "spd", "brn")), seed)
+        generated = PetProfile.from_words(words, first.profile.pet_id, second.profile.pet_id)
+        child.profile = PetProfile(generated.pet_id, sex, first.profile.pet_id, second.profile.pet_id)
         if any(s["pet"]["profile"].split(":")[1] == child.profile.pet_id for s in self.slots):
             raise ValueError("Duplicate child identity")
-        child.restore_dna(list(offspring_dna(first.dna, second.dna, seed)))
+        child.restore_dna(list(offspring_dna(first.dna[:4], second.dna[:4], seed)) + [1 if sex == "M" else 2])
         if hasattr(first, "learning"):
             from core.learning import LearningState
             child.learning = LearningState.inherited(first.learning, second.learning)
@@ -261,7 +264,7 @@ class Collection:
                     raise ValueError("Invalid care")
                 for value in body["stats"].values():
                     integer(value, 0, 100)
-                if len(body["dna"]) != 4:
+                if len(body["dna"]) not in (4, 5):
                     raise ValueError("Invalid genes")
                 for value in body["dna"]:
                     integer(value, 0, 255)
@@ -275,6 +278,8 @@ class Collection:
                     raise ValueError("Shared bag would lose data on load")
                 for key in SHARED_KEYS:
                     normalized.pop(key)
+                if len(body["dna"]) == 4:
+                    normalized["dna"] = body["dna"]
                 if normalized != body:
                     raise ValueError("Individual would lose data on load")
             receipt = d["receipt"]

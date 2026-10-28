@@ -66,6 +66,8 @@ std::string metadata(const CollectionState& state) {
         putNumber(out, slot.cooldownMs, 4); putNumber(out, slot.incubationMs, 4);
         putNumber(out, slot.incubationRequiredMs, 4); putNumber(out, slot.rulesVersion, 2);
     }
+    putNumber(out, state.transferReceiptCount, 1);
+    out.append(reinterpret_cast<const char*>(state.transferReceipts), sizeof(state.transferReceipts));
     if (out.size() > kMetadataBytes) return "";
     out.resize(kMetadataBytes, 0); return out;
 }
@@ -107,13 +109,27 @@ bool decodeMetadata(const std::string& record, CollectionState& state) {
         slot.cooldownMs = r.take(4); slot.incubationMs = r.take(4);
         slot.incubationRequiredMs = r.take(4); slot.rulesVersion = r.take(2);
     }
+    next.transferReceiptCount = r.take(1);
+    r.fixed(next.transferReceipts, sizeof(next.transferReceipts));
+    if (next.transferReceiptCount > CollectionState::kTransferReceipts) return false;
     if (!r.ok || std::any_of(record.begin()+r.at, record.end(), [](char c) { return c != 0; })) return false;
     return true;
 }
 
 bool validState(const CollectionState& state, size_t bytes) {
     if (!state.sequence || !state.migrated || !state.count() || state.active >= CollectionState::kSlots ||
-        !state.slots[state.active].occupied || state.adoptedStock.cursor >= adopted::kCount) return false;
+        !state.slots[state.active].occupied || state.adoptedStock.cursor >= adopted::kCount ||
+        state.transferReceiptCount > CollectionState::kTransferReceipts) return false;
+    size_t receiptCount = 0;
+    for (size_t i = 0; i < CollectionState::kTransferReceipts; ++i) {
+        const auto& receipt = state.transferReceipts[i];
+        const bool empty = std::all_of(std::begin(receipt), std::end(receipt), [](uint8_t b) { return b == 0; });
+        if (empty) continue;
+        ++receiptCount;
+        for (size_t j = 0; j < i; ++j)
+            if (std::equal(std::begin(receipt), std::end(receipt), std::begin(state.transferReceipts[j]))) return false;
+    }
+    if (receiptCount != state.transferReceiptCount) return false;
     for (auto count : state.stock) if (count > items::kStackMax) return false;
     size_t offset = kHeaderBytes + kMetadataBytes;
     for (size_t i = 0; i < CollectionState::kSlots; ++i) {
@@ -264,6 +280,11 @@ bool CollectionStore::restore(const std::string& record, PetState& pet, Settings
         static_cast<uint8_t>(snapshot.ints.at("dna1")), static_cast<uint8_t>(snapshot.ints.at("dna2")),
         static_cast<uint8_t>(snapshot.ints.at("dna3"))};
     next.restoreDna(dna);
+    const auto locus = snapshot.ints.find("dna4");
+    if (locus != snapshot.ints.end()) {
+        if (locus->second == 1) next.setSexLocus(Sex::Male);
+        else if (locus->second == 2) next.setSexLocus(Sex::Female);
+    }
     pet = next; settings = nextSettings; return true;
 }
 bool CollectionStore::readBody(const CollectionSlot& slot, std::string& body) {
@@ -382,6 +403,7 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
     if (!restore(active, pet, settings)) { blocked_ = true; return false; }
     if (!pet.profile.assigned()) pet.profile = missingActive;
     if (!pet.profile.assigned()) return false;
+    if (pet.sexLocus() == Sex::Unknown) pet.setSexLocus(pet.profile.sex());
     auto& candidate = *scratch;
     candidate.migrated = true; sharedFrom(candidate, pet);
     candidate.slots[0].occupied = true; candidate.slots[0].setProfile(pet.profile);
@@ -393,6 +415,7 @@ bool CollectionStore::migrate(CollectionState& state, const std::string& active,
         if (!restore(*backup, pet, settings)) { blocked_ = true; return false; }
         if (!pet.profile.assigned()) pet.profile = missingBackup;
         if (!pet.profile.assigned()) return false;
+        if (pet.sexLocus() == Sex::Unknown) pet.setSexLocus(pet.profile.sex());
         std::string canonicalBackup;
         if (!capture(pet, settings, canonicalBackup)) return false;
         if (pet.profile.petId() == candidate.slots[0].profile().petId()) {
@@ -526,6 +549,48 @@ bool CollectionStore::discardEgg(CollectionState& state, size_t index, bool conf
     scratch->slots[index] = CollectionSlot();
     const std::string* replacements[CollectionState::kSlots] = {};
     return persist(state, *scratch, replacements);
+}
+bool CollectionStore::importEgg(CollectionState& state, const std::string& token,
+                                const PetState& egg, const Settings& settings,
+                                uint32_t incubationElapsedMs, size_t& slotIndex, bool confirmed) {
+    if (!confirmed || !current(state) || token.size() != 32 ||
+        token.find_first_not_of("0123456789abcdef") != std::string::npos ||
+        !egg.profile.assigned() || egg.profile.petId() != token || egg.species() != SpeciesId::Egg ||
+        !idle(egg) || incubationElapsedMs > 1800000) return false;
+    uint8_t id[16] = {};
+    for (size_t i = 0; i < 16; ++i) {
+        const auto digit = [](char c) -> uint8_t { return c <= '9' ? c - '0' : c - 'a' + 10; };
+        id[i] = static_cast<uint8_t>((digit(token[i * 2]) << 4) | digit(token[i * 2 + 1]));
+    }
+    for (const auto& receipt : state.transferReceipts)
+        if (std::equal(std::begin(id), std::end(id), std::begin(receipt))) {
+            slotIndex = CollectionState::kSlots;
+            for (size_t i = 0; i < CollectionState::kSlots; ++i)
+                if (state.slots[i].occupied && state.slots[i].profile().petId() == token) slotIndex = i;
+            return true;
+        }
+    if (identityExists(state, egg.profile)) return false;
+    if (state.transferReceiptCount >= CollectionState::kTransferReceipts) return false;
+    const auto index = emptySlot(state);
+    if (index == CollectionState::kSlots) return false;
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    auto& candidate = *scratch;
+    auto& slot = candidate.slots[index];
+    slot.occupied = true;
+    slot.form = static_cast<uint8_t>(SpeciesId::Egg);
+    slot.setProfile(egg.profile);
+    slot.incubationMs = incubationElapsedMs;
+    slot.incubationRequiredMs = 1800000;
+    auto& receipt = candidate.transferReceipts[candidate.transferReceiptCount++];
+    std::copy(std::begin(id), std::end(id), std::begin(receipt));
+    std::string body;
+    if (!captureBody(egg, settings, body)) return false;
+    const std::string* replacements[CollectionState::kSlots] = {};
+    replacements[index] = &body;
+    if (!persist(state, candidate, replacements)) return false;
+    slotIndex = index;
+    return true;
 }
 bool CollectionStore::advanceSlots(CollectionState& state, uint32_t elapsedMs) {
     if (!elapsedMs) return false;

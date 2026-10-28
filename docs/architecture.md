@@ -1,5 +1,21 @@
 # Arquitectura de software
 
+## Supervivencia Y Muerte Gradual: Piloto 2026-10-28
+
+El core conserva la muerte por 15 lesiones acumuladas o seis horas herido.
+Como piloto nuevo, hambre=0 o energia=0 inicia un reloj independiente de gracia
+de 12 horas de cuidado activo; alimentar o recuperar energia por encima de cero
+reinicia el reloj correspondiente. Sueño, pausa/frio, exploracion, huevos y
+tiempo offline no cuentan para hambre/energia. El contador de lesion conserva
+su regla anterior, incluso durante sueño. Las claves NVS `hunCritMs` y
+`eneCritMs` usan cero por defecto para saves anteriores y se persisten en los
+snapshots existentes, sin cambiar enums ni schema principal. Ver
+[`SPEC-GAME-SURVIVAL-001`](superpowers/specs/2026-10-28-game-survival-death.md).
+
+La compilacion y pruebas host no sustituyen la prueba fisica. La revision aun
+no se ha flasheado; la validacion de las cuatro paginas Status exigida por
+`AGENTS.md` sigue pendiente.
+
 ## Recuperacion Y Ciclo De Vida De Huevos: 2026-10-28
 
 `App` conserva la propiedad del estado vivo y del TFT. Si un checkpoint no
@@ -14,10 +30,12 @@ no convierte el guardado en un servicio de dominio ni reejecuta la batalla.
 coleccion solo huevos reservados: requiere confirmacion explicita, no admite el
 slot activo y no muta memoria durable cuando falla la transaccion. La vista de
 coleccion expone la confirmacion/cancelacion y muestra sexo desconocido (`?`)
-para huevos. Los individuos nacidos conservan sexo M/F de `PetProfile`; ese
-valor actualmente es metadato del perfil, no un locus heredado en los cuatro
-bytes de ADN. La herencia genetica del sexo queda como requisito propuesto y
-necesita especificacion de datos y migracion compatible antes de implementarse.
+para huevos. Los individuos conservan DNA0..3 y un locus DNA4 para sexo. En
+datos antiguos el locus se migra desde el perfil sin modificar los cuatro bytes
+previos; la coleccion y el snapshot versionado lo persisten. El cruce elige el
+sexo parental con probabilidad proporcional a la suma de sus seis IV (empate
+sin IV: 50/50), y lo fija en el huevo. La UI mantiene `?` hasta la eclosion. Ver
+[`SPEC-GAME-GENETICS-BLE-001`](superpowers/specs/2026-10-28-sex-locus-ble-egg-transfer.md).
 
 El cruce local ya crea una cria en forma de huevo cuando ambos padres son
 elegibles y hay plaza: cuerpo con ADN heredado, referencias a ambos padres,
@@ -27,6 +45,13 @@ esto no equivale a recepcion de huevos externos ni a un sistema de intercambio.
 El huevo de fundador es una accion separada de prueba/creacion, no representa
 un huevo recibido de otro usuario. Requisitos, criterios y limites estan en
 [`SPEC-GAME-REC-001`](superpowers/specs/2026-10-28-battle-recovery-egg-lifecycle.md).
+
+La persistencia de coleccion incluye un recibo atomico para importacion de
+huevo, idempotente aunque el huevo recibido se descarte luego. El ledger admite
+27 tokens por coleccion para mantener `CollectionState` bajo 2 KiB; al agotarse
+rechaza de forma segura. El codec portable esta separado del adaptador, pero la
+sala GATT, la UI de aceptar/enviar y el borrado del emisor tras ACK aun no estan
+integrados; por tanto no hay intercambio BLE operativo todavia.
 
 ## Especificaciones Y Verificacion Local
 
@@ -320,7 +345,7 @@ permite ejecutar sus pruebas como binarios nativos en macOS.
 | `AssetStore` | Monta LittleFS, valida VPA1 y dibuja frames indexados |
 | `BoardInput` | Traduce GPIO0/GPIO35 a `Next`, `Action` y `Back` |
 | `PetState` | Estadisticas, inventario gastable, acciones, descubrimientos y evolucion |
-| `PetProfile` | ID individual, sexo y referencias de padres; no rutas de assets, ADN ni experiencia |
+| `PetProfile` | ID individual, sexo expresado y referencias de padres; el sexo heredable se persiste ademas en DNA4 |
 | `CollectionStore` | Cuatro cuerpos por separado, inventario compartido y recibos atomicos sin modificar NVS legacy |
 | `CollectionPanel` | Confirmaciones, seleccion de individuo/padres y coordinacion con App; no modifica Status |
 | `LearningState` / `LearningRuntime` | Politica portable y eventos confirmados por individuo; herencia limitada y AUTO legal |

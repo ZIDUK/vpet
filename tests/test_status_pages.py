@@ -307,6 +307,13 @@ def test_dna_page_shows_full_code_inside_frame(build_dir, monkeypatch):
     assert any(sum(pixel) > 350 for pixel in tail), "DNA code tail is missing"
 
 
+def test_dna_page_accepts_sex_locus_byte(build_dir, monkeypatch):
+    _patch_monotonic(monkeypatch)
+    pet = _rookie()
+    pet.restore_dna((0xBF, 0x1E, 0x1B, 0x93, 0x02))
+    assert _render_status(build_dir, pet, page=3).size == (240, 135)
+
+
 def test_dna_page_six_stats_match_combat_stat(build_dir, monkeypatch):
     """The six stats on the DNA page must read from combat_stat and
     never invent a +1. The test pins the exact values for a known

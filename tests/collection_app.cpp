@@ -194,7 +194,7 @@ void compactTimerRecovery() {
     for(bool activeEgg : {false,true}) for(bool pending : {false,true}) {
         Store kv; SettingsStore legacy(kv); Settings settings; PetState a,b;
         a.restore(SpeciesId::Champion,90,90,90,0,100,0); a.profile=profile(); a.rollDna(9);
-        b=a; b.profile=profile();
+        b=a; b.profile=profile(); b.setSexLocus(b.profile.sex());
         Repository repository; CareJournal journal(kv); CollectionStore store(repository,&journal);
         CollectionState state; std::string first,second;
         assert(CollectionStore::capture(a,settings,first) && CollectionStore::capture(b,settings,second));

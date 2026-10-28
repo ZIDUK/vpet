@@ -174,6 +174,23 @@ def test_breeding_incubation_only_advances_active_egg_and_preserves_identity():
     assert all(value == 0 for value in restored.current().ev.values())
 
 
+def test_bred_egg_keeps_hidden_inherited_sex_through_hatch():
+    from core.collection import Collection, INCUBATION_MS
+    a, b = adult(), adult(3)
+    collection = Collection.from_pet(a, b)
+    index = collection.breed(0, 1, (8, 9, 10, 11), 1234, confirmed=True, sequence=1)
+    inherited = collection.pet_at(index)
+    assert inherited.profile.sex in ("M", "F")
+    assert inherited.dna[4] == (1 if inherited.profile.sex == "M" else 2)
+    assert collection.slots[index]["pet"]["profile"].split(":")[2] == inherited.profile.sex
+    collection.switch(collection.current(), index, confirmed=True)
+    assert collection.current().is_egg and collection.current().profile.sex == inherited.profile.sex
+    collection.advance_ms(INCUBATION_MS)
+    assert collection.current().species == "baby"
+    assert collection.current().profile.sex == inherited.profile.sex
+    assert collection.current().dna[4] == inherited.dna[4]
+
+
 def test_breeding_rejects_related_parents_without_mutation():
     from core.collection import Collection
     a, b = adult(), adult(3)
@@ -211,14 +228,14 @@ def test_zero_gene_child_is_not_mistaken_for_legacy_missing_dna():
     a, b = adult(), adult(3)
     for p in (a, b):
         p.restore_dna([0, 0, 0, 0])
-    seed = next(i for i in range(100) if offspring_dna(a.dna, b.dna, i) == bytes(4))
+    seed = next(i for i in range(100) if offspring_dna(a.dna[:4], b.dna[:4], i) == bytes(4))
     collection = Collection.from_pet(a, b)
     child = collection.breed(0, 1, (8, 9, 10, 11), seed, confirmed=True, sequence=1)
     collection.switch(collection.current(), child, confirmed=True)
     collection.advance_ms(INCUBATION_MS)
     restored = Collection.decode(collection.encode())
     assert restored.current().species == "baby"
-    assert restored.current().dna == [0, 0, 0, 0]
+    assert restored.current().dna == [0, 0, 0, 0, 1]
 
 
 def test_repository_never_silently_rolls_back_a_committed_corrupt_generation(tmp_path):

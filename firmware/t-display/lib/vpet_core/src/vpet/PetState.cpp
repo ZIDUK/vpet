@@ -63,15 +63,18 @@ void PetState::rollDna(uint32_t entropy) {
     dna_[1] = static_cast<uint8_t>(mix >> 8);
     dna_[2] = static_cast<uint8_t>(mix >> 16);
     dna_[3] = static_cast<uint8_t>(mix >> 24);
+    setSexLocus(profile.sex());
     if (!hasDna()) dna_[0] = 1;
 }
 
 void PetState::restoreDna(const uint8_t dna[4]) {
     if (dna == nullptr) return;
+    dna_[4] = 0;
     dna_[0] = dna[0];
     dna_[1] = dna[1];
     dna_[2] = dna[2];
     dna_[3] = dna[3];
+    if (dna_[4] == 0 && profile.assigned()) setSexLocus(profile.sex());
 }
 
 void PetState::restoreEv(const uint8_t ev[6]) {
@@ -148,6 +151,7 @@ void PetState::setEvAt(CombatStat stat, uint8_t value) {
 
 void PetState::setEnergy(int value) {
     energy_ = value < 0 ? 0 : (value > 100 ? 100 : value);
+    if (energy_ > 0) energyCriticalMs_ = 0;
 }
 
 void PetState::setHappiness(int value) {
@@ -164,6 +168,7 @@ void PetState::setWeight(uint8_t value) {
 
 void PetState::setHunger(int value) {
     hunger_ = clampStat(value);
+    if (hunger_ > 0) hungerCriticalMs_ = 0;
 }
 
 void PetState::noteMeal(bool overfeed) {
@@ -216,6 +221,8 @@ void PetState::resetAfterEvolution() {
     injured_ = false;
     injuries_ = 0;
     injuredMs_ = 0;
+    hungerCriticalMs_ = 0;
+    energyCriticalMs_ = 0;
     dead_ = false;
     lastBattleWon_ = false;
     battleRoll_ = -1;
@@ -252,7 +259,7 @@ void PetState::setBattleRoll(uint8_t roll) {
 
 void PetState::setInjured(bool value) {
     injured_ = value;
-    if (!value) injuredMs_ = 0;
+    if (!value) { injuredMs_ = 0; }
 }
 
 void PetState::setInjuries(uint8_t value) {
@@ -269,6 +276,11 @@ void PetState::restoreInjury(bool injured, uint8_t injuries, bool dead, uint32_t
     injuries_ = injuries > 99 ? 99 : injuries;
     dead_ = dead;
     injuredMs_ = !injured_ ? 0 : elapsedMs > 21600000U ? 21600000U : elapsedMs;
+}
+
+void PetState::restoreSurvival(uint32_t hungerMs, uint32_t energyMs) {
+    hungerCriticalMs_ = hungerMs > kSurvivalGraceMs ? kSurvivalGraceMs : hungerMs;
+    energyCriticalMs_ = energyMs > kSurvivalGraceMs ? kSurvivalGraceMs : energyMs;
 }
 
 uint8_t PetState::effortHearts() const {
@@ -450,6 +462,18 @@ void PetState::tick(uint32_t elapsedMs, bool sleeping) {
         injuredMs_ = elapsedMs >= 21600000U - injuredMs_ ? 21600000U : injuredMs_ + elapsedMs;
         checkDeath();
     }
+    if (!dead_ && !sleeping) {
+        if (hunger_ == 0) {
+            hungerCriticalMs_ = elapsedMs >= kSurvivalGraceMs - hungerCriticalMs_
+                ? kSurvivalGraceMs : hungerCriticalMs_ + elapsedMs;
+        } else hungerCriticalMs_ = 0;
+        if (energy_ == 0) {
+            energyCriticalMs_ = elapsedMs >= kSurvivalGraceMs - energyCriticalMs_
+                ? kSurvivalGraceMs : energyCriticalMs_ + elapsedMs;
+        } else energyCriticalMs_ = 0;
+        if (hungerCriticalMs_ >= kSurvivalGraceMs || energyCriticalMs_ >= kSurvivalGraceMs)
+            dead_ = true;
+    }
     if (dead_ || sleeping) return;
     decayMs_ += elapsedMs;
     while (decayMs_ >= 30000) {
@@ -467,6 +491,7 @@ void PetState::tick(uint32_t elapsedMs, bool sleeping) {
             }
         }
         energy_ = clampStat(energy_ - 1);
+        if (energy_ > 0) energyCriticalMs_ = 0;
         happiness_ = clampStat(happiness_ - 1);
         if ((hungerBefore > 0 && hunger_ == 0) || (energyBefore > 0 && energy_ == 0)) {
             record(CareEventType::DecayZero, hunger_ == 0 ? 1 : 2);
@@ -575,6 +600,8 @@ void PetState::restore(
     evolveTo(species);
     hunger_ = clampStat(hunger);
     energy_ = clampStat(energy);
+    if (hunger_ > 0) hungerCriticalMs_ = 0;
+    if (energy_ > 0) energyCriticalMs_ = 0;
     happiness_ = clampStat(happiness);
     effort_ = clampStat(effort);
     health_ = clampStat(health);
@@ -669,6 +696,7 @@ ItemUseResult PetState::useItem(uint8_t index) {
         case 0: break;
         case 1:
             energy_ = clampStat(energy_ + items::kEnergyRecovery);
+            if (energy_ > 0) energyCriticalMs_ = 0;
             refreshCallAfterCare();
             gainEv(CombatStat::Mp, items::kEnergyEv);
             break;

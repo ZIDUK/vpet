@@ -13,7 +13,7 @@ static const char* const kSnapshotKeys[] = {
     "effort", "health", "age", "invMeat", "invEner", "invExp", "invRing",
     "invProt", "invMed", "stageAge", "cm", "call", "meals", "training", "battles",
     "wins", "losses", "weight", "nutHunRem", "nutTrainRem", "nutProtein", "dp",
-    "protein", "overfed", "overfeeds", "injured", "injuries", "injuredMs", "dead", "cold",
+    "protein", "overfed", "overfeeds", "injured", "injuries", "injuredMs", "dead", "cold", "hunCritMs", "eneCritMs",
     "dna0", "dna1", "dna2", "dna3", "evHp", "evMp", "evOff", "evDef", "evSpd",
     "evBrn", "life", "sound", "bluetooth", "techVer", "techTrain", "techBond",
     "techM0", "techM1", "techM2", "techEquip"
@@ -41,11 +41,13 @@ private:
 
 inline bool validSnapshotValue(const char* key, int32_t value) {
     if (value < 0) return false;
+    if (!strcmp(key,"dna4")) return value <= 2;
     if (!strcmp(key,"schema")) return value == 3;
     if (!strcmp(key,"nutVer") || !strcmp(key,"life") || !strcmp(key,"techVer")) return value == 1;
     if (!strcmp(key,"species")) return value <= 4;
     if (!strcmp(key,"legacyWeight") || !strcmp(key,"weight")) return value >= 1 && value <= 99;
     if (!strcmp(key,"injuredMs")) return value <= 21600000;
+    if (!strcmp(key,"hunCritMs") || !strcmp(key,"eneCritMs")) return value <= 43200000;
     if (!strcmp(key,"age") || !strcmp(key,"stageAge") || !strcmp(key,"training") || !strcmp(key,"battles")) return true;
     if (!strcmp(key,"call") || !strcmp(key,"nutTrainRem")) return value <= 3;
     if (!strcmp(key,"nutHunRem")) return value <= 19;
@@ -63,7 +65,7 @@ inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
     std::ostringstream out;
     const auto profile=snapshot.strings.find("petProfile");
     const bool profilePresent=profile!=snapshot.strings.end() && !profile->second.empty();
-    out << (profilePresent ? "5\n" : "4\n");
+    out << (profilePresent ? "6\n" : "4\n");
     for (const auto key : kSnapshotKeys) {
         const auto found = snapshot.ints.find(key);
         if (found == snapshot.ints.end() || !validSnapshotValue(key, found->second)) return "";
@@ -73,6 +75,11 @@ inline std::string encodeSnapshot(const SnapshotStore& snapshot) {
         const auto found = snapshot.ints.find(key);
         if (found == snapshot.ints.end() || !validSnapshotValue(key,found->second)) return "";
         out << key << ' ' << found->second << '\n';
+    }
+    if (profilePresent) {
+        const auto locus = snapshot.ints.find("dna4");
+        if (locus == snapshot.ints.end() || !validSnapshotValue("dna4", locus->second)) return "";
+        out << "dna4 " << locus->second << '\n';
     }
     for (const auto key : {"language", "adoptBag", "expState", "sleepState"}) {
         const auto found = snapshot.strings.find(key);
@@ -92,8 +99,9 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     if (record.size() > 3800) return false;
     std::istringstream in(record);
     std::string line, key;
-    if (!std::getline(in, line) || (line != "1" && line != "2" && line != "3" && line != "4" && line != "5")) return false;
-    const bool profilePresent = line == "5";
+    if (!std::getline(in, line) || (line != "1" && line != "2" && line != "3" && line != "4" && line != "5" && line != "6")) return false;
+    const bool profilePresent = line == "5" || line == "6";
+    const bool version6 = line == "6";
     const bool sleepPresent = line == "4" || profilePresent;
     const bool explorationPresent = line != "1";
     const bool expandedTechniques = line == "3" || sleepPresent;
@@ -111,6 +119,13 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
         int32_t value;
         if (!(field>>key>>value) || key!=expected || !validSnapshotValue(expected,value) || field>>key) return false;
         next.ints[expected]=value;
+    }
+    if (version6) {
+        if (!std::getline(in,line)) return false;
+        std::istringstream field(line);
+        int32_t value;
+        if (!(field >> key >> value) || key != "dna4" || !validSnapshotValue(key.c_str(),value) || value > 2 || field >> key) return false;
+        next.ints["dna4"] = value;
     }
     if (!std::getline(in, line) || (line != "ES" && line != "EN")) return false;
     next.strings["language"] = line;
@@ -147,6 +162,9 @@ inline bool replaySnapshot(KeyValueStore& destination, const SnapshotStore& snap
         if (found!=snapshot.ints.end() && destination.getInt(key,-1)!=found->second &&
             !destination.putInt(key,found->second)) return false;
     }
+    const auto dna4 = snapshot.ints.find("dna4");
+    if (dna4 != snapshot.ints.end() && destination.getInt("dna4", -1) != dna4->second &&
+        !destination.putInt("dna4",dna4->second)) return false;
     for (const auto key : {"language", "adoptBag"})
         if (destination.getString(key, "") != snapshot.strings.at(key) &&
             !destination.putString(key, snapshot.strings.at(key).c_str())) return false;

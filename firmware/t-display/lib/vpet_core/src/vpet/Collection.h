@@ -42,12 +42,15 @@ struct CollectionSlot {
 
 struct CollectionState {
     static constexpr size_t kSlots = 4;
+    static constexpr size_t kTransferReceipts = 27;
     CollectionSlot slots[kSlots];
     uint64_t sequence = 0;
     uint8_t active = 0;
     uint8_t stock[6] = {};  // Existing item indices; unlimited food rules stay in PetState.
     AdoptedInventory adoptedStock;  // Includes the sole authoritative reward cursor.
     bool migrated = false;
+    uint8_t transferReceiptCount = 0;
+    uint8_t transferReceipts[kTransferReceipts][16] = {};
 
     size_t count() const {
         size_t n = 0;

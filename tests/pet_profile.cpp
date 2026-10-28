@@ -48,6 +48,7 @@ int main(int argc,char** argv) {
     pet.profile=child;
     const uint8_t dna[]={10,20,30,40}, ev[]={252,83,168,4,5,6};
     pet.restoreDna(dna); pet.restoreEv(ev);
+    assert(pet.sexLocus()==child.sex());
     for(const auto form : {SpeciesId::Baby,SpeciesId::Rookie,SpeciesId::Champion,SpeciesId::Ultimate}) {
         pet.evolveTo(form);
         assert(pet.profile.encode()==valid && pet.dna()[0]==10 && pet.evAt(CombatStat::Hp)==252);
@@ -58,6 +59,13 @@ int main(int argc,char** argv) {
     assert(!storage.swapOrPark(notSaved,settings));
     assert(storage.save(pet,settings));
     assert(live.ints["schema"]==3 && live.strings["petProfile"]==valid);
+    assert(live.ints["dna4"]==(child.sex()==Sex::Male?1:2));
+    storage::SnapshotStore sexSnapshot;
+    assert(SettingsStore(sexSnapshot).save(pet,settings));
+    const auto sexRecord=storage::encodeSnapshot(sexSnapshot);
+    assert(sexRecord.rfind("6\n",0)==0);
+    storage::SnapshotStore sexDecoded;
+    assert(storage::decodeSnapshot(sexRecord,sexDecoded) && sexDecoded.ints.at("dna4")==live.ints["dna4"]);
     const PetState immutable=pet;
     assert(storage.save(immutable,settings));
     const PetState unassigned;
@@ -84,6 +92,9 @@ int main(int argc,char** argv) {
     assert(newLife.species()==SpeciesId::Egg && newLife.profile.assigned());
     Store complete=legacy; PetState migrated;
     assert(SettingsStore(complete,nullptr,generate).load(migrated,settings)==LoadResult::Loaded);
+    complete.ints.erase("dna4");
+    assert(SettingsStore(complete,nullptr,generate).load(migrated,settings)==LoadResult::Loaded);
+    assert(migrated.sexLocus()==migrated.profile.sex());
     const int migrationWrites=complete.writes-legacy.writes;
     for(int cut=0;cut<=migrationWrites;++cut) {
         Store interrupted=legacy; interrupted.writes=0; interrupted.cut=cut;

@@ -39,6 +39,17 @@ def test_ivs_read_dna_nibbles():
     assert iv_at((0x21, 0x43, 0x65, 0x87), "hp") == 1
 
 
+def test_legacy_dna_migration_sex_locus():
+    from core.profile import PetProfile
+    pet = Pet(species="rookie", state=STATE_LIVE)
+    pet.profile = PetProfile("1" * 32, "F")
+    legacy = pet.to_dict()
+    legacy["dna"] = [0x21, 0x43, 0x65, 0x87]
+    restored = Pet()
+    restored.load_from_dict(legacy)
+    assert restored.dna == [0x21, 0x43, 0x65, 0x87, 2]
+
+
 def test_combat_stat_uses_iv_ev_formula():
     pet = Pet(species="rookie")
     pet.restore_dna((0x0F, 0x00, 0x00, 0x01))
@@ -104,7 +115,8 @@ def test_reset_to_egg_clears_dna_and_hatch_rolls():
     assert pet.ev_at("hp") == 0
     pet.complete_hatch("baby", entropy=11)
     assert pet.has_dna()
-    assert pet.dna == mix_entropy(11)
+    assert pet.dna[:4] == mix_entropy(11)
+    assert len(pet.dna) == 5
 
 
 def test_evolution_keeps_dna_and_ev():

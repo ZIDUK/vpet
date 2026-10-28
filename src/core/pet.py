@@ -37,6 +37,7 @@ STAT_COLORS = {
 # Decay rates: amount lost per DECAY_PERIOD_SECONDS
 DECAY_PERIOD_SECONDS = 3
 DECAY_AMOUNT = 1
+SURVIVAL_GRACE_MS = 12 * 60 * 60 * 1000
 
 # Action effects (added to current stat, capped at 100)
 ACTION_EFFECTS = {
@@ -111,10 +112,12 @@ class Pet:
         self.injured = False
         self.injuries = 0
         self.injured_ms = 0
+        self.hunger_critical_ms = 0
+        self.energy_critical_ms = 0
         self.dead = False
         self.last_battle_won = False
         self.battle_roll = None
-        self.dna = [0, 0, 0, 0]
+        self.dna = [0, 0, 0, 0, 0]
         self.ev = {"hp": 0, "mp": 0, "off": 0, "def": 0, "spd": 0, "brn": 0}
         self.techniques = TechniqueProgress()
         self.exploration = Exploration()
@@ -205,6 +208,8 @@ class Pet:
         self.injured = False
         self.injuries = 0
         self.injured_ms = 0
+        self.hunger_critical_ms = 0
+        self.energy_critical_ms = 0
         self.dead = False
         self.last_battle_won = False
         self.dp = 1
@@ -222,11 +227,14 @@ class Pet:
 
     def roll_dna(self, entropy):
         self.dna = mix_entropy(entropy)
+        self.dna.append(1 if self.profile.sex == "M" else 2 if self.profile.sex == "F" else 0)
 
     def restore_dna(self, dna):
-        self.dna = [int(value) & 0xFF for value in list(dna)[:4]]
-        while len(self.dna) < 4:
+        self.dna = [int(value) & 0xFF for value in list(dna)[:5]]
+        while len(self.dna) < 5:
             self.dna.append(0)
+        if self.dna[4] not in (0, 1, 2):
+            self.dna[4] = 0
 
     def restore_ev(self, ev):
         for key in self.ev:
@@ -255,7 +263,13 @@ class Pet:
         return effective_stat(self.combat_stat(stat), penalty)
 
     def use_food(self, food_id, asleep=False, busy=False):
-        return apply_food(self, food_id, asleep=asleep, busy=busy)
+        result = apply_food(self, food_id, asleep=asleep, busy=busy)
+        if result["applied"]:
+            if food_id == "meat" and self.stats.get("h", 0) > 0:
+                self.hunger_critical_ms = 0
+            if food_id == "protein" and self.stats.get("e", 0) > 0:
+                self.energy_critical_ms = 0
+        return result
 
     def gain_ev(self, stat, amount):
         if stat not in self.ev:
@@ -263,13 +277,18 @@ class Pet:
         self.ev[stat] = projected_ev(self.ev[stat], amount, self.species)
 
     def feed(self, from_item=False):
-        return apply_food(self, "meat")["applied"]
+        applied = apply_food(self, "meat")["applied"]
+        if applied and self.stats.get("h", 0) > 0:
+            self.hunger_critical_ms = 0
+        return applied
 
     def effort_hearts(self):
         return min(4, getattr(self, "training_sessions", 0) // 4)
 
     def use_protein(self):
         self.stats["e"] = min(100, self.stats.get("e", 0) + 20)
+        if self.stats["e"] > 0:
+            self.energy_critical_ms = 0
         self.protein_uses = min(99, getattr(self, "protein_uses", 0) + 1)
         if self.protein_uses % 4 == 0:
             self.protein = min(7, self.protein + 1)
@@ -284,6 +303,28 @@ class Pet:
         self.injured_ms = 0
         self.stats["hp"] = min(100, self.stats.get("hp", 0) + effect_amount("medkit", "restore", "hp"))
         return True
+
+    def tick_survival(self, elapsed_ms, sleeping=False):
+        """Advance neglect timers during active care time only."""
+        if self.state != STATE_LIVE or self.dead or self.cold:
+            return
+        elapsed_ms = max(0, int(elapsed_ms))
+        if self.injured:
+            self.injured_ms = min(21600000, self.injured_ms + elapsed_ms)
+        else:
+            self.injured_ms = 0
+        if sleeping or self.sleep.asleep:
+            self._check_death()
+            return
+        if self.stats.get("h", 0) <= 0:
+            self.hunger_critical_ms = min(SURVIVAL_GRACE_MS, self.hunger_critical_ms + elapsed_ms)
+        else:
+            self.hunger_critical_ms = 0
+        if self.stats.get("e", 0) <= 0:
+            self.energy_critical_ms = min(SURVIVAL_GRACE_MS, self.energy_critical_ms + elapsed_ms)
+        else:
+            self.energy_critical_ms = 0
+        self._check_death()
 
     def can_battle(self):
         if self.is_egg or self.dead or self.injured or self.dp <= 0:
@@ -325,6 +366,9 @@ class Pet:
         if self.is_egg:
             return
         if self.injuries >= 15 or (self.injured and getattr(self, "injured_ms", 0) >= 21600000):
+            self.dead = True
+        if (getattr(self, "hunger_critical_ms", 0) >= SURVIVAL_GRACE_MS or
+                getattr(self, "energy_critical_ms", 0) >= SURVIVAL_GRACE_MS):
             self.dead = True
 
     def restore_dp(self):
@@ -433,6 +477,12 @@ class Pet:
             "battles_this_form": self.battles_this_form,
             "care_mistakes": self.care_mistakes,
             "call_reason": self.call_reason,
+            "injured": self.injured,
+            "injuries": self.injuries,
+            "injured_ms": self.injured_ms,
+            "hunger_critical_ms": self.hunger_critical_ms,
+            "energy_critical_ms": self.energy_critical_ms,
+            "dead": self.dead,
             "stage_age_seconds": max(0, int(self.stage_age_seconds)),
             "meals": self.meals,
             "training_sessions": self.training_sessions,
@@ -493,6 +543,14 @@ class Pet:
         self.battles_this_form = d.get("battles_this_form", 0)
         self.care_mistakes = d.get("care_mistakes", 0)
         self.call_reason = d.get("call_reason")
+        self.injured = bool(d.get("injured", False))
+        self.injuries = max(0, min(99, int(d.get("injuries", 0))))
+        self.injured_ms = max(0, min(21600000, int(d.get("injured_ms", 0))))
+        self.hunger_critical_ms = max(0, min(SURVIVAL_GRACE_MS,
+                                             int(d.get("hunger_critical_ms", 0))))
+        self.energy_critical_ms = max(0, min(SURVIVAL_GRACE_MS,
+                                             int(d.get("energy_critical_ms", 0))))
+        self.dead = bool(d.get("dead", False))
         self.stage_age_seconds = max(0, int(d.get("stage_age_seconds", 0)))
         self.meals = d.get("meals", 0)
         self.training_sessions = d.get("training_sessions", 0)
@@ -514,6 +572,12 @@ class Pet:
         self.born_at = time.monotonic() - age
         loaded_dna = d.get("dna") or [0, 0, 0, 0]
         self.restore_dna(loaded_dna)
+        if self.dna[4] == 0 and profile.sex in ("M", "F"):
+            self.dna[4] = 1 if profile.sex == "M" else 2
+        elif self.dna[4] in (1, 2) and profile.sex != ("M" if self.dna[4] == 1 else "F"):
+            profile = PetProfile(profile.pet_id, "M" if self.dna[4] == 1 else "F",
+                                 profile.parent_a, profile.parent_b)
+            self.profile = profile
         self.restore_ev(d.get("ev") or {})
         if not self.has_dna() and self.state != STATE_EGG and self.species != "egg":
             species_id = SPECIES_ID.get(self.species, 0)

@@ -13,6 +13,7 @@ public:
     bool assigned() const { return !id_.empty(); }
     const std::string& petId() const { return id_; }
     Sex sex() const { return sex_; }
+    void setSex(Sex sex) { if (sex == Sex::Male || sex == Sex::Female) sex_ = sex; }
     const std::string& parentA() const { return a_; }
     const std::string& parentB() const { return b_; }
     static PetProfile fromWords(const uint32_t words[4], const std::string& a = "", const std::string& b = "") {

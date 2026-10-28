@@ -60,6 +60,11 @@ public:
     bool commitEgg(CollectionState& state, const CollectionEggTransaction& transaction,
                    const PetState& egg, const Settings& settings, size_t& childSlot, bool confirmed);
     bool discardEgg(CollectionState& state, size_t slot, bool confirmed);
+    // Egg ID is the stable transfer token. The receipt and imported egg commit
+    // in the same generation; retries remain acknowledged after egg disposal.
+    bool importEgg(CollectionState& state, const std::string& token,
+                   const PetState& egg, const Settings& settings,
+                   uint32_t incubationElapsedMs, size_t& slot, bool confirmed);
     // Batched trusted powered-on deltas only, checkpointed conservatively by the
     // adapter (not every frame). Never ticks PetState or performs hatching.
     bool advance(CollectionState& state, uint32_t elapsedMs, bool paused);

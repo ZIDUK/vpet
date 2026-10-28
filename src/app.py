@@ -427,6 +427,7 @@ def run():
         now = time.monotonic()
         elapsed = now - last_now
         last_now = now
+        pet.tick_survival(round(elapsed * 1000), sleeping=motion.state == MOTION_SLEEP)
         if pet.is_live:
             pet.stage_age_seconds += elapsed
             hour = 12

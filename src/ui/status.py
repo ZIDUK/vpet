@@ -165,7 +165,7 @@ def _draw_dna_page(target, pet):
     _text(target, (STATUS_WIDTH - _text_width("ADN", 2)) // 2, 6, "ADN", 2, 2)
     dna = getattr(pet, "dna", [0, 0, 0, 0])
     if getattr(pet, "has_dna", lambda: False)():
-        code = "%02X%02X%02X%02X" % tuple(dna)
+        code = "%02X%02X%02X%02X" % tuple(dna[:4])
     else:
         code = "----"
     _text(target, (STATUS_WIDTH - _text_width(code)) // 2, 22, code, 7)

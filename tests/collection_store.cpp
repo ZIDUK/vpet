@@ -506,6 +506,27 @@ void compactTimers() {
     assert(store.advance(state,1000,false) && state.slots[child].incubationMs==7000);
     assert(store.load(state)==CollectionLoad::Loaded && state.slots[child].incubationMs==7000);
 }
+void eggTransferReceipts() {
+    MemoryRepository repo; CollectionState state; auto active=pet(2); initialize(repo,state,active);
+    CollectionStore store(repo); Settings settings; auto egg=pet(9);
+    egg.profile=profile(9,profile(2).petId(),profile(3).petId());
+    egg.restore(SpeciesId::Egg,90,90,90,0,100,0);
+    const std::string token=egg.profile.petId(); size_t slot=99;
+    assert(store.importEgg(state,token,egg,settings,720000,slot,true));
+    assert(slot==2 && state.transferReceiptCount==1 && state.slots[slot].incubationMs==720000);
+    const auto committed=repo.durable; const int commits=repo.commits;
+    size_t retry=99;
+    assert(store.importEgg(state,token,egg,settings,720000,retry,true));
+    assert(retry==slot && repo.durable==committed && repo.commits==commits);
+    CollectionState reboot; CollectionStore restart(repo);
+    assert(restart.load(reboot)==CollectionLoad::Loaded && reboot.transferReceiptCount==1);
+    assert(restart.discardEgg(reboot,slot,true));
+    retry=99;
+    assert(restart.importEgg(reboot,token,egg,settings,720000,retry,true));
+    assert(retry==CollectionState::kSlots && reboot.count()==2);
+    assert(!restart.importEgg(reboot,profile(10).petId(),egg,settings,0,retry,true));
+    assert(!restart.importEgg(reboot,token,egg,settings,1800001,retry,true));
+}
 int main(int argc, char** argv) {
     assert(argc == 2); const std::string name = argv[1];
     if (name == "roundtrip") roundtrip();
@@ -518,6 +539,7 @@ int main(int argc, char** argv) {
     else if (name == "compact") compactCare();
     else if (name == "compact_faults") compactFaults();
     else if (name == "compact_timers") compactTimers();
+    else if (name == "egg_transfer") eggTransferReceipts();
     else return 2;
     std::cout << name << " passed\n";
 }

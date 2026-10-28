@@ -23,7 +23,7 @@ int main(int argc,char** argv) {
     Store kv,bak; SettingsStore legacy(kv,&bak), reserve(bak); Settings settings;
     PetState a,b;
     a.restore(SpeciesId::Rookie,90,90,90,0,100,0); a.rollDna(42); a.profile=profile();
-    b=a; b.profile=profile();
+    b=a; b.profile=profile(); b.setSexLocus(b.profile.sex());
     b.sleep.start(learningWall,b.dna()[3]);
     assert(legacy.save(a,settings));
     Settings oldBackup=settings; oldBackup.language="EN"; oldBackup.soundEnabled=false;

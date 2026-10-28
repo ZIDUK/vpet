@@ -95,6 +95,8 @@ def apply_food(pet, food_id, available=True, asleep=False, busy=False):
     if food_id == "meat":
         gained = preview["hunger_after"] - pet.get("h")
         pet.stats["h"] = preview["hunger_after"]
+        if preview["hunger_after"] > 0 and hasattr(pet, "hunger_critical_ms"):
+            pet.hunger_critical_ms = 0
         pet.weight = preview["weight_after"]
         if gained == 0:
             pet.overfed_this_cycle = True
@@ -107,6 +109,8 @@ def apply_food(pet, food_id, available=True, asleep=False, busy=False):
     else:
         energy_before = pet.get("e")
         pet.stats["e"] = preview["energy_after"]
+        if preview["energy_after"] > 0 and hasattr(pet, "energy_critical_ms"):
+            pet.energy_critical_ms = 0
         pet.weight = preview["weight_after"]
         pet.protein_fed_this_cycle = True
         if (getattr(pet, "call_reason", None) == "strength"

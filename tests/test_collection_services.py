@@ -153,7 +153,7 @@ def test_founder_hatch_is_durable_and_rollback_preserves_zero_genes(tmp_path, mo
     assert services.complete_hatch(pet)
     fresh, restored = SimulatorServices(tmp_path), Pet()
     assert fresh.start(restored)
-    assert restored.species == "baby" and restored.dna == [0, 0, 0, 0]
+    assert restored.species == "baby" and restored.dna == [0, 0, 0, 0, 0]
 
 
 def test_uncertain_commit_blocks_retry_until_reload_without_a_duplicate_egg(tmp_path, monkeypatch):
