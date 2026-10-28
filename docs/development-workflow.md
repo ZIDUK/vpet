@@ -34,6 +34,13 @@ El puerto detectado durante esta migracion fue
 
 ## Ciclo diario
 
+Para nuevas funcionalidades del piloto Creator/proceso, preceder estos pasos
+con spec, requisitos identificados, aprobacion y plan separado segun
+[desarrollo guiado por specs](spec-driven-development.md). Ejecutar
+`make spec-check` y `make verify-local`; para cambios generales usar el perfil
+full. No hay GitHub Actions ni instalacion automatica de hooks. Las pruebas
+locales no sustituyen aprobacion humana ni los gates de hardware siguientes.
+
 1. Cambia codigo bajo `src/`, `scripts/` o `firmware/t-display/`.
 2. Cambia arte fuente bajo las rutas curadas de `assets/`.
 3. Ejecuta `make sim` para revisar el resultado a 240x135.

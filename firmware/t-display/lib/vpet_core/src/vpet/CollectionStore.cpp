@@ -517,6 +517,16 @@ bool CollectionStore::commitEgg(CollectionState& state, const CollectionEggTrans
     if (!persist(state, candidate, replacements)) return false;
     childSlot = index; return true;
 }
+bool CollectionStore::discardEgg(CollectionState& state, size_t index, bool confirmed) {
+    if (!confirmed || index >= CollectionState::kSlots || index == state.active || !current(state)) return false;
+    const auto& slot = state.slots[index];
+    if (!slot.occupied || slot.form != static_cast<uint8_t>(SpeciesId::Egg)) return false;
+    std::unique_ptr<CollectionState> scratch(new (std::nothrow) CollectionState(state));
+    if (!scratch) { blocked_ = true; return false; }
+    scratch->slots[index] = CollectionSlot();
+    const std::string* replacements[CollectionState::kSlots] = {};
+    return persist(state, *scratch, replacements);
+}
 bool CollectionStore::advanceSlots(CollectionState& state, uint32_t elapsedMs) {
     if (!elapsedMs) return false;
     bool changed = false;

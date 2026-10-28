@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const HUB_URL = process.env.HUB_URL || 'http://127.0.0.1:8765';
 
 (async () => {
   const browser = await chromium.launch({headless:true});
@@ -7,15 +8,15 @@ const assert = require('node:assert/strict');
   const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   const request = page.request;
-  assert.equal((await request.get('http://127.0.0.1:8765/README.md')).status(),404);
-  assert.equal((await request.get('http://127.0.0.1:8765/api/preview?role=bad&action=idle')).status(),400);
-  assert.equal((await request.post('http://127.0.0.1:8765/api/validate',
+  assert.equal((await request.get(HUB_URL+'/README.md')).status(),404);
+  assert.equal((await request.get(HUB_URL+'/api/preview?role=bad&action=idle')).status(),400);
+  assert.equal((await request.post(HUB_URL+'/api/validate',
     {data:'x'.repeat(65537)})).status(),413);
-  assert.equal((await request.post('http://127.0.0.1:8765/api/validate',
+  assert.equal((await request.post(HUB_URL+'/api/validate',
     {headers:{Origin:'https://untrusted.example'},data:'{}'})).status(),403);
   for (const width of [1280,390]) {
     await page.setViewportSize({width,height:900});
-    await page.goto('http://127.0.0.1:8765');
+    await page.goto(HUB_URL);
     await page.waitForFunction(()=>document.querySelectorAll('[data-role]').length===5);
     for(const role of ['egg','baby','rookie','champion','ultimate']) {
       await page.locator(`[data-role=${role}]`).click();

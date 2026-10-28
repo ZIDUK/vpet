@@ -86,6 +86,45 @@ def test_parent_selection_pins_one_parent_and_requires_a_second_confirmation(tmp
     assert session.collection.encode() == before
 
 
+def test_detail_order_and_egg_sex_are_presentational(tmp_path):
+    session = scene(tmp_path)
+    session.collection.founder((9, 1, 2, 3), 17, confirmed=True, sequence=1)
+    session.target = 2
+    session.page = "detail"
+    session.index = 1
+    image = render_collection(ROOT / "build-tdisplay", session)
+    assert session.choices() == ("ACTIVAR", "PADRE", "PREFERENCIAS", "VOLVER")
+    assert image.size == (240, 135)
+    assert PetProfile.decode(session.collection.slots[1]["pet"]["profile"]).sex in ("M", "F")
+
+
+def test_detail_actions_follow_next_order_and_preferences_is_read_only(tmp_path):
+    session = scene(tmp_path)
+    session.target = 0
+    session.page = "detail"
+    before = session.collection.encode()
+    observed = []
+    for index in range(4):
+        session.index = index
+        image = render_collection(ROOT / "build-tdisplay", session)
+        observed.append(session.choices()[index])
+        assert image.size == (240, 135)
+    assert observed == ["ACTIVA", "PADRE", "PREFERENCIAS", "VOLVER"]
+    session.index = 2
+    session.input("action")
+    assert session.page == "preferences"
+    assert session.collection.encode() == before
+
+
+def test_detail_preferences_back_to_detail_selection(tmp_path):
+    session = scene(tmp_path)
+    session.page, session.target, session.index = "detail", 0, 2
+    session.input("action")
+    assert session.page == "preferences"
+    session.input("action")
+    assert session.page == "detail" and session.index == 2
+
+
 @pytest.mark.parametrize("language", ["ES", "EN"])
 def test_labels_fit_and_hide_technical_migration_and_hex_ids(tmp_path, monkeypatch, language):
     session = scene(tmp_path, language)

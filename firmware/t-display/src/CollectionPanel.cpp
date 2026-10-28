@@ -16,7 +16,8 @@ namespace vpet {
 namespace {
 breeding::Parent parent(const PetState& pet, const CollectionSlot& slot) {
     breeding::Parent p;
-    p.pet_id=pet.profile.petId(); p.sex=pet.profile.sex()==Sex::Male ? "M" : "F";
+    p.pet_id=pet.profile.petId();
+    p.sex=pet.profile.sex()==Sex::Male ? "M" : "F";
     p.line_id=slot.lineage; p.adult=pet.techniqueStage()>0;
     p.health=pet.health(); p.hunger=pet.hunger(); p.energy=pet.energy(); p.happiness=pet.happiness();
     p.injured=pet.injured(); p.dead=pet.dead(); p.asleep=pet.sleep.asleep;
@@ -222,7 +223,8 @@ bool CollectionPanel::breed(const PetState& pet, const Settings& settings) {
     const auto identity=profiles_();
     const auto a=state_.slots[parentA_].profile(), b=state_.slots[selected_].profile();
     *loaded=PetState();
-    const std::string profileRecord="1:"+identity.petId()+(identity.sex()==Sex::Male?":M:":":F:")+a.petId()+":"+b.petId();
+    const std::string profileRecord="1:"+identity.petId()+":"+
+        (identity.sex()==Sex::Male?"M":"F")+":"+a.petId()+":"+b.petId();
     if (!identity.assigned() || !loaded->profile.decode(profileRecord)) { error("Identidad no disponible"); return false; }
     if (learning_) {
         std::string inheritedRef;
@@ -267,11 +269,13 @@ bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings,
         return false;
     }
     if (page_==Page::Detail) {
-        if (event==InputEvent::Next) cursor_=(cursor_+1)%4;
+        const bool discardable=state_.slots[selected_].form==static_cast<uint8_t>(SpeciesId::Egg) && selected_!=state_.active;
+        if (event==InputEvent::Next) cursor_=(cursor_+1)%(discardable?5:4);
         else if (event==InputEvent::Action) {
-            if (cursor_==2) { page_=Page::List; cursor_=selected_; }
+            if (cursor_==3) { page_=Page::List; cursor_=selected_; }
             else if (cursor_==1) beginParents(pet,selected_);
-            else if (cursor_==3) { page_=Page::Preferences; cursor_=0; }
+            else if (cursor_==2) { page_=Page::Preferences; cursor_=0; }
+            else if (cursor_==4 && discardable) { page_=Page::ConfirmDiscard; cursor_=0; }
             else if (selected_!=state_.active) { page_=Page::ConfirmSwitch; cursor_=0; }
         }
         return false;
@@ -313,6 +317,10 @@ bool CollectionPanel::input(InputEvent event, PetState& pet, Settings& settings,
     if (confirmation==Page::ConfirmMigration) migrate(pet,settings);
     else if (confirmation==Page::ConfirmFounder) founder(pet,settings);
     else if (confirmation==Page::ConfirmBreed) breed(pet,settings);
+    else if (confirmation==Page::ConfirmDiscard) {
+        if (store_.discardEgg(state_,selected_,true)) { page_=Page::List; cursor_=selected_; }
+        else error("Desecho no disponible",store_.blocked());
+    }
     else if (confirmation==Page::ConfirmSwitch) {
         std::unique_ptr<LearningState> nextPolicy;
         if (learning_ && !learning_->readPolicy(state_.slots[selected_],nextPolicy)) {

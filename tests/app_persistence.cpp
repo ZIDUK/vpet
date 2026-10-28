@@ -51,6 +51,8 @@ int main() {
     assert(!app.ready());
     assert(panels.errors > 0);
     assert(Serial.output.find("VPET_SAVE_PENDING") != std::string::npos);
+    app.tick(63050, InputEvent::Back);
+    assert(!app.ready() && renderer.species==SpeciesId::Rookie);
     kv.fail = false;
     app.tick(64000, InputEvent::Action);
     assert(app.ready());

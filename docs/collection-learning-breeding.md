@@ -5,6 +5,34 @@ pendientes de aceptacion fisica. Ver [diseno aprobado](superpowers/specs/2026-10
 y [plan y evidencia](superpowers/plans/2026-10-25-collection-learning-breeding.md).
 Ver [registro de carga y limites](superpowers/plans/2026-10-25-collection-board-delivery.md).
 
+## Revision De Ficha Y Huevos 2026-10-28
+
+En la ficha de un individuo, NEXT recorre ACTIVE/SELECT, BREED, PREFERENCES y
+BACK en ese orden. La pantalla de lista y el detalle presentan el sexo de un
+huevo como `?`; el perfil persistido conserva M/F para no cambiar el formato
+NVS. El sexo se asigna a la identidad al crear el huevo y se revela al eclosionar.
+No forma parte de los cuatro bytes de ADN estadistico ni se hereda; el ADN
+actual codifica seis stats y dos rasgos. Una futura herencia de sexo requiere
+un contrato genetico versionado, no reutilizar estos nibbles.
+
+Preferences resume la accion mejor puntuada por politica entre entrenamiento,
+combate y exploracion para el individuo que se consulta. `---` significa que
+no hay experiencia observada; no es un fallo ni una preferencia por defecto.
+Consultar preferencias no debe guardar ni modificar la mascota.
+
+Los huevos ocupan una de cuatro plazas igual que los adultos. Aun no existe
+liberar/eliminar huevo: no seleccionar ni confirmar una accion de borrado que
+la interfaz no ofrezca. La incorporacion de huevos recibidos y un selector de
+inventario de huevos son trabajo futuro; el flujo actual crea un fundador local
+o un huevo al cruzar.
+
+En la captura del usuario hay tres plazas ocupadas (Firemon M activo, Flamemon
+F y un huevo) y una libre. Por capacidad se puede crear un huevo de cruce, pero
+el cruce solo es elegible cuando ambos adultos de la misma linea cumplen salud
+>=80, saciedad >=60, energia >=70, animo >=60, estan despiertos, sanos y sin
+pausa/actividad incompatible ni cooldown. No modificar stats del dispositivo
+para forzar la prueba. La elegibilidad actual depende de sus valores vivos.
+
 ## Revision De Interfaz 2026-10-26
 
 El usuario confirma que la placa aun muestra "Migrar"; no se interpreta como

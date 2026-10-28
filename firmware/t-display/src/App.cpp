@@ -56,6 +56,7 @@ App::~App() {
 void App::begin(uint32_t nowMs) {
     if (careSave_) return;
     savePending_ = false;
+    savePendingHome_ = false;
     careRecovery_ = false;
     deferredCareMs_ = 0;
     navigation_.setPanel(PanelId::Home);
@@ -102,7 +103,7 @@ bool App::saveState() {
     if (persistActive()) return settleStorage();
     savePending_ = true;
     Serial.println("VPET_SAVE_PENDING");
-    panels_.drawStorageError(settings_.language.c_str());
+    if (!savePendingHome_) panels_.drawStorageError(settings_.language.c_str());
     return false;
 }
 
@@ -211,8 +212,9 @@ bool App::settleStorage() {
     savePending_ = collection_ && collection_->enabled() ? collection_->failed() : !settingsStore_.recoverPending();
     if (savePending_) {
         Serial.println("VPET_SAVE_PENDING");
-        panels_.drawStorageError(settings_.language.c_str());
+        if (!savePendingHome_) panels_.drawStorageError(settings_.language.c_str());
     } else {
+        savePendingHome_ = false;
         panels_.invalidate();
     }
     return !savePending_;
@@ -699,13 +701,21 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         return;
     }
     if (savePending_) {
+        if (event==InputEvent::Back) {
+            navigation_.setPanel(PanelId::Home);
+            savePendingHome_=true;
+            panels_.invalidate();
+        }
         if (careRecovery_) {
             motion_.alignClock(nowMs);
             if (nowMs-lastSaveAttemptMs_>=1000) {
                 const bool compact=collection_ && collection_->enabled() && collection_->compactCare();
                 const bool recovered=compact ? collection_->recoverCare(pet_,settings_) : saveState();
-                if (recovered) { careRecovery_=false; savePending_=false; }
+                if (recovered) { careRecovery_=false; savePending_=false; savePendingHome_=false; }
                 lastSaveAttemptMs_=nowMs;
+            }
+            if (savePendingHome_ && (event!=InputEvent::None || nowMs-lastRenderMs_>=33)) {
+                lastRenderMs_=nowMs; drawHome(nowMs);
             }
             return; // Keep lastTickMs_: catch up the pending interval after recovery.
         }
@@ -713,6 +723,9 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         lastTickMs_ = nowMs;
         motion_.alignClock(nowMs);
         if (nowMs - lastSaveAttemptMs_ >= 1000) saveState();
+        if (savePendingHome_ && (event!=InputEvent::None || nowMs-lastRenderMs_>=33)) {
+            lastRenderMs_=nowMs; drawHome(nowMs);
+        }
         return;
     }
     // Present care inputs before any due storage checkpoint. Do not interrupt

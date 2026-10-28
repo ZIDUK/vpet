@@ -16,7 +16,7 @@ public:
     using SeedGenerator = uint32_t (*)();
     enum class Page : uint8_t {
         Migration, List, Detail, Parents, ConfirmMigration, ConfirmFounder,
-        ConfirmSwitch, ConfirmBreed, Error, Preferences
+        ConfirmSwitch, ConfirmBreed, ConfirmDiscard, Error, Preferences
     };
     CollectionPanel(CollectionStore& store, SettingsStore& legacy, ProfileGenerator profiles,
                     SeedGenerator seeds, TFT_eSprite* canvas = nullptr, AssetStore* assets = nullptr,

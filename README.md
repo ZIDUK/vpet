@@ -10,9 +10,15 @@ secundaria mediante los comandos terminados en `-pico`.
 
 ## Estado actual
 
+Proceso local: [spec-driven development](docs/spec-driven-development.md), con
+registro de requisitos, plantilla, spec/plan separados y `make verify-local`.
+Sin GitHub Actions; piloto Creator/proceso, no migracion retroactiva total.
+
 Portal local: [vPet Hub](docs/vpet-hub.md), catalogo animado e importacion de
 definiciones F1. Arranque: `.venv-platformio/bin/python scripts/hub_server.py`.
 No instala paquetes ni modifica partidas; el transporte USB esta pendiente.
+Incluye [Crear vPet](docs/vpet-creator.md): asistente de etapas/PNG, borradores
+y exportacion de proyecto con JSON generado, no paquete instalable.
 
 Resumen actualizado el 2026-10-25. Consulta la [guia por opcion](docs/product-guide.md),
 el [estado y evidencia](docs/project-status.md) y el

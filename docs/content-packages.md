@@ -288,8 +288,14 @@ sitio una version publicada; se publica con otro numero semantico.
 El proyecto ya tiene VPA1, manifest generado, LittleFS y validacion de capacidad.
 Tambien existe [vPet Hub local](vpet-hub.md): catalogo builtin animado e importacion
 de definiciones F1 con validacion de metadatos. No es un catalogo publicado ni
-valida paquetes distribuibles completos. Faltan el esquema publico, validador
-de paquetes/arte, protocolo USB, firmas y gestor de instalaciones.
+valida paquetes distribuibles completos. La consulta USB (`HUB STATUS`) ya responde version y espacio y rechaza
+cualquier otra orden; no esta cargada en la placa. Faltan el respaldo con
+consentimiento, el esquema publico, el validador de paquetes/arte, firmas y
+el gestor de instalaciones.
+El [asistente Crear vPet](vpet-creator.md) ya genera una definicion F1 y un ZIP
+de autor con PNG y BMP preparados, revisa sus graficos y permite borradores.
+No publica ni firma paquetes ni acredita premios; su validacion no afirma
+capacidad fisica ni sustituye el instalador.
 
 F1 ya extrae la definicion builtin, resolver comun y metadatos de clips.
 Siguen pendientes roster multi-individuo, premio/huevo idempotente y breeding

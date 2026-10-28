@@ -3,6 +3,14 @@
 Primera entrega local aprobada: catalogo de la linea builtin, animaciones por
 etapa/accion e importacion de definiciones JSON internas F1. Sin cuentas ni tienda.
 
+Ampliacion 2026-10-24: [asistente Crear vPet](vpet-creator.md), con identidad,
+cinco etapas, carga PNG, preview, recursos, revision y generacion de JSON/ZIP.
+Permite descargar/reabrir borradores con PNG. Sigue sin publicar ni instalar.
+
+Pruebas de la ampliacion: 19 de autor y 8 del Hub aprobadas; recorrido Chromium
+desktop/mobile con exportacion y restauracion de borrador aprobado. Suite general
+intentada, no certificada: fallo por ENOSPC (sin espacio temporal en el Mac).
+
 ```sh
 .venv-platformio/bin/python scripts/hub_server.py --port 8765
 ```
@@ -18,10 +26,13 @@ La validacion NO verifica arte adjunto, firma, autor/licencia, espacio disponibl
 ni integridad de un paquete distribuible. Una definicion valida no concede huevos
 ni items. Las vistas previas corresponden solo al contenido builtin preparado.
 
-Dispositivo informa soporte Web Serial sin abrir puertos. Conexion e instalacion
-estan deshabilitadas: faltan protocolo firmware, contrato publico, almacenamiento,
-staging/rollback y verificacion de emisor. No hay progreso ficticio de instalacion.
-No se modifica firmware, partida, esquema NVS ni inventario.
+Dispositivo informa soporte Web Serial sin abrir puertos. El boton Conectar
+sigue cerrado. El firmware nuevo entiende `HUB STATUS` y responde protocolo,
+heap, flash, espacio LittleFS y manifiesto; cualquier otro verbo `HUB`, incluido
+respaldo e instalacion, responde `HUB ERR code=UNSUPPORTED`. Esa build no esta
+cargada. Faltan el respaldo con consentimiento, almacenamiento, staging/rollback
+y verificacion de emisor. No hay progreso ficticio de instalacion.
+No se modifica la partida, el esquema NVS ni el inventario.
 
 Archivos: scripts/hub_server.py (adaptador host), web/hub (cliente),
 tests/test_hub_server.py (contrato). No se cambia el motor portable.

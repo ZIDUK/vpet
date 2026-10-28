@@ -72,6 +72,21 @@ def test_capacity_and_sequence_rejection_leave_collection_unchanged():
     assert len(collection.slots) == 4
 
 
+def test_egg_sex_is_hidden_in_collection_views(tmp_path):
+    from core.collection import Collection
+    from scripts.collection_session import CollectionSession
+    from scripts.sim_services import SimulatorServices
+
+    pet = adult()
+    collection = Collection.from_pet(pet)
+    collection.founder((3, 4, 5, 6), 123, confirmed=True, sequence=1)
+
+    services = SimulatorServices(tmp_path)
+    services.collection = collection
+    session = CollectionSession(pet, services)
+    assert session.choices()[1].endswith(" ?")
+
+
 def test_invalid_duplicate_identity_or_future_data_is_not_migrated():
     from core.collection import Collection
     a = adult()

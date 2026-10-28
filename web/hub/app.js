@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 const labels = {egg:'Huevo',baby:'Sparkmon',rookie:'Firemon',champion:'Flamemon',ultimate:'Dragfiremon'};
 const actions = {idle:'Reposo',walk:'Caminar',eat:'Comer',sleep:'Dormir',hatch:'Eclosión',punch:'Golpe',cast:'Llama',evolution:'Evolución',hit:'Impacto',hurt:'Daño',block:'Guardia',dodge:'Esquivar',happy:'Alegría',sad:'Tristeza',tired:'Cansancio',angry:'Enojo',hit_react:'Reacción'};
 let data, stage, clip, atlas, start=0, paused=false, generation=0;
-function tab(name){for(const [key,id] of [['catalog','catalog'],['import','import'],['device','device-view']])$(id).hidden=key!==name;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===name);b.setAttribute('aria-current',b.dataset.tab===name?'page':'false');});}
+function tab(name){for(const [key,id] of [['catalog','catalog'],['import','import'],['device','device-view'],['create','create']])$(id).hidden=key!==name;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===name);b.setAttribute('aria-current',b.dataset.tab===name?'page':'false');});}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 $('device').onclick=()=>tab('device');
 $('serial-support').textContent='serial' in navigator?'Web Serial disponible en este navegador.':'Web Serial no está disponible. Para la futura conexión USB: Chrome o Edge en computadora.';

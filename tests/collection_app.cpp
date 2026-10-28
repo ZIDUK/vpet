@@ -73,6 +73,43 @@ vpet::PetProfile profile() { uint32_t w[]={allocation++,2,3,4}; return vpet::Pet
 uint32_t seed() { return 1234; }
 uint64_t clockNow() { return 1791979200; }
 
+void discardEggTransaction() {
+    using namespace vpet;
+    Repository repository; CollectionStore store(repository); CollectionState state;
+    Settings settings; PetState a,b;
+    a.restore(SpeciesId::Champion,90,90,90,0,100,0); a.profile=profile(); a.rollDna(9);
+    b=a; b.profile=profile();
+    std::string first,second;
+    assert(CollectionStore::capture(a,settings,first) && CollectionStore::capture(b,settings,second));
+    assert(store.migrate(state,first,&second));
+    PetState egg; egg.profile=profile(); egg.rollDna(123);
+    assert(store.addFounder(state,egg,settings,true) && state.count()==3);
+    assert(!store.discardEgg(state,0,true) && state.count()==3);
+    Store legacyKv; SettingsStore legacy(legacyKv);
+    CollectionPanel panel(store,legacy,profile,seed);
+    PetState active; Settings ignored;
+    assert(panel.load(active,ignored)==CollectionLoad::Loaded);
+    panel.open();
+    panel.input(InputEvent::Next,active,ignored,{}); panel.input(InputEvent::Next,active,ignored,{});
+    panel.input(InputEvent::Action,active,ignored,{});
+    assert(panel.page()==CollectionPanel::Page::Detail);
+    for(int i=0;i<4;++i) panel.input(InputEvent::Next,active,ignored,{});
+    panel.input(InputEvent::Action,active,ignored,{});
+    assert(panel.page()==CollectionPanel::Page::ConfirmDiscard);
+    panel.input(InputEvent::Back,active,ignored,{});
+    assert(panel.state().count()==3);
+    panel.open();
+    panel.input(InputEvent::Next,active,ignored,{}); panel.input(InputEvent::Next,active,ignored,{});
+    panel.input(InputEvent::Action,active,ignored,{});
+    for(int i=0;i<4;++i) panel.input(InputEvent::Next,active,ignored,{});
+    panel.input(InputEvent::Action,active,ignored,{});
+    panel.input(InputEvent::Next,active,ignored,{}); panel.input(InputEvent::Action,active,ignored,{});
+    assert(panel.state().count()==2);
+    CollectionStore reboot(repository); CollectionState restored;
+    assert(reboot.load(restored)==CollectionLoad::Loaded && restored.count()==2);
+    assert(!restored.slots[2].occupied);
+}
+
 struct DeferredSaveTask : vpet::SaveTask {
     Work work=nullptr;
     void* context=nullptr;
@@ -189,6 +226,7 @@ void compactTimerRecovery() {
 }
 int main() {
     using namespace vpet;
+    discardEggTransaction();
     compactCareActions();
     compactTimerRecovery();
     assert(Navigation::kMenuCount == 9);
@@ -229,6 +267,17 @@ int main() {
     assert(panel.enabled() && panel.state().count()==2);
     assert(panel.state().stock[0]==2);
     assert(backup.ints==backupInts && backup.strings==backupStrings);
+    const int detailCommits=repository.commits;
+    panel.open(); panel.input(InputEvent::Action,a,settings,{});
+    assert(panel.page()==CollectionPanel::Page::Detail);
+    panel.input(InputEvent::Next,a,settings,{}); // Breed
+    panel.input(InputEvent::Next,a,settings,{}); // Preferences
+    panel.input(InputEvent::Action,a,settings,{});
+    assert(panel.page()==CollectionPanel::Page::Preferences);
+    assert(repository.commits==detailCommits);
+    panel.input(InputEvent::Action,a,settings,{});
+    panel.input(InputEvent::Action,a,settings,{}); // Back
+    assert(panel.page()==CollectionPanel::Page::List);
     const int legacyWrites=live.writes;
     {
         App forceApp(renderer,panels,legacy,ble,clockNow,&panel); forceApp.begin(0);
@@ -322,6 +371,7 @@ int main() {
         hatchApp.tick(91800000,InputEvent::None);
         assert(hatchStore.readPet(hatchPanel.state(),3,zeroEgg,zeroSettings));
         assert(zeroEgg.species()==SpeciesId::Baby && zeroEgg.profile.petId()==child.petId());
+        assert(zeroEgg.profile.sex()==Sex::Male || zeroEgg.profile.sex()==Sex::Female);
         assert(std::memcmp(zeroEgg.dna(),zeroGenome,4)==0);
     }
     for(int i=0;i<29;++i) assert(panel.advance(60000,false));

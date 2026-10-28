@@ -47,7 +47,7 @@ int main(int argc,char** argv) {
     else if(mode=="detail" || mode=="preferences" || mode=="activate") {
         if(mode=="activate") key(InputEvent::Next);
         key(InputEvent::Action);
-        if(mode=="preferences") { for(int i=0;i<3;++i) key(InputEvent::Next); key(InputEvent::Action); }
+        if(mode=="preferences") { for(int i=0;i<2;++i) key(InputEvent::Next); key(InputEvent::Action); }
         if(mode=="activate") key(InputEvent::Action);
     } else if(mode=="founder") { for(int i=0;i<4;++i) key(InputEvent::Next); key(InputEvent::Action); }
     else if(mode=="first" || mode=="second" || mode=="breed") {

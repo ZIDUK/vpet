@@ -68,7 +68,8 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(body, bytes):
             body = json.dumps(body, ensure_ascii=False).encode()
         self.send_response(status)
-        self.send_header('Content-Type', mime + ('; charset=utf-8' if mime != 'image/png' else ''))
+        textual = mime.startswith('text/') or mime == 'application/json'
+        self.send_header('Content-Type', mime + ('; charset=utf-8' if textual else ''))
         self.send_header('Content-Length', str(len(body)))
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Cache-Control', 'no-store')
@@ -86,7 +87,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, preview(query.get('role', [''])[0],
                                                query.get('action', [''])[0]), 'image/png')
             files = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'),
-                     '/style.css': ('style.css', 'text/css')}
+                     '/style.css': ('style.css', 'text/css'),
+                     '/creator.js': ('creator.js', 'text/javascript'),
+                     '/creator.css': ('creator.css', 'text/css')}
             if url.path not in files:
                 return self.reply(404, {'error': 'No encontrado'})
             name, mime = files[url.path]
@@ -100,14 +103,29 @@ class Handler(BaseHTTPRequestHandler):
         # Reject cross-origin requests; no filesystem or device writes exist here.
         if self.headers.get('Origin') not in (None, 'http://' + self.headers.get('Host', '')):
             return self.reply(403, {'error': 'Origen no permitido'})
-        if self.path != '/api/validate':
+        if self.path not in ('/api/validate', '/api/creator/check', '/api/creator/export'):
             return self.reply(404, {'error': 'No encontrado'})
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 65536:
-                return self.reply(413, {'error': 'Limite: 64 KiB'})
-            self.reply(200, validate_payload(self.rfile.read(length)))
-        except (ValueError, RecursionError) as exc:
+            from scripts.hub_creator import MAX_BODY, inspect_project, export_project
+            limit = 65536 if self.path == '/api/validate' else MAX_BODY
+            if not 0 < length <= limit:
+                return self.reply(413, {'error': f'Limite de solicitud: {limit} bytes'})
+            raw = self.rfile.read(length)
+            if self.path == '/api/validate':
+                return self.reply(200, validate_payload(raw))
+            def unique(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError('Clave JSON duplicada: ' + key)
+                    result[key] = value
+                return result
+            document = json.loads(raw, object_pairs_hook=unique)
+            if self.path == '/api/creator/check':
+                return self.reply(200, inspect_project(document))
+            return self.reply(200, export_project(document), 'application/zip')
+        except (ValueError, RecursionError, UnicodeError) as exc:
             self.reply(400, {'error': str(exc) or 'JSON no valido'})
 
 

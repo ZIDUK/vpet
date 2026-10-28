@@ -2,6 +2,42 @@
 
 ## Estado vigente: 2026-10-28
 
+## Trazabilidad Local, Sin GitHub Actions
+
+Piloto Creator/proceso: 2 specs y 12 requisitos en docs/requirements.json,
+plantilla obligatoria para specs registradas y planes separados. Creator queda
+retrospective-review; no se inventan aprobaciones ni commits de publicacion.
+make spec-check resuelve estructura/selectores; make verify-local ejecuta el
+piloto con reportes y huella de fuentes sin commit. make verify-local-full agrega
+suite general, assets, native y build ESP32, sin flash. release-check rechaza el
+piloto mientras falten aprobacion final, evidencia registrada y commit de entrega.
+53 pruebas focalizadas pasan. El primer intento full agoto el disco; se agregaron
+preflight de espacio y respaldo del reporte ante ENOSPC. Tras liberar espacio,
+el cierre full 20261028T141943Z-e5a2c08a pasa con fuentes estables: 2084 Python
+en 297.97 s, 185 nativas en 0.460 s, generados/assets, sintaxis JS, compilacion
+ESP32 y ambos recorridos Chromium. RAM estatica 53460 bytes, app 1116477 bytes;
+build incremental 2.612 s. Persisten 13278 advertencias de deprecacion/paletas.
+Reporte: out/local-verification/20261028T141943Z-e5a2c08a/report.json.
+El intento anterior paso todos los checks pero detecto cambio de un plan durante
+la ejecucion y no se certifico como snapshot unico. Esta evidencia no acredita
+release, flash ni rendimiento fisico; no promueve requisitos automaticamente.
+No hay GitHub Actions, hooks instalados ni configuracion Git modificada.
+Ver [proceso y comandos](spec-driven-development.md).
+
+## Coleccion: Orden De Ficha Y Sexo Visible Del Huevo
+
+Corregido el recorrido del detalle a ACTIVE/SELECT, BREED, PREFERENCES, BACK.
+Los huevos muestran `?` en lista/detalle; el formato NVS M/F permanece intacto
+y el valor se revela al eclosionar. El sexo no esta en el ADN estadistico actual
+(seis stats y dos rasgos) ni se hereda. La prueba fisica requiere compilar y
+cargar expresamente esta revision; aun no desplegada. No se implemento eliminar
+huevos ni recepcion/seleccion de huevos externos.
+
+Preferences muestra el mejor valor aprendido por dominio; `---` indica que no
+hay experiencia observable. Abrirla es de solo lectura. El recorrido revisado
+tiene prueba C++ del controlador y prueba visual/simulador pendientes de la
+validacion final de este turno.
+
 ## Guardado Compacto: Comida Y Luz Aceptadas; Memoria Pendiente
 
 El usuario aprobo el redisenio tras rechazar la fluidez de 643ca42. Comida,
@@ -333,6 +369,9 @@ describen comprobaciones previas a esta carga, no el estado de despliegue actual
 
 vPet Hub local: catalogo, previews por etapa/accion e importacion de JSON F1
 con validacion de metadatos. Sin cuentas, tienda ni escrituras en placa.
+Incluye [Crear vPet](vpet-creator.md): identidad, cinco etapas, carga/preview
+de PNG, reutilizacion de clips, retratos/fondos, revision, borradores y
+exportacion de proyecto ZIP/JSON. No equivale a publicacion ni vpetpack firmado.
 Instalacion USB deshabilitada hasta implementar el protocolo y recuperacion.
 Ver [alcance y arranque](vpet-hub.md).
 

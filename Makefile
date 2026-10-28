@@ -12,7 +12,7 @@ SIM_PY := $(shell for p in "$(PY)" /usr/local/bin/python3 /Library/Frameworks/Py
 	fi; \
 done)
 
-.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-firmware deploy-pico sim sim-practice sim-training sim-pico sim-record test clean all
+.PHONY: help build build-pico build-tdisplay bootstrap-pio firmware native-test preflight deploy deploy-firmware deploy-pico sim sim-practice sim-training sim-pico sim-record test clean all spec-check verify-local verify-local-full release-check
 
 help:
 	@echo "vPet dev workflow"
@@ -32,10 +32,26 @@ help:
 	@echo "  make sim-pico     Run the 128x128 Pico-compatible simulator"
 	@echo "  make sim-record   Same as sim, but saves every frame as PNG to out/sim_frames/"
 	@echo "  make test         Run pytest in tests/"
+	@echo "  make spec-check   Validate requirement traceability and collect referenced tests"
+	@echo "  make verify-local Run the local Creator/process checks, including browser tests"
+	@echo "  make verify-local-full Also test/build Python, assets, native C++ and ESP32; no flash"
+	@echo "  make release-check Require recorded approvals, execution evidence and release commits"
 	@echo "  make all          Same verified pipeline as make deploy"
 	@echo "  make clean        Remove the generated build/ directory"
 
 build: build-pico build-tdisplay
+
+spec-check:
+	$(PY) scripts/spec_check.py --collect
+
+verify-local:
+	$(PY) scripts/verify_local.py --profile creator
+
+verify-local-full:
+	$(PY) scripts/verify_local.py --profile full
+
+release-check:
+	$(PY) scripts/spec_check.py --release
 
 build-pico:
 	$(PY) scripts/build.py --profile pico --output build

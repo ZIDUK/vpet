@@ -164,8 +164,15 @@ schema, journals y momento de commit permanecen iguales.
 catalogo y previews PNG derivados de los atlas preparados; el adaptador host
 reutiliza `PetDefinition` para validar JSON F1 en memoria. No modifica el core,
 guardados ni firmware. GET se limita a rutas explicitas y POST a validacion
-de hasta 64 KiB, sin CORS abierto ni escritura de archivos. CSP restringe
+de hasta 64 KiB para F1, sin CORS abierto ni escritura de archivos. CSP restringe
 recursos al propio origen. Ver [limites y uso](vpet-hub.md).
+
+El [asistente Crear vPet](vpet-creator.md) agrega estado de autor independiente,
+previews PNG locales, borradores descargables y exportacion ZIP en memoria.
+`scripts/hub_creator.py` valida imagenes/cuadriculas y genera una PetDefinition;
+no duplica ni cambia reglas de dominio. Los endpoints /api/creator/check y
+/api/creator/export admiten hasta 24 MiB de JSON, con 16 MiB de PNG decodificados
+y 4 MiB por recurso. El ZIP es un proyecto de autor, no un paquete instalable.
 
 Web Serial se detecta solo como capacidad del navegador. No hay puerto abierto
 ni comandos de instalacion: esa entrega necesita protocolo firmware, contrato

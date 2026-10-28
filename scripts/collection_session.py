@@ -22,7 +22,7 @@ class CollectionSession:
         if self.page == "founder":
             return ("CANCELAR", "CREAR HUEVO")
         if self.page == "detail":
-            return ("ACTIVA" if self.target == self.collection.active else "ACTIVAR", "PADRE", "VOLVER", "PREFERENCIAS")
+            return ("ACTIVA" if self.target == self.collection.active else "ACTIVAR", "PADRE", "PREFERENCIAS", "VOLVER")
         if self.page == "activate":
             return ("CANCELAR", "CAMBIAR MASCOTA")
         if self.page == "preferences":
@@ -41,7 +41,8 @@ class CollectionSession:
             form = slot["pet"]["species"]
             from core.pet import STAGE_FRIENDLY
             name = STAGE_FRIENDLY.get(form, form).upper()
-            rows.append("%d %s %s%s" % (i + 1, name, profile.sex, " *" if i == self.collection.active else ""))
+            sex = "?" if form == "egg" else profile.sex
+            rows.append("%d %s %s%s" % (i + 1, name, sex, " *" if i == self.collection.active else ""))
         return tuple(rows) + ("NUEVO HUEVO", "REPRODUCIR", "VOLVER")
 
     def candidates(self):
@@ -107,14 +108,14 @@ class CollectionSession:
         elif page == "detail":
             if index == 0 and self.target != self.collection.active:
                 self.page, self.index = "activate", 0
-            elif index == 3:
+            elif index == 2:
                 self.page, self.index = "preferences", 0
             elif index == 1:
                 self.choose_parents(self.target)
             else:
                 self.page, self.index = "list", self.target
         elif page == "preferences":
-            self.page, self.index = "detail", 3
+            self.page, self.index = "detail", 2
         elif page == "pairs":
             if index == 4:
                 self.page, self.index = "list", 0

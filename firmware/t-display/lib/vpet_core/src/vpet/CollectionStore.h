@@ -59,6 +59,7 @@ public:
     // This persistence boundary only rechecks the stored basic eligibility.
     bool commitEgg(CollectionState& state, const CollectionEggTransaction& transaction,
                    const PetState& egg, const Settings& settings, size_t& childSlot, bool confirmed);
+    bool discardEgg(CollectionState& state, size_t slot, bool confirmed);
     // Batched trusted powered-on deltas only, checkpointed conservatively by the
     // adapter (not every frame). Never ticks PetState or performs hatching.
     bool advance(CollectionState& state, uint32_t elapsedMs, bool paused);

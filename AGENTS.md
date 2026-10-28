@@ -26,6 +26,17 @@ with a Python/Pillow/pygame simulator and a preserved Pico/CircuitPython path.
 
 ## Testing
 
+- Local spec-driven pilot (2026-10-28): follow `docs/spec-driven-development.md`.
+  New features use `docs/templates/spec.md`, stable REQ/AC IDs in
+  `docs/requirements.json`, a separate spec/plan and explicit acceptance criteria.
+  Historical documents migrate incrementally; never invent retrospective approval.
+- Run `make spec-check` and `make verify-local` for the Creator/process pilot;
+  use `make verify-local-full` for whole-project local verification.
+  Report actual scope and failures. Never equate structural links with passing tests,
+  or automated tests with human approval, publication or physical board acceptance.
+- Do not add GitHub Actions or install Git hooks/config for this workflow.
+  Verification is local; approval/traceability status is never promoted automatically.
+
 - Run `.venv-platformio/bin/python -m pytest -q` for Python changes.
 - Run `.venv-platformio/bin/pio test -d firmware/t-display -e native` for C++ core changes.
 - Run `.venv-platformio/bin/pio run -d firmware/t-display -e tdisplay` for firmware changes.

@@ -104,7 +104,7 @@ class _View:
                 self.pet(i, x + 2, y + 2, 36)
                 self.text(x + 40, y + 5, self.name(i), font=SMALL)
                 profile = PetProfile.decode(slot["pet"]["profile"])
-                self.text(x + 40, y + 22, profile.sex, CYAN, SMALL)
+                self.text(x + 40, y + 22, "?" if slot["pet"]["species"] == "egg" else profile.sex, CYAN, SMALL)
                 if i == self.collection.active:
                     self.text(x + 55, y + 22, "ACTIVA" if self.es else "ACTIVE", MINT, SMALL)
             else:
@@ -119,7 +119,7 @@ class _View:
         self.header(self.name(index))
         self.pet(index, 8, 27, 76)
         profile = PetProfile.decode(slot["pet"]["profile"])
-        self.text(95, 30, profile.sex, CYAN, TITLE)
+        self.text(95, 30, "?" if slot["pet"]["species"] == "egg" else profile.sex, CYAN, TITLE)
         active = index == self.collection.active
         self.text(115, 32, ("ACTIVA" if self.es else "ACTIVE") if active else
                   ("RESERVA" if self.es else "RESERVE"), MINT if active else MUTED)
@@ -129,15 +129,15 @@ class _View:
         duration = "%dh" % ((remaining + 3599999) // 3600000) if remaining >= 3600000 else "%dm" % ((remaining + 59999) // 60000)
         self.text(116, 60, duration if remaining else
                   ("SIN ESPERA" if self.es else "NO WAIT"), MUTED)
-        icons = ("Load", "Heart", "Back", "Brain")
-        labels = (("ACTIVA" if active else "ACTIVAR", "CRUZAR", "VOLVER", "PREFERENCIAS") if self.es else
-                  ("ACTIVE" if active else "SELECT", "BREED", "BACK", "PREFERENCES"))
+        icons = ("Load", "Heart", "Brain", "Back")
+        labels = (("ACTIVA" if active else "ACTIVAR", "CRUZAR", "PREFERENCIAS", "VOLVER") if self.es else
+                  ("ACTIVE" if active else "SELECT", "BREED", "PREFERENCES", "BACK"))
         self.icon(icons[self.session.index % 4], 94, 82)
         self.text(116, 85, labels[self.session.index % 4], CYAN, SMALL)
         self.button(6, 80, 0, "Load", ("ACTIVA" if self.es else "ACTIVE") if active else ("ACTIVAR" if self.es else "SELECT"))
         self.button(93, 44, 1, "Heart")
-        self.button(144, 44, 3, "Brain")
-        self.button(198, 36, 2, "Back")
+        self.button(144, 44, 2, "Brain")
+        self.button(198, 36, 3, "Back")
 
     def parents(self, confirm=False):
         first, second = self.session.parent_a, self.session.index

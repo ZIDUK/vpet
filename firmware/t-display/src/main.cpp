@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <LittleFS.h>
+#include <cstring>
 #include <TFT_eSPI.h>
 
 #include "vpet/AssetStore.h"
@@ -178,7 +179,44 @@ void setup() {
     reportReady();
 }
 
+void serviceHubLink() {
+    // Consult only. STATUS reports capacity; every other HUB verb is refused
+    // so a browser cannot install a package or rewrite the save through USB.
+    static char line[48];
+    static uint8_t used = 0;
+    static bool overflow = false;
+    while (Serial.available() > 0) {
+        const int raw = Serial.read();
+        if (raw < 0) return;
+        const char c = static_cast<char>(raw);
+        if (c == '\r') continue;
+        if (c != '\n') {
+            if (used + 1 < sizeof(line)) line[used++] = c;
+            else overflow = true;
+            continue;
+        }
+        line[used] = '\0';
+        const bool dropped = overflow;
+        used = 0;
+        overflow = false;
+        if (dropped) {
+            Serial.println("HUB ERR code=LINE");
+        } else if (strcmp(line, "HUB STATUS") == 0) {
+            Serial.printf(
+                "HUB STATUS protocol=1 heap_free=%u heap_min=%u flash=%u fs_used=%u fs_total=%u manifest=%s\n",
+                ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getFlashChipSize(),
+                startupAssets.mounted ? LittleFS.usedBytes() : 0,
+                startupAssets.mounted ? LittleFS.totalBytes() : 0,
+                startupAssets.version.length() ? startupAssets.version.c_str() : "none"
+            );
+        } else if (strncmp(line, "HUB ", 4) == 0) {
+            Serial.println("HUB ERR code=UNSUPPORTED");
+        }
+    }
+}
+
 void loop() {
+    serviceHubLink();
     const uint32_t startedUs=micros();
     const vpet::InputEvent event = buttons.poll(millis());
     if (event != vpet::InputEvent::None) {
