@@ -106,7 +106,21 @@ inline bool decodeSnapshot(const std::string& record, SnapshotStore& snapshot) {
     const bool explorationPresent = line != "1";
     const bool expandedTechniques = line == "3" || sleepPresent;
     SnapshotStore next;
+    bool survivalPresent = version6;
     for (const auto expected : kSnapshotKeys) {
+        // Old snapshots end care fields at cold. An interim v4 writer also
+        // emitted the complete extension; accept both without relaxing v6.
+        if (!version6 && !strcmp(expected, "hunCritMs")) {
+            const auto position = in.tellg();
+            if (!std::getline(in, line)) return false;
+            survivalPresent = line.compare(0, 10, "hunCritMs ") == 0;
+            in.clear();
+            in.seekg(position);
+        }
+        if (!survivalPresent && (!strcmp(expected, "hunCritMs") || !strcmp(expected, "eneCritMs"))) {
+            next.ints[expected] = 0;
+            continue;
+        }
         if (!std::getline(in, line)) return false;
         std::istringstream field(line);
         int32_t value;

@@ -17,7 +17,7 @@ def persistence_binary(tmp_path_factory):
     return binary
 
 
-@pytest.mark.parametrize("case", ["save", "swap", "injury", "survival", "invalid", "recovery"])
+@pytest.mark.parametrize("case", ["save", "swap", "injury", "survival", "historical", "invalid", "recovery"])
 def test_durable_operations(persistence_binary, case):
     result = subprocess.run([str(persistence_binary), case], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

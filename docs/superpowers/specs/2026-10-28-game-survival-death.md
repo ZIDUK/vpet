@@ -49,6 +49,14 @@ cuentan tiempo offline. Llegar a cero no mata de inmediato. Se conserva la muert
 actual por 15 lesiones acumuladas o 6 horas continuas herido, curable con
 Medkit antes del limite.
 
+### REQ-GAME-SURVIVAL-002
+
+La lectura de snapshots y diarios anteriores a supervivencia debe aceptar la
+ausencia conjunta de `hunCritMs` y `eneCritMs`, iniciando ambos en cero. Debe
+conservar identidad, ADN, inventario, aprendizaje y rutinas presentes. Los
+registros v6 y las extensiones presentes requieren ambos campos validos; una
+extension parcial/corrupta no puede publicarse ni provocar un reset de partida.
+
 ## Criterios De Aceptacion
 
 ### AC-GAME-SURVIVAL-001
@@ -59,6 +67,15 @@ cold/pause, away y egg no avanzan los relojes. Guardar/cargar mantiene los ms
 restantes, y un save viejo sin claves nuevas empieza en cero. La muerte por
 lesion conserva sus limites previos. Tests Python y C++ deben probar estos casos.
 
+### AC-GAME-SURVIVAL-002
+
+Un snapshot historico v1-v5 sin los dos campos debe cargar y recuperarse sin
+perder los datos que posee esa version. Un diario compacto v5 debe cargar sin
+reescribir la coleccion, aplicar el consumo una sola vez y poder volver a guardar.
+Un v6 o una extension parcial con un campo ausente debe rechazarse dejando
+intacto el destino. La validacion fisica debe observar `VPET_READY` despues del
+flash sobre la partida conservada; esto no acredita revision visual de Status.
+
 ## Contratos Y Compatibilidad
 
 El firmware usa `hunCritMs` y `eneCritMs` saturados a 43,200,000; la ausencia de
@@ -68,6 +85,11 @@ durante away/frio y el core lo suspende durante sueño/huevo. Death se guarda po
 el campo existente. La lesion mantiene su contador previo aun durante sueño;
 sólo los temporizadores nuevos de hambre/energia se pausan al dormir. Cualquier
 aviso UI nuevo requiere diseno propio, no se inventa aqui.
+
+Compatibilidad de snapshots: v1-v5 preceden los timers. El firmware transitorio
+tambien escribio v4 con ambos timers; se acepta esa extension conjunta. V6
+incluye los timers y DNA4 obligatorios. El lector no exige campos nuevos a los
+registros historicos ni elimina diarios para ocultar un fallo de recuperacion.
 
 ## Errores Y Recuperacion
 

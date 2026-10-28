@@ -3,6 +3,8 @@
 #include <map>
 #include <string>
 #include "vpet/SettingsStore.h"
+#include "vpet/StateSnapshot.h"
+#include "legacy_snapshot.h"
 
 struct Fault {
     int cut = -1, writes = 0;
@@ -164,6 +166,56 @@ void survival_continuity() {
     assert(restored.hungerCriticalMs()==0 && restored.energyCriticalMs()==0);
 }
 
+void historical_snapshots() {
+    auto original = pet(SpeciesId::Champion, 63);
+    const uint32_t words[] = {2, 3, 4, 5};
+    original.profile = PetProfile::fromWords(words);
+    original.setSexLocus(original.profile.sex());
+    storage::SnapshotStore captured;
+    assert(SettingsStore(captured).save(original, Settings()));
+    const auto current = storage::encodeSnapshot(captured);
+    for (int version = 1; version <= 6; ++version) {
+        const auto record = legacySnapshot(current, version);
+        storage::SnapshotStore decoded;
+        assert(storage::decodeSnapshot(record, decoded));
+        assert(decoded.ints.at("hunCritMs") == 0 && decoded.ints.at("eneCritMs") == 0);
+        Fault f; Store kv(f);
+        kv.strings["saveTx"] = record;
+        Settings settings; PetState restored;
+        assert(SettingsStore(kv).load(restored, settings) == LoadResult::Loaded);
+        assert(kv.strings["saveTx"].empty());
+        assert(restored.hunger() == original.hunger() && restored.energy() == original.energy());
+        assert(restored.itemCount(0) == original.itemCount(0));
+        assert(restored.dna()[0] == original.dna()[0]);
+        assert(restored.hungerCriticalMs() == 0 && restored.energyCriticalMs() == 0);
+        if (version >= 5) {
+            assert(restored.profile.encode() == original.profile.encode());
+            assert(restored.sexLocus() == original.profile.sex());
+        }
+        assert(SettingsStore(kv).load(restored, settings) == LoadResult::Loaded);
+    }
+    // A partial extension or a v6 missing a mandatory field is corruption.
+    for (const auto key : {"hunCritMs", "eneCritMs"}) {
+        for (const auto version : {4, 6}) {
+            auto broken = current;
+            broken[0] = '0' + version;
+            if (version == 4) {
+                const auto start = broken.find("dna4 ");
+                broken.erase(start, broken.find('\n', start) - start + 1);
+                const auto end = broken.rfind("END\n");
+                const auto startProfile = broken.rfind('\n', end - 2) + 1;
+                broken.erase(startProfile, end - startProfile);
+            }
+            const auto start = broken.find(std::string(key) + " ");
+            broken.erase(start, broken.find('\n', start) - start + 1);
+            storage::SnapshotStore unchanged;
+            unchanged.ints["sentinel"] = 17;
+            assert(!storage::decodeSnapshot(broken, unchanged));
+            assert(unchanged.ints.size() == 1 && unchanged.ints.at("sentinel") == 17);
+        }
+    }
+}
+
 void invalid_journals() {
     Fault f; Store kv(f), backup(f); Settings settings;
     auto original = pet(SpeciesId::Rookie, 60);
@@ -255,6 +307,7 @@ int main(int argc, char** argv) {
     if (which == "swap" || which == "all") { swap_cuts(false); swap_cuts(true); }
     if (which == "injury" || which == "all") injury_continuity();
     if (which == "survival" || which == "all") survival_continuity();
+    if (which == "historical" || which == "all") historical_snapshots();
     if (which == "invalid" || which == "all") invalid_journals();
     if (which == "recovery" || which == "all") { recovery_cuts(false); recovery_cuts(true); first_save_and_limits(); }
 }

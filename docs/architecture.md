@@ -808,7 +808,8 @@ elemento y umbral. El rival Firemon conserva su catalogo inicial.
 [Contrato y tablas](techniques.md).
 
 NVS conserva schema 3 y techVer 1; agrega techM3/4 y extiende los bits de
-techEquip. Los snapshots internos leen v1/v2/v3/v4 y F2a agrega v5 con perfil, conservando la recuperacion
+techEquip. Los snapshots internos leen v1-v6; F2a agrega v5 con perfil y v6
+agrega el locus sexual y los timers de supervivencia, conservando la recuperacion
 atomica de partidas e intercambios. Dominio, recarga y usos de combate son
 bytes acotados; Battle sigue por debajo del presupuesto de 256 bytes.
 
@@ -819,14 +820,20 @@ Se guarda junto con energia y premios; restaurar no acredita tiempo apagado.
 Home usa calendario para dia/noche, no el estado de Motion. El sprite cansado
 no inicia sueno ni interrumpe actividades. [Contrato completo](sleep-routine.md).
 
-El guardado general usa `saveTx`, snapshot interno v5 cuando tiene perfil
-individual y v4 para fixtures sin perfil (lector compatible con v1/v2/v3/v4),
+El guardado general usa `saveTx`, snapshot interno v6 cuando tiene perfil
+individual y v4 para fixtures sin perfil (lector compatible con v1-v5),
 rangos y terminador obligatorio. Primero registra el estado absoluto; despues
 reproduce las claves legacy del schema 3. Omite escrituras de valores iguales.
 `swapLive` y `swapBack` preparan snapshots separados (cada uno menor de 3800
 bytes); `swapTx=1` acepta el intercambio de las dos mascotas. El marcador se
 limpia solo despues de recuperar ambos lados. La carga recupera estas
 operaciones antes de leer campos; registros incompatibles fallan cerrados.
+
+Los snapshots historicos v1-v5 pueden omitir juntos `hunCritMs` y `eneCritMs`;
+el lector inicia ambos en cero y conserva el resto del estado. El v4 transitorio
+con ambos campos tambien se acepta. Una extension parcial y un v6 sin campos
+obligatorios se rechazan. Este contrato aplica tanto a `saveTx` como a cuerpos
+de Coleccion y al snapshot del diario compacto `colCare`.
 
 F2a agrega `petProfile` v1 sin cambiar schema NVS 3. El mismo journal captura
 identidad y progreso; la carga productiva guarda una migracion sin perfil
@@ -870,7 +877,7 @@ Port de placa del 2026-10-16: `Exploration` es un dominio C++ portable,
 `ExplorationSession` controla opciones, `ExplorationUi` dibuja tablas en
 Panels.cpp y App aplica transacciones completas. Navigation y MenuBar usan
 nueve entradas; Exploration se agrega al final de PanelId sin renumerar.
-La clave `expState` v1 se captura en snapshots `saveTx` v5 con perfil (v4 en
+La clave `expState` v1 se captura en snapshots `saveTx` v6 con perfil (v4 en
 fixtures sin perfil); el lector conserva compatibilidad con v1/v2/v3/v4.
 La hora fiable se valida separadamente del reloj de animacion; sin calendario
 tras un corte de alimentacion se requiere ajuste manual. Durante viaje se pausan

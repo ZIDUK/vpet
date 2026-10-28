@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include "vpet/CollectionStore.h"
 #include "vpet/LittleFsCollectionRepository.h"
+#include "legacy_snapshot.h"
 
 using namespace vpet;
 
@@ -360,6 +361,37 @@ struct CareKv : KeyValueStore {
     }
     bool sync() override { return !syncFails; }
 };
+void historicalCare() {
+    MemoryRepository repo; CollectionState state; auto active = pet(2);
+    initialize(repo, state, active);
+    CareKv kv; CareJournal journal(kv); CollectionStore store(repo, &journal);
+    assert(store.load(state) == CollectionLoad::Loaded);
+    active.setEnergy(25); active.restoreItems(3, 1, 1, 1, 2, 1);
+    auto snapshot = legacySnapshot(capture(active), 5);
+    PetState decoded; Settings settings;
+    assert(CollectionStore::restore(snapshot, decoded, settings));
+    assert(decoded.profile.encode() == active.profile.encode());
+    assert(decoded.sexLocus() == active.profile.sex());
+    CareRecord record;
+    record.base = state.sequence; record.active = state.active; record.revision = 1;
+    record.identity = active.profile.petId(); record.snapshot = snapshot;
+    record.elapsedMs = 1500;
+    kv.record = CareJournal::encode(record);
+    assert(!kv.record.empty());
+    const auto before = repo.durable;
+    const auto savedJournal = kv.record;
+    CareJournal rebootJournal(kv); CollectionStore reboot(repo, &rebootJournal);
+    CollectionState restored;
+    assert(reboot.load(restored) == CollectionLoad::Loaded);
+    assert(reboot.readPet(restored, restored.active, decoded, settings));
+    assert(decoded.energy() == 25 && decoded.itemCount(1) == 1);
+    assert(decoded.hungerCriticalMs() == 0 && decoded.energyCriticalMs() == 0);
+    assert(repo.durable == before && kv.record == savedJournal && kv.writes == 0);
+    assert(reboot.saveCare(restored, decoded, settings) && reboot.settleCare());
+    assert(reboot.load(restored) == CollectionLoad::Loaded);
+    assert(reboot.readPet(restored, restored.active, decoded, settings));
+    assert(decoded.itemCount(1) == 1 && decoded.energy() == 25);
+}
 void compactCare() {
     MemoryRepository repo; CollectionState state; auto active=pet(2);
     initialize(repo,state,active);
@@ -537,6 +569,7 @@ int main(int argc, char** argv) {
     else if (name == "corruption") corruption();
     else if (name == "filesystem") filesystem();
     else if (name == "compact") compactCare();
+    else if (name == "historical") historicalCare();
     else if (name == "compact_faults") compactFaults();
     else if (name == "compact_timers") compactTimers();
     else if (name == "egg_transfer") eggTransferReceipts();
