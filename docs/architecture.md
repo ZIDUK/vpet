@@ -279,13 +279,13 @@ F2a agrega
 [perfil individual](individual-profile.md): identidad/sexo/padres por composicion,
 entropia inyectada y migracion de partida/reserva. La coleccion, aprendizaje y
 breeding se describen en el [contrato local](collection-learning-breeding.md).
-La [vista grafica actual de Archify](../.archify/architecture-vpet-20261005/review-3/vpet-architecture.html)
-resume los componentes vigentes, sus relaciones de ejecucion y persistencia,
-la ruta local de creacion y los limites implementados/pendientes del breeding.
-La fuente editable es `.archify/architecture-vpet-20261005/candidate.json`;
-`review-2` conserva la instantanea historica. Archify valido la composicion,
-entrega y procedencia, pero la captura visual automatizada queda pendiente por
-un error del canal Chrome DevTools; no se declara inspeccion visual aprobada.
+La [vista grafica actual de Archify](../.archify/architecture-vpet-20261028-132049/vpet-architecture.html)
+resume persistencia, locus sexual, supervivencia, breeding local y los limites
+de la transferencia BLE aun no integrada. La fuente editable es
+`.archify/architecture-vpet-20261028-132049/candidate.json`; la revision del
+2026-10-05 se conserva como instantanea historica. Archify valido composicion,
+entrega y procedencia. El browser-check queda fallido por terminacion del canal
+Chrome DevTools antes de recibir datos; no se declara inspeccion visual aprobada.
 
 ```text
 assets/*.png + src/data

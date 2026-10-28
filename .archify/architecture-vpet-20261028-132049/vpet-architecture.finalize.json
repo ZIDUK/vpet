@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-28T18:22:57.204Z",
+  "specification": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/candidate.json",
+    "sha256": "f97ae14e6856434243c28727fb6aa322e483568209538080652a6391a60059f8",
+    "bytes": 5989
+  },
+  "artifact": {
+    "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+    "sha256": "5481ee64476868f150f3c386a5c893d46c19c79ac43a1620d0dcd8c0064e0e93",
+    "bytes": 776137
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/Users/jonathanpardofuentes/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/candidate.json",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "f97ae14e6856434243c28727fb6aa322e483568209538080652a6391a60059f8",
+          "bytes": 5989
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 897,
+      "command": [
+        "/Users/jonathanpardofuentes/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/candidate.json",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "cc5f0c7b-4f29-4d11-ae82-f36a415a8965",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/candidate.json",
+        "output": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "specification": {
+          "sha256": "f97ae14e6856434243c28727fb6aa322e483568209538080652a6391a60059f8",
+          "bytes": 5989
+        },
+        "artifact": {
+          "sha256": "5481ee64476868f150f3c386a5c893d46c19c79ac43a1620d0dcd8c0064e0e93",
+          "bytes": 776137
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "evidence": {
+          "verified": true,
+          "repository": "https://github.com/ZIDUK/vpet",
+          "revision": "331f0dc103230c2af8833a6bf73794d113aa727f",
+          "references": 24
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 135,
+      "command": [
+        "/Users/jonathanpardofuentes/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "check",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "artifact": {
+          "sha256": "5481ee64476868f150f3c386a5c893d46c19c79ac43a1620d0dcd8c0064e0e93",
+          "bytes": 776137
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 9,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 6.305084745762712,
+            "maxBends": 4,
+            "routesOverSuggestedBends": 2,
+            "maxStretch": 1.162,
+            "routesOverSuggestedStretch": 0,
+            "minSegmentPx": 17,
+            "minInteriorSegmentPx": 17,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": [
+              {
+                "relationship": {
+                  "from": "app",
+                  "to": "collection-ui",
+                  "label": "Despacha acciones",
+                  "collectionIndex": 4,
+                  "artifactIndex": 5
+                },
+                "bends": 3,
+                "stretch": 1
+              },
+              {
+                "relationship": {
+                  "from": "sdd",
+                  "to": "creator",
+                  "label": "Specs y checks locales",
+                  "collectionIndex": 12,
+                  "artifactIndex": 13
+                },
+                "bends": 4,
+                "stretch": 1.162,
+                "directCorridorBlockers": [
+                  {
+                    "id": "core",
+                    "label": "Core de contenido",
+                    "box": [
+                      640,
+                      820,
+                      200,
+                      74
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 80,
+            "emptyTopRatio": 0.083,
+            "occupiedTop": 80,
+            "viewBoxTop": 0,
+            "canvasHeight": 965,
+            "typicalNodeHeight": 74,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "legacy-930",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 930,
+            "actualBudgetPx": 930,
+            "limit": "legacy",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": false,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": null,
+              "from": "input",
+              "to": "app"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 6.305084745762712,
+            "semanticTextCount": 39
+          },
+          "issues": []
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "cc5f0c7b-4f29-4d11-ae82-f36a415a8965"
+      }
+    },
+    "browser-check": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": 4984,
+      "command": [
+        "/Users/jonathanpardofuentes/.nvm/versions/node/v22.19.0/bin/node",
+        "/Users/jonathanpardofuentes/.agents/skills/archify/bin/archify.mjs",
+        "browser-check",
+        "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "fail",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "cc5f0c7b-4f29-4d11-ae82-f36a415a8965",
+        "artifact": {
+          "path": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+          "sha256": "5481ee64476868f150f3c386a5c893d46c19c79ac43a1620d0dcd8c0064e0e93",
+          "bytes": 776137
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        },
+        "diagnostics": [
+          {
+            "code": "viewer/browser-check-runtime",
+            "severity": "error",
+            "message": "browser-check could not complete its Chrome inspection.",
+            "subject": {
+              "artifact": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html"
+            },
+            "evidence": {
+              "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=4463, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+            },
+            "supportedFixes": [
+              "resolve the reported Chrome inspection error, then rerun browser-check"
+            ]
+          }
+        ],
+        "containment": {
+          "status": "fail",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": []
+        },
+        "themeStates": {
+          "status": "fail",
+          "viewports": []
+        },
+        "readability": {
+          "status": "fail",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": []
+        },
+        "viewerChrome": {
+          "status": "fail",
+          "viewports": []
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "vpet-architecture.browser-check.json",
+          "files": []
+        },
+        "error": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=4463, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      }
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools read pipe failed: stream ended\nChrome process: still running.\nChrome transport: Node v22.19.0, libuv 1.51.0, darwin; pid=4463, exitCode=null, signalCode=null.\nChrome read pipe: readable=false, ended=true, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=true, ended=false, destroyed=false, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.finalize.json",
+    "summaryReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.finalize-summary.json",
+    "browserCheckReceipt": "/Users/jonathanpardofuentes/Documents/Arduino/vPet/.archify/architecture-vpet-20261028-132049/vpet-architecture.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "browser-check",
+  "finishedAt": "2026-10-28T18:23:03.401Z",
+  "durationMs": 6196,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "cache-unavailable"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "vPet: arquitectura actual",
+    "output": ".archify/architecture-vpet-20261028-132049/vpet-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/ZIDUK/vpet.git",
+      "revision": "331f0dc103230c2af8833a6bf73794d113aa727f"
+    }
+  },
+  "components": [
+    {"id":"input","type":"external","label":"Dos botones","sublabel":"GPIO0 / GPIO35","pos":[40,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/BoardInput.cpp","line":1,"end_line":52}]},
+    {"id":"app","type":"backend","label":"App ESP32","sublabel":"Estado, cuidado y supervivencia","pos":[340,80],"size":[220,74],"sources":[{"path":"firmware/t-display/src/App.cpp","line":33,"end_line":50},{"path":"firmware/t-display/src/App.cpp","line":860,"end_line":891}]},
+    {"id":"render","type":"frontend","label":"TFT y Renderer","sublabel":"Paneles de juego y coleccion","pos":[700,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/Renderer.cpp","line":1,"end_line":40},{"path":"firmware/t-display/src/CollectionView.cpp","line":85,"end_line":145}]},
+    {"id":"collection-ui","type":"frontend","label":"Panel de coleccion","sublabel":"Cruce y descarte","pos":[40,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/CollectionPanel.cpp","line":203,"end_line":247},{"path":"firmware/t-display/src/CollectionPanel.cpp","line":298,"end_line":330}]},
+    {"id":"nvs","type":"database","label":"NVS","sublabel":"Estado, preferencias y journal care","pos":[640,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/NvsKeyValueStore.cpp","line":1,"end_line":88},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CareJournal.h","line":60,"end_line":95}]},
+    {"id":"assets","type":"database","label":"LittleFS assets","sublabel":"Recursos VPA1 de ejecucion","pos":[940,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/AssetStore.cpp","line":1,"end_line":70}]},
+    {"id":"collection-store","type":"backend","label":"CollectionStore","sublabel":"Huevos y recibos atomicos","pos":[340,440],"size":[200,74],"sources":[{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":509,"end_line":541},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":553,"end_line":594}]},
+    {"id":"save-worker","type":"backend","label":"SaveTask ESP32","sublabel":"Un trabajo FreeRTOS a la vez","pos":[340,260],"size":[200,74],"sources":[{"path":"firmware/t-display/include/vpet/FreeRtosSaveTask.h","line":8,"end_line":46},{"path":"firmware/t-display/src/App.cpp","line":42,"end_line":49}]},
+    {"id":"collection-fs","type":"database","label":"Coleccion LittleFS","sublabel":"Generaciones y cuerpos VPCL","pos":[340,620],"size":[200,74],"sources":[{"path":"firmware/t-display/src/LittleFsCollectionRepository.cpp","line":1,"end_line":70}]},
+    {"id":"hub","type":"backend","label":"vPet Hub local","sublabel":"Servidor loopback y API","pos":[40,820],"size":[200,74],"sources":[{"path":"scripts/hub_server.py","line":66,"end_line":105},{"path":"scripts/hub_server.py","line":106,"end_line":138}]},
+    {"id":"creator","type":"backend","label":"Crear vPet","sublabel":"Borradores y ZIP; no instala","pos":[340,820],"size":[200,74],"sources":[{"path":"scripts/hub_creator.py","line":1,"end_line":20},{"path":"scripts/hub_creator.py","line":230,"end_line":260},{"path":"web/hub/creator.js","line":1,"end_line":80}]},
+    {"id":"core","type":"backend","label":"Core de contenido","sublabel":"PetDefinition compartido","pos":[640,820],"size":[200,74],"sources":[{"path":"src/core/content.py","line":1,"end_line":80},{"path":"firmware/t-display/lib/vpet_core/src/vpet/PetDefinition.h","line":1,"end_line":47}]},
+    {"id":"sdd","type":"backend","label":"Proceso SDD local","sublabel":"Specs, REQ/AC y evidencia","pos":[940,820],"size":[200,74],"sources":[{"path":"scripts/spec_check.py","line":1,"end_line":15},{"path":"scripts/verify_local.py","line":1,"end_line":35}]}
+  ],
+  "connections": [
+    {"from":"input","to":"app","label":"Eventos"},
+    {"from":"app","to":"render","label":"Actualiza pantalla"},
+    {"from":"app","to":"nvs","label":"Lee y guarda estado","fromSide":"right","toSide":"left"},
+    {"from":"render","to":"assets","label":"Lee recursos"},
+    {"from":"app","to":"collection-ui","label":"Despacha acciones","fromSide":"bottom","toSide":"right"},
+    {"from":"collection-ui","to":"collection-store","label":"Cruza, activa o desecha"},
+    {"from":"collection-store","to":"collection-fs","label":"Commit atomico"},
+    {"from":"collection-store","to":"nvs","label":"Journal care","fromSide":"right","toSide":"bottom"},
+    {"from":"app","to":"save-worker","label":"Encola snapshot"},
+    {"from":"save-worker","to":"collection-store","label":"Ejecuta callback de persistencia"},
+    {"from":"creator","to":"hub","label":"HTTP API"},
+    {"from":"creator","to":"core","label":"PetDefinition"},
+    {"from":"sdd","to":"creator","label":"Specs y checks locales","labelDy":-55}
+  ],
+  "cards": [
+    {"dot":"emerald","title":"Implementado","items":["BACK permite volver a Home durante retry sin habilitar mutaciones","Huevo no activo se descarta con confirmacion y commit durable","Cruce local persiste padres, ADN, sexo DNA4 e incubacion; el huevo muestra ?","Hambre y energia en cero tienen gracia de 12 h y recuperacion; lesiones conservan sus limites"]},
+    {"dot":"amber","title":"Pendiente / no incluido","items":["Transferencia BLE externa: falta GATT, sala/confirmacion en pantalla y retiro del emisor tras ACK","No hay validacion de radio entre dos placas ni aceptacion fisica de supervivencia","Balance del piloto de muerte requiere prueba de juego"]},
+    {"dot":"cyan","title":"Plataforma","items":["ESP32 T-Display / Arduino / PlatformIO; Pico W es ruta legada","NVS conserva estado y journal; LittleFS contiene assets y coleccion","BLE es opcional y WiFi sigue deshabilitado"]}
+  ]
+}
