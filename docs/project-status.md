@@ -1,8 +1,8 @@
 # Estado y alcance del proyecto
 
-## Estado vigente: 2026-10-27
+## Estado vigente: 2026-10-28
 
-## Guardado Compacto: Validado Localmente, Pendiente De Carga
+## Guardado Compacto: Cargado, Prueba De Acciones Pendiente
 
 El usuario aprobo el redisenio tras rechazar la fluidez de 643ca42. Comida,
 Mochila y luz usan un journal absoluto acotado en NVS cuando Coleccion esta
@@ -17,13 +17,35 @@ Validacion aislada sin Creator: 2027 pruebas completas aprobadas en 310.10 s,
 final sin hallazgos pendientes tras corregir vista estructural obsoleta y
 tiempo de cuidado diferido. Build 7.768 s: RAM estatica 53404, app 1114965 y
 bin 1121536 bytes. Bin/ELF y registro local: out/compact-care/.
-SHA-256 del firmware:
+SHA-256 de la compilacion local del 2026-10-27:
 `ce2734a17a52599679d48ae18a2fb1e010a8575fa71ff5505f180851acdf4cfc`.
 
-No se ha cargado esta revision. La placa mantiene 643ca42, cuya fluidez fue
-rechazada. No se crean mascotas, consumen items ni restauran respaldos por el
-agente. Creator queda fuera de la entrega. Tampoco se certifican tiempos de
-respuesta, memoria bajo carga, radio BLE ni fluidez hasta medirlos en hardware.
+El 2026-10-28 el usuario autorizo cargar y medir. Se reconstruyo ce68348 desde
+git archive, sin Creator: build limpio 16.818 s, preflash repetido 3.633 s y
+57 focalizadas aprobadas en 16.10 s. El binario solo difiere del anterior en
+la huella ELF embebida y el SHA de imagen; sus demas bytes coinciden. SHA cargado:
+`ad31882cb3e863d6b2d1dc2197c56b7a07e26eee98989a38a0c8737e16bab153`.
+
+Primer intento de respaldo a 921600 fallo por ruido serie antes de escribir.
+Se repitio a 115200 con respaldo nuevo verificado en
+out/board-backups/compact-care-20261028-080406/; se preservan ambos registros.
+Solo se escribieron 1121536 bytes de app en 0x10000. Antes de arrancar se
+verificaron hashes de app y de NVS, LittleFS, bootloader y particiones intactos.
+READY: heap libre 80692, minimo 71160, flash 16 MiB y manifest 1.
+
+La herramienta verifico carga/arranque pero termino con ASSET_STORAGE_OVERFLOW:
+LittleFS usado 11829248/12451840, libres 622592 bytes (5%). Es exactamente el
+mismo uso observado antes con 643ca42, no espacio consumido por esta carga.
+No se borra ningun archivo ni se restaura una partida antigua para resolverlo.
+El margen de almacenamiento sigue por debajo del criterio del 10%.
+
+Observacion posterior de 20.099 s, sin comandos ni entradas: un arranque
+registrado al abrir USB, una muestra runtime, heap libre 80248/minimo 71160,
+loop maximo 524853 us, BLE=0 y cero lineas fatales. Una muestra no acredita
+estabilidad prolongada ni duracion de guardados: todavia no hay consumos de
+prueba ni confirmacion visual de fluidez en este firmware. No se crean mascotas,
+consumen items ni restauran respaldos por el agente. Creator queda fuera de la
+entrega. Siguen pendientes tiempos de acciones, memoria bajo carga y radio BLE.
 El modo legacy sin Coleccion y los checkpoints estructurales siguen usando
 su ruta completa; un downgrade requiere un checkpoint total previo.
 [Plan y pruebas](superpowers/plans/2026-10-27-compact-care-journal.md).

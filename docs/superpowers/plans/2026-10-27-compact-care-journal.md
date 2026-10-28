@@ -1,7 +1,8 @@
 # Compact Care Journal Implementation
 
 **Approved:** The user approved compact transactional care persistence after the
-board measured 4.2-7 second saves with frozen animation. No new flash is approved.
+board measured 4.2-7 second saves with frozen animation. Implementation approval
+did not include flashing; separate flash approval was received on 2026-10-28.
 
 **Design:** An optional portable CareJournal stores one bounded absolute active
 snapshot in the existing NVS namespace. It binds base Collection generation,
@@ -64,8 +65,8 @@ Firmware build: 7.768 s, static RAM 53404 bytes, app 1114965 bytes, binary
 Build and full-suite workspace exclude Creator; owned source/test checksums
 match that isolated workspace. Artifacts: `out/compact-care/`.
 Full isolated suite: 2027 passed in 310.10 s, with existing deprecation/palette
-warnings. No board deployment occurred. The prepared artifact is not physical
-acceptance; the last on-board fluency result remains failed.
+warnings. No board deployment had occurred at that local-validation stage.
+The prepared artifact is not physical acceptance; see the subsequent load below.
 
 ## Next Physical Gate
 
@@ -78,3 +79,34 @@ only after settled confirmation and check exact food/stock/sleep state without
 first forcing a manual full save, which would hide a journal-recovery defect.
 Do not automate consumptions or create/switch/breed pets for this gate. BLE,
 long sessions and full structural workflows remain separate acceptance checks.
+
+## Deployment: 2026-10-28
+
+The user explicitly approved loading and measuring. Recreated the isolated
+workspace from git archive ce68348 after the temporary workspace disappeared;
+Creator remains excluded. Clean build 16.818 s, preflash build 3.633 s, focused
+57 tests passed in 16.10 s. Static RAM/app/bin sizes are unchanged. Only the
+embedded ELF hash and trailing image hash differ from the original binary.
+Loaded SHA-256:
+`ad31882cb3e863d6b2d1dc2197c56b7a07e26eee98989a38a0c8737e16bab153`.
+
+The first backup attempt at 921600 failed before any flash write. The retry at
+115200 created a fresh verified backup in
+`out/board-backups/compact-care-20261028-080406/`. LittleFS was reconstructed from
+a verified baseline plus 11 device-read changed blocks, then matched against
+the current full-device filesystem digest. No old save was restored. Only app
+0x10000/1121536 bytes was written; app and unchanged boot/partition/NVS/LittleFS
+digests were verified before reset. READY: heap free 80692, minimum 71160,
+16 MiB flash, manifest 1.
+
+The script exited nonzero after verified boot because the real LittleFS usage
+leaves 622592 bytes/5% free, below the 10% storage margin. The previous firmware
+reported exactly the same 11829248/12451840 usage. This is not a new allocation
+or a failed app write; it remains an unresolved capacity gate, not waived or
+fixed by deleting files. Backup verification.json retains this diagnostic.
+
+Read-only capture `out/compact-care/capture-20261028-080817.json`: 20.099 s,
+zero sent commands/inputs, one startup sequence observed on opening USB, one
+runtime sample, no fatal lines, heap free 80248/minimum 71160, loop maximum
+524853 us, BLE=0. This does not establish sustained liveness, action latency,
+radio behavior or visual fluency. User-driven care tests remain pending.

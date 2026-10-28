@@ -34,8 +34,11 @@ modo sin Coleccion conserva el guardado legacy existente. Para volver a un
 firmware sin soporte del journal debe completarse primero un checkpoint total;
 de otro modo ese firmware no veria el ultimo cuidado. NVS tambien escribe flash
 y puede hacer garbage collection: eliminar escrituras LittleFS por accion no
-certifica fluidez en hardware. Esta revision requiere nueva validacion fisica
-y autorizacion de carga separada. Ver [plan](superpowers/plans/2026-10-27-compact-care-journal.md).
+certifica fluidez en hardware. Esta revision se cargo el 2026-10-28 con
+autorizacion separada y hashes protegidos verificados; siguen pendientes la
+prueba de acciones y la aceptacion visual. El margen LittleFS real es 5%, igual
+que antes de la carga y por debajo del criterio de 10%; no se limpia ni migra
+el filesystem automaticamente. Ver [plan](superpowers/plans/2026-10-27-compact-care-journal.md).
 
 ## Cuidado Responsivo Y Menos I/O: Revision Cargada 2026-10-27
 
