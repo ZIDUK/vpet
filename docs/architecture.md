@@ -1,5 +1,55 @@
 # Arquitectura de software
 
+## Recuperacion Y Ciclo De Vida De Huevos: 2026-10-28
+
+`App` conserva la propiedad del estado vivo y del TFT. Si un checkpoint no
+puede confirmarse, la pantalla de reintento permite volver visualmente a Home
+con BACK mientras los reintentos continúan. La persistencia sigue pendiente y
+las acciones que mutan estado permanecen bloqueadas hasta que el almacenamiento
+confirma el resultado; volver a Home no descarta, duplica ni da por guardada la
+accion. Esto también cubre la recuperación tras una batalla. La implementación
+no convierte el guardado en un servicio de dominio ni reejecuta la batalla.
+
+`CollectionStore::discardEgg` elimina mediante el mismo commit atomico de la
+coleccion solo huevos reservados: requiere confirmacion explicita, no admite el
+slot activo y no muta memoria durable cuando falla la transaccion. La vista de
+coleccion expone la confirmacion/cancelacion y muestra sexo desconocido (`?`)
+para huevos. Los individuos nacidos conservan sexo M/F de `PetProfile`; ese
+valor actualmente es metadato del perfil, no un locus heredado en los cuatro
+bytes de ADN. La herencia genetica del sexo queda como requisito propuesto y
+necesita especificacion de datos y migracion compatible antes de implementarse.
+
+El cruce local ya crea una cria en forma de huevo cuando ambos padres son
+elegibles y hay plaza: cuerpo con ADN heredado, referencias a ambos padres,
+incubacion de 30 minutos y cooldown parental se confirman en la transaccion de
+coleccion. Los tests verifican el ciclo y evitan duplicar la cria ante reintento;
+esto no equivale a recepcion de huevos externos ni a un sistema de intercambio.
+El huevo de fundador es una accion separada de prueba/creacion, no representa
+un huevo recibido de otro usuario. Requisitos, criterios y limites estan en
+[`SPEC-GAME-REC-001`](superpowers/specs/2026-10-28-battle-recovery-egg-lifecycle.md).
+
+## Especificaciones Y Verificacion Local
+
+El piloto SDD mantiene `docs/requirements.json` como registro de specs,
+requisitos y entregas; `docs/superpowers/specs/` expresa comportamiento y
+aceptacion, y `docs/superpowers/plans/` registra pasos y evidencia. `scripts/`
+provee chequeo estructural y ejecucion local, no una puerta remota: no hay
+GitHub Actions ni hooks, y los estados de aprobacion no se elevan solos. Las
+pruebas automatizadas no son aprobacion humana ni validacion fisica. El piloto
+abarca Creator y el proceso nuevo; la historia previa migra gradualmente, sin
+fabricar aprobaciones retrospectivas. Detalle operativo en
+[`docs/spec-driven-development.md`](spec-driven-development.md).
+
+## Creator Hub: Frontera De Datos
+
+El Hub corre como servidor local loopback. El catalogo/importador y el asistente
+Creator usan `PetDefinition` para validar contenido sin duplicar reglas del
+dominio. Creator mantiene borrador y recursos en estado de autor, con preview
+y exportacion ZIP; no publica, instala ni concede huevos/items. Web Serial no
+abre el puerto ni instala contenido. Se conserva la frontera entre autoría,
+validacion, exportacion y eventual instalacion de firmware/paquetes. Ver
+[`vpet-creator.md`](vpet-creator.md) y [`vpet-hub.md`](vpet-hub.md).
+
 ## Journal Compacto De Cuidado: 2026-10-27
 
 El usuario aprobo separar comida, items y luz del checkpoint completo. Con
