@@ -266,4 +266,4 @@ Previews reproducibles con los assets reales:
 - [Decisiones: cuatro mascotas, stock compartido, crecimiento y breeding](docs/product-decisions-2026-10-23.md)
 - [Seguridad y proteccion del firmware](docs/security.md)
 - [Estado, alcance y pendientes](docs/project-status.md)
-- [Arquitectura visual interactiva (Archify)](.archify/architecture-vpet-20261005/review-2/vpet-architecture.html)
+- [Arquitectura visual interactiva actual (Archify)](.archify/architecture-vpet-20261005/review-3/vpet-architecture.html)

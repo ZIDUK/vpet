@@ -3,284 +3,46 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "vPet: arquitectura actual",
-    "output": ".archify/architecture-vpet-20261005/vpet-architecture.html",
+    "output": ".archify/architecture-vpet-20261005/review-3/vpet-architecture.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/ZIDUK/vpet.git",
-      "revision": "3b98843c75804b77b4a1ff737968aed49db51c58"
+      "revision": "9db4b63f1799f0138cbc1849833145c29c8d9ca4"
     }
   },
   "components": [
-    {
-      "id": "input",
-      "type": "external",
-      "label": "Dos botones",
-      "sublabel": "GPIO0 / GPIO35",
-      "pos": [
-        40,
-        80
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/BoardInput.cpp"
-        }
-      ]
-    },
-    {
-      "id": "app",
-      "type": "backend",
-      "label": "App ESP32",
-      "sublabel": "Estado y navegacion",
-      "pos": [
-        330,
-        80
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/App.cpp"
-        }
-      ]
-    },
-    {
-      "id": "render",
-      "type": "frontend",
-      "label": "Pantalla TFT",
-      "sublabel": "Renderer / Panels",
-      "pos": [
-        620,
-        80
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/Renderer.cpp"
-        }
-      ]
-    },
-    {
-      "id": "nvs",
-      "type": "database",
-      "label": "NVS",
-      "sublabel": "Estado y preferencias",
-      "pos": [
-        330,
-        280
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/NvsKeyValueStore.cpp"
-        }
-      ]
-    },
-    {
-      "id": "assets",
-      "type": "database",
-      "label": "LittleFS",
-      "sublabel": "Assets VPA1",
-      "pos": [
-        620,
-        280
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/AssetStore.cpp"
-        }
-      ]
-    },
-    {
-      "id": "ble",
-      "type": "backend",
-      "label": "Bluetooth LE",
-      "sublabel": "NimBLE / HID / DIS",
-      "pos": [
-        40,
-        480
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/BleService.cpp"
-        }
-      ]
-    },
-    {
-      "id": "phone",
-      "type": "external",
-      "label": "Telefono",
-      "sublabel": "Cliente BLE externo",
-      "pos": [
-        40,
-        680
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "firmware/t-display/src/BleService.cpp"
-        }
-      ]
-    },
-    {
-      "id": "build",
-      "type": "backend",
-      "label": "Pipeline de assets",
-      "sublabel": "PNG a BMP a VPA",
-      "pos": [
-        620,
-        480
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "scripts/build_tdisplay.py"
-        }
-      ]
-    },
-    {
-      "id": "sim",
-      "type": "frontend",
-      "label": "Simulador Python",
-      "sublabel": "Pygame / modelo Python",
-      "pos": [
-        620,
-        680
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "scripts/sim.py"
-        }
-      ]
-    },
-    {
-      "id": "combat",
-      "type": "backend",
-      "label": "Combate portable",
-      "sublabel": "Python / C++ contract",
-      "pos": [
-        330,
-        680
-      ],
-      "size": [
-        200,
-        74
-      ],
-      "sources": [
-        {
-          "path": "scripts/sim.py"
-        }
-      ]
-    }
+    {"id":"input","type":"external","label":"Dos botones","sublabel":"GPIO0 / GPIO35","pos":[40,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/BoardInput.cpp","line":1,"end_line":52}]},
+    {"id":"app","type":"backend","label":"App ESP32","sublabel":"Estado, navegacion y recuperacion","pos":[340,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/App.cpp","line":33,"end_line":50},{"path":"firmware/t-display/src/App.cpp","line":703,"end_line":729}]},
+    {"id":"render","type":"frontend","label":"TFT y Renderer","sublabel":"Paneles de juego y coleccion","pos":[640,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/Renderer.cpp","line":1,"end_line":40},{"path":"firmware/t-display/src/CollectionView.cpp","line":85,"end_line":145}]},
+    {"id":"collection-ui","type":"frontend","label":"Panel de coleccion","sublabel":"Perfiles, preferencias y breeding","pos":[40,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/CollectionPanel.cpp","line":32,"end_line":80},{"path":"firmware/t-display/src/CollectionPanel.cpp","line":210,"end_line":240},{"path":"firmware/t-display/src/CollectionPanel.cpp","line":308,"end_line":326}]},
+    {"id":"nvs","type":"database","label":"NVS","sublabel":"Estado, preferencias y journal care","pos":[640,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/NvsKeyValueStore.cpp","line":1,"end_line":88},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CareJournal.h","line":60,"end_line":95}]},
+    {"id":"assets","type":"database","label":"LittleFS assets","sublabel":"Recursos VPA1 de ejecucion","pos":[940,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/AssetStore.cpp","line":1,"end_line":70}]},
+    {"id":"collection-store","type":"backend","label":"CollectionStore","sublabel":"Snapshots y transacciones atomicas","pos":[340,440],"size":[200,74],"sources":[{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":297,"end_line":365},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":486,"end_line":529}]},
+    {"id":"save-worker","type":"backend","label":"SaveTask ESP32","sublabel":"Un trabajo FreeRTOS a la vez","pos":[340,260],"size":[200,74],"sources":[{"path":"firmware/t-display/include/vpet/FreeRtosSaveTask.h","line":8,"end_line":46},{"path":"firmware/t-display/src/App.cpp","line":42,"end_line":49}]},
+    {"id":"collection-fs","type":"database","label":"Coleccion LittleFS","sublabel":"Generaciones y cuerpos VPCL","pos":[340,620],"size":[200,74],"sources":[{"path":"firmware/t-display/src/LittleFsCollectionRepository.cpp","line":1,"end_line":70}]},
+    {"id":"hub","type":"backend","label":"vPet Hub local","sublabel":"Servidor loopback y API","pos":[40,820],"size":[200,74],"sources":[{"path":"scripts/hub_server.py","line":66,"end_line":105},{"path":"scripts/hub_server.py","line":106,"end_line":138}]},
+    {"id":"creator","type":"backend","label":"Crear vPet","sublabel":"Borradores y ZIP; no instala","pos":[340,820],"size":[200,74],"sources":[{"path":"scripts/hub_creator.py","line":1,"end_line":20},{"path":"scripts/hub_creator.py","line":230,"end_line":260},{"path":"web/hub/creator.js","line":1,"end_line":80}]},
+    {"id":"core","type":"backend","label":"Core de contenido","sublabel":"PetDefinition compartido","pos":[640,820],"size":[200,74],"sources":[{"path":"src/core/content.py","line":1,"end_line":80},{"path":"firmware/t-display/lib/vpet_core/src/vpet/PetDefinition.h","line":1,"end_line":47}]},
+    {"id":"sdd","type":"backend","label":"Proceso SDD local","sublabel":"Specs, REQ/AC y evidencia","pos":[940,820],"size":[200,74],"sources":[{"path":"scripts/spec_check.py","line":1,"end_line":15},{"path":"scripts/verify_local.py","line":1,"end_line":35}]}
   ],
   "connections": [
-    {
-      "from": "input",
-      "to": "app",
-      "label": "Eventos"
-    },
-    {
-      "from": "app",
-      "to": "render",
-      "label": "Dibuja"
-    },
-    {
-      "from": "app",
-      "to": "nvs",
-      "label": "Guarda / carga"
-    },
-    {
-      "from": "render",
-      "to": "assets",
-      "label": "Lee frames"
-    },
-    {
-      "from": "app",
-      "to": "ble",
-      "label": "Activa / apaga"
-    },
-    {
-      "from": "phone",
-      "to": "ble",
-      "label": "Conexion BLE"
-    },
-    {
-      "from": "build",
-      "to": "assets",
-      "label": "Empaca VPA"
-    },
-    {
-      "from": "build",
-      "to": "sim",
-      "label": "BMP intermedio"
-    },
-    {
-      "from": "combat",
-      "to": "sim",
-      "label": "Tech / practica"
-    },
-    {
-      "from": "combat",
-      "to": "app",
-      "label": "Pendiente: adaptar firmware"
-    }
+    {"from":"input","to":"app","label":"Eventos"},
+    {"from":"app","to":"render","label":"Actualiza pantalla"},
+    {"from":"app","to":"nvs","label":"Lee y guarda estado","fromSide":"right","toSide":"left"},
+    {"from":"render","to":"assets","label":"Lee recursos"},
+    {"from":"app","to":"collection-ui","label":"Despacha acciones","fromSide":"bottom","toSide":"right"},
+    {"from":"collection-ui","to":"collection-store","label":"Cruza, activa o desecha"},
+    {"from":"collection-store","to":"collection-fs","label":"Commit atomico"},
+    {"from":"collection-store","to":"nvs","label":"Journal care","fromSide":"right","toSide":"bottom"},
+    {"from":"app","to":"save-worker","label":"Encola snapshot"},
+    {"from":"save-worker","to":"collection-store","label":"Ejecuta callback de persistencia"},
+    {"from":"creator","to":"hub","label":"HTTP API"},
+    {"from":"creator","to":"core","label":"PetDefinition"},
+    {"from":"sdd","to":"creator","label":"Specs y checks locales","labelDy":-55}
   ],
   "cards": [
-    {
-      "dot": "emerald",
-      "title": "Confirmado por el usuario",
-      "items": [
-        "2026-10-05: BLE visible desde telefono",
-        "WiFi fuera del menu; mejor fluidez"
-      ]
-    },
-    {
-      "dot": "amber",
-      "title": "Pendiente",
-      "items": [
-        "Catalogo y paquetes por definir",
-        "Nuevos pets por decidir",
-        "Intro sin despliegue; paridad parcial",
-        "Combate firmware y progreso NVS pendientes"
-      ]
-    },
-    {
-      "dot": "cyan",
-      "title": "Desarrollo",
-      "items": [
-        "Contrato de combate probado en Python y C++",
-        "La carga USB requiere ejecutar deploy",
-        "Visor Archify con controles en ingles"
-      ]
-    }
+    {"dot":"emerald","title":"Implementado","items":["BACK permite volver a Home durante retry sin habilitar mutaciones","Un huevo no activo se desecha con confirmacion y commit durable","Breeding crea un huevo con padres, genes e incubacion en la transaccion"]},
+    {"dot":"amber","title":"Pendiente / no incluido","items":["Sexo aun es metadato M/F del perfil, no locus heredado en ADN","No hay recepcion ni intercambio de huevos externos","El piloto SDD es local; no instala, publica ni crea CI remoto"]},
+    {"dot":"cyan","title":"Plataforma","items":["ESP32 T-Display / Arduino / PlatformIO; Pico W es ruta legada","NVS conserva estado y journal; LittleFS contiene assets y coleccion","BLE es opcional y WiFi sigue deshabilitado"]}
   ]
 }
