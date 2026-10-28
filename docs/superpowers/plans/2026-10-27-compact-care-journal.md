@@ -110,3 +110,21 @@ zero sent commands/inputs, one startup sequence observed on opening USB, one
 runtime sample, no fatal lines, heap free 80248/minimum 71160, loop maximum
 524853 us, BLE=0. This does not establish sustained liveness, action latency,
 radio behavior or visual fluency. User-driven care tests remain pending.
+
+## User Action Measurement: 2026-10-28
+
+Capture `out/compact-care/capture-20261028-081632.json`: 180.110 s, 17 runtime
+samples, 143 user inputs, no sent commands, one startup on opening serial,
+no fatal lines or restarts between runtime samples. Four food actions present
+in 84 ms and save in 272/286/302/297 ms. Two light actions present in 134/135 ms
+and save in 278/341 ms. All six commits are settled. The earlier measured saves
+took 4175-7016 ms. The user reports "ahora si funciona perfecto muy bien".
+Visible improvement is accepted by the user; no effective backpack commit was
+captured, so its hardware latency remains unmeasured rather than inferred.
+
+Residual gates remain: minimum heap 37652 bytes is below the 48 KiB threshold,
+although free heap recovers to 70360-70368 and worker stack minimum is 4400.
+A loop peak of 7622063 us near uptime 142014 lies outside the traced care-save
+jobs; phase instrumentation is insufficient to assign its cause. No radio
+test (BLE=0), long-session acceptance or physical journal-only reboot check.
+Do not call all firmware latency or memory safety accepted on this evidence.

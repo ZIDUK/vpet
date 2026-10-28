@@ -2,7 +2,7 @@
 
 ## Estado vigente: 2026-10-28
 
-## Guardado Compacto: Cargado, Prueba De Acciones Pendiente
+## Guardado Compacto: Comida Y Luz Aceptadas; Memoria Pendiente
 
 El usuario aprobo el redisenio tras rechazar la fluidez de 643ca42. Comida,
 Mochila y luz usan un journal absoluto acotado en NVS cuando Coleccion esta
@@ -39,13 +39,29 @@ mismo uso observado antes con 643ca42, no espacio consumido por esta carga.
 No se borra ningun archivo ni se restaura una partida antigua para resolverlo.
 El margen de almacenamiento sigue por debajo del criterio del 10%.
 
-Observacion posterior de 20.099 s, sin comandos ni entradas: un arranque
+Observacion inicial de 20.099 s, sin comandos ni entradas: un arranque
 registrado al abrir USB, una muestra runtime, heap libre 80248/minimo 71160,
 loop maximo 524853 us, BLE=0 y cero lineas fatales. Una muestra no acredita
-estabilidad prolongada ni duracion de guardados: todavia no hay consumos de
-prueba ni confirmacion visual de fluidez en este firmware. No se crean mascotas,
-consumen items ni restauran respaldos por el agente. Creator queda fuera de la
-entrega. Siguen pendientes tiempos de acciones, memoria bajo carga y radio BLE.
+estabilidad prolongada ni duracion de guardados. En ese registro inicial no
+hubo consumos de prueba. No se crean mascotas, consumen items ni restauran
+respaldos por el agente. Creator queda fuera de la entrega.
+
+Prueba de acciones 20261028-081632: captura 180.110 s, 143 entradas del usuario,
+17 muestras runtime, cero comandos enviados y cero lineas fatales/reinicios
+entre muestras. Se observa un arranque al abrir USB. Cuatro MEAT presentan en
+84 ms y guardan en 272/286/302/297 ms; dos cambios de luz presentan en 134/135 ms
+y guardan en 278/341 ms. Los seis commits quedan settled=1. Antes los guardados
+medidos tardaban 4175-7016 ms. El usuario confirma "ahora si funciona perfecto".
+Se acepta la mejora visual reportada, con tiempos trazados de comida y luz;
+no aparece ningun commit de item en esta captura, por lo que el tiempo de un
+consumo efectivo de Mochila sigue sin medirse.
+
+La aceptacion no cierra todo el rendimiento: heap minimo 37652 bytes, inferior
+al criterio de 48 KiB; libre recuperado 70360-70368 y pila minima del worker
+4400. Ademas hay un pico de loop de 7622063 us cerca de uptime 142014, fuera de
+los jobs de cuidado trazados. No hay instrumentacion para atribuirlo a un
+checkpoint u otra accion concreta. BLE=0: falta radio, margen de RAM, causa de
+ese pico, estabilidad larga y recuperacion fisica del journal sin checkpoint.
 El modo legacy sin Coleccion y los checkpoints estructurales siguen usando
 su ruta completa; un downgrade requiere un checkpoint total previo.
 [Plan y pruebas](superpowers/plans/2026-10-27-compact-care-journal.md).

@@ -35,8 +35,13 @@ firmware sin soporte del journal debe completarse primero un checkpoint total;
 de otro modo ese firmware no veria el ultimo cuidado. NVS tambien escribe flash
 y puede hacer garbage collection: eliminar escrituras LittleFS por accion no
 certifica fluidez en hardware. Esta revision se cargo el 2026-10-28 con
-autorizacion separada y hashes protegidos verificados; siguen pendientes la
-prueba de acciones y la aceptacion visual. El margen LittleFS real es 5%, igual
+autorizacion separada y hashes protegidos verificados. La prueba del usuario
+acepta la mejora visual; cuatro MEAT y dos cambios de luz guardan en 272-341 ms
+frente a los 4175-7016 ms anteriores. No se midio un commit efectivo de Mochila.
+El heap minimo observado de 37652 bytes y un pico de loop no atribuido de
+7622063 us fuera de esos jobs mantienen abiertos los limites de memoria y
+otros flujos sincronos; no se declara resuelta toda la latencia del firmware.
+El margen LittleFS real es 5%, igual
 que antes de la carga y por debajo del criterio de 10%; no se limpia ni migra
 el filesystem automaticamente. Ver [plan](superpowers/plans/2026-10-27-compact-care-journal.md).
 
