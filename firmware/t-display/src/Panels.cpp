@@ -263,9 +263,7 @@ void Panels::drawHelix(int16_t x, int16_t y, const uint8_t dna[4], float spin, i
 
 void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
     const int16_t x = kStatusSplitX + 2;
-    // Helix occupies the right strip (x..x+kHelixWidth). The agreed
-    // visual contract for 4/4 is kHelixWidth=40; the height stays at
-    // 68 so the code strip and the first stat row are not overlapped.
+    display_.setTextDatum(TL_DATUM);
     drawHelix(x, 58, pet.dna(), helixSpin(nowMs), kHelixWidth, 68);
     char code[20];
     if (pet.hasDna()) {
@@ -322,21 +320,18 @@ void Panels::drawDnaPage(const PetState& pet, bool spanish, uint32_t nowMs) {
         constexpr int16_t barW = kStatusDnaBarW;
         display_.fillRoundRect(rowX, y, rowW, 13, 2, kChip);
         display_.drawRoundRect(rowX, y, rowW, 13, 2, kInk);
-        // Scaled 10x10 icon (parity with sim_renderer.py). The scratch
-        // sprite is filled with the destination pixel at (x, y) so the
-        // transparent areas of the icon blend with the card chip color.
         assets_.drawFrameScaled(
             display_, icons[i], 0,
-            rowX + 2, y + 1,
-            10, 10,
-            false, -1, 50
+            rowX + 2, y,
+            12, 12,
+            false, -1, 0
         );
         display_.setTextColor(kInk, kChip);
-        drawLabel(names[i], rowX + 14, y + 1, 18, 1);
-        drawLabel(num, rowX + 34, y + 1, 18, 1);
-        snprintf(num, sizeof(num), "%u", pet.evAt(stats[i]));
+        drawLabel(names[i], rowX + 17, y + 2, 18, 1);
         display_.setTextDatum(TR_DATUM);
-        drawLabel(num, rowX + kStatusDnaEvOffset + 18, y + 1, 18, 1);
+        drawLabel(num, rowX + 55, y + 2, 18, 1);
+        snprintf(num, sizeof(num), "%u", pet.evAt(stats[i]));
+        drawLabel(num, rowX + kStatusDnaEvOffset + 18, y + 2, 18, 1);
         display_.setTextDatum(TL_DATUM);
         // Bar border: 7 px tall so the 5 px fill leaves 1 px padding
         // top and bottom.
@@ -365,12 +360,12 @@ void Panels::drawStatus(const PetState& pet, bool spanish, uint8_t page, uint32_
         const int16_t y = kStatusListY + row * (carePage ? kStatusCareRow : kStatusListRow);
         const int16_t height = carePage ? kStatusCareH : kStatusListH;
         const int16_t textY = y + (carePage ? 2 : 4);
-        const int16_t iconSize = carePage ? 10 : 12;
+        const int16_t iconSize = carePage ? 12 : 14;
         display_.fillRoundRect(x, y, kStatusListW, height, 3, kChip);
         display_.drawRoundRect(x, y, kStatusListW, height, 3, kInk);
-        assets_.drawFrameScaled(display_, icon, 0, x + 2, y + 1, iconSize, iconSize, false, -1, 65);
+        assets_.drawFrameScaled(display_, icon, 0, x + 2, carePage ? y : y + 1, iconSize, iconSize, false, -1, 0);
         display_.setTextColor(kInk, kChip);
-        drawLabel(label, x + 15, textY, carePage ? 78 : 82, 1);
+        drawLabel(label, x + (carePage ? 17 : 19), textY, carePage ? 76 : 78, 1);
         display_.setTextDatum(TR_DATUM);
         drawLabel(value, x + kStatusListW - 3, textY, carePage ? 30 : 27, 1);
         display_.setTextDatum(TL_DATUM);
@@ -433,27 +428,29 @@ void Panels::drawInventory(uint8_t selected, bool spanish, const PetState& pet) 
         if (pet.inventoryIndexAt(pos) == current) break;
     }
     const uint8_t start = inventoryWindowStart(visible, pos);
-    assets_.drawFrame(display_, copy::itemIcon(current), 0, 40, 70, false, -1, 72);
-    display_.setTextColor(kInk, kPanel);
-    display_.setTextDatum(MC_DATUM);
-    if (current>=8) {
-        String name(copy::itemName(current,spanish));
-        int split=name.length();
-        while (split>1 && display_.textWidth(name.substring(0,split),1)>88) --split;
-        if (split<static_cast<int>(name.length())) {
-            const int space=name.substring(0,split+1).lastIndexOf(' ');
-            if (space>0) split=space;
+    if (current != 6) {
+        assets_.drawFrame(display_, copy::itemIcon(current), 0, 40, 70, false, -1, 72);
+        display_.setTextColor(kInk, kPanel);
+        display_.setTextDatum(MC_DATUM);
+        if (current>=8) {
+            String name(copy::itemName(current,spanish));
+            int split=name.length();
+            while (split>1 && display_.textWidth(name.substring(0,split),1)>88) --split;
+            if (split<static_cast<int>(name.length())) {
+                const int space=name.substring(0,split+1).lastIndexOf(' ');
+                if (space>0) split=space;
+            }
+            String second=name.substring(split);
+            second.trim();
+            drawLabel(name.substring(0,split).c_str(),50,102,88,1);
+            drawLabel(second.c_str(),50,112,88,1);
+            drawLabel(copy::itemBlurb(current,spanish),50,124,88,1);
+        } else {
+            drawLabel(copy::itemName(current, spanish), 50, 104, 88, 2);
+            drawLabel(copy::itemBlurb(current, spanish), 50, 118, 88, 1);
         }
-        String second=name.substring(split);
-        second.trim();
-        drawLabel(name.substring(0,split).c_str(),50,102,88,1);
-        drawLabel(second.c_str(),50,112,88,1);
-        drawLabel(copy::itemBlurb(current,spanish),50,124,88,1);
-    } else {
-        drawLabel(copy::itemName(current, spanish), 50, 104, 88, 2);
-        drawLabel(copy::itemBlurb(current, spanish), 50, 118, 88, 1);
+        display_.setTextDatum(TL_DATUM);
     }
-    display_.setTextDatum(TL_DATUM);
     const int16_t x = kStatusSplitX + 4;
     const int16_t width = 232 - kStatusSplitX;
     const uint8_t shown = visible < kInventoryWindow ? visible : kInventoryWindow;

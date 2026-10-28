@@ -27,6 +27,7 @@ public:
     virtual bool saveCare(const PetState& pet, const Settings& settings);
     virtual bool settleCare();
     virtual bool recoverCare(const PetState& pet, const Settings& settings);
+    virtual bool recoverRejectedSave();
     bool compactCare() const { return store_.compactCare(); }
     virtual bool saveExperience(const PetState& pet, const Settings& settings,
                                 const RuntimeExperience* events, size_t count);
@@ -47,6 +48,7 @@ public:
     bool changedActive() const { return changedActive_; }
     Page page() const { return page_; }
     const CollectionState& state() const { return state_; }
+    const char* saveFailure() const { return saveFailure_; }
 
 private:
     enum class BlockReason : uint8_t { None, Sleeping, Paused, Exploring, Training,
@@ -81,5 +83,6 @@ private:
     bool enabled_ = false, failed_ = false, changedActive_ = false;
     bool careFailed_ = false, careUnsettled_ = false;
     const char* message_ = "";
+    const char* saveFailure_ = "none";
 };
 }  // namespace vpet

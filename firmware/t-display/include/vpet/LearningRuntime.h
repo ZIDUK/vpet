@@ -19,6 +19,7 @@ public:
     // Immutable and durably readable before true. A failed preparation never
     // changes any existing file. Unreferenced files are harmless orphans.
     virtual bool prepare(const std::string& owner, const LearningState& policy, std::string& ref) = 0;
+    virtual const char* failureReason() const { return "policy_prepare"; }
 };
 
 class LearningRuntime {
@@ -32,11 +33,13 @@ public:
     bool inherit(const CollectionSlot& a, const CollectionSlot& b, const PetProfile& child, std::string& ref);
     int chooseAuto(const practice::Fighter& fighter, uint8_t learnedMask) const;
     const LearningState* policy() const { return active_.get(); }
+    const char* commitFailure() const { return commitFailure_; }
 
 private:
     LearningRepository& repository_;
     std::unique_ptr<LearningState> active_;
     std::string owner_;
     std::string activeRef_;
+    const char* commitFailure_ = "none";
 };
 }  // namespace vpet

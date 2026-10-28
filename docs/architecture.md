@@ -104,6 +104,16 @@ segunda escritura para borrarlo. Incubacion y cooldown acumulan solo tiempo
 encendido confirmado, sin duplicarlo al reiniciar ni tras una recuperacion.
 Los fallos transitorios del journal se distinguen del bloqueo del archivo base.
 
+Al rechazar un guardado de combate antes de publicar su generacion, App revierte
+el candidato y conserva el resultado terminal con `pendingAward`. Antes de
+permitir otro intento, `recoverRejectedSave` valida la misma secuencia/activo,
+cuerpo, metadatos, recibo compacto y politica de aprendizaje. Si la lectura
+falla, conserva el bloqueo y vuelve a comprobarla; nunca borra el diario para
+desbloquear. La adquisicion se reintenta con ACTION sin repetir el combate ni
+duplicar premios. Los logs `VPET_EXPERIENCE_SAVE_REJECTED` y
+`VPET_BATTLE_SAVE_REJECTED` identifican fase y recuperacion. Ver
+[contrato de jugabilidad](superpowers/specs/2026-10-28-battle-retry-inventory-status.md).
+
 No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
 modo sin Coleccion conserva el guardado legacy existente. Para volver a un
 firmware sin soporte del journal debe completarse primero un checkpoint total;
@@ -128,6 +138,8 @@ ajustes y panel/cursor de origen. Mochila presenta la cantidad actualizada;
 luz presenta Home y el nuevo estado de sueno antes de iniciar el mismo worker.
 No se inventa otra animacion ni assets. Se conserva capacidad de un trabajo:
 ACTION/Back no ejecutan otra transaccion mientras el commit esta pendiente.
+BACK de Mochila si puede cerrar visualmente el panel durante el trabajo; si
+este se rechaza, el rollback conserva la salida a Home y restaura el consumo.
 Por eso mover el guardado a un hilo no garantizaba comidas seguidas sin espera.
 
 `prepareCare` actualiza el cuidado y sueno hasta el input sin persistir aun,

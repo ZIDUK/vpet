@@ -224,7 +224,32 @@ void compactTimerRecovery() {
         assert(panel.state().slots[0].cooldownMs==86400000-60000);
     }
 }
+void inventoryBackDuringSave() {
+    using namespace vpet;
+    Store kv; SettingsStore storage(kv); Settings settings; PetState pet;
+    pet.restore(SpeciesId::Rookie,80,20,80,0,100,0);
+    pet.restoreItems(0,2,0,0,0,0); pet.rollDna(42);
+    assert(storage.save(pet,settings));
+    Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+    App app(renderer,panels,storage,ble,clockNow,nullptr,&task);
+    uint32_t ms=0; app.begin(ms);
+    auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
+    for(int i=0;i<6;++i) key(InputEvent::Next);
+    key(InputEvent::Action); key(InputEvent::Action);
+    assert(task.starts==1 && !app.ready());
+    key(InputEvent::Next);
+    assert(panels.panelIndex==6);
+    const auto before=renderer.draws;
+    key(InputEvent::Action);
+    assert(renderer.menuIndex==6 && renderer.draws>before && task.starts==1);
+    task.complete(); key(InputEvent::None); key(InputEvent::None);
+    assert(app.ready());
+    assert(storage.load(pet,settings)==LoadResult::Loaded);
+    assert(pet.itemCount(1)==1 && pet.energy()==45);
+}
+
 int main() {
+    inventoryBackDuringSave();
     using namespace vpet;
     discardEggTransaction();
     compactCareActions();

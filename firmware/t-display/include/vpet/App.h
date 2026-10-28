@@ -95,6 +95,7 @@ private:
     bool trainingActive_ = false;
     bool storageReady_ = false;
     bool savePending_ = false;
+    bool battleSaveRecovery_ = false;
     bool savePendingHome_ = false;
     bool careRecovery_ = false;
     uint32_t lastSaveAttemptMs_ = 0;

@@ -335,6 +335,65 @@ def test_dna_page_six_stats_match_combat_stat(build_dir, monkeypatch):
     assert dict(pet.ev) == ev_before
 
 
+def test_dna_icons_and_maximum_values_have_separate_columns(build_dir, monkeypatch):
+    from PIL import ImageDraw
+    from scripts import sim_renderer
+    pet = Pet(species="ultimate", state=STATE_LIVE)
+    pet.restore_dna((255, 255, 255, 255))
+    pet.restore_ev(dict.fromkeys(("hp", "mp", "off", "def", "spd", "brn"), 252))
+    texts, icons, meters = [], [], []
+    original_text = ImageDraw.ImageDraw.text
+    original_icon = sim_renderer._paste_ui_icon
+    original_meter = sim_renderer._draw_meter
+
+    def text(draw, xy, value, *args, **kwargs):
+        texts.append((xy, draw.textbbox(xy, str(value), font=kwargs.get("font"),
+                                      anchor=kwargs.get("anchor"))))
+        return original_text(draw, xy, value, *args, **kwargs)
+
+    def icon(frame, root, name, x, y, size=20, *args, **kwargs):
+        if x > 100 and y >= 55:
+            icons.append((x, y, size))
+        return original_icon(frame, root, name, x, y, size, *args, **kwargs)
+
+    def meter(draw, x, y, width, *args, **kwargs):
+        meters.append((x, y, width))
+        return original_meter(draw, x, y, width, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", text)
+    monkeypatch.setattr(sim_renderer, "_paste_ui_icon", icon)
+    monkeypatch.setattr(sim_renderer, "_draw_meter", meter)
+    _render_status(build_dir, pet, 3)
+    assert len(icons) == len(meters) == 6
+    assert all(size >= 12 for _, _, size in icons)
+    for index in range(6):
+        y = 55 + index * 13
+        boxes = sorted(box for xy, box in texts if y <= xy[1] < y + 13)
+        assert len(boxes) == 3
+        assert icons[index][0] + icons[index][2] + 2 <= boxes[0][0]
+        assert boxes[0][2] + 2 <= boxes[1][0]
+        assert boxes[1][2] + 2 <= meters[index][0]
+        assert meters[index][0] + meters[index][2] + 2 <= boxes[2][0]
+        assert boxes[2][2] <= 235
+
+
+def test_inventory_back_has_no_item_detail(build_dir, monkeypatch):
+    from PIL import ImageDraw
+    texts = []
+    original = ImageDraw.ImageDraw.text
+
+    def capture(draw, xy, text, *args, **kwargs):
+        if xy[0] < 100 and xy[1] >= 48:
+            texts.append(str(text))
+        return original(draw, xy, text, *args, **kwargs)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture)
+    pet = _rookie()
+    render_frame(build_dir, pet, menu_index=6, panel_mode="inventory", panel_index=6,
+                 profile=get_display_profile("tdisplay"))
+    assert not texts
+
+
 def test_dna_page_six_stats_remain_stable_across_timestamps(build_dir,
                                                             monkeypatch):
     """The six stat values on the DNA page must not change between

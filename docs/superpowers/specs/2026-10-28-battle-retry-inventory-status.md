@@ -1,0 +1,104 @@
+# SPEC-GAME-PLAYABILITY-001: Reintento De Combate Y Legibilidad
+
+## Estado Y Aprobacion
+
+scope-approved por el reporte explicito del usuario del 2026-10-28: bloqueo
+SAVE PENDING al combatir, BACK de Mochila sin salida y Status 4/4 poco legible.
+Es aprobacion del alcance; no se inventa aprobacion del documento ni aceptacion
+fisica. El alcance de carga/commit/push continua la solicitud previa del usuario.
+
+## Problema
+
+Un rechazo al guardar el resultado de combate conserva pendingAward pero activa
+savePending y el fallo del controlador, impidiendo alcanzar su propio reintento.
+BACK de Mochila tambien puede quedar atrapado durante un guardado de cuidado.
+La ficha ADN tiene iconos pequenos y columnas con margenes insuficientes.
+
+## Objetivo
+
+Permitir recuperacion verificable del combate sin duplicar premios, salida de
+Mochila como navegacion y columnas legibles en la pantalla de 240x135.
+
+## Alcance
+
+App/CollectionPanel/LearningRuntime y adaptador LittleFS, renderers ESP32 y
+simulador, regresiones host y registro de evidencia fisica autorizado.
+
+## Exclusiones
+
+Sin borrar partida/diarios, conceder premios de prueba, cambiar balance,
+cancelar viajes ni omitir checksums o confirmacion durable del resultado.
+
+## Requisitos
+
+### REQ-GAME-PLAY-001
+
+Un resultado rechazado antes de publicacion debe mantener la opcion de
+reintentar. Solo se desbloquea tras validar el mismo estado durable, cuerpo,
+recibo de cuidado y politica. Si no pueden leerse, se mantiene el bloqueo hasta
+recuperacion. Premios y aprendizaje se publican una sola vez. Registrar la fase
+de fallo por USB sin incluir contenido completo de la partida.
+
+### REQ-GAME-PLAY-002
+
+BACK en Mochila es solo navegacion: no muestra detalle de item ni inicia un
+guardado. ACTION cierra inmediatamente, incluso mientras hay un guardado de
+cuidado pendiente, cuyo trabajo sigue conservando el consumo unico.
+
+### REQ-GAME-PLAY-003
+
+Status debe separar icono, etiqueta, valor, barra y EV. Los iconos ADN pasan a
+12 px, los de cuidado a 12 px y combate a 14 px sin filtrar sus colores oscuros.
+Los valores de tres cifras y EV no invaden otras columnas. Mantener seis stats,
+cuatro paginas, codigo ADN completo y dominio de solo lectura.
+
+## Criterios De Aceptacion
+
+### AC-GAME-PLAY-001
+
+Con Coleccion, politica y diario compacto reales en host, rechazar preparacion
+de politica o commit de Coleccion deja un resultado reintentable. Si falla la
+lectura durante recuperacion, no permite mutaciones; al restablecer lectura,
+ACTION publica un resultado y reiniciar conserva una batalla y un premio como
+maximo. Un registro fisico debe identificar cualquier fallo residual antes de
+afirmar que el recorrido en placa quedo aceptado.
+
+### AC-GAME-PLAY-002
+
+Usar item, dejar la tarea diferida pendiente, seleccionar BACK y pulsar ACTION
+dibuja Home sin iniciar otra tarea. Terminar el trabajo conserva un consumo.
+El preview izquierdo de BACK no muestra nombre, icono ni CLOSE BAG.
+
+### AC-GAME-PLAY-003
+
+Con ADN/EV maximos en Ultimate, seis iconos >=12 px y cajas de texto/barra
+separadas por al menos 2 px; todo cabe en 240x135 sin mutar Pet. Revisar la
+vista previa y declarar por separado la aceptacion visual en placa.
+
+## Contratos Y Compatibilidad
+
+No cambia NVS, enums ni formatos persistidos. Un false de commit de Coleccion
+significa rechazo anterior al rename; los true pendientes se siguen resolviendo
+por su recibo. La recuperacion no transforma un registro corrupto en vacio.
+
+## Errores Y Recuperacion
+
+Un fallo de lectura o una secuencia durable diferente impiden desbloquear.
+El resultado retenido puede reintentar la adquisicion, no repetir el combate
+ni aplicar un delta ya comprometido. No se modifica el estado de exploracion.
+
+## Riesgos
+
+La prueba host no reproduce limites de flash/heap de ESP32. Un fallo inicial de
+almacenamiento en placa puede tener otra causa: el registro capturado antes de
+esta correccion no contenia SAVE PENDING y no permite atribuirla.
+
+## Verificacion
+
+Ver plan separado; pruebas C++ de App real, persistencia, pixel bounds Python,
+native, build y prueba fisica de combate autorizada. No confundir arranque con
+aceptacion de batalla, guardado o Status.
+
+## Preguntas Pendientes
+
+Confirmar el recorrido de combate y la revision visual en la placa conservada.

@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / "firmware/t-display/lib/vpet_core/src"
@@ -23,7 +24,8 @@ def test_policy_files_atomic_refs_and_runtime_recovery(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path):
+@pytest.mark.parametrize("compact", [False, True, "collection", "unreadable"])
+def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path, compact):
     binary = tmp_path / "learning-app"
     result = subprocess.run([
         "c++", "-std=c++17", "-include", str(ROOT / "tests/asset_stubs/Arduino.h"),
@@ -38,7 +40,7 @@ def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path):
         "-o", str(binary),
     ], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
-    result = subprocess.run([str(binary), str(tmp_path)], capture_output=True, text=True)
+    result = subprocess.run([str(binary), str(tmp_path), *([str(compact)] if compact else [])], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
 
 

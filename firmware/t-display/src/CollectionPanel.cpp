@@ -87,13 +87,32 @@ bool CollectionPanel::recoverCare(const PetState& pet, const Settings& settings)
     if (careUnsettled_) return settleCare();
     return saveCare(pet,settings) && settleCare();
 }
+bool CollectionPanel::recoverRejectedSave() {
+    if (!enabled_) return false;
+    std::unique_ptr<CollectionState> durable(new (std::nothrow) CollectionState);
+    std::unique_ptr<PetState> saved(new (std::nothrow) PetState);
+    Settings settings;
+    // A rejected transaction can resume only from the exact authoritative view
+    // that preceded it. readPet rechecks metadata, CRC and the care receipt.
+    if (!durable || !saved || store_.load(*durable)!=CollectionLoad::Loaded ||
+        durable->sequence!=state_.sequence || durable->active!=state_.active ||
+        !store_.readPet(state_,state_.active,*saved,settings) ||
+        (learning_ && !learning_->load(state_.slots[state_.active]))) return false;
+    failed_=careFailed_=careUnsettled_=false;
+    return true;
+}
 bool CollectionPanel::saveExperience(const PetState& pet, const Settings& settings,
                                     const RuntimeExperience* events, size_t count) {
     if (!count) return save(pet,settings);
-    if (!enabled_ || failed_ || !learning_ || !flush() ||
-        !learning_->commit(store_,state_,pet,settings,events,count)) {
+    if (!enabled_ || failed_ || !learning_ || !flush()) {
+        saveFailure_="precondition";
         error("Error al guardar politica",true); return false;
     }
+    if (!learning_->commit(store_,state_,pet,settings,events,count)) {
+        saveFailure_=learning_->commitFailure();
+        error("Error al guardar politica",true); return false;
+    }
+    saveFailure_="none";
     return true;
 }
 int CollectionPanel::chooseAuto(const practice::Fighter& fighter, uint8_t learnedMask) const {

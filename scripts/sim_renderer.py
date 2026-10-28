@@ -257,7 +257,7 @@ def _draw_wide_row(frame, draw, build_dir, icon, label, value, x, y, ink, muted,
         fill=_mix(ink, (214, 180, 112), 0.88),
         outline=ink,
     )
-    icon_size = min(13, height - 2)
+    icon_size = min(14, height - 1)
     _paste_ui_icon(frame, build_dir, icon, x + 1, y + 1, icon_size)
     text_y = y + (height - 10) // 2
     draw.text((x + icon_size + 4, text_y), label, fill=muted,
@@ -416,7 +416,7 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
             STATUS_SPLIT_X + 2,
             58,
             dna,
-            width=40,
+            width=36,
             height=68,
             spin=helix_spin(now_ms),
         )
@@ -436,23 +436,23 @@ def _draw_tdisplay_status(frame, draw, build_dir, pet, panel_index, current_date
         for index, (key, value, ev) in enumerate(rows):
             y = 55 + index * 13
             label = tr_status_dna_label(pet, key)[:3]
-            card_x = 145
+            card_x = 141
             card_right = 237
             draw.rounded_rectangle((card_x, y, card_right, y + 12), radius=2,
                                    fill=_mix(ink, (214, 180, 112), 0.88),
                                    outline=ink)
             _paste_ui_icon(frame, build_dir, stat_icons[key], card_x + 2,
-                           y + 1, 10)
+                           y, 12)
             label_font = _status_font(8)
             if label_font.getlength(label) > 18:
                 label_font = _status_font(7)
-            draw.text((card_x + 14, y + 1), label, fill=muted,
+            draw.text((card_x + 17, y + 2), label, fill=muted,
                       font=label_font)
-            draw.text((card_x + 34, y + 1), "%02d" % value, fill=ink,
-                      font=_status_font(8))
-            _draw_meter(draw, card_x + 54, y + 2, 12, value, pet.stat_limit(key),
+            draw.text((card_x + 55, y + 2), "%02d" % value, fill=ink,
+                      font=_status_font(8), anchor="ra")
+            _draw_meter(draw, card_x + 59, y + 2, 10, value, pet.stat_limit(key),
                         bar_color, ink)
-            draw.text((card_x + 88, y + 1), str(ev), fill=ink,
+            draw.text((card_x + 93, y + 2), str(ev), fill=ink,
                       font=_status_font(8), anchor="ra")
         return
 
@@ -568,7 +568,7 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             for i, line in enumerate(lines[:2]):
                 fitted_text(draw, (6, 99 + i * 11, 94, 110 + i * 11), line, _status_font(10), ink)
             fitted_text(draw, (6, 123, 94, 134), inventory_blurb(current, spanish), _status_font(10), ink)
-        else:
+        elif current != 6:
             _paste_ui_icon(frame, build_dir, inventory_icon(current), 30, 62, 40)
             draw.text((50, 108), inventory_name(current, spanish), fill=ink, font=_status_font(12), anchor="mm")
             draw.text((50, 122), inventory_blurb(current, spanish), fill=_mix(ink, panel, 0.28), font=_status_font(10), anchor="mm")

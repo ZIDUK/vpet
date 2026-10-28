@@ -116,9 +116,12 @@ bool LittleFsLearningRepository::read(const std::string& owner,const char* refer
     return record.size()<=LearningState::MAX_ENCODED_SIZE;
 }
 bool LittleFsLearningRepository::prepare(const std::string& owner,const LearningState& policy,std::string& ref) {
+    failureReason_="policy_path";
     if (directory_.empty() || !ownerValid(owner)) return false;
     if (::mkdir(directory_.c_str(),0700) && errno!=EEXIST) return false;
+    failureReason_="policy_collect";
     if (!collect()) return false;
+    failureReason_="policy_encode";
     const std::string encoded=policy.encode();
     if (encoded.empty() || encoded.size()>LearningState::MAX_ENCODED_SIZE) return false;
     const std::string envelope="VPR1\n"+owner+"\n"+encoded;
@@ -128,12 +131,15 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
     const std::string final=directory_+"/"+next;
     struct stat info;
     if (::stat(final.c_str(),&info)==0) {
+        failureReason_="policy_existing";
         std::string existing;
         if (!readFile(final,existing) || existing!=envelope) return false;
-        ref=next; return true;
+        ref=next; failureReason_="none"; return true;
     }
     if (errno!=ENOENT) return false;
+    failureReason_="policy_space";
     if (!budget(directory_)) return false;
+    failureReason_="policy_write";
     const std::string pending=directory_+"/.pending";
     auto* file=openFile(pending,"wb"); if (!file) return false;
     bool ok=std::fwrite(envelope.data(),1,envelope.size(),file)==envelope.size();
@@ -141,9 +147,10 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
     const bool closed=std::fclose(file)==0;
     std::string verified;
     if (!ok || !closed || !readFile(pending,verified) || verified!=envelope) return false;
+    failureReason_="policy_publish";
     if (::rename(pending.c_str(),final.c_str()) || !directorySync(directory_)) return false;
     // Even if interrupted here, the collection still points to its old policy.
-    ref=next; return true;
+    ref=next; failureReason_="none"; return true;
 }
 
 bool LittleFsLearningRepository::collect() {
@@ -155,6 +162,7 @@ bool LittleFsLearningRepository::collect() {
     std::unique_ptr<CollectionState> state(new (std::nothrow) CollectionState);
     if (!state) return false;
     for (const auto name:{"current.bin","previous.bin"}) {
+        failureReason_=!std::strcmp(name,"current.bin")?"policy_collect_current":"policy_collect_previous";
         ReadOnlyGeneration generation(parent+"/"+name); CollectionStore reader(generation);
         const auto loaded=reader.load(*state);
         if (loaded==CollectionLoad::Missing) {
@@ -164,6 +172,7 @@ bool LittleFsLearningRepository::collect() {
         if (loaded!=CollectionLoad::Loaded) return false;
         for (const auto& slot:state->slots) if (slot.occupied && slot.learningRef[0]) protectedRefs.insert(slot.learningRef);
     }
+    failureReason_="policy_collect_directory";
     DIR* directory=::opendir(directory_.c_str()); if (!directory) return false;
     size_t retainedBytes=0; bool ok=true;
     while (auto* entry=::readdir(directory)) {

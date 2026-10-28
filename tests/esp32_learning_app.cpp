@@ -9,15 +9,79 @@ uint64_t learningClock() { return learningWall; }
 struct PolicyFaults : vpet::LearningRepository {
     vpet::LearningRepository& files;
     bool fail=false;
+    std::function<void()> onFailure;
     explicit PolicyFaults(vpet::LearningRepository& value) : files(value) {}
     bool read(const std::string& owner,const char* ref,std::string& record) override { return files.read(owner,ref,record); }
     bool prepare(const std::string& owner,const vpet::LearningState& p,std::string& ref) override {
-        return !fail && files.prepare(owner,p,ref);
+        if (fail) { if(onFailure) onFailure(); return false; }
+        return files.prepare(owner,p,ref);
     }
 };
 
+struct BattleStorageFaults : vpet::CollectionRepository {
+    vpet::CollectionRepository& files;
+    bool reject=false, unreadable=false;
+    explicit BattleStorageFaults(vpet::CollectionRepository& value) : files(value) {}
+    vpet::CollectionRead size(size_t& n) override { return unreadable?vpet::CollectionRead::Error:files.size(n); }
+    bool read(size_t at,void* p,size_t n) override { return !unreadable && files.read(at,p,n); }
+    bool begin(uint64_t seq,size_t n) override { return !reject && files.begin(seq,n); }
+    bool write(size_t at,const void* p,size_t n) override { return files.write(at,p,n); }
+    bool readPrepared(size_t at,void* p,size_t n) override { return files.readPrepared(at,p,n); }
+    bool commit(uint64_t seq) override { return files.commit(seq); }
+    void abort() override { files.abort(); }
+};
+
+void compactBattle(const std::string& root, const std::string& fault) {
+    using namespace vpet;
+    Store kv; SettingsStore legacy(kv); Settings settings; PetState original;
+    original.restore(SpeciesId::Rookie,90,90,90,0,100,0);
+    original.profile=profile(); original.rollDna(42);
+    original.practice.equipped=1;
+    std::string snapshot; assert(CollectionStore::capture(original,settings,snapshot));
+    LittleFsCollectionRepository repository((root+"/collection").c_str());
+    BattleStorageFaults storageFaults(repository);
+    CareJournal journal(kv); CollectionStore store(storageFaults,&journal); CollectionState initial;
+    assert(store.migrate(initial,snapshot));
+    LittleFsLearningRepository files((root+"/collection/policies").c_str());
+    PolicyFaults faults(files); LearningRuntime learning(faults);
+    CollectionPanel panel(store,legacy,profile,seed,nullptr,nullptr,&learning);
+    Renderer renderer; Panels panels; BleService ble;
+    App app(renderer,panels,legacy,ble,learningClock,&panel);
+    uint32_t ms=0; app.begin(ms); assert(app.ready());
+    auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
+    for(int i=0;i<4;++i) key(InputEvent::Next);
+    key(InputEvent::Action); key(InputEvent::Next); key(InputEvent::Action);
+    // A rejected policy preparation must retain a retryable terminal result.
+    faults.fail=fault!="collection";
+    storageFaults.reject=fault=="collection";
+    if(fault=="unreadable") faults.onFailure=[&]() { storageFaults.unreadable=true; };
+    for(int i=0;i<128 && !panels.arenaResult;++i) {
+        ms+=1500; app.tick(ms,InputEvent::None);
+    }
+    assert(panels.arenaResult && app.ready()==(fault!="unreadable"));
+    assert(learning.policy()->last_sequence()==0);
+    storageFaults.unreadable=storageFaults.reject=false;
+    if(fault=="unreadable") {
+        ms+=1100; app.tick(ms,InputEvent::None);
+        assert(app.ready() && learning.policy()->last_sequence()==0);
+    }
+    PetState saved; assert(store.readPet(panel.state(),panel.state().active,saved,settings));
+    assert(saved.battles()==0);
+    faults.fail=false;
+    key(InputEvent::Action);
+    assert(app.ready() && learning.policy()->last_sequence()>0);
+    assert(store.readPet(panel.state(),panel.state().active,saved,settings) && saved.battles()==1);
+    const auto committed=learning.policy()->last_sequence();
+    for(int i=0;i<3;++i) key(InputEvent::None);
+    assert(learning.policy()->last_sequence()==committed);
+    App reboot(renderer,panels,legacy,ble,learningClock,&panel);
+    reboot.begin(ms); assert(reboot.ready());
+    assert(store.readPet(panel.state(),panel.state().active,saved,settings) && saved.battles()==1);
+}
+
 int main(int argc,char** argv) {
-    assert(argc==2);
+    assert(argc==2 || argc==3);
+    if(argc==3) { compactBattle(argv[1],argv[2]); return 0; }
     using namespace vpet;
     const std::string root=argv[1];
     Store kv,bak; SettingsStore legacy(kv,&bak), reserve(bak); Settings settings;

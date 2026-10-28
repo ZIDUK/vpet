@@ -56,6 +56,7 @@ App::~App() {
 void App::begin(uint32_t nowMs) {
     if (careSave_) return;
     savePending_ = false;
+    battleSaveRecovery_ = false;
     savePendingHome_ = false;
     careRecovery_ = false;
     deferredCareMs_ = 0;
@@ -647,6 +648,14 @@ void App::submitCare(uint32_t nowMs) {
 }
 
 void App::pollCare(uint32_t nowMs, InputEvent event) {
+    if (event==InputEvent::Back || (event==InputEvent::Action &&
+        navigation_.panel()==PanelId::Inventory && navigation_.panelIndex()==6)) {
+        navigation_.setPanel(PanelId::Home);
+        careSave_->origin=PanelId::Home;
+        careSave_->originIndex=0;
+        panels_.invalidate();
+        drawHome(nowMs);
+    }
     if (saveTask_->finished()) {
         const bool committed = careSave_->committed;
         const bool settled = careSave_->settled;
@@ -689,6 +698,14 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         pollCare(nowMs,event);
         return;
     }
+    if (event==InputEvent::Action && navigation_.panel()==PanelId::Inventory &&
+        navigation_.panelIndex()==6) {
+        navigation_.setPanel(PanelId::Home);
+        if (savePending_) savePendingHome_=true;
+        lastInteractionMs_=nowMs;
+        drawHome(nowMs);
+        return;
+    }
     if (event==InputEvent::Action && navigation_.panel()==PanelId::Feeding) {
         Serial.printf("VPET_FEED input index=%u hunger=%d energy=%d mood=%d paused=%u asleep=%u dead=%u away=%u pending=%u storage=%u saving=%u training=%u practice=%u\n",
             static_cast<unsigned>(navigation_.panelIndex()),pet_.hunger(),pet_.energy(),pet_.happiness(),
@@ -699,6 +716,13 @@ void App::tick(uint32_t nowMs, InputEvent event) {
     if (!storageReady_) {
         if (nowMs-lastRenderMs_>=1000) begin(nowMs);
         return;
+    }
+    if (savePending_ && battleSaveRecovery_ && collection_ && collection_->enabled() &&
+        nowMs-lastSaveAttemptMs_>=1000 && collection_->recoverRejectedSave()) {
+        savePending_=false;
+        battleSaveRecovery_=false;
+        savePendingHome_=false;
+        panels_.invalidate();
     }
     if (savePending_) {
         if (event==InputEvent::Back) {
@@ -812,7 +836,16 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             }
             const bool committed=persistExperience(experiences,count);
             practice_.finishSave(pet_,beforePet,beforeSession,committed);
-            if (!committed) practicing_=true;
+            if (!committed) {
+                practicing_=true;
+                Serial.printf("VPET_EXPERIENCE_SAVE_REJECTED stage=%s\n",
+                    collection_ && collection_->enabled()?collection_->saveFailure():"legacy");
+                const bool recovered=collection_ && collection_->enabled() && collection_->recoverRejectedSave();
+                battleSaveRecovery_=!recovered;
+                if (recovered) savePending_=savePendingHome_=false;
+                Serial.printf("VPET_BATTLE_SAVE_REJECTED recovered=%u result=%d retry=%u\n",
+                    recovered?1U:0U,practice_.battle.result,practice_.pendingAward?1U:0U);
+            }
             else if (!settleStorage()) return;
         }
         if (!practicing_) { panels_.invalidate(); motion_.alignClock(nowMs); }

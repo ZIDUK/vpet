@@ -145,7 +145,7 @@ void test_helix_helpers_use_dna_or_gray() {
     TEST_ASSERT_EQUAL(2, vpet::inventoryWindowStart(7, 3));
     TEST_ASSERT_EQUAL(4, vpet::inventoryWindowStart(7, 6));
     TEST_ASSERT_EQUAL(56, vpet::kHelixY);
-    TEST_ASSERT_EQUAL(40, vpet::kHelixWidth);
+    TEST_ASSERT_EQUAL(36, vpet::kHelixWidth);
     TEST_ASSERT_EQUAL(74, vpet::kHelixHeight);
     TEST_ASSERT_EQUAL(6, vpet::kHelixRungs);
     TEST_ASSERT_EQUAL(1.f, vpet::kHelixTurns);

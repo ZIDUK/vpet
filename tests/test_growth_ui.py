@@ -80,7 +80,7 @@ def test_status_320_fits_before_bar_and_does_not_mutate(growth_art, monkeypatch)
     def text(draw,xy,value,*args,**kwargs):
         if value == "320":
             captured.append(xy)
-            box = draw.textbbox(xy,value,font=kwargs["font"])
+            box = draw.textbbox(xy,value,font=kwargs["font"],anchor=kwargs.get("anchor"))
             assert box[2] <= 199 and box[3]-box[1] <= 13
         return original(draw,xy,value,*args,**kwargs)
 
