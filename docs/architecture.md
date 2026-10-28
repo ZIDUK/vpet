@@ -114,6 +114,13 @@ duplicar premios. Los logs `VPET_EXPERIENCE_SAVE_REJECTED` y
 `VPET_BATTLE_SAVE_REJECTED` identifican fase y recuperacion. Ver
 [contrato de jugabilidad](superpowers/specs/2026-10-28-battle-retry-inventory-status.md).
 
+Entrenamiento aplica la misma validacion despues de su rollback: conserva la
+pantalla de error, permite ACTION para reintentar el resultado retenido o BACK
+para descartarlo. Un rechazo no concede EV ni aprendizaje ni consume recursos;
+un resultado confirmado solo se publica una vez. La bandera RAM solo cubre
+experiencias rechazadas, no cuidados aceptados pendientes. El registro
+`VPET_TRAINING_SAVE_REJECTED` identifica la fase de almacenamiento fallida.
+
 No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
 modo sin Coleccion conserva el guardado legacy existente. Para volver a un
 firmware sin soporte del journal debe completarse primero un checkpoint total;

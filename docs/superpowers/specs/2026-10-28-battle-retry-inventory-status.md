@@ -4,6 +4,7 @@
 
 scope-approved por el reporte explicito del usuario del 2026-10-28: bloqueo
 SAVE PENDING al combatir, BACK de Mochila sin salida y Status 4/4 poco legible.
+Ampliacion explicita del mismo dia: SAVE PENDING tambien al entrenar.
 Es aprobacion del alcance; no se inventa aprobacion del documento ni aceptacion
 fisica. El alcance de carga/commit/push continua la solicitud previa del usuario.
 
@@ -52,6 +53,15 @@ Status debe separar icono, etiqueta, valor, barra y EV. Los iconos ADN pasan a
 Los valores de tres cifras y EV no invaden otras columnas. Mantener seis stats,
 cuatro paginas, codigo ADN completo y dominio de solo lectura.
 
+### REQ-GAME-PLAY-004
+
+Un entrenamiento cuyo resultado fue rechazado revierte EV, energia, recursos y
+aprendizaje. Tras validar la misma vista durable, permite ACTION para reintentar
+el resultado retenido o BACK para descartarlo e iniciar otra sesion sin
+reiniciar la placa. No concede el resultado rechazado.
+Si la lectura sigue fallando, conserva el bloqueo y reintenta validacion.
+Registrar por USB la fase de rechazo sin volcar la partida.
+
 ## Criterios De Aceptacion
 
 ### AC-GAME-PLAY-001
@@ -74,6 +84,13 @@ El preview izquierdo de BACK no muestra nombre, icono ni CLOSE BAG.
 Con ADN/EV maximos en Ultimate, seis iconos >=12 px y cajas de texto/barra
 separadas por al menos 2 px; todo cabe en 240x135 sin mutar Pet. Revisar la
 vista previa y declarar por separado la aceptacion visual en placa.
+
+### AC-GAME-PLAY-004
+
+Con App y almacenamiento real en host, rechazar politica o Coleccion durante
+entrenamiento no altera energia/EV guardados ni secuencia de aprendizaje.
+Lectura indisponible mantiene bloqueo hasta recuperar. Una nueva sesion publica
+un unico resultado, conservado al reiniciar. Validacion fisica queda separada.
 
 ## Contratos Y Compatibilidad
 

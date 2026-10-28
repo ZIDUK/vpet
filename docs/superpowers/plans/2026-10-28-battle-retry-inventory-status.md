@@ -16,6 +16,8 @@ Spec: [SPEC-GAME-PLAYABILITY-001](../specs/2026-10-28-battle-retry-inventory-sta
 
 ## Trazas
 
+- REQ-GAME-PLAY-004: `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes` (training_policy, training_collection, training_unreadable).
+
 - REQ-GAME-PLAY-001: `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes`.
 - REQ-GAME-PLAY-002: `tests/test_collection_app.py::test_collection_app_runtime_and_transactions`,
   `tests/test_status_pages.py::test_inventory_back_has_no_item_detail`.
@@ -34,6 +36,32 @@ no aparece SAVE PENDING en esa captura. Se observa inicio de exploracion.
 No acredita recuperacion del fallo original ni autoriza cancelar el viaje.
 
 ## Evidencia Final
+
+### Ampliacion Entrenamiento
+
+Reporte posterior: SAVE PENDING al entrenar. Regresion training_policy falla
+antes del cambio: app.ready permanece false despues del rollback. Se amplia la
+bandera de recuperacion a resultados rechazados de entrenamiento, sin incluir
+guardados de cuidado aceptados. Error de entrenamiento no concede efectos;
+permite otra sesion explicita tras validar la vista durable. Regresiones:
+training_policy, training_collection y training_unreadable en App real.
+- Regresiones nuevas: 3 passed; native 185/185; build tdisplay correcto,
+  app 1120317 bytes y RAM estatica 53916. spec-check: 6 specs, 26 requisitos.
+- Respaldo fresco `out/board-backups/20261028-training-critical.bin` (24576
+  bytes), SHA256 `df4ace1fc8a0b19d2078ad4951921b745bf8eb5824f9e37b11899e9ba8bb0a37`.
+- Firmware cargado sin reemplazar LittleFS ni NVS. SHA256
+  `e59556c02727304d029b2ebe91c21a7d1832a94d0d847465ae1438ac06a76436`;
+  `out/board-backups/20261028-training-deploy.log`: Deploy OK, heap libre
+  78836, minimo 67892, FS 11845632/12451840, manifest=1.
+- Capturas USB de 120 s antes y despues: `20261028-training-live.log` y
+  `20261028-training-fixed-live.log` bajo `out/board-backups/`. Sin entradas ni
+  entrenamiento capturado; arranque READY y 11 muestras runtime posteriores,
+  sin fallo fatal ni reinicio posterior al arranque. Se solicito reproduccion.
+  No acredita causa del primer rechazo fisico ni aceptacion de entrenamiento.
+- Suite Python completa: 2106 passed, 13278 warnings, 396.61 s. Advertencias
+  de deprecacion existentes; sin fallos. diff --check correcto.
+
+### Entrega Anterior 48c9145
 
 - Suite Python final: 2103 passed, 13278 warnings, 336.96 s. Las advertencias
   son deprecaciones existentes de Pillow/pytest; no hubo fallos.

@@ -33,6 +33,8 @@ struct BattleStorageFaults : vpet::CollectionRepository {
 
 void compactBattle(const std::string& root, const std::string& fault) {
     using namespace vpet;
+    const bool training=fault.find("training_")==0;
+    const std::string failure=training?fault.substr(9):fault;
     Store kv; SettingsStore legacy(kv); Settings settings; PetState original;
     original.restore(SpeciesId::Rookie,90,90,90,0,100,0);
     original.profile=profile(); original.rollDna(42);
@@ -49,24 +51,42 @@ void compactBattle(const std::string& root, const std::string& fault) {
     App app(renderer,panels,legacy,ble,learningClock,&panel);
     uint32_t ms=0; app.begin(ms); assert(app.ready());
     auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
-    for(int i=0;i<4;++i) key(InputEvent::Next);
-    key(InputEvent::Action); key(InputEvent::Next); key(InputEvent::Action);
+    for(int i=0;i<(training?2:4);++i) key(InputEvent::Next);
+    key(InputEvent::Action);
+    key(training?InputEvent::Action:InputEvent::Next); key(InputEvent::Action);
     // A rejected policy preparation must retain a retryable terminal result.
-    faults.fail=fault!="collection";
-    storageFaults.reject=fault=="collection";
-    if(fault=="unreadable") faults.onFailure=[&]() { storageFaults.unreadable=true; };
-    for(int i=0;i<128 && !panels.arenaResult;++i) {
+    faults.fail=failure!="collection";
+    storageFaults.reject=failure=="collection";
+    if(failure=="unreadable") faults.onFailure=[&]() { storageFaults.unreadable=true; };
+    if(training) { ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None); }
+    else for(int i=0;i<128 && !panels.arenaResult;++i) {
         ms+=1500; app.tick(ms,InputEvent::None);
     }
-    assert(panels.arenaResult && app.ready()==(fault!="unreadable"));
+    assert((training || panels.arenaResult) && app.ready()==(failure!="unreadable"));
     assert(learning.policy()->last_sequence()==0);
     storageFaults.unreadable=storageFaults.reject=false;
-    if(fault=="unreadable") {
+    if(failure=="unreadable") {
         ms+=1100; app.tick(ms,InputEvent::None);
         assert(app.ready() && learning.policy()->last_sequence()==0);
     }
     PetState saved; assert(store.readPet(panel.state(),panel.state().active,saved,settings));
     assert(saved.battles()==0);
+    if(training) {
+        assert(saved.evAt(CombatStat::Off)==0 && saved.energy()==original.energy());
+        faults.fail=false;
+        if(failure=="policy") key(InputEvent::Action); // Retry the retained result.
+        else {
+            key(InputEvent::Back); // Discard the rejected result, without reboot.
+            assert(app.ready() && learning.policy()->last_sequence()==0);
+            key(InputEvent::Action); key(InputEvent::Action);
+            ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None);
+        }
+        assert(app.ready() && learning.policy()->last_sequence()==1);
+        assert(store.readPet(panel.state(),0,saved,settings) && saved.evAt(CombatStat::Off)==6);
+        key(InputEvent::None); assert(learning.policy()->last_sequence()==1);
+        app.begin(ms); assert(app.ready() && learning.policy()->last_sequence()==1);
+        return;
+    }
     faults.fail=false;
     key(InputEvent::Action);
     assert(app.ready() && learning.policy()->last_sequence()>0);
@@ -173,13 +193,13 @@ int main(int argc,char** argv) {
     LearningRuntime child(files); assert(child.load(panel.state().slots[2]));
     assert(child.policy()->last_sequence()==0 && child.policy()->history_size()==0);
     assert(child.policy()->estimate(0,0,0).bias==25 && child.policy()->estimate(0,0,0).count==0);
-    // A policy storage failure rolls training back and blocks further input.
+    // A policy storage failure rolls training back without trapping navigation.
     home(); assert(store.readPet(panel.state(),1,saved,savedSettings));
     const int beforeEnergy=saved.energy(); const int beforeEv=saved.evAt(CombatStat::Off);
     for(int i=0;i<2;++i) key(InputEvent::Next);
     key(InputEvent::Action); key(InputEvent::Action); key(InputEvent::Action);
     faults.fail=true; ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None);
-    assert(!app.ready() && learning.policy()->last_sequence()==0);
+    assert(app.ready() && learning.policy()->last_sequence()==0);
     assert(store.readPet(panel.state(),1,saved,savedSettings));
     assert(saved.energy()==beforeEnergy && saved.evAt(CombatStat::Off)==beforeEv);
     faults.fail=false; home(); assert(learning.policy()->last_sequence()==0);

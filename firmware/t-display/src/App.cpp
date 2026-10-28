@@ -56,7 +56,7 @@ App::~App() {
 void App::begin(uint32_t nowMs) {
     if (careSave_) return;
     savePending_ = false;
-    battleSaveRecovery_ = false;
+    rejectedExperienceRecovery_ = false;
     savePendingHome_ = false;
     careRecovery_ = false;
     deferredCareMs_ = 0;
@@ -717,10 +717,10 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (nowMs-lastRenderMs_>=1000) begin(nowMs);
         return;
     }
-    if (savePending_ && battleSaveRecovery_ && collection_ && collection_->enabled() &&
+    if (savePending_ && rejectedExperienceRecovery_ && collection_ && collection_->enabled() &&
         nowMs-lastSaveAttemptMs_>=1000 && collection_->recoverRejectedSave()) {
         savePending_=false;
-        battleSaveRecovery_=false;
+        rejectedExperienceRecovery_=false;
         savePendingHome_=false;
         panels_.invalidate();
     }
@@ -841,7 +841,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
                 Serial.printf("VPET_EXPERIENCE_SAVE_REJECTED stage=%s\n",
                     collection_ && collection_->enabled()?collection_->saveFailure():"legacy");
                 const bool recovered=collection_ && collection_->enabled() && collection_->recoverRejectedSave();
-                battleSaveRecovery_=!recovered;
+                rejectedExperienceRecovery_=!recovered;
                 if (recovered) savePending_=savePendingHome_=false;
                 Serial.printf("VPET_BATTLE_SAVE_REJECTED recovered=%u result=%d retry=%u\n",
                     recovered?1U:0U,practice_.battle.result,practice_.pendingAward?1U:0U);
@@ -870,6 +870,11 @@ void App::tick(uint32_t nowMs, InputEvent event) {
             const RuntimeExperience experience{0,0,trainingIndexFor(training_.chosenStat),std::max(-100,std::min(100,score))};
             if (!persistExperience(&experience,1)) {
                 training_.rollbackFromSnapshot(pet_);
+                Serial.printf("VPET_TRAINING_SAVE_REJECTED stage=%s\n",
+                    collection_ && collection_->enabled()?collection_->saveFailure():"legacy");
+                const bool recovered=collection_ && collection_->enabled() && collection_->recoverRejectedSave();
+                rejectedExperienceRecovery_=!recovered;
+                if (recovered) savePending_=savePendingHome_=false;
             } else settleStorage();
             training_.dirty = false;
             training_.needsRollback = false;
