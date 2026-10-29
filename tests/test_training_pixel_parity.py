@@ -19,6 +19,18 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
     from scripts.practice_renderer import render_practice
     from scripts.verify_training_pixels import quantized
     binary = tmp_path / "comparison" / "training-pixels"
+    for language in ("ES", "EN"):
+        for stat in range(6):
+            frames = []
+            for ms in (10000, 10150):
+                args = (9, language, stat, 0, 1, ms, 80, 30)
+                raw = subprocess.check_output([str(binary), str(data), *map(str, args)])
+                actual = Image.open(io.BytesIO(raw)).convert("RGB")
+                expected = quantized(sim_frame(sim, *args))
+                assert ImageChops.difference(actual, expected).getbbox() is None
+                frames.append(actual)
+                actual.save(tmp_path / "comparison" / f"{language}-saving-{stat}-{ms}.png")
+            assert ImageChops.difference(*frames).getbbox() is not None
     for lang in ("ES", "EN"):
         pet = Pet()
         pet.complete_hatch("rookie", entropy=42)

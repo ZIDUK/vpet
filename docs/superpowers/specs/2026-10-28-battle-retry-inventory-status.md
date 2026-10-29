@@ -97,6 +97,24 @@ validacion de cuerpos y cierre comprobado antes del GC. No reutilizar bytes o
 validaciones entre operaciones ni mostrar como confirmado un resultado rechazado.
 Medir duracion del guardado de entrenamiento por USB antes de afirmar fluidez.
 
+### REQ-GAME-PLAY-009
+
+Reporte posterior 2026-10-29: el usuario confirma que la pausa final sigue igual
+con la reduccion de aperturas. Confirmar entrenamiento fuera del hilo de dibujo,
+usando el escritor existente de capacidad uno y un snapshot inmutable. Presentar
+GUARDANDO/SAVING animado antes de iniciar E/S, sin resultados confirmados ni
+otras acciones hasta terminar. Rechazo restaura los efectos y conserva reintento;
+commit aceptado pendiente no se revierte. No cambiar formatos ni balance.
+
+### REQ-GAME-PLAY-010
+
+Aclaracion del usuario 2026-10-29: no quiere demoras entre acciones; reemplazar
+el congelamiento por GUARDANDO no satisface el requerimiento. Medir y reducir
+la duracion real de la transaccion, separando validacion, espacio, escritura,
+lectura de comprobacion, respaldo y publicacion. No quitar durabilidad,
+validacion ni respaldos a cambio de latencia. El mantenimiento solo se puede
+diferir si se conserva recuperacion y presupuesto de espacio demostrables.
+
 ## Criterios De Aceptacion
 
 ### AC-GAME-PLAY-001
@@ -157,6 +175,30 @@ Corrupcion de bytes posterior a un escaneo y fallo de cierre bloquean el siguien
 escaneo sin descriptores abiertos ni GC. Regresiones de premio unico, rechazo,
 reinicio y nombres de 32 bytes siguen pasando. Capturar VPET_TRAINING_SAVE en
 placa y separar menor E/S host de aceptacion fisica del congelamiento.
+
+### AC-GAME-PLAY-009
+
+Retener el escritor durante multiples ticks mantiene el indicador animado, sin
+leer assets LittleFS (reutiliza el primer cuadro con retrato estatico), sin
+consulta de politica, nueva transaccion ni resultado visible. ACTION/NEXT/BACK
+y begin no reemplazan la operacion; la tecla del tick de finalizacion se consume.
+Exito publica una experiencia y un cargo conservados tras reinicio. Rechazar
+executor, politica o Coleccion restaura EV/energia; lectura fallida bloquea hasta
+recuperar. Cubrir tambien legacy, commit pendiente y destruccion con tarea activa.
+Comparar 24 cuadros de guardado ES/EN, seis stats y dos instantes en 240x135 con
+el renderer C++ real y Pillow. Medir por USB duracion, cuadros, intervalo maximo,
+pila libre y heap. Objetivo fisico: ningun intervalo visible de guardado >200 ms;
+si se excede, no declarar fluidez aceptada. El tiempo total de escritura puede
+ser mayor y no se disfraza de progreso determinado.
+
+### AC-GAME-PLAY-010
+
+Capturar fases USB de un entrenamiento de la partida real antes de optimizar
+el costo dominante. Objetivo: transicion a resultado confirmado <=200 ms y
+respuesta visual al input <=100 ms, sin espera obligatoria de varios segundos.
+Regresiones de corrupcion, espacio, cortes, rollback, premio unico y reinicio
+deben seguir pasando. Si solo cambia la animacion y no el tiempo de transicion,
+el requisito permanece abierto. Aceptacion visual/latencia en placa separada.
 
 ## Contratos Y Compatibilidad
 

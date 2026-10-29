@@ -8,6 +8,7 @@
 struct Canvas {
     std::string root;
     std::vector<std::string> assets;
+    bool forbidAssets = false;
     uint16_t pixels[240*135] = {};
     void drawPixel(int x, int y, uint16_t color) {
         if (x>=0 && x<240 && y>=0 && y<135) pixels[y*240+x]=color;
@@ -17,6 +18,7 @@ struct Canvas {
         for (int yy=y;yy<y+h;++yy) for(int xx=x;xx<x+w;++xx) drawPixel(xx,yy,color);
     }
     void asset(const char* path,uint32_t frame,int x,int y) {
+        if(forbidAssets) throw std::runtime_error("Asset read while saving");
         assets.emplace_back(path);
         std::ifstream in(root+path,std::ios::binary);
         if(!in) throw std::runtime_error(std::string("Missing asset: ")+path);
@@ -48,7 +50,7 @@ int main(int argc,char** argv) {
     pet.restore(species,50,std::stoi(argv[8]),80,0,80,3600);
     const uint8_t dna[]={0xab,0xcd,0xef,0x12}; pet.restoreDna(dna);
     uint8_t ev[]={60,24,30,12,18,0};
-    if (std::stoi(argv[2]) >= 7) {
+    if (std::stoi(argv[2]) == 7 || std::stoi(argv[2]) == 8) {
         vpet::PracticeSession p;
         p.page=std::stoi(argv[2])==7 ? vpet::PracticeSession::Page::Tech : vpet::PracticeSession::Page::Detail;
         p.technique=std::stoi(argv[4]); p.cursor=std::stoi(argv[5]);
@@ -71,6 +73,8 @@ int main(int argc,char** argv) {
     s.chosenStat=vpet::trainingTypeAt(s.cursor).stat; s.chosenStatValid=true;
     ev[static_cast<int>(s.chosenStat)]=std::stoi(argv[9]); pet.restoreEv(ev);
     s.state=static_cast<vpet::TrainingSession::State>(std::stoi(argv[2]));
+    s.saving=std::stoi(argv[2])==9;
+    if(s.saving) s.state=vpet::TrainingSession::State::Result;
     s.secondary=std::stoi(argv[5])==1;
     s.focus=s.secondary ? vpet::TrainingSession::Focus::Finalize : vpet::TrainingSession::Focus::Train;
     s.repsCompleted=std::stoi(argv[6]); s.pendingEv=s.repsCompleted*6; s.energyReserved=s.repsCompleted*8;
@@ -85,6 +89,10 @@ int main(int argc,char** argv) {
         s.resultChoice=*vpet::trainingBlockReason(pet,s.chosenStat) ? 1 : 0;
     }
     vpet::training_ui::View<Canvas>(c,s,pet,ms,std::string(argv[3])=="ES").draw();
+    if(s.saving) {
+        c.forbidAssets=true;
+        vpet::training_ui::View<Canvas>(c,s,pet,ms,std::string(argv[3])=="ES").drawSavingIndicator();
+    }
     if(argc==13) {
         for(const auto& path:c.assets) std::cerr<<path<<'\n';
         return 0;

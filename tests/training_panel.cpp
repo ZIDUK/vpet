@@ -73,5 +73,29 @@ int main(int argc, char** argv) {
         uncached.drawTraining(session, pet, 2700, language);
         assert(canvas.pixels == reference.pixels);
     }
+    session.state = vpet::TrainingSession::State::Result;
+    session.saving = true;
+    panels.drawTraining(session, pet, 10000, language);
+    const auto firstSaving = canvas.pixels;
+    bool animated = false;
+    for (uint32_t ms = 10033; ms < 14000; ms += 33) {
+        const size_t opens = assetOpens;
+        panels.drawTraining(session, pet, ms, language);
+        assert(assetOpens == opens); // No LittleFS contention with the writer.
+        animated = animated || canvas.pixels != firstSaving;
+        uncached.invalidate();
+        uncached.drawTraining(session, pet, ms, language);
+        assert(canvas.pixels == reference.pixels);
+    }
+    assert(animated);
+    panels.invalidate();
+    panels.drawTraining(session, pet, 14000, language);
+    uncached.invalidate();
+    uncached.drawTraining(session, pet, 14000, language);
+    assert(canvas.pixels == reference.pixels);
+    session.saving = false;
+    panels.drawTraining(session, pet, 14033, language);
+    uncached.drawTraining(session, pet, 14033, language);
+    assert(canvas.pixels == reference.pixels);
     std::cout << "TRAINING_PANEL_OK\n";
 }

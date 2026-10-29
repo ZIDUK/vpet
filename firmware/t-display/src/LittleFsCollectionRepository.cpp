@@ -1,4 +1,5 @@
 #include "vpet/LittleFsCollectionRepository.h"
+#include "vpet/StorageTiming.h"
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
@@ -149,13 +150,16 @@ bool LittleFsCollectionRepository::freeBudget() const {
     return available+occupied >= kStorageBudgetBytes;
 }
 bool LittleFsCollectionRepository::begin(uint64_t expectedSequence, size_t bytes) {
+    StorageTiming timing("collection_begin");
     if (prepared_ || directory_.empty() || bytes < kHeaderBytes+2048 || bytes > CollectionStore::kMaxRecordBytes) return false;
     size_t currentBytes = 0; const auto result = size(currentBytes); uint64_t currentSequence = 0;
     if (result == CollectionRead::Error || (result == CollectionRead::Missing && expectedSequence) ||
         (result == CollectionRead::Present && (!generation(directory_+"/current.bin", currentSequence, currentBytes) ||
          currentSequence != expectedSequence))) return false;
     if (::mkdir(directory_.c_str(), 0700) && (errno != EEXIST || !directoryExists(directory_))) return false;
+    timing.mark("validate");
     if (!freeBudget()) return false;
+    timing.mark("space");
     prepared_ = openFile(directory_+"/pending.bin", "w+b",writeBuffer_,sizeof(writeBuffer_));
     if (!prepared_) return false;
     preparedBytes_ = bytes; expectedSequence_ = expectedSequence; dirty_ = true;
@@ -188,20 +192,24 @@ bool LittleFsCollectionRepository::readPrepared(size_t offset, void* data, size_
     return count==bytes;
 }
 bool LittleFsCollectionRepository::commit(uint64_t nextSequence) {
+    StorageTiming timing("collection_commit");
     if (!prepared_ || expectedSequence_ == std::numeric_limits<uint64_t>::max() ||
         nextSequence != expectedSequence_+1 || !syncPrepared()) return false;
     const bool closed = std::fclose(prepared_) == 0; prepared_ = nullptr;
     if (!closed) return false;
     uint64_t sequence = 0; size_t bytes = 0;
     if (!generation(directory_+"/pending.bin", sequence, bytes) || sequence != nextSequence || bytes != preparedBytes_) return false;
+    timing.mark("readback");
     size_t currentBytes = 0; const auto result = size(currentBytes);
     if (expectedSequence_) {
         if (result != CollectionRead::Present || !generation(directory_+"/current.bin", sequence, currentBytes) ||
             sequence != expectedSequence_ || !copyGeneration(directory_+"/current.bin", directory_+"/previous.bin", currentBytes, sequence)) return false;
     } else if (result != CollectionRead::Missing) return false;
+    timing.mark("backup");
     // LittleFS's atomic rename is the sole visibility point. In particular,
     // never remove current first, and never return false after a successful rename.
     if (::rename((directory_+"/pending.bin").c_str(), (directory_+"/current.bin").c_str())) return false;
+    timing.mark("publish");
     preparedBytes_ = 0; expectedSequence_ = 0; dirty_ = false; return true;
 }
 void LittleFsCollectionRepository::abort() {

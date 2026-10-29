@@ -141,6 +141,64 @@ certifica todos los casos de combate/entrenamiento ni cortes de energia.
 Un firmware anterior que solo lee nombres L no puede abrir referencias P;
 no hacer downgrade sin un plan compatible. No se borra ni resetea aprendizaje.
 
+### Transicion Rapida Entre Acciones: 2026-10-29
+
+REQ-GAME-PLAY-010 conserva la aclaracion del usuario: "lo que no quiero es que
+se demore cuando paso de una accion a otra". REQ-GAME-PLAY-009 no cierra este
+objetivo: mostrar GUARDANDO animado no reduce por si mismo la duracion total.
+Se agregan tiempos monotonic por fase de los repositorios, con salida USB solo
+en Arduino, para identificar en la partida real collect/space/write_sync/
+readback/backup/publish. Objetivo <=200 ms hasta resultado confirmado, <=100 ms
+para feedback de input. No se elimina validacion ni respaldo sin evidencia.
+Estado: diagnostico; medicion fisica y optimizacion del costo dominante abiertas.
+
+### Guardado De Entrenamiento En Segundo Plano: 2026-10-29
+
+REQ-GAME-PLAY-009 responde a "sigue igual" despues de 3ca44ce. Red observado:
+async_success falla porque App confirma sincronamente en vez de iniciar la tarea
+y presentar guardado antes de E/S. Red visual: cuadro saving no coincide con
+Pillow antes de implementar la vista.
+
+Diseno implementado: TrainingSave contiene un PetState, Settings y experiencia;
+reutiliza el escritor persistente de 8192 bytes, sin duplicar tarea ni framebuffer.
+App conserva la mascota viva y el rollback; worker escribe solo snapshot,
+resultado y metricas. La barrera finished protege el acceso a esos resultados.
+Durante espera, ninguna entrada ni begin abre otra transaccion; destructor espera.
+Vista GUARDANDO/SAVING con retrato estatico e indicador animado, sin tabla
+adelantada. El cuadro inicial lee assets antes del writer; los ticks siguientes
+solo actualizan tres cuadrados del framebuffer, sin competir por LittleFS.
+Panels real con y sin scene verifica 120 ticks sin abrir assets y paridad visual.
+Rechazo de recursos no concede premio; rechazos de politica/Coleccion usan
+recuperacion existente; commit aceptado pendiente no se revierte.
+
+Pruebas diferidas: exito, politica, Coleccion, lectura y executor rechazados;
+legacy exito/rechazo/aceptado-pendiente/destructor. Paridad exacta en 24 cuadros
+nuevos ES/EN y los cuadros de entrenamiento anteriores. Vista ES inspeccionada
+localmente. No cambia schema, enums numericos, balance, Status ni assets VPA.
+
+Verificacion local: suite completa 2119 passed, 13302 warnings existentes,
+457.11 s. La instrumentacion por fases se agrego durante esa corrida; despues
+del ultimo ajuste de instrumentacion, sus 22 regresiones de repositorio/App
+pasaron de nuevo (144.94 s), incluido adaptador Arduino y pila host. Native
+185/185. Build final tdisplay correcto: app 1123573, RAM estatica 53924 bytes.
+spec-check: 6 specs, 32 requisitos; estructura valida no significa aceptacion.
+
+Respaldo fresco out/board-backups/20261029-training-async-critical.bin, 24576
+bytes, SHA256 5e543612b19f38551f15510969518b6e7f53bf905336287693d079baf005110b.
+Carga firmware-only autorizada completada sin sustituir LittleFS/NVS. Firmware
+SHA256 0142fed729d8d7d42b580f7a4ec0f6e794b7a2a0846d624ebd69a9cedef3931b.
+Log 20261029-training-async-deploy.log bajo out/board-backups/: Deploy OK,
+heap libre 78332/minimo 58576, FS 11853824/12451840, manifest=1.
+
+Registro USB 20261029-training-async-live.log capturado durante 300 s; usuario
+invitado a entrenar. Boot READY y consulta HUB STORAGE de solo lectura valid=1
+stage=none, sin entradas VPET_INPUT ni entrenamiento en esa ventana; no se pudo
+atribuir la demora a una fase. Sin reinicios posteriores al arranque ni fatal.
+Esto no certifica fluidez ni duracion de transicion. Capturar entrenamiento con
+VPET_TRAINING_SAVE: duracion, cuadros, max_frame_gap_ms, pila y heap. Objetivo
+maximo 200 ms entre cuadros; incumplimiento deja aceptacion fisica abierta.
+No declarar que se redujo duracion de disco ni cerrar CLAIM/reloj por este cambio.
+
 ### Ampliacion Entrenamiento
 
 Reporte posterior: SAVE PENDING al entrenar. Regresion training_policy falla

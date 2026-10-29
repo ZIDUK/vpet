@@ -42,7 +42,9 @@ def test_policy_files_atomic_refs_and_runtime_recovery(tmp_path):
 
 @pytest.mark.parametrize("compact", [False, True, "collection", "unreadable",
                                      "training_policy", "training_collection", "training_unreadable",
-                                     "explore_policy", "explore_collection", "explore_unreadable"])
+                                     "explore_policy", "explore_collection", "explore_unreadable",
+                                     "async_success", "async_policy", "async_collection", "async_unreadable", "async_executor",
+                                     "legacy_success", "legacy_reject", "legacy_pending", "legacy_destruct"])
 def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path, compact):
     binary = tmp_path / "learning-app"
     result = subprocess.run([

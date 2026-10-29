@@ -29,7 +29,7 @@ public:
     ~App();
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
-    bool ready() const { return storageReady_ && !savePending_ && !careSave_; }
+    bool ready() const { return storageReady_ && !savePending_ && !careSave_ && !trainingSave_; }
 
 private:
     void activate(uint32_t nowMs);
@@ -41,6 +41,9 @@ private:
     static void writeCare(void* context);
     void submitCare(uint32_t nowMs);
     void pollCare(uint32_t nowMs, InputEvent event);
+    static void writeTraining(void* context);
+    void submitTraining(uint32_t nowMs, const RuntimeExperience& experience);
+    void pollTraining(uint32_t nowMs);
     void beginDateTime(bool date);
     void applyDateTime();
     uint8_t clockHour() const;
@@ -74,6 +77,15 @@ private:
         uint32_t durationMs = 0, stackFreeBytes = 0, heapMin = 0;
     };
     std::unique_ptr<CareSave> careSave_;
+    struct TrainingSave {
+        PetState snapshot;
+        Settings settings;
+        RuntimeExperience experience;
+        bool collection = false, started = false, committed = false, settled = false;
+        uint32_t durationMs = 0, stackFreeBytes = 0, heapMin = 0;
+        uint32_t frames = 1, maxFrameGapMs = 0;
+    };
+    std::unique_ptr<TrainingSave> trainingSave_;
     std::unique_ptr<CareSave> prepareSave(CareKind kind, PanelId origin, uint8_t index);
     std::unique_ptr<SaveTask> ownedSaveTask_;
     SaveTask* saveTask_;

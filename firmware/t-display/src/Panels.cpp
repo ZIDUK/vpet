@@ -83,6 +83,7 @@ void Panels::drawStorageError(const char* language) {
 }
 
 void Panels::invalidate() {
+    trainingSaving_ = false;
     assets_.releaseTrainingCache();
     sceneKind_ = Scene::None;
     lastPanel_ = PanelId::Home;
@@ -1085,6 +1086,13 @@ void Panels::drawTraining(
         }
     } canvas{display_, assets_};
     const bool cachedFooter = scene_ && s.state == TrainingSession::State::Select;
+    if (s.saving && trainingSaving_) {
+        // Keep the first saving frame: no LittleFS reads while its writer owns storage.
+        training_ui::View<Canvas>(canvas,s,pet,nowMs,languageIsSpanish(language),definition_).drawSavingIndicator();
+        display_.pushSprite(0,0);
+        return;
+    }
+    trainingSaving_ = s.saving;
     if (cachedFooter && (sceneKind_ != Scene::TrainingFooter || trainingFooterCursor_ != s.cursor)) {
         Canvas footer{*scene_, assets_};
         training_ui::View<Canvas>(footer,s,pet,nowMs,languageIsSpanish(language),definition_).selectFooter();

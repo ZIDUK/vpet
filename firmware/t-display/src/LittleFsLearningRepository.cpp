@@ -1,4 +1,5 @@
 #include "vpet/LittleFsLearningRepository.h"
+#include "vpet/StorageTiming.h"
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -150,11 +151,13 @@ bool LittleFsLearningRepository::read(const std::string& owner,const char* refer
     return record.size()<=LearningState::MAX_ENCODED_SIZE;
 }
 bool LittleFsLearningRepository::prepare(const std::string& owner,const LearningState& policy,std::string& ref) {
+    StorageTiming timing("policy");
     failureReason_="policy_path";
     if (directory_.empty() || !ownerValid(owner)) return false;
     if (::mkdir(directory_.c_str(),0700) && errno!=EEXIST) return false;
     failureReason_="policy_collect";
     if (!collect()) return false;
+    timing.mark("collect");
     failureReason_="policy_encode";
     const std::string encoded=policy.encode();
     if (encoded.empty() || encoded.size()>LearningState::MAX_ENCODED_SIZE) return false;
@@ -170,18 +173,23 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
         ref=next; failureReason_="none"; return true;
     }
     if (errno!=ENOENT) return false;
+    timing.mark("encode_existing");
     failureReason_="policy_space";
     if (!budget(directory_)) return false;
+    timing.mark("space");
     failureReason_="policy_write";
     const std::string pending=directory_+"/.pending";
     auto* file=openFile(pending,"wb"); if (!file) return false;
     bool ok=std::fwrite(envelope.data(),1,envelope.size(),file)==envelope.size();
     if (ok) ok=std::fflush(file)==0 && ::fsync(::fileno(file))==0;
     const bool closed=std::fclose(file)==0;
+    timing.mark("write_sync");
     std::string verified;
     if (!ok || !closed || !readFile(pending,verified) || verified!=envelope) return false;
+    timing.mark("readback");
     failureReason_="policy_publish";
     if (::rename(pending.c_str(),final.c_str()) || !directorySync(directory_)) return false;
+    timing.mark("publish");
     // Even if interrupted here, the collection still points to its old policy.
     ref=next; failureReason_="none"; return true;
 }

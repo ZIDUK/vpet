@@ -39,7 +39,8 @@ def sim_frame(build, state, lang, index, secondary, reps, ms, energy, ev):
     p.effort = 0
     p.language = lang
     s = TrainingSession(p, lambda _: True)
-    s.state = STATES[state]
+    s.state = STATES[4 if state == 9 else state]
+    s.saving = state == 9
     s.index = index
     s._chosen_index = min(index,5)
     s._chosen_stat = stat

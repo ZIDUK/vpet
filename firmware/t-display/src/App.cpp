@@ -51,11 +51,11 @@ App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleSe
 }
 
 App::~App() {
-    if (careSave_ && careSave_->started) saveTask_->wait();
+    if ((careSave_ && careSave_->started) || (trainingSave_ && trainingSave_->started)) saveTask_->wait();
 }
 
 void App::begin(uint32_t nowMs) {
-    if (careSave_) return;
+    if (careSave_ || trainingSave_) return;
     savePending_ = false;
     rejectedExperienceRecovery_ = false;
     savePendingHome_ = false;
@@ -705,7 +705,89 @@ void App::pollCare(uint32_t nowMs, InputEvent event) {
     }
 }
 
+void App::writeTraining(void* context) {
+    auto& app = *static_cast<App*>(context);
+    auto& job = *app.trainingSave_;
+    const uint32_t started = millis();
+    // Persistence is exclusively owned by this writer until finished().
+    job.committed = job.collection ? app.collection_->saveExperience(job.snapshot,job.settings,&job.experience,1)
+        : app.settingsStore_.save(static_cast<const PetState&>(job.snapshot),job.settings);
+    job.settled = job.committed && (job.collection ? !app.collection_->failed()
+        : app.settingsStore_.recoverPending());
+    job.durationMs = millis()-started;
+#ifdef ARDUINO
+    job.stackFreeBytes = uxTaskGetStackHighWaterMark(nullptr);
+    job.heapMin = ESP.getMinFreeHeap();
+#endif
+}
+
+void App::submitTraining(uint32_t nowMs, const RuntimeExperience& experience) {
+    std::unique_ptr<TrainingSave> job(new (std::nothrow) TrainingSave);
+    training_.dirty = false;
+    if (job) {
+        job->snapshot = pet_;
+        job->settings = settings_;
+        job->experience = experience;
+        job->collection = collection_ && collection_->enabled();
+        trainingSave_ = std::move(job);
+        training_.saving = true;
+        renderer_.invalidate();
+        panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+        lastRenderMs_ = nowMs;
+        trainingSave_->started = saveTask_->start(writeTraining,this);
+        if (trainingSave_->started) {
+            if (saveTask_->finished()) pollTraining(nowMs);
+            return;
+        }
+        trainingSave_.reset();
+    }
+    training_.rollbackFromSnapshot(pet_);
+    Serial.println("VPET_TRAINING_QUEUE rejected=resources");
+    panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+}
+
+void App::pollTraining(uint32_t nowMs) {
+    lastInteractionMs_ = nowMs;
+    if (!saveTask_->finished()) {
+        if (nowMs-lastRenderMs_ >= 33) {
+            trainingSave_->maxFrameGapMs = std::max(trainingSave_->maxFrameGapMs,nowMs-lastRenderMs_);
+            ++trainingSave_->frames;
+            lastRenderMs_ = nowMs;
+            renderer_.invalidate();
+            panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+        }
+        return;
+    }
+    // finished() is the acquire barrier for every field written by the worker.
+    const bool committed = trainingSave_->committed, settled = trainingSave_->settled;
+    const uint32_t duration = trainingSave_->durationMs;
+    const uint32_t stack = trainingSave_->stackFreeBytes, heap = trainingSave_->heapMin;
+    const uint32_t frames = trainingSave_->frames;
+    const uint32_t gap = std::max(trainingSave_->maxFrameGapMs,nowMs-lastRenderMs_);
+    saveTask_->reset();
+    trainingSave_.reset();
+    training_.saving = false;
+    savePending_ = !settled;
+    if (!committed) {
+        training_.rollbackFromSnapshot(pet_);
+        recoverRejectedExperience("training");
+    } else training_.needsRollback = false;
+    lastSaveAttemptMs_ = nowMs;
+    motion_.alignClock(nowMs);
+    renderer_.invalidate();
+    panels_.invalidate();
+    lastRenderMs_ = nowMs;
+    if (savePending_) panels_.drawStorageError(settings_.language.c_str());
+    else panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+    Serial.printf("VPET_TRAINING_SAVE duration_ms=%u committed=%u pending=%u stack_free_bytes=%u heap_min=%u frames=%u max_frame_gap_ms=%u\n",
+        duration,committed?1U:0U,savePending_?1U:0U,stack,heap,frames,gap);
+}
+
 void App::tick(uint32_t nowMs, InputEvent event) {
+    if (trainingSave_) {
+        pollTraining(nowMs);
+        return; // Inputs received during a save cannot become a second action.
+    }
     if (careSave_) {
         pollCare(nowMs,event);
         return;
@@ -876,16 +958,8 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (training_.dirty && training_.needsRollback) {
             const int score=int(training_.lastSummary.evAdded)*10-training_.lastSummary.energyCharged;
             const RuntimeExperience experience{0,0,trainingIndexFor(training_.chosenStat),std::max(-100,std::min(100,score))};
-            const uint32_t saveStarted=millis();
-            const bool committed=persistExperience(&experience,1);
-            if (!committed) {
-                training_.rollbackFromSnapshot(pet_);
-                recoverRejectedExperience("training");
-            } else settleStorage();
-            Serial.printf("VPET_TRAINING_SAVE duration_ms=%u committed=%u pending=%u\n",
-                millis()-saveStarted,committed?1U:0U,savePending_?1U:0U);
-            training_.dirty = false;
-            training_.needsRollback = false;
+            submitTraining(nowMs,experience);
+            return;
         }
         if (savePending_) return;
         if (!stillActive) {

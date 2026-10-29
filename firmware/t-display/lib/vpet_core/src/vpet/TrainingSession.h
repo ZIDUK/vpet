@@ -335,6 +335,7 @@ public:
     uint8_t resultChoice = 0; // repeat, back, stats
     bool techniquesRequested = false;
     bool animating = false;
+    bool saving = false;
     uint32_t animationStartedMs = 0;
     uint32_t pausedAtMs = 0;
     uint8_t cursor = 0;             // current stat selection in State::Select
@@ -370,6 +371,7 @@ public:
     // fails the caller must invoke `rollbackFromSnapshot(pet)` to
     // restore the pre-apply state.
     bool input(PetState& pet, InputEvent event, uint32_t nowMs) {
+        if (saving) return true;
         if (event != InputEvent::None) message = "";
         switch (state) {
             case State::Select: return inputSelect(pet, event);
@@ -417,6 +419,7 @@ public:
     // Restore the pet to the pre-commit state captured at the last
     // apply. Called by the App when settingsStore_.save returns false.
     void rollbackFromSnapshot(PetState& pet) {
+        saving = false;
         if (!needsRollback) return;
         pet.adoptedStock = rollbackStock;
         pet.exploration = rollbackExploration;
@@ -460,6 +463,7 @@ public:
         resultChoice = 0;
         techniquesRequested = false;
         animating = false;
+        saving = false;
         animationStartedMs = 0;
         pausedAtMs = 0;
         repsCompleted = 0;

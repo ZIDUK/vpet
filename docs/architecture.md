@@ -141,8 +141,21 @@ La validacion del GC de aprendizaje usa un flujo de lectura por generacion,
 no uno por bloque: comprueba longitud, CRC completo y cuerpos antes de cerrar
 con resultado verificado. Cada operacion reabre y revalida; no conserva bytes
 ni certificados de validacion entre generaciones. App mide el guardado final
-de entrenamiento con VPET_TRAINING_SAVE. Sigue siendo sincrono y la tabla solo
-se presenta despues de confirmarlo; menor E/S host no acredita fluidez fisica.
+de entrenamiento con VPET_TRAINING_SAVE. El usuario confirma que reducir esas
+aperturas no elimino la pausa. La confirmacion de entrenamiento ahora reutiliza
+SaveTask/FreeRtosSaveTask: un snapshot posterior y un evento inmutables en heap,
+sin segunda tarea, cola adicional ni framebuffer. App dibuja GUARDANDO/SAVING
+antes de iniciar el escritor; despues solo actualiza el indicador animado sobre
+ese framebuffer, sin lecturas de assets ni mas memoria grafica. La mascota en
+esa vista permanece quieta. Solo el escritor accede a Coleccion/NVS
+hasta la barrera acquire de finished(). App no consulta aprendizaje mientras
+dibuja y ready es false, bloqueando operaciones del Hub. La tabla solo aparece
+tras commit y settlement; rechazos restauran efectos y permiten reintento tras
+recuperacion, sin duplicar cargos/experiencias. Un commit aceptado pendiente
+no se revierte. La destruccion espera al escritor y begin no reinicia el trabajo.
+La telemetria agrega frames, max_frame_gap_ms, stack_free_bytes y heap_min.
+Las pruebas host y paridad visual no acreditan fluidez fisica. CLAIM, reloj y
+combate conservan su camino sincrono; REQ-GAME-PLAY-007 sigue pendiente.
 
 No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
 modo sin Coleccion conserva el guardado legacy existente. Para volver a un

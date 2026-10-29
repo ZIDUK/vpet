@@ -2,6 +2,7 @@
 #include "vpet/ExplorationSession.h"
 #include "vpet/Navigation.h"
 #include "vpet/PracticeSession.h"
+#include "vpet/TrainingSession.h"
 namespace vpet {
 struct Panels {
     int errors = 0;
@@ -15,6 +16,9 @@ struct Panels {
     int arenaResult = 0;
     int itemCount = -1;
     int selectedStock = -1;
+    int trainingFrames=0, trainingResultFrames=0;
+    bool trainingSaving=false;
+    uint32_t trainingTime=0;
     void invalidate() {}
     void drawStorageError(const char*) { ++errors; }
     template<class... T> void draw(const Navigation& n,const PetState& pet,T&&...) {
@@ -25,7 +29,10 @@ struct Panels {
     void drawPractice(const PracticeSession& s,const PetState&,uint32_t,const char*) {
         arenaResult=s.battle.result;
     }
-    template<class... T> void drawTraining(T&&...) {}
+    void drawTraining(const TrainingSession& s,const PetState&,uint32_t ms,const char*) {
+        ++trainingFrames; trainingSaving=s.saving; trainingTime=ms;
+        if (s.state==TrainingSession::State::Result && !s.saving) ++trainingResultFrames;
+    }
     void drawExploration(const ExplorationSession& s,const PetState& p,uint64_t,uint32_t,const char*,bool home=false,uint8_t menu=3) {
         ++explorationFrames; explorePage=s.page; away=p.exploration.away(); exploreHome=home; selectedMenu=menu;
     }

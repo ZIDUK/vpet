@@ -34,9 +34,10 @@ struct BattleStorageFaults : vpet::CollectionRepository {
 
 void compactBattle(const std::string& root, const std::string& fault) {
     using namespace vpet;
-    const bool training=fault.find("training_")==0;
+    const bool deferred=fault.find("async_")==0;
+    const bool training=fault.find("training_")==0 || deferred;
     const bool exploring=fault.find("explore_")==0;
-    const std::string failure=training?fault.substr(9):exploring?fault.substr(8):fault;
+    const std::string failure=deferred?fault.substr(6):training?fault.substr(9):exploring?fault.substr(8):fault;
     Store kv; SettingsStore legacy(kv); Settings settings; PetState original;
     original.restore(SpeciesId::Rookie,90,90,90,0,100,0);
     original.profile=profile(); original.rollDna(42);
@@ -50,7 +51,8 @@ void compactBattle(const std::string& root, const std::string& fault) {
     PolicyFaults faults(files); LearningRuntime learning(faults);
     CollectionPanel panel(store,legacy,profile,seed,nullptr,nullptr,&learning);
     Renderer renderer; Panels panels; BleService ble;
-    App app(renderer,panels,legacy,ble,learningClock,&panel);
+    DeferredSaveTask task;
+    App app(renderer,panels,legacy,ble,learningClock,&panel,deferred?&task:nullptr);
     uint32_t ms=0; app.begin(ms); assert(app.ready());
     auto key=[&](InputEvent e) { ms+=50; app.tick(ms,e); };
     for(int i=0;i<(training?2:exploring?3:4);++i) key(InputEvent::Next);
@@ -62,13 +64,38 @@ void compactBattle(const std::string& root, const std::string& fault) {
         learningWall+=1800;
     }
     // A rejected policy preparation must retain a retryable terminal result.
-    faults.fail=failure!="collection";
+    faults.fail=deferred?(failure=="policy" || failure=="unreadable"):failure!="collection";
     storageFaults.reject=failure=="collection";
     if(failure=="unreadable") faults.onFailure=[&]() { storageFaults.unreadable=true; };
+    if(deferred) {
+        task.reject=failure=="executor";
+        task.onStart=[&]() {
+            assert(panels.trainingSaving && panels.trainingResultFrames==0);
+            assert(learning.policy()->last_sequence()==0);
+        };
+    }
     if(exploring) key(InputEvent::Action);
     else if(training) { ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None); }
     else for(int i=0;i<128 && !panels.arenaResult;++i) {
         ms+=1500; app.tick(ms,InputEvent::None);
+    }
+    if(deferred && failure!="executor") {
+        assert(!app.ready() && task.starts==1 && panels.trainingSaving && panels.trainingResultFrames==0);
+        app.begin(ms); assert(!app.ready());
+        const int frames=panels.trainingFrames;
+        for(int i=0;i<12;++i) key(i%3==0?InputEvent::Action:i%3==1?InputEvent::Next:InputEvent::Back);
+        assert(panels.trainingFrames>frames && panels.trainingTime==ms);
+        assert(task.starts==1 && learning.policy()->last_sequence()==0);
+        task.complete(); key(InputEvent::Action); // Do not reinterpret a queued input.
+        if(failure=="success") {
+            assert(app.ready() && panels.trainingResultFrames>0 && !panels.trainingSaving);
+            assert(task.starts==1 && learning.policy()->last_sequence()==1);
+            PetState committed; assert(store.readPet(panel.state(),0,committed,settings));
+            assert(committed.evAt(CombatStat::Off)==6);
+            key(InputEvent::None); assert(task.starts==1 && learning.policy()->last_sequence()==1);
+            app.begin(ms); assert(app.ready() && learning.policy()->last_sequence()==1);
+            return;
+        }
     }
     assert((training || exploring || panels.arenaResult) && app.ready()==(failure!="unreadable"));
     assert(learning.policy()->last_sequence()==0);
@@ -96,13 +123,15 @@ void compactBattle(const std::string& root, const std::string& fault) {
     if(training) {
         assert(saved.evAt(CombatStat::Off)==0 && saved.energy()==original.energy());
         faults.fail=false;
-        if(failure=="policy") key(InputEvent::Action); // Retry the retained result.
+        task.reject=false; task.onStart=nullptr;
+        if(failure=="policy" || failure=="executor") key(InputEvent::Action); // Retry the retained result.
         else {
             key(InputEvent::Back); // Discard the rejected result, without reboot.
             assert(app.ready() && learning.policy()->last_sequence()==0);
             key(InputEvent::Action); key(InputEvent::Action);
             ms+=kTrainingDurationMs; app.tick(ms,InputEvent::None);
         }
+        if(deferred) { assert(!app.ready()); task.complete(); key(InputEvent::None); }
         assert(app.ready() && learning.policy()->last_sequence()==1);
         assert(store.readPet(panel.state(),0,saved,settings) && saved.evAt(CombatStat::Off)==6);
         key(InputEvent::None); assert(learning.policy()->last_sequence()==1);
@@ -121,8 +150,46 @@ void compactBattle(const std::string& root, const std::string& fault) {
     assert(store.readPet(panel.state(),panel.state().active,saved,settings) && saved.battles()==1);
 }
 
+void legacyTraining(const std::string& mode) {
+    using namespace vpet;
+    Store kv; SettingsStore store(kv); Settings settings; PetState original;
+    original.restore(SpeciesId::Rookie,90,90,90,0,100,0);
+    original.profile=profile(); original.rollDna(42);
+    assert(store.save(original,settings));
+    Renderer renderer; Panels panels; BleService ble; DeferredSaveTask task;
+    auto app=std::unique_ptr<App>(new App(renderer,panels,store,ble,learningClock,nullptr,&task));
+    uint32_t ms=0; app->begin(ms); assert(app->ready());
+    auto key=[&](InputEvent event) { ms+=50; app->tick(ms,event); };
+    key(InputEvent::Next); key(InputEvent::Next);
+    key(InputEvent::Action); key(InputEvent::Action); key(InputEvent::Action);
+    if(mode=="legacy_reject") kv.rejectCommit=true;
+    if(mode=="legacy_pending") kv.foodFault=1;
+    ms+=kTrainingDurationMs; app->tick(ms,InputEvent::None);
+    assert(!app->ready() && task.starts==1 && panels.trainingSaving && !panels.trainingResultFrames);
+    if(mode=="legacy_destruct") {
+        app.reset(); assert(task.done);
+    } else {
+        for(int i=0;i<8;++i) key(InputEvent::Action);
+        assert(task.starts==1 && !panels.trainingResultFrames);
+        task.complete(); key(InputEvent::Action);
+        assert(app->ready()==(mode=="legacy_success"));
+        kv.rejectCommit=false; kv.replayFault=false; kv.foodFault=0;
+        if(mode!="legacy_success") { ms+=1100; app->tick(ms,InputEvent::None); assert(app->ready()); }
+        if(mode=="legacy_reject") {
+            key(InputEvent::Action);
+            assert(task.starts==2 && !app->ready());
+            task.complete(); key(InputEvent::None); assert(app->ready());
+        }
+        app->begin(ms); assert(app->ready());
+    }
+    PetState restored; assert(store.load(restored,settings)==LoadResult::Loaded);
+    assert(restored.evAt(CombatStat::Off)==6 && restored.trainingSessions()==1);
+    assert(restored.energy()==original.energy()-8);
+}
+
 int main(int argc,char** argv) {
     assert(argc==2 || argc==3);
+    if(argc==3 && std::string(argv[2]).find("legacy_")==0) { legacyTraining(argv[2]); return 0; }
     if(argc==3) { compactBattle(argv[1],argv[2]); return 0; }
     using namespace vpet;
     const std::string root=argv[1];

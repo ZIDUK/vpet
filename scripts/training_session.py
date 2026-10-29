@@ -31,6 +31,7 @@ class TrainingSession:
         # index positions are used in state A.
         self.index = 0
         self.state = STATE_SELECT
+        self.saving = False
         # Subset of training types: 0..5 are the six dumbbell
         # attributes; index 6 is the techniques entry (unchanged
         # behaviour, opened via ``PracticeSession(training=True)``);
@@ -171,6 +172,8 @@ class TrainingSession:
     # ------------------------------------------------------------------
 
     def input(self, event, now_ms):
+        if self.saving:
+            return True
         # Techniques sub-session: delegated as before.
         if self.techniques is not None:
             if not self.techniques.input(event, now_ms):
