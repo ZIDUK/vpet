@@ -10,10 +10,12 @@ uint64_t learningClock() { return learningWall; }
 struct PolicyFaults : vpet::LearningRepository {
     vpet::LearningRepository& files;
     bool fail=false;
+    int prepares=0;
     std::function<void()> onFailure;
     explicit PolicyFaults(vpet::LearningRepository& value) : files(value) {}
     bool read(const std::string& owner,const char* ref,std::string& record) override { return files.read(owner,ref,record); }
     bool prepare(const std::string& owner,const vpet::LearningState& p,std::string& ref) override {
+        ++prepares;
         if (fail) { if(onFailure) onFailure(); return false; }
         return files.prepare(owner,p,ref);
     }
@@ -22,10 +24,11 @@ struct PolicyFaults : vpet::LearningRepository {
 struct BattleStorageFaults : vpet::CollectionRepository {
     vpet::CollectionRepository& files;
     bool reject=false, unreadable=false;
+    int begins=0;
     explicit BattleStorageFaults(vpet::CollectionRepository& value) : files(value) {}
     vpet::CollectionRead size(size_t& n) override { return unreadable?vpet::CollectionRead::Error:files.size(n); }
     bool read(size_t at,void* p,size_t n) override { return !unreadable && files.read(at,p,n); }
-    bool begin(uint64_t seq,size_t n) override { return !reject && files.begin(seq,n); }
+    bool begin(uint64_t seq,size_t n) override { ++begins; return !reject && files.begin(seq,n); }
     bool write(size_t at,const void* p,size_t n) override { return files.write(at,p,n); }
     bool readPrepared(size_t at,void* p,size_t n) override { return files.readPrepared(at,p,n); }
     bool commit(uint64_t seq) override { return files.commit(seq); }
@@ -187,8 +190,63 @@ void legacyTraining(const std::string& mode) {
     assert(restored.energy()==original.energy()-8);
 }
 
+void journalProgress(const std::string& root) {
+    using namespace vpet;
+    Store kv; SettingsStore legacy(kv); Settings settings; PetState pet;
+    pet.restore(SpeciesId::Rookie,90,90,90,0,100,0);
+    pet.profile=profile(); pet.rollDna(42);
+    LittleFsCollectionRepository files((root+"/collection").c_str());
+    BattleStorageFaults repository(files);
+    CareJournal journal(kv); CollectionStore store(repository,&journal,true);
+    CollectionState initial; std::string snapshot;
+    assert(CollectionStore::capture(pet,settings,snapshot) && store.migrate(initial,snapshot));
+    LittleFsLearningRepository policyFiles((root+"/collection/policies").c_str());
+    PolicyFaults policies(policyFiles); LearningRuntime learning(policies);
+    CollectionPanel panel(store,legacy,profile,seed,nullptr,nullptr,&learning);
+    assert(panel.load(pet,settings)==CollectionLoad::Loaded);
+    const auto base=panel.state().sequence;
+    repository.begins=policies.prepares=0;
+    pet.setEvAt(CombatStat::Off,6); pet.setEnergy(82);
+    RuntimeExperience experience{0,0,0,52};
+    assert(panel.saveExperience(pet,settings,&experience,1));
+    assert(repository.begins==0 && policies.prepares==0 && panel.state().sequence==base);
+    assert(learning.policy()->last_sequence()==1);
+    CareJournal restartedJournal(kv); CollectionStore restarted(files,&restartedJournal,true);
+    LearningRuntime restoredLearning(policies);
+    CollectionPanel reboot(restarted,legacy,profile,seed,nullptr,nullptr,&restoredLearning);
+    PetState restored;
+    assert(reboot.load(restored,settings)==CollectionLoad::Loaded);
+    assert(restored.evAt(CombatStat::Off)==6 && restored.energy()==82);
+    assert(restoredLearning.policy()->last_sequence()==1);
+    restored.setHappiness(71);
+    assert(reboot.saveCare(restored,settings) && reboot.settleCare());
+    assert(reboot.load(restored,settings)==CollectionLoad::Loaded);
+    assert(restored.happiness()==71 && restoredLearning.policy()->last_sequence()==1);
+    // Consolidation changes the base exactly once; the old receipt is retained
+    // but must not replay events already included in the new policy reference.
+    assert(reboot.checkpoint(restored,settings));
+    assert(reboot.state().sequence==base+1 && reboot.state().journalRevision>0);
+    assert(reboot.load(restored,settings)==CollectionLoad::Loaded);
+    assert(restoredLearning.policy()->last_sequence()==1 && !restarted.progressRecord());
+    // Capacity is bounded, rejects without changing effects, then consolidation
+    // makes room. Reboots remain equivalent through many generations.
+    for(size_t i=1;i<512;++i) {
+        if(reboot.progressCount()==64) assert(reboot.checkpoint(restored,settings));
+        assert(reboot.saveExperience(restored,settings,&experience,1));
+        assert(restoredLearning.policy()->last_sequence()==i+1);
+        if(i%31==0) {
+            assert(reboot.load(restored,settings)==CollectionLoad::Loaded);
+            assert(restoredLearning.policy()->last_sequence()==i+1);
+        }
+    }
+    assert(reboot.checkpoint(restored,settings));
+    assert(reboot.load(restored,settings)==CollectionLoad::Loaded);
+    assert(restoredLearning.policy()->last_sequence()==512);
+}
+
 int main(int argc,char** argv) {
     assert(argc==2 || argc==3);
+    if(argc==3 && std::string(argv[2])=="journal") { journalProgress(argv[1]); return 0; }
     if(argc==3 && std::string(argv[2]).find("legacy_")==0) { legacyTraining(argv[2]); return 0; }
     if(argc==3) { compactBattle(argv[1],argv[2]); return 0; }
     using namespace vpet;

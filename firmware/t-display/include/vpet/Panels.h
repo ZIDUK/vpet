@@ -101,7 +101,6 @@ private:
     SpeciesId sceneSpecies_ = SpeciesId::Egg;
     SpeciesId menuSpecies_ = SpeciesId::Egg;
     uint8_t trainingFooterCursor_ = 255;
-    bool trainingSaving_ = false;
     uint16_t arenaFooterKey_ = 0xFFFF;
     PanelId lastPanel_ = PanelId::Home;
     bool lastSpanish_ = true;

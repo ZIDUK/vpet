@@ -51,11 +51,13 @@ App::App(Renderer& renderer, Panels& panels, SettingsStore& settingsStore, BleSe
 }
 
 App::~App() {
+    if (progressSave_ && progressSave_->started) saveTask_->wait();
+    if (progressMode_) collection_->setInterrupt(nullptr,nullptr);
     if ((careSave_ && careSave_->started) || (trainingSave_ && trainingSave_->started)) saveTask_->wait();
 }
 
 void App::begin(uint32_t nowMs) {
-    if (careSave_ || trainingSave_) return;
+    if (careSave_ || trainingSave_ || (progressSave_ && progressSave_->kind!=ProgressKind::None)) return;
     savePending_ = false;
     rejectedExperienceRecovery_ = false;
     savePendingHome_ = false;
@@ -84,6 +86,23 @@ void App::begin(uint32_t nowMs) {
         panels_.drawStorageError(settings_.language.c_str());
         return;
     }
+    progressMode_=collection_ && collection_->enabled() && collection_->progressEnabled();
+    if (progressMode_) {
+        if (!progressSave_) progressSave_.reset(new (std::nothrow) ProgressSave);
+        if (!progressSave_ || !saveTask_) {
+            storageReady_=false; panels_.drawStorageError(settings_.language.c_str()); return;
+        }
+        progressInputHead_=progressInputCount_=0;
+        progressInputOverflow_=sleepCheckpoint_=progressSettlement_=progressWarning_=false;
+        progressInterrupt_.store(false,std::memory_order_release);
+        collection_->setInterrupt(interruptProgress,this);
+        lastProgressCheckpointMs_=nowMs;
+        progressMaxQueueDelayMs_=progressMaxDrawLatencyMs_=0;
+        progressVisibleInput_=progressSafeHome_=false;
+        Serial.printf("VPET_PROGRESS_MEMORY job_bytes=%u pet_bytes=%u view_bytes=%u queue_bytes=%u\n",
+            unsigned(sizeof(ProgressSave)),unsigned(sizeof(PetState)),unsigned(sizeof(ProgressView)),
+            unsigned(sizeof(progressInputs_)));
+    }
     if (!bluetooth_.setEnabled(settings_.bluetoothEnabled)) {
         storageReady_ = false;
         Serial.println("VPET_INIT_BLOCKED reason=BLE");
@@ -100,6 +119,7 @@ void App::begin(uint32_t nowMs) {
 }
 
 bool App::saveState() {
+    if (progressMode_) return persistActive();
     lastSaveAttemptMs_ = lastTickMs_;
     if (explorationClock_.trusted(calendarNow())) pet_.exploration.clockCheckpoint=calendarNow();
     if (persistActive()) return settleStorage();
@@ -116,6 +136,10 @@ uint64_t App::calendarNow() const {
 }
 
 bool App::persistActive() {
+    if (progressMode_) {
+        if (progressSave_->kind==ProgressKind::None) progressSave_->kind=ProgressKind::Receipt;
+        return progressSave_->kind==ProgressKind::Receipt;
+    }
     if (collection_ && collection_->enabled()) {
         const bool committed=collection_->save(pet_,settings_);
         if (!committed) savePending_=true;
@@ -125,6 +149,11 @@ bool App::persistActive() {
     return settingsStore_.save(pet_,settings_);
 }
 bool App::persistExperience(const RuntimeExperience* events, size_t count) {
+    if (progressMode_) {
+        if (!persistActive() || count>8-progressSave_->eventCount || (count && !events)) return false;
+        for (size_t i=0;i<count;++i) progressSave_->events[progressSave_->eventCount++]=events[i];
+        return true;
+    }
     if (collection_ && collection_->enabled() && count) {
         const bool committed=collection_->saveExperience(pet_,settings_,events,count);
         if (!committed) savePending_=true;
@@ -144,6 +173,7 @@ bool App::recoverRejectedExperience(const char* context) {
 }
 int App::autoChoice(void* context, const practice::Fighter& fighter, int fallback) {
     auto* app=static_cast<App*>(context);
+    if (app && app->progressMode_ && app->progressSave_->started) return fallback;
     if (!app || !app->collection_ || !app->collection_->enabled()) return fallback;
     uint8_t learned=0;
     for (int i=0;i<techniques::kCount;++i)
@@ -214,6 +244,7 @@ void App::explorationInput(InputEvent event) {
         Serial.println("VPET_EXPLORE_SAVE_REJECTED");
         return;
     }
+    if (progressMode_) progressSave_->origin=ProgressOrigin::Exploration;
     exploration_.open(pet_,true);
     Serial.printf("VPET_EXPLORE away=%u receipt=%u route=%u\n",
         pet_.exploration.away(),pet_.exploration.hasReceipt(),static_cast<unsigned>(pet_.exploration.route));
@@ -221,6 +252,7 @@ void App::explorationInput(InputEvent event) {
 }
 
 bool App::settleStorage() {
+    if (progressMode_) return !savePending_;
     lastSaveAttemptMs_ = lastTickMs_;
     savePending_ = collection_ && collection_->enabled() ? collection_->failed() : !settingsStore_.recoverPending();
     if (savePending_) {
@@ -258,6 +290,13 @@ void App::applyDateTime() {
     value.tm_hour = values[3];
     value.tm_min = values[4];
     const time_t epoch = mktime(&value);
+    if (progressMode_) {
+        if (epoch<0 || !persistActive()) return;
+        progressSave_->setClock=true;
+        progressSave_->epoch=static_cast<uint64_t>(epoch);
+        pet_.exploration.clockCheckpoint=static_cast<uint64_t>(epoch);
+        return;
+    }
     const timeval clock = {epoch, 0};
     settimeofday(&clock, nullptr);
     if (explorationClockStep_!=1) {
@@ -271,6 +310,22 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
     const PanelId panel = navigation_.panel();
     if (panel==PanelId::Collection) {
         if (!collection_) { navigation_.setPanel(PanelId::Options,option_menu::collection); return; }
+        if (progressMode_) {
+            const auto page=collection_->page();
+            const bool navigationOnly=event==InputEvent::Next || event==InputEvent::None ||
+                (event==InputEvent::Back && page!=CollectionPanel::Page::Parents) ||
+                (event==InputEvent::Action && (page==CollectionPanel::Page::Preferences ||
+                    page==CollectionPanel::Page::Migration || page==CollectionPanel::Page::Error));
+            if (navigationOnly) {
+                if (collection_->input(event,pet_,settings_,collectionGuard()))
+                    navigation_.setPanel(PanelId::Options,option_menu::collection);
+                return;
+            }
+            progressSave_->kind=ProgressKind::CollectionInput;
+            progressSave_->input=event;
+            progressSave_->guard=collectionGuard();
+            return;
+        }
         const bool close=collection_->input(event,pet_,settings_,collectionGuard());
         if (collection_->changedActive()) activeChanged(nowMs);
         if (collection_->failed()) { storageReady_=false; panels_.drawStorageError(settings_.language.c_str()); return; }
@@ -301,14 +356,17 @@ void App::handlePanelInput(uint32_t nowMs, InputEvent event) {
                 break;
             case 1:
                 settings_.language = settings_.language == "ES" ? "EN" : "ES";
+                if (progressMode_) saveState();
                 break;
             case 2:
                 settings_.soundEnabled = !settings_.soundEnabled;
+                if (progressMode_) saveState();
                 break;
             case 3:
                 saveState();
                 break;
             case 4:
+                if (progressMode_) { progressSave_->kind=ProgressKind::Reload; break; }
                 if ((collection_ && collection_->enabled() ?
                      collection_->load(pet_,settings_)!=CollectionLoad::Loaded :
                      settingsStore_.load(pet_, settings_) != LoadResult::Loaded)) {
@@ -642,6 +700,13 @@ void App::writeCare(void* context) {
 
 void App::submitCare(uint32_t nowMs) {
     if (!careSave_ || careSave_->started) return;
+    if (progressMode_) {
+        progressSave_->before=careSave_->before;
+        progressSave_->origin=ProgressOrigin::Care;
+        persistActive();
+        careSave_.reset();
+        return;
+    }
     careSave_->started = true;
     if (!saveTask_->start(writeCare,this)) {
         const bool checkpoint=careSave_->careCheckpoint;
@@ -722,6 +787,16 @@ void App::writeTraining(void* context) {
 }
 
 void App::submitTraining(uint32_t nowMs, const RuntimeExperience& experience) {
+    if (progressMode_) {
+        progressSave_->origin=ProgressOrigin::Training;
+        persistExperience(&experience,1);
+        training_.dirty=false;
+        training_.saving=false;
+        renderer_.invalidate();
+        panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+        lastRenderMs_=nowMs;
+        return;
+    }
     std::unique_ptr<TrainingSave> job(new (std::nothrow) TrainingSave);
     training_.dirty = false;
     if (job) {
@@ -783,7 +858,356 @@ void App::pollTraining(uint32_t nowMs) {
         duration,committed?1U:0U,savePending_?1U:0U,stack,heap,frames,gap);
 }
 
+App::ProgressView App::progressView() const {
+    ProgressView view;
+    view.navigation=navigation_; view.date=dateMenu_; view.training=training_;
+    view.practice=practice_; view.exploration=exploration_;
+    view.trainingActive=trainingActive_; view.practicing=practicing_;
+    view.clockStep=explorationClockStep_;
+    return view;
+}
+
+void App::restoreProgressView(const ProgressView& view) {
+    navigation_=view.navigation; dateMenu_=view.date; training_=view.training;
+    practice_=view.practice; exploration_=view.exploration;
+    trainingActive_=view.trainingActive; practicing_=view.practicing;
+    explorationClockStep_=view.clockStep;
+}
+
+void App::prepareProgress() {
+    auto& job=*progressSave_;
+    job.kind=ProgressKind::None; job.origin=ProgressOrigin::State;
+    job.before=pet_; job.beforeSettings=settings_; job.beforeView=progressView();
+    job.eventCount=0;
+    job.started=false; job.committed=false; job.recovered=true; job.cancelled=false;
+    job.close=false; job.changedActive=false; job.setClock=false; job.clockApplied=true;
+    job.dirty=false;
+    job.durationMs=job.stackFreeBytes=job.heapMin=0;
+}
+
+bool App::interruptProgress(void* context) {
+    return static_cast<App*>(context)->progressInterrupt_.load(std::memory_order_acquire);
+}
+
+void App::writeProgress(void* context) {
+    auto& app=*static_cast<App*>(context);
+    auto& job=*app.progressSave_;
+    const uint32_t started=millis();
+    // The worker owns CollectionPanel and LearningRuntime until finished().
+    switch (job.kind) {
+        case ProgressKind::Receipt:
+            job.committed=job.eventCount ?
+                app.collection_->saveExperience(job.snapshot,job.settings,job.events,job.eventCount) :
+                app.collection_->saveProgress(job.snapshot,job.settings);
+            job.recovered=job.committed ? app.collection_->settleCare() : app.collection_->recoverRejectedSave();
+            break;
+        case ProgressKind::Checkpoint:
+            job.committed=app.collection_->checkpoint(job.snapshot,job.settings);
+            job.cancelled=!job.committed && app.collection_->interrupted();
+            if (!job.committed && !job.cancelled) job.recovered=app.collection_->recoverRejectedSave();
+            break;
+        case ProgressKind::CollectionInput:
+            job.close=app.collection_->input(job.input,job.snapshot,job.settings,job.guard);
+            job.changedActive=app.collection_->changedActive();
+            job.committed=!app.collection_->failed();
+            if (!job.committed) job.recovered=app.collection_->recoverRejectedSave();
+            break;
+        case ProgressKind::Reload:
+            job.committed=app.collection_->load(job.snapshot,job.settings)==CollectionLoad::Loaded;
+            job.changedActive=job.committed;
+            job.recovered=job.committed;
+            break;
+        case ProgressKind::Recovery:
+            job.committed=app.collection_->recoverRejectedSave();
+            job.recovered=job.committed;
+            break;
+        case ProgressKind::Settlement:
+            // The receipt was accepted already. Resolve it without applying or
+            // submitting its effects/events again, even across repeated failures.
+            job.committed=true;
+            job.recovered=app.collection_->settleCare();
+            break;
+        case ProgressKind::None: break;
+    }
+    if (job.committed && job.setClock) {
+        const timeval clock={static_cast<time_t>(job.epoch),0};
+        job.clockApplied=settimeofday(&clock,nullptr)==0;
+    }
+    job.dirty=app.collection_->dirty();
+    job.durationMs=millis()-started;
+#ifdef ARDUINO
+    job.stackFreeBytes=uxTaskGetStackHighWaterMark(nullptr);
+    job.heapMin=ESP.getMinFreeHeap();
+#endif
+}
+
+void App::startProgress(uint32_t nowMs) {
+    auto& job=*progressSave_;
+    job.snapshot=pet_; job.settings=settings_; job.view=progressView();
+    if (progressSafeHome_) {
+        lastRenderMs_=nowMs-33;
+        drawProgress(nowMs);
+    } else if (progressWarning_ && nowMs-progressWarningStartedMs_<2000)
+        panels_.drawStorageError(settings_.language.c_str());
+    progressInterrupt_.store(false,std::memory_order_release);
+    job.started=true;
+    if (!saveTask_->start(writeProgress,this)) {
+        job.started=false;
+        finishProgress(nowMs);
+        Serial.println("VPET_PROGRESS_QUEUE rejected=executor");
+    }
+}
+
+void App::finishProgress(uint32_t nowMs) {
+    auto& job=*progressSave_;
+    // Only the acquire barrier permits reading worker output or Collection again.
+    if (job.started) saveTask_->reset();
+    restoreProgressView(job.view);
+    if (!job.committed && !job.cancelled && job.kind==ProgressKind::Receipt) {
+        pet_=job.before;
+        settings_=job.beforeSettings;
+        bluetooth_.setEnabled(settings_.bluetoothEnabled);
+        motion_.cancelAction(nowMs);
+        if (pet_.sleep.asleep) motion_.startAction(Action::Rest,nowMs);
+        if (job.origin==ProgressOrigin::Training) {
+            training_.rollbackFromSnapshot(pet_);
+            trainingActive_=true;
+        } else if (job.origin==ProgressOrigin::Practice) {
+            practice_.finishSave(pet_,job.before,job.beforeView.practice,false);
+            practicing_=true;
+        } else if (job.origin==ProgressOrigin::Exploration) {
+            exploration_=job.beforeView.exploration;
+            exploration_.saveFailed=true;
+        } else if (job.origin==ProgressOrigin::Care) {
+            navigation_=job.beforeView.navigation;
+        }
+        warnProgress(nowMs);
+    }
+    if (job.committed) {
+        if (job.kind==ProgressKind::Receipt) {
+            if (job.origin==ProgressOrigin::Training) training_.needsRollback=false;
+            if (!job.before.sleep.asleep && pet_.sleep.asleep) sleepCheckpoint_=true;
+        }
+        if (job.kind==ProgressKind::CollectionInput || job.kind==ProgressKind::Reload) {
+            pet_=job.snapshot; settings_=job.settings;
+            if (job.changedActive) activeChanged(nowMs);
+            if (job.close) navigation_.setPanel(PanelId::Options,option_menu::collection);
+            bluetooth_.setEnabled(settings_.bluetoothEnabled);
+        }
+        if (job.setClock) {
+            if (job.clockApplied) explorationClock_.adjusted(job.epoch);
+            else warnProgress(nowMs);
+        }
+    }
+    progressSettlement_=job.committed && !job.recovered;
+    savePending_=!job.recovered;
+    if (job.kind==ProgressKind::Checkpoint) lastProgressCheckpointMs_=nowMs;
+    lastSaveAttemptMs_=nowMs;
+    const bool failed=!job.committed && !job.cancelled;
+    Serial.printf("VPET_PROGRESS_SAVE kind=%u duration_ms=%u committed=%u settled=%u cancelled=%u dirty=%u stack_free_bytes=%u heap_min=%u queue=%u max_queue_delay_ms=%u max_input_to_draw_ms=%u\n",
+        unsigned(job.kind),job.durationMs,job.committed?1U:0U,job.recovered?1U:0U,
+        job.cancelled?1U:0U,job.dirty?1U:0U,job.stackFreeBytes,job.heapMin,
+        unsigned(progressInputCount_),progressMaxQueueDelayMs_,progressMaxDrawLatencyMs_);
+    job.started=false; job.kind=ProgressKind::None;
+    progressInterrupt_.store(false,std::memory_order_release);
+    if (failed) {
+        Serial.println("VPET_PROGRESS_REJECTED");
+        warnProgress(nowMs);
+    }
+    if (savePending_) warnProgress(nowMs);
+    panels_.invalidate(); renderer_.invalidate();
+    lastRenderMs_=nowMs-1000;
+}
+
+bool App::queueProgressInput(InputEvent event, uint32_t nowMs, bool home) {
+    if (event==InputEvent::None) return true;
+    if (progressInputCount_==kProgressInputCapacity) {
+        progressInputOverflow_=true;
+        Serial.println("VPET_PROGRESS_INPUT rejected=capacity");
+        return false;
+    }
+    progressInputs_[(progressInputHead_+progressInputCount_)%kProgressInputCapacity]={event,home,nowMs};
+    ++progressInputCount_;
+    return true;
+}
+
+void App::previewProgressInput(InputEvent event, uint32_t nowMs) {
+    // Presentation is speculative. Restore job.view before ordered replay; these
+    // paths neither mutate PetState nor call Collection/LearningRuntime.
+    if (trainingActive_) {
+        if (training_.state==TrainingSession::State::Result)
+            training_.input(pet_,event,nowMs);
+        return;
+    }
+    if (practicing_) {
+        if (event==InputEvent::Next) practice_.cursor=(practice_.cursor+1)%practice_.count(pet_);
+        return;
+    }
+    if (event==InputEvent::Next) {
+        if (navigation_.panel()==PanelId::Inventory)
+            navigation_.setPanelIndex(pet_.nextVisibleInventoryIndex(navigation_.panelIndex()));
+        else if (navigation_.panel()==PanelId::DateTime) dateMenu_.next();
+        else if (navigation_.panel()!=PanelId::Collection) navigation_.dispatch(event);
+    } else if (event==InputEvent::Back && navigation_.panel()!=PanelId::Collection) {
+        navigation_.setPanel(PanelId::Home);
+    }
+}
+
+void App::drawProgress(uint32_t nowMs) {
+    const auto kind=progressSave_->kind;
+    const bool filesystemWork=kind==ProgressKind::Checkpoint || kind==ProgressKind::CollectionInput ||
+        kind==ProgressKind::Reload || kind==ProgressKind::Recovery;
+    if (progressSave_->started && filesystemWork) return;
+    if (progressSafeHome_) {
+        progressWarning_=false;
+        if (nowMs-lastRenderMs_>=33) {
+            lastRenderMs_=nowMs;
+            drawHome(nowMs);
+            progressPresented();
+        }
+        return;
+    }
+    if (progressWarning_ && nowMs-progressWarningStartedMs_<2000) {
+        panels_.drawStorageError(settings_.language.c_str());
+        progressPresented();
+        return;
+    }
+    progressWarning_=false;
+    // Full filesystem work reuses the already-presented framebuffer. Even a
+    // redraw of the same screen could otherwise read LittleFS assets.
+    if (filesystemWork) return;
+    if (nowMs-lastRenderMs_<33) return;
+    lastRenderMs_=nowMs;
+    if (trainingActive_) panels_.drawTraining(training_,pet_,nowMs,settings_.language.c_str());
+    else if (practicing_) panels_.drawPractice(practice_,pet_,nowMs,settings_.language.c_str());
+    else if (navigation_.panel()==PanelId::Exploration)
+        panels_.drawExploration(exploration_,pet_,calendarNow(),nowMs,settings_.language.c_str());
+    else if (navigation_.panel()==PanelId::Home) drawHome(nowMs);
+    else if (navigation_.panel()!=PanelId::Collection)
+        panels_.draw(navigation_,pet_,bluetooth_.status(),dateMenu_,settings_.language.c_str(),
+            settings_.soundEnabled,false,SpeciesId::Egg,nowMs);
+    else return;
+    progressPresented();
+}
+
+void App::progressPresented() {
+    if (!progressVisibleInput_) return;
+    const uint32_t latency=millis()-progressVisibleInputMs_;
+    progressMaxDrawLatencyMs_=std::max(progressMaxDrawLatencyMs_,latency);
+    progressVisibleInput_=false;
+    Serial.printf("VPET_PROGRESS_PRESENT input_to_draw_ms=%u queued=%u\n",
+        latency,unsigned(progressInputCount_));
+}
+
+void App::warnProgress(uint32_t nowMs) {
+    if (progressSafeHome_) return;
+    progressWarning_=true;
+    progressWarningStartedMs_=nowMs;
+    panels_.drawStorageError(settings_.language.c_str());
+}
+
+void App::closeProgressToHome() {
+    trainingActive_=practicing_=false;
+    explorationClockStep_=0;
+    navigation_.setPanel(PanelId::Home);
+    panels_.invalidate(); renderer_.invalidate();
+    progressSafeHome_=false;
+}
+
+void App::tickProgress(uint32_t nowMs, InputEvent event) {
+    auto& job=*progressSave_;
+    if (event!=InputEvent::None) {
+        lastInteractionMs_=nowMs;
+        sleepCheckpoint_=false;
+        if (job.started && job.kind==ProgressKind::Checkpoint)
+            progressInterrupt_.store(true,std::memory_order_release);
+        const bool home=savePending_ && event==InputEvent::Back;
+        if (home) {
+            progressSafeHome_=true;
+            progressWarning_=false;
+            lastRenderMs_=nowMs-33;
+        }
+        if (queueProgressInput(event,nowMs,home)) {
+            if (!progressVisibleInput_) { progressVisibleInput_=true; progressVisibleInputMs_=nowMs; }
+            if (job.started) previewProgressInput(event,nowMs);
+        }
+    }
+    if (job.started) {
+        if (!saveTask_->finished()) {
+            motion_.tick(nowMs);
+            drawProgress(nowMs);
+            return;
+        }
+        finishProgress(nowMs);
+        if (savePending_ && event==InputEvent::Back) {
+            progressSafeHome_=true;
+            progressWarning_=false;
+            if (progressInputCount_) {
+                auto& queued=progressInputs_[(progressInputHead_+progressInputCount_-1)%kProgressInputCapacity];
+                if (queued.event==InputEvent::Back && queued.queuedAtMs==nowMs) queued.home=true;
+            }
+        }
+    }
+    if (progressSafeHome_ && !progressInputCount_) closeProgressToHome();
+    if (savePending_) {
+        if (nowMs-lastSaveAttemptMs_>=1000) {
+            prepareProgress();
+            job.kind=progressSettlement_ ? ProgressKind::Settlement : ProgressKind::Recovery;
+            startProgress(nowMs);
+        }
+        drawProgress(nowMs);
+        return;
+    }
+    // Reserve the worst-case eight learning events before any new mutation.
+    // Capacity pressure runs maintenance on the same worker, never on tick().
+    if (collection_->progressCount()>64-8) {
+        prepareProgress(); job.kind=ProgressKind::Checkpoint; startProgress(nowMs);
+        return;
+    }
+    bool processed=false;
+    do {
+        InputEvent next=InputEvent::None;
+        if (progressInputCount_) {
+            const auto queued=progressInputs_[progressInputHead_];
+            if (queued.home) closeProgressToHome();
+            else next=queued.event;
+            progressMaxQueueDelayMs_=std::max(progressMaxQueueDelayMs_,nowMs-queued.queuedAtMs);
+            progressInputHead_=(progressInputHead_+1)%kProgressInputCapacity;
+            --progressInputCount_;
+        } else if (processed) break;
+        prepareProgress();
+        const uint32_t previousRender=lastRenderMs_;
+        tickGameplay(nowMs,next);
+        if (lastRenderMs_!=previousRender && lastRenderMs_==nowMs) progressPresented();
+        processed=true;
+        if (job.kind!=ProgressKind::None) {
+            startProgress(nowMs);
+            if (job.started) {
+                for (uint8_t i=0;i<progressInputCount_;++i)
+                    previewProgressInput(progressInputs_[(progressInputHead_+i)%kProgressInputCapacity].event,nowMs);
+            }
+            return;
+        }
+    } while (progressInputCount_);
+    if (progressInputOverflow_) {
+        warnProgress(nowMs);
+        progressInputOverflow_=false;
+    }
+    if (progressWarning_) drawProgress(nowMs);
+    if (collection_->dirty() && (sleepCheckpoint_ ||
+        (nowMs-lastInteractionMs_>=5000 && nowMs-lastProgressCheckpointMs_>=5000))) {
+        prepareProgress(); job.kind=ProgressKind::Checkpoint;
+        sleepCheckpoint_=false;
+        startProgress(nowMs);
+    }
+}
+
 void App::tick(uint32_t nowMs, InputEvent event) {
+    if (progressMode_) tickProgress(nowMs,event);
+    else tickGameplay(nowMs,event);
+}
+
+void App::tickGameplay(uint32_t nowMs, InputEvent event) {
     if (trainingSave_) {
         pollTraining(nowMs);
         return; // Inputs received during a save cannot become a second action.
@@ -929,6 +1353,7 @@ void App::tick(uint32_t nowMs, InputEvent event) {
                 experiences[count++]={1,1,technique,std::max(-100,std::min(100,10+delta*10))};
             }
             const bool committed=persistExperience(experiences,count);
+            if (progressMode_) progressSave_->origin=ProgressOrigin::Practice;
             practice_.finishSave(pet_,beforePet,beforeSession,committed);
             if (!committed) {
                 practicing_=true;

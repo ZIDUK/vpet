@@ -8,7 +8,6 @@
 struct Canvas {
     std::string root;
     std::vector<std::string> assets;
-    bool forbidAssets = false;
     uint16_t pixels[240*135] = {};
     void drawPixel(int x, int y, uint16_t color) {
         if (x>=0 && x<240 && y>=0 && y<135) pixels[y*240+x]=color;
@@ -18,7 +17,6 @@ struct Canvas {
         for (int yy=y;yy<y+h;++yy) for(int xx=x;xx<x+w;++xx) drawPixel(xx,yy,color);
     }
     void asset(const char* path,uint32_t frame,int x,int y) {
-        if(forbidAssets) throw std::runtime_error("Asset read while saving");
         assets.emplace_back(path);
         std::ifstream in(root+path,std::ios::binary);
         if(!in) throw std::runtime_error(std::string("Missing asset: ")+path);
@@ -89,10 +87,6 @@ int main(int argc,char** argv) {
         s.resultChoice=*vpet::trainingBlockReason(pet,s.chosenStat) ? 1 : 0;
     }
     vpet::training_ui::View<Canvas>(c,s,pet,ms,std::string(argv[3])=="ES").draw();
-    if(s.saving) {
-        c.forbidAssets=true;
-        vpet::training_ui::View<Canvas>(c,s,pet,ms,std::string(argv[3])=="ES").drawSavingIndicator();
-    }
     if(argc==13) {
         for(const auto& path:c.assets) std::cerr<<path<<'\n';
         return 0;

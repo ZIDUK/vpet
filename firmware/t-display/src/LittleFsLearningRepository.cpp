@@ -1,5 +1,6 @@
 #include "vpet/LittleFsLearningRepository.h"
 #include "vpet/StorageTiming.h"
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -19,6 +20,7 @@
 
 namespace vpet {
 namespace {
+constexpr size_t kChunkBytes=256;
 bool ownerValid(const std::string& owner) {
     return owner.size()==32 && owner!=std::string(32,'0') &&
         owner.find_first_not_of("0123456789abcdef")==std::string::npos;
@@ -55,15 +57,20 @@ std::FILE* openFile(const std::string& path,const char* mode) {
     if (file) std::setvbuf(file,nullptr,_IONBF,0);
     return file;
 }
-bool readFile(const std::string& path,std::string& record) {
+bool readFile(const std::string& path,std::string& record,const LearningRepository& repository) {
     struct stat info;
-    if (::stat(path.c_str(),&info) || !S_ISREG(info.st_mode) || info.st_size<38 ||
+    if (repository.interrupted() || ::stat(path.c_str(),&info) || !S_ISREG(info.st_mode) || info.st_size<38 ||
         info.st_size>static_cast<off_t>(LittleFsLearningRepository::kMaxBlobBytes)) return false;
     auto* file=openFile(path,"rb"); if (!file) return false;
     std::string next(static_cast<size_t>(info.st_size),0);
-    const bool ok=std::fread(&next[0],1,next.size(),file)==next.size();
+    bool ok=true;
+    for (size_t at=0;ok && at<next.size();) {
+        const auto n=std::min(kChunkBytes,next.size()-at);
+        ok=!repository.interrupted() && std::fread(&next[at],1,n,file)==n;
+        at+=n;
+    }
     const bool closed=std::fclose(file)==0;
-    if (!ok || !closed) return false;
+    if (!ok || !closed || repository.interrupted()) return false;
     record=std::move(next); return true;
 }
 bool budget(const std::string& path) {
@@ -95,7 +102,7 @@ bool directorySync(const std::string& path) {
 }
 class ReadOnlyGeneration final : public CollectionRepository {
 public:
-    explicit ReadOnlyGeneration(const std::string& path) : path_(path) {}
+    ReadOnlyGeneration(const std::string& path,const LearningRepository& repository) : path_(path), repository_(repository) {}
     ReadOnlyGeneration(const ReadOnlyGeneration&)=delete;
     ReadOnlyGeneration& operator=(const ReadOnlyGeneration&)=delete;
     ~ReadOnlyGeneration() override { finish(); }
@@ -107,7 +114,7 @@ public:
     CollectionRead size(size_t& bytes) override {
         // A stream lasts one complete validation, never the next generation.
         sized_=false; position_=0;
-        if (!finish()) return CollectionRead::Error;
+        if (!finish() || interrupted()) return CollectionRead::Error;
         struct stat info;
         if (::stat(path_.c_str(),&info)) return errno==ENOENT?CollectionRead::Missing:CollectionRead::Error;
         if (!S_ISREG(info.st_mode) || info.st_size<0) return CollectionRead::Error;
@@ -115,21 +122,31 @@ public:
         return CollectionRead::Present;
     }
     bool read(size_t offset,void* data,size_t bytes) override {
-        if (!sized_ || offset>length_ || bytes>length_-offset || offset>static_cast<size_t>(LONG_MAX)) return false;
+        if (interrupted() || !sized_ || offset>length_ || bytes>length_-offset || offset>static_cast<size_t>(LONG_MAX)) return false;
         if (!file_) { file_=openFile(path_,"rb"); position_=0; }
         if (!file_) return false;
         if (position_!=offset && std::fseek(file_,static_cast<long>(offset),SEEK_SET)) return false;
-        const size_t read=std::fread(data,1,bytes,file_);
-        position_=offset+read;
-        return read==bytes;
+        position_=offset;
+        auto* output=static_cast<uint8_t*>(data);
+        for (size_t at=0;at<bytes;) {
+            if (interrupted()) return false;
+            const auto n=std::min(kChunkBytes,bytes-at);
+            const auto count=std::fread(output+at,1,n,file_);
+            position_+=count;
+            if (count!=n) return false;
+            at+=n;
+        }
+        return !interrupted();
     }
     bool begin(uint64_t,size_t) override { return false; }
     bool write(size_t,const void*,size_t) override { return false; }
     bool readPrepared(size_t,void*,size_t) override { return false; }
     bool commit(uint64_t) override { return false; }
     void abort() override {}
+    bool interrupted() const override { return repository_.interrupted(); }
 private:
     std::string path_;
+    const LearningRepository& repository_;
     std::FILE* file_=nullptr;
     size_t length_=0, position_=0;
     bool sized_=false;
@@ -141,54 +158,63 @@ LittleFsLearningRepository::LittleFsLearningRepository(const char* directory) : 
 }
 bool LittleFsLearningRepository::read(const std::string& owner,const char* reference,std::string& record) {
     const std::string ref=reference?reference:"";
-    if (directory_.empty() || !refValid(owner,ref)) return false;
+    if (interrupted() || directory_.empty() || !refValid(owner,ref)) return false;
     std::string envelope;
-    if (!readFile(directory_+"/"+ref,envelope) || envelope.compare(0,38,"VPR1\n"+owner+"\n")) return false;
+    if (!readFile(directory_+"/"+ref,envelope,*this) || envelope.compare(0,38,"VPR1\n"+owner+"\n")) return false;
     char crc[9]; std::snprintf(crc,sizeof(crc),"%08x",checksum(envelope));
     if (ref.substr(ref.size()-9)!="."+std::string(crc)) return false;
     if (compactRefValid(ref) && compactKey(envelope)!=ref) return false;
+    if (interrupted() || envelope.size()-38>LearningState::MAX_ENCODED_SIZE) return false;
     record=envelope.substr(38);
-    return record.size()<=LearningState::MAX_ENCODED_SIZE;
+    return true;
 }
 bool LittleFsLearningRepository::prepare(const std::string& owner,const LearningState& policy,std::string& ref) {
     StorageTiming timing("policy");
     failureReason_="policy_path";
-    if (directory_.empty() || !ownerValid(owner)) return false;
+    if (interrupted() || directory_.empty() || !ownerValid(owner)) return false;
     if (::mkdir(directory_.c_str(),0700) && errno!=EEXIST) return false;
     failureReason_="policy_collect";
-    if (!collect()) return false;
+    if (!collect() || interrupted()) return false;
     timing.mark("collect");
     failureReason_="policy_encode";
     const std::string encoded=policy.encode();
-    if (encoded.empty() || encoded.size()>LearningState::MAX_ENCODED_SIZE) return false;
+    if (interrupted() || encoded.empty() || encoded.size()>LearningState::MAX_ENCODED_SIZE) return false;
     const std::string envelope="VPR1\n"+owner+"\n"+encoded;
     const std::string next=compactKey(envelope);
-    if (!refValid(owner,next)) return false;
+    if (interrupted() || !refValid(owner,next)) return false;
     const std::string final=directory_+"/"+next;
     struct stat info;
     if (::stat(final.c_str(),&info)==0) {
         failureReason_="policy_existing";
         std::string existing;
-        if (!readFile(final,existing) || existing!=envelope) return false;
+        if (!readFile(final,existing,*this) || existing!=envelope || interrupted()) return false;
         ref=next; failureReason_="none"; return true;
     }
     if (errno!=ENOENT) return false;
     timing.mark("encode_existing");
     failureReason_="policy_space";
-    if (!budget(directory_)) return false;
+    if (!budget(directory_) || interrupted()) return false;
     timing.mark("space");
     failureReason_="policy_write";
     const std::string pending=directory_+"/.pending";
     auto* file=openFile(pending,"wb"); if (!file) return false;
-    bool ok=std::fwrite(envelope.data(),1,envelope.size(),file)==envelope.size();
-    if (ok) ok=std::fflush(file)==0 && ::fsync(::fileno(file))==0;
+    bool ok=true;
+    for (size_t at=0;ok && at<envelope.size();) {
+        const auto n=std::min(kChunkBytes,envelope.size()-at);
+        ok=!interrupted() && std::fwrite(envelope.data()+at,1,n,file)==n;
+        at+=n;
+    }
+    if (ok) ok=!interrupted() && std::fflush(file)==0 && ::fsync(::fileno(file))==0;
     const bool closed=std::fclose(file)==0;
     timing.mark("write_sync");
     std::string verified;
-    if (!ok || !closed || !readFile(pending,verified) || verified!=envelope) return false;
+    if (!ok || !closed || !readFile(pending,verified,*this) || verified!=envelope) return false;
     timing.mark("readback");
     failureReason_="policy_publish";
-    if (::rename(pending.c_str(),final.c_str()) || !directorySync(directory_)) return false;
+    if (interrupted() || ::rename(pending.c_str(),final.c_str())) return false;
+    // Rename is the visibility point. A later cancellation or directory-sync
+    // error cannot turn this immutable, published blob into a failed attempt.
+    (void)directorySync(directory_);
     timing.mark("publish");
     // Even if interrupted here, the collection still points to its old policy.
     ref=next; failureReason_="none"; return true;
@@ -197,16 +223,18 @@ bool LittleFsLearningRepository::prepare(const std::string& owner,const Learning
 bool LittleFsLearningRepository::collect(bool cleanup) {
     // Read-only validation of BOTH complete generations precedes any deletion.
     // A future/corrupt generation blocks cleanup, preserving all possible refs.
+    if (interrupted() || directory_.empty()) return false;
     const auto slash=directory_.find_last_of('/');
     const std::string parent=directory_.substr(0,slash);
     std::set<std::string> protectedRefs;
     std::unique_ptr<CollectionState> state(new (std::nothrow) CollectionState);
     if (!state) return false;
     for (const auto name:{"current.bin","previous.bin"}) {
+        if (interrupted()) return false;
         failureReason_=!std::strcmp(name,"current.bin")?"policy_collect_current":"policy_collect_previous";
-        ReadOnlyGeneration generation(parent+"/"+name); CollectionStore reader(generation);
+        ReadOnlyGeneration generation(parent+"/"+name,*this); CollectionStore reader(generation);
         const auto loaded=reader.load(*state);
-        if (!generation.finish()) return false;
+        if (!generation.finish() || interrupted()) return false;
         if (loaded==CollectionLoad::Missing) {
             if (!std::strcmp(name,"current.bin")) return false;
             continue;
@@ -215,9 +243,11 @@ bool LittleFsLearningRepository::collect(bool cleanup) {
         for (const auto& slot:state->slots) if (slot.occupied && slot.learningRef[0]) protectedRefs.insert(slot.learningRef);
     }
     failureReason_="policy_collect_directory";
+    if (interrupted()) return false;
     DIR* directory=::opendir(directory_.c_str()); if (!directory) return false;
     size_t retainedBytes=0; bool ok=true;
     while (auto* entry=::readdir(directory)) {
+        if (interrupted()) { ok=false; break; }
         const std::string name=entry->d_name;
         if (name=="." || name=="..") continue;
         struct stat info;
@@ -226,14 +256,14 @@ bool LittleFsLearningRepository::collect(bool cleanup) {
         const bool own=compactRefValid(name) ||
             (name.size()>34 && name[0]=='L' && refValid(name.substr(1,32),name));
         if ((own && !protectedRefs.count(name)) || name==".pending") {
-            if (cleanup && std::remove(path.c_str())) { ok=false; break; }
+            if (interrupted() || (cleanup && std::remove(path.c_str()))) { ok=false; break; }
         } else {
             if (static_cast<uint64_t>(info.st_size)>kStorageBudgetBytes-retainedBytes) { ok=false; break; }
             retainedBytes+=static_cast<size_t>(info.st_size);
         }
     }
     const bool closed=::closedir(directory)==0;
-    const bool valid=ok && closed && retainedBytes+2*kMaxBlobBytes<=kStorageBudgetBytes &&
+    const bool valid=ok && closed && !interrupted() && retainedBytes+2*kMaxBlobBytes<=kStorageBudgetBytes &&
         (!cleanup || directorySync(directory_));
     if (valid) failureReason_="none";
     return valid;

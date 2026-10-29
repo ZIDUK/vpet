@@ -66,8 +66,6 @@ def render_training(build_dir, session, now_ms=0):
     bottom). The new states (C, confirm, cancel, D, E) reuse the same
     bands without overlap."""
     build_dir = Path(build_dir)
-    if session.saving:
-        return _render_saving(build_dir, session, now_ms)
     if session.techniques is not None:
         return render_practice(build_dir, session.techniques, now_ms)
     state = getattr(session, "state", STATE_SELECT)
@@ -91,23 +89,6 @@ def render_training(build_dir, session, now_ms=0):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _render_saving(build_dir, session, now_ms):
-    frame = Image.new("RGB", (240, 135), INK)
-    draw = ImageDraw.Draw(frame)
-    _header(draw, build_dir, tr(session.pet, "training.title"), "")
-    index = session._chosen_index
-    item = TRAINING_TYPES[index]
-    pet_sprite(frame, build_dir, 0, 30, 68, None, 0,
-               species=session.pet.species, frame_interval_ms=TRAINING_ACTION_FRAME_INTERVAL_MS)
-    info_label(frame, draw, item["icon"], 70, 24,
-               tr_stat(session.pet, item["stat"]), YELLOW)
-    text(draw, (70, 57), tr(session.pet, "training.saving"), WHITE)
-    for i in range(3):
-        draw.rectangle((70 + i*12, 80, 75 + i*12, 85),
-                       fill=YELLOW if (now_ms//150) % 3 == i else PANEL)
-    return frame
 
 
 def _color_for_state(focus, target, color=YELLOW):
@@ -433,7 +414,7 @@ def _render_result_summary(build_dir, session, now_ms):
     draw = ImageDraw.Draw(frame)
     draw.rectangle((0, 0, 239, 19), fill=GREEN)
     paste_icon(frame, asset_icon(build_dir, "Training"), 4, 2)
-    text(draw, (26, 4), tr(session.pet, "training.result.title"))
+    text(draw, (26, 4), tr(session.pet, "training.result.heading"))
     text(draw, (210, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
     # Pet on the left, idle animation.
     pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
@@ -501,7 +482,7 @@ def _render_result_stats(build_dir, session, now_ms):
     draw = ImageDraw.Draw(frame)
     draw.rectangle((0, 0, 239, 19), fill=GREEN)
     paste_icon(frame, asset_icon(build_dir, "Training"), 4, 2)
-    text(draw, (26, 4), tr(session.pet, "training.result.title"))
+    text(draw, (26, 4), tr(session.pet, "training.result.heading"))
     text(draw, (210, 4), tr(session.pet, "training.result.ok"), MUTED, small=True)
     pet_sprite(frame, build_dir, 0, 30, 68, None, now_ms,
                frame_interval_ms=TRAINING_IDLE_FRAME_INTERVAL_MS)

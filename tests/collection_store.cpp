@@ -276,7 +276,7 @@ void corruption() {
         const auto corrupt = repo.durable;
         assert(!store.saveActive(initial, active, Settings()) && repo.durable == corrupt);
     }
-    MemoryRepository future = original; future.durable[4] = 2;
+    MemoryRepository future = original; future.durable[4] = 3;
     CollectionStore store(future); CollectionState state;
     assert(store.load(state) == CollectionLoad::Future);
     assert(!store.migrate(state, capture(active)));
@@ -329,7 +329,7 @@ void filesystem() {
     LittleFsCollectionRepository damaged(root.c_str()); CollectionStore blocked(damaged);
     assert(blocked.load(loaded) == CollectionLoad::Corrupt);
     assert(!blocked.migrate(loaded, first) && fileBytes(root+"/current.bin") == corrupt);
-    corrupt[4] = 2; writeFile(root+"/current.bin", corrupt);
+    corrupt[4] = 3; writeFile(root+"/current.bin", corrupt);
     LittleFsCollectionRepository future(root.c_str()); CollectionStore futureStore(future);
     assert(futureStore.load(loaded) == CollectionLoad::Future);
     assert(std::remove((root+"/current.bin").c_str()) == 0);
@@ -559,6 +559,67 @@ void eggTransferReceipts() {
     assert(!restart.importEgg(reboot,profile(10).petId(),egg,settings,0,retry,true));
     assert(!restart.importEgg(reboot,token,egg,settings,1800001,retry,true));
 }
+void progressJournal() {
+    MemoryRepository original; auto active=pet(2); CollectionState initial;
+    initialize(original,initial,active); Settings settings;
+    CareKv kv; CareJournal journal(kv); CollectionStore writer(original,&journal,true);
+    assert(writer.load(initial)==CollectionLoad::Loaded);
+    std::string events;
+    for(size_t i=0;i<64;++i) assert(ProgressEvents::append(events,0,0,0,i%2?52:-100));
+    const auto bounded=events;
+    assert(!ProgressEvents::append(events,0,0,0,52) && events==bounded);
+    assert(!ProgressEvents::valid(events+"0000zz") && !ProgressEvents::valid("030000"));
+    active.setEnergy(24);
+    assert(writer.saveProgress(initial,active,settings,0,events));
+    const auto receipt=kv.record;
+    assert(receipt.size()<=CareJournal::kMaxBytes && receipt.find("VPCJ2\n")==0);
+    CareRecord decoded; assert(CareJournal::decode(receipt,decoded)==CareLoad::Loaded);
+    LearningState learned;
+    assert(ProgressEvents::replay(decoded.experiences,decoded.learningBase,learned));
+    assert(learned.last_sequence()==64 && !ProgressEvents::replay(decoded.experiences,0,learned));
+    assert(!ProgressEvents::replay(decoded.experiences,UINT64_MAX,learned));
+    for(size_t at=0;at<receipt.size();++at) {
+        auto corrupt=receipt; corrupt[at]^=1;
+        CareRecord ignored; assert(CareJournal::decode(corrupt,ignored)!=CareLoad::Loaded);
+    }
+    // A rejected NVS commit must preserve both its effects and its experiences.
+    kv.reject=true; auto changed=active; changed.setEnergy(10);
+    assert(!writer.saveCare(initial,changed,settings) && kv.record==receipt);
+    kv.reject=false;
+    auto probe=original; auto probeKv=kv; CareJournal probeJournal(probeKv);
+    CollectionStore trial(probe,&probeJournal,true); CollectionState view;
+    assert(trial.load(view)==CollectionLoad::Loaded); probe.operations=0;
+    assert(!trial.saveActive(view,active,settings));
+    probe.operations=0;
+    assert(trial.saveActive(view,active,settings,"consolidated.vpl"));
+    const int operations=probe.operations;
+    for(int cut=0;cut<=operations;++cut) {
+        auto repo=original; auto cutKv=kv; CareJournal j(cutKv);
+        CollectionStore store(repo,&j,true); CollectionState candidate;
+        assert(store.load(candidate)==CollectionLoad::Loaded);
+        repo.operations=0; repo.failAt=cut;
+        const bool committed=store.saveActive(candidate,active,settings,"consolidated.vpl");
+        repo.failAt=-1; CareJournal rebootJournal(cutKv); CollectionStore reboot(repo,&rebootJournal,true);
+        PetState restored;
+        assert(reboot.load(candidate)==CollectionLoad::Loaded && reboot.readPet(candidate,0,restored,settings));
+        assert(restored.energy()==24 && cutKv.record==receipt);
+        assert(candidate.sequence==initial.sequence+(committed?1:0));
+        assert((reboot.progressRecord()!=nullptr)==!committed);
+    }
+    auto maximum=active;
+    for(int i=0;i<adopted::kCount;++i) maximum.adoptedStock.set(i,99);
+    maximum.adoptedStock.cursor=39; maximum.adoptedStock.rewards=UINT32_MAX;
+    maximum.restoreItems(99,99,99,99,99,99);
+    decoded.snapshot=capture(maximum);
+    decoded.base=decoded.revision=decoded.learningBase=UINT64_MAX-64;
+    decoded.elapsedMs=UINT32_MAX;
+    const auto maxReceipt=CareJournal::encode(decoded);
+    assert(!maxReceipt.empty() && maxReceipt.size()<=CareJournal::kMaxBytes);
+    CareRecord maxDecoded;
+    assert(CareJournal::decode(maxReceipt,maxDecoded)==CareLoad::Loaded);
+    std::cout << "maximum progress receipt bytes=" << maxReceipt.size() << '\n';
+    std::cout << "progress receipt bytes=" << receipt.size() << '\n';
+}
 int main(int argc, char** argv) {
     assert(argc == 2); const std::string name = argv[1];
     if (name == "roundtrip") roundtrip();
@@ -573,6 +634,7 @@ int main(int argc, char** argv) {
     else if (name == "compact_faults") compactFaults();
     else if (name == "compact_timers") compactTimers();
     else if (name == "egg_transfer") eggTransferReceipts();
+    else if (name == "progress") progressJournal();
     else return 2;
     std::cout << name << " passed\n";
 }

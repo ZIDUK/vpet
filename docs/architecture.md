@@ -8,11 +8,33 @@ incluye entrenamiento, combate, CLAIM, cuidado y ajustes; no basta ocultar un
 texto ni cambiar una pausa por un spinner. La consolidacion tambien debe ceder
 ante entradas y evitar contencion con el renderer.
 
-Esto es una decision de alcance, NO el comportamiento implementado en 64addc8.
-El journal actual solo cubre cuidado; las experiencias siguen confirmando
-generaciones completas y entrenamiento aun presenta la vista de guardado.
-El documento tecnico y los limites de migracion/memoria necesitan revision;
-no se declara fluidez ni aceptacion fisica. Ver
+El documento tecnico fue aprobado el 2026-10-29. La implementacion nueva usa
+`VPCJ2` sobre la clave existente `colCare`: snapshot, inventario y hasta 64
+experiencias consecutivas compactas se confirman juntos. `LearningRuntime`
+reproduce esas experiencias sobre la politica base al reiniciar. El checkpoint
+escribe primero la politica completa y despues una generacion `VPCL v2` con la
+revision incorporada. Conservar el recibo antiguo es seguro: esa revision evita
+reaplicarlo. No se retiran experiencias sin una referencia de politica nueva.
+Se mantienen lectores `VPCJ1` / `VPCL v1`, NVS schema 3 y VPL1.
+
+`App` tiene un solo escritor de capacidad uno, compartido por recibos y
+checkpoint. La cola de ocho eventos conserva su orden; solo la presentacion se
+anticipa, las mutaciones dependientes esperan la confirmacion. Un recibo
+aceptado pero no confirmado se resuelve sin volver a concederlo. Un rechazo
+real restaura el estado anterior y muestra un error recuperable. La tabla de
+entrenamiento representa el resultado en RAM, no un acuse de durabilidad.
+
+El mantenimiento se solicita al dormir o tras cinco segundos sin entradas. Los
+adaptadores consultan cancelacion entre bloques de 256 bytes y antes de
+publicar. La copia anterior se prepara y valida en `previous.bin.pending`
+antes de reemplazarla atomicamente; cancelar no destruye generaciones validas.
+Durante E/S completa se conserva el framebuffer presentado para evitar lecturas
+de assets competidoras. La latencia de esa cancelacion y la continuidad visual
+requieren medicion fisica, no se deducen de mover el trabajo a FreeRTOS.
+
+Esta entrega sigue en verificacion local; no se declara fluidez ni aceptacion
+fisica. El baseline 64addc8 solo tenia cuidado compacto y una vista de guardado
+en entrenamiento. Ver
 [SPEC-GAME-FLUID-001](superpowers/specs/2026-10-29-invisible-progress-journal-design.md)
 y su [plan](superpowers/plans/2026-10-29-invisible-progress-journal.md).
 

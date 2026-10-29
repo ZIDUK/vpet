@@ -19,8 +19,10 @@ with a Python/Pillow/pygame simulator and a preserved Pico/CircuitPython path.
   Preconditions before flashing: (1) the user has confirmed the final build
   incorporates the current Status adjustments in `scripts/sim_renderer.py` and
   `firmware/t-display/src/Panels.cpp`; (2) `pio run -d firmware/t-display -e tdisplay`
-  completes with the new build artifacts; (3) physical validation of the four
-  240×135 Status pages is captured and reported. Do not flash an older binary.
+  completes with the new build artifacts. Do not flash an older binary.
+  **User update (2026-10-29):** physical evidence or screenshots of the four
+  Status pages are no longer required before flashing. This does not turn a
+  successful upload into verified physical gameplay, visual or radio acceptance.
 - Never delete `out/board-backups/` during cleanup.
 - Keep historical Pico material under its existing legacy labels.
 

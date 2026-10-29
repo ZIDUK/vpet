@@ -7,8 +7,8 @@ se congele y que no me diga guardando". A la propuesta de registro pequeno
 recuperable, respaldo completo al dormir/en reposo y aviso ante fallo real,
 respondio: "Si, guardar asi sin interrumpir el juego".
 
-El alcance esta aprobado; este documento tecnico requiere revision antes de
-implementar. No equivale a codigo terminado, release ni aceptacion en placa.
+El documento tecnico tambien fue aprobado el 2026-10-29: "Si, continua con la
+implementacion". No equivale a codigo terminado, release ni aceptacion en placa.
 El firmware actual es 64addc8 y NO satisface esta especificacion.
 
 ## Problema
@@ -193,7 +193,8 @@ y observan fallar antes de implementar. No hay pruebas fisicas de esta arquitect
 
 ## Preguntas Pendientes
 
-Revision humana del documento tecnico; la aprobacion del alcance consta arriba.
+Documento tecnico aprobado por el usuario el 2026-10-29:
+"Si, continua con la implementacion". La aprobacion del alcance consta arriba.
 No se requiere volver a decidir si el producto debe mostrar GUARDANDO: ya fue
 rechazado. Las decisiones de limites propuestas se validan mediante las pruebas
 de capacidad/memoria del piloto antes de promover requisitos a implemented.

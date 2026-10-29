@@ -29,6 +29,16 @@ public:
     virtual bool recoverCare(const PetState& pet, const Settings& settings);
     virtual bool recoverRejectedSave();
     bool compactCare() const { return store_.compactCare(); }
+    bool progressEnabled() const { return store_.progressEnabled(); }
+    bool dirty() const { return store_.progressRecord()!=nullptr || pendingElapsed_!=0; }
+    size_t progressCount() const { const auto* p=store_.progressRecord(); return p?p->experiences.size()/6:0; }
+    virtual bool saveProgress(const PetState& pet, const Settings& settings);
+    virtual bool checkpoint(const PetState& pet, const Settings& settings);
+    void setInterrupt(bool (*callback)(void*), void* context) {
+        store_.setInterrupt(callback,context);
+        if(learning_) learning_->setInterrupt(callback,context);
+    }
+    bool interrupted() const { return store_.interrupted() || (learning_ && learning_->interrupted()); }
     virtual bool saveExperience(const PetState& pet, const Settings& settings,
                                 const RuntimeExperience* events, size_t count);
     virtual int chooseAuto(const practice::Fighter& fighter, uint8_t learnedMask) const;

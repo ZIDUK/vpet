@@ -14,7 +14,7 @@ estado vivo, TFT y navegacion; el escritor recibe datos inmutables.
 
 ## Global Constraints
 
-- Spec: SPEC-GAME-FLUID-001; alcance aprobado, revision escrita pendiente.
+- Spec: SPEC-GAME-FLUID-001; alcance y especificacion escrita aprobados 2026-10-29.
 - No cambiar Settings/NVS schema 3, VPL1 ni numeros de enums existentes.
 - Leer VPCL v1 y VPCJ1 antes de introducir escrituras versionadas nuevas.
 - No reformatear LittleFS, borrar partidas ni borrar out/board-backups/.
@@ -29,7 +29,7 @@ estado vivo, TFT y navegacion; el escritor recibe datos inmutables.
 - [x] Revisar App, CareJournal, CollectionStore, LearningRuntime y NVS adapter.
 - [x] Aprobacion humana del alcance: "Si, guardar asi sin interrumpir el juego".
 - [x] Registrar el diseno y los contratos de recuperacion/capacidad.
-- [ ] Revision del documento escrito antes de cambiar persistencia de produccion.
+- [x] Revision del documento: usuario responde "Si, continua con la implementacion".
 
 ## Task 1: Recibo De Progreso Y Recuperacion
 
@@ -120,6 +120,29 @@ fuente/render segun su skill y evidencias de ejecucion locales.
 
 ## Estado De Ejecucion
 
-Solo diseno y plan escritos. No hay implementacion ni pruebas nuevas ejecutadas
-de esta arquitectura; los tests referenciados en el registro son la linea base
-que se ampliara. No se ha flasheado ni declarado resuelta esta entrega.
+Implementacion en curso, no desplegada. El recibo VPCJ2 almacena snapshot y
+eventos compactos; VPCL v2 incorpora su revision al consolidar. Lectura VPCJ1
+y VPCL v1 conservada. La regresion inicial observo el fallo de comportamiento
+(escritura de archivos completos), despues paso el replay conjunto de EV,
+energia y aprendizaje; tambien pasaron 512 acciones con consolidaciones y
+cortes de E/S del checkpoint. Se ampliaron luego guardias contra retiro de
+experiencias sin referencia nueva y prueba de stock maximo; requieren rerun.
+
+Native: 185/185. `make spec-check`: 7 specs, 36 requisitos y 101 tests
+recolectados; no implica aprobacion de pruebas. Primera corrida host amplia:
+35 pasaron, 3 fallaron (dos fixtures debian usar version futura 3, no 2 ahora
+soportada; un enlace coincidio con escritura concurrente de App). Se corrigieron
+fixtures y se repetira la suite sobre archivos estables. Hubo tambien timeouts
+de compilacion con carga concurrente; no se cuentan como evidencia positiva.
+
+Integracion final local: suite completa `pytest -q tests` 2212/2212,
+PlatformIO native 185/185; subset final de coordinador, interrupciones y store
+81/81. Se activo `progress=true` en main.cpp y la compilacion tdisplay termino
+con 1133909 bytes de programa y 54100 bytes de RAM estatica. `make spec-check`
+valida 166 tests trazados, sin sustituir ejecucion ni aceptacion fisica.
+
+Resumen y limites: ../reviews/2026-10-29-invisible-progress-verification.md.
+El usuario retiro el 2026-10-29 la precondicion de evidencia de las cuatro
+paginas Status; AGENTS.md actualizado. La carga esta preparada, sin afirmar
+aceptacion fisica. Todavia no estan medidos p95, intervalos de cuadros ni
+cortes de energia reales de esta version.

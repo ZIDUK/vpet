@@ -68,6 +68,7 @@ std::string metadata(const CollectionState& state) {
     }
     putNumber(out, state.transferReceiptCount, 1);
     out.append(reinterpret_cast<const char*>(state.transferReceipts), sizeof(state.transferReceipts));
+    putNumber(out,state.journalRevision,8);
     if (out.size() > kMetadataBytes) return "";
     out.resize(kMetadataBytes, 0); return out;
 }
@@ -111,6 +112,7 @@ bool decodeMetadata(const std::string& record, CollectionState& state) {
     }
     next.transferReceiptCount = r.take(1);
     r.fixed(next.transferReceipts, sizeof(next.transferReceipts));
+    next.journalRevision=r.take(8);
     if (next.transferReceiptCount > CollectionState::kTransferReceipts) return false;
     if (!r.ok || std::any_of(record.begin()+r.at, record.end(), [](char c) { return c != 0; })) return false;
     return true;
@@ -196,7 +198,7 @@ bool parentEligible(const PetState& pet) {
 }  // namespace
 
 CollectionLoad CollectionStore::load(CollectionState& state) {
-    const auto fail = [this](CollectionLoad result) { blocked_ = true; return result; };
+    const auto fail = [this](CollectionLoad result) { blocked_ = !repository_.interrupted(); return result; };
     size_t bytes = 0; const auto present = repository_.size(bytes);
     if (present == CollectionRead::Error) return fail(CollectionLoad::Error);
     if (present == CollectionRead::Missing) {
@@ -209,8 +211,8 @@ CollectionLoad CollectionStore::load(CollectionState& state) {
     if (!repository_.read(0, header, sizeof(header))) return fail(CollectionLoad::Error);
     if (std::memcmp(header, "VPCL", 4)) return fail(CollectionLoad::Corrupt);
     const auto version = number(header+4, 4);
-    if (version > 1) return fail(CollectionLoad::Future);
-    if (version != 1 || number(header+16, 4) != bytes-kHeaderBytes) return fail(CollectionLoad::Corrupt);
+    if (version > 2) return fail(CollectionLoad::Future);
+    if ((version != 1 && version != 2) || number(header+16, 4) != bytes-kHeaderBytes) return fail(CollectionLoad::Corrupt);
     uint32_t crc = crcUpdate(~uint32_t(0), header, 20);
     char chunk[kChunkBytes];
     for (size_t at = kHeaderBytes; at < bytes;) {
@@ -226,6 +228,7 @@ CollectionLoad CollectionStore::load(CollectionState& state) {
     if (!repository_.read(kHeaderBytes, &encoded[0], encoded.size())) return fail(CollectionLoad::Error);
     if (!decodeMetadata(encoded, next) || next.sequence != number(header+8, 8) || !validState(next, bytes))
         return fail(CollectionLoad::Corrupt);
+    if (version==1 && next.journalRevision) return fail(CollectionLoad::Corrupt);
     for (const auto& slot : next.slots) if (slot.occupied) {
         std::string body;
         if (!readBody(slot, body)) return fail(CollectionLoad::Error);
@@ -240,16 +243,18 @@ CollectionLoad CollectionStore::load(CollectionState& state) {
         if (result==CareLoad::Loaded) {
             const auto& record=care_->record();
             if (record.base>next.sequence) return fail(CollectionLoad::Corrupt);
-            if (record.base==next.sequence) {
+            if (record.revision>next.journalRevision && record.base==next.sequence) {
                 std::unique_ptr<PetState> individual(new (std::nothrow) PetState);
                 if (!individual) return fail(CollectionLoad::Error);
                 auto& pet=*individual; Settings settings;
                 const auto& slot=next.slots[next.active];
                 if (record.active!=next.active || record.identity!=slot.profile().petId() ||
                     !restore(record.snapshot,pet,settings) || pet.profile.encode()!=slot.profileRecord ||
-                    static_cast<uint8_t>(pet.species())!=slot.form) return fail(CollectionLoad::Corrupt);
+                    (!record.progress && static_cast<uint8_t>(pet.species())!=slot.form)) return fail(CollectionLoad::Corrupt);
+                next.slots[next.active].form=static_cast<uint8_t>(pet.species());
                 sharedFrom(next,pet); advanceSlots(next,record.elapsedMs); careApplied_=true;
             }
+            else if (record.revision>next.journalRevision && record.progress) return fail(CollectionLoad::Corrupt);
         }
     }
     viewSequence_=next.sequence; viewToken_=checksum(metadata(next)); baseCrc_=number(header+20,4);
@@ -310,7 +315,7 @@ bool CollectionStore::readPet(const CollectionState& state, size_t slot, PetStat
     if (slot >= CollectionState::kSlots || !state.slots[slot].occupied || !current(state)) return false;
     std::string body; PetState next; Settings nextSettings;
     if (careApplied_ && slot==state.active) body=care_->record().snapshot;
-    else if (!readBody(state.slots[slot], body)) { blocked_ = true; return false; }
+    else if (!readBody(state.slots[slot], body)) { blocked_ = !repository_.interrupted(); return false; }
     if (!restore(body, next, nextSettings)) { blocked_ = true; return false; }
     applyShared(state, next); pet = next; settings = nextSettings; return true;
 }
@@ -337,7 +342,12 @@ bool CollectionStore::persist(CollectionState& state, const CollectionState& pro
         replacements[state.active]=&mergedBody;
     }
     auto& candidate = *scratch;
+    // A receipt with learning effects may only be retired together with its
+    // consolidated policy reference, including at structural boundaries.
+    if(careApplied_ && care_->record().progress && !care_->record().experiences.empty() &&
+       std::strcmp(candidate.slots[state.active].learningRef,state.slots[state.active].learningRef)==0) return false;
     candidate.sequence = state.sequence+1;
+    if(careApplied_ && care_->record().progress) candidate.journalRevision=care_->record().revision;
     size_t bytes = kHeaderBytes+kMetadataBytes;
     for (size_t i = 0; i < CollectionState::kSlots; ++i) if (candidate.slots[i].occupied) {
         auto& body = candidate.slots[i].body;
@@ -353,10 +363,10 @@ bool CollectionStore::persist(CollectionState& state, const CollectionState& pro
     if (!validState(candidate, bytes)) return false;
     const auto encoded = metadata(candidate); if (encoded.empty()) return false;
     std::string header("VPCL", 4);
-    putNumber(header, 1, 4); putNumber(header, candidate.sequence, 8); putNumber(header, bytes-kHeaderBytes, 4);
+    putNumber(header, candidate.journalRevision?2:1, 4); putNumber(header, candidate.sequence, 8); putNumber(header, bytes-kHeaderBytes, 4);
     uint32_t crc = crcUpdate(~uint32_t(0), header.data(), header.size());
     crc = crcUpdate(crc, encoded.data(), encoded.size());
-    const auto fail = [this]() { repository_.abort(); blocked_ = true; return false; };
+    const auto fail = [this]() { repository_.abort(); blocked_ = !repository_.interrupted(); return false; };
     if (!repository_.begin(state.sequence, bytes)) return fail();
     if (!repository_.write(kHeaderBytes, encoded.data(), encoded.size())) return fail();
     char chunk[kChunkBytes];
@@ -452,6 +462,16 @@ bool CollectionStore::saveActive(CollectionState& state, const PetState& pet, co
 bool CollectionStore::saveCare(CollectionState& state, const PetState& pet, const Settings& settings,
                                uint32_t elapsedMs) {
     if (!care_) return saveActive(state,pet,settings,nullptr,elapsedMs);
+    return saveJournal(state,pet,settings,elapsedMs,nullptr);
+}
+bool CollectionStore::saveProgress(CollectionState& state, const PetState& pet, const Settings& settings,
+                                   uint64_t learningBase, const std::string& events, uint32_t elapsedMs) {
+    if (!progressEnabled() || !ProgressEvents::valid(events)) return false;
+    CareRecord progress; progress.progress=true; progress.learningBase=learningBase; progress.experiences=events;
+    return saveJournal(state,pet,settings,elapsedMs,&progress);
+}
+bool CollectionStore::saveJournal(CollectionState& state, const PetState& pet, const Settings& settings,
+                                  uint32_t elapsedMs, const CareRecord* progress) {
     if (blocked_ || state.active>=CollectionState::kSlots || !state.slots[state.active].occupied ||
         !state.sequence || state.sequence!=viewSequence_ || checksum(metadata(state))!=viewToken_ ||
         pet.profile.encode()!=state.slots[state.active].profileRecord) return false;
@@ -459,15 +479,20 @@ bool CollectionStore::saveCare(CollectionState& state, const PetState& pet, cons
     size_t bytes=0; char header[kHeaderBytes];
     if (repository_.size(bytes)!=CollectionRead::Present || bytes<kHeaderBytes ||
         !repository_.read(0,header,sizeof(header)) || std::memcmp(header,"VPCL",4) ||
-        number(header+4,4)!=1 || number(header+8,8)!=state.sequence ||
+        (number(header+4,4)!=1 && number(header+4,4)!=2) || number(header+8,8)!=state.sequence ||
         number(header+16,4)!=bytes-kHeaderBytes || number(header+20,4)!=baseCrc_) return false;
     const uint32_t previous=careApplied_?care_->record().elapsedMs:0;
-    if (static_cast<uint8_t>(pet.species())!=state.slots[state.active].form || elapsedMs>UINT32_MAX-previous)
+    if(progressEnabled() && elapsedMs>UINT32_MAX-previous) return false;
+    if (!progressEnabled() && (static_cast<uint8_t>(pet.species())!=state.slots[state.active].form || elapsedMs>UINT32_MAX-previous))
         return saveActive(state,pet,settings,nullptr,elapsedMs);
     std::unique_ptr<CollectionState> candidate(new (std::nothrow) CollectionState(state));
     if (!candidate) return false;
     sharedFrom(*candidate,pet); advanceSlots(*candidate,elapsedMs);
-    CareRecord record; record.base=state.sequence; record.active=state.active;
+    candidate->slots[state.active].form=static_cast<uint8_t>(pet.species());
+    CareRecord record=careApplied_?care_->record():CareRecord();
+    if(progress) { record.progress=true; record.learningBase=progress->learningBase; record.experiences=progress->experiences; }
+    else if(progressEnabled()) record.progress=true;
+    record.base=state.sequence; record.active=state.active;
     record.identity=pet.profile.petId(); record.elapsedMs=previous+elapsedMs;
     if (!capture(pet,settings,record.snapshot) || !care_->save(std::move(record))) return false;
     state=*candidate; careApplied_=true; viewToken_=checksum(metadata(state));

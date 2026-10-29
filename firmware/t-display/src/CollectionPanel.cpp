@@ -43,7 +43,7 @@ CollectionLoad CollectionPanel::load(PetState& pet, Settings& settings) {
     if (result!=CollectionLoad::Loaded || !store_.readPet(state_,state_.active,pet,settings)) {
         error("Almacen no disponible",true); return CollectionLoad::Error;
     }
-    if (learning_ && !learning_->load(state_.slots[state_.active])) {
+    if (learning_ && !learning_->load(state_.slots[state_.active],store_.progressRecord())) {
         error("Politica no disponible",true); return CollectionLoad::Error;
     }
     enabled_=true; failed_=careFailed_=careUnsettled_=false; return CollectionLoad::Loaded;
@@ -64,11 +64,24 @@ bool CollectionPanel::flush() {
     pendingElapsed_=0; return settleCare();
 }
 bool CollectionPanel::save(const PetState& pet, const Settings& settings) {
-    if (!enabled_ || failed() || !store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_)) {
+    if (!enabled_ || failed() || !(learning_ && store_.progressEnabled() ?
+        learning_->checkpoint(store_,state_,pet,settings,pendingElapsed_) :
+        store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_))) {
         error("Error al guardar",true); return false;
     }
     pendingElapsed_=0;
     return true;
+}
+bool CollectionPanel::saveProgress(const PetState& pet, const Settings& settings) {
+    return store_.progressEnabled()?saveExperience(pet,settings,nullptr,0):save(pet,settings);
+}
+bool CollectionPanel::checkpoint(const PetState& pet, const Settings& settings) {
+    if (!enabled_ || failed()) return false;
+    const bool saved=learning_?learning_->checkpoint(store_,state_,pet,settings,pendingElapsed_):
+        store_.saveActive(state_,pet,settings,nullptr,pendingElapsed_);
+    if(saved) { pendingElapsed_=0; return true; }
+    if(!interrupted()) error("Error al guardar",true);
+    return false;
 }
 bool CollectionPanel::saveCare(const PetState& pet, const Settings& settings) {
     if (!store_.compactCare()) return save(pet,settings);
@@ -97,20 +110,24 @@ bool CollectionPanel::recoverRejectedSave() {
     if (!durable || !saved || store_.load(*durable)!=CollectionLoad::Loaded ||
         durable->sequence!=state_.sequence || durable->active!=state_.active ||
         !store_.readPet(state_,state_.active,*saved,settings) ||
-        (learning_ && !learning_->load(state_.slots[state_.active]))) return false;
+        (learning_ && !learning_->load(state_.slots[state_.active],store_.progressRecord()))) return false;
     failed_=careFailed_=careUnsettled_=false;
     return true;
 }
 bool CollectionPanel::saveExperience(const PetState& pet, const Settings& settings,
                                     const RuntimeExperience* events, size_t count) {
-    if (!count) return save(pet,settings);
-    if (!enabled_ || failed_ || !learning_ || !flush()) {
+    if (!count && !store_.progressEnabled()) return save(pet,settings);
+    if (!enabled_ || failed_ || !learning_ || (!store_.progressEnabled() && !flush())) {
         saveFailure_="precondition";
         error("Error al guardar politica",true); return false;
     }
-    if (!learning_->commit(store_,state_,pet,settings,events,count)) {
+    if (!learning_->commit(store_,state_,pet,settings,events,count,store_.progressEnabled()?pendingElapsed_:0)) {
         saveFailure_=learning_->commitFailure();
         error("Error al guardar politica",true); return false;
+    }
+    if(store_.progressEnabled()) {
+        pendingElapsed_=0;
+        careUnsettled_=!store_.settleCare(); careFailed_=careUnsettled_;
     }
     saveFailure_="none";
     return true;
@@ -134,6 +151,7 @@ bool CollectionPanel::accumulate(uint32_t elapsedMs, bool paused) {
     return true;
 }
 bool CollectionPanel::advance(uint32_t elapsedMs, bool paused) {
+    if(store_.progressEnabled()) return accumulate(elapsedMs,paused);
     if (enabled_ && !paused && elapsedMs>std::numeric_limits<uint32_t>::max()-pendingElapsed_) {
         if (!flush()) return false;
     }
@@ -150,7 +168,8 @@ bool CollectionPanel::timedEgg() const {
 bool CollectionPanel::hatchReady() const {
     if (!timedEgg()) return true;
     const auto& egg=state_.slots[state_.active];
-    return egg.incubationMs>=egg.incubationRequiredMs;
+    return egg.incubationMs>=egg.incubationRequiredMs ||
+        (store_.progressEnabled() && pendingElapsed_>=egg.incubationRequiredMs-egg.incubationMs);
 }
 void CollectionPanel::open() {
     changedActive_=false; cursor_=0; parentA_=255; blockReason_=BlockReason::None;

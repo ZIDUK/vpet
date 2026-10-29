@@ -26,13 +26,17 @@ public:
     // An uncertain/Pending outcome must be resolved inside the adapter.
     virtual bool commit(uint64_t nextSequence) = 0;
     virtual void abort() = 0;
+    virtual void setInterrupt(bool (*)(void*), void*) {}
+    virtual bool interrupted() const { return false; }
 };
 
 class CollectionStore {
 public:
     static constexpr size_t kMaxRecordBytes = 24 * 1024;
     static constexpr size_t kMaxSnapshotBytes = 3800;
-    explicit CollectionStore(CollectionRepository& repository, CareJournal* care=nullptr) : repository_(repository), care_(care) {}
+    explicit CollectionStore(CollectionRepository& repository, CareJournal* care=nullptr, bool progress=false)
+        : repository_(repository), care_(care), progress_(progress) {}
+    bool progressEnabled() const { return care_ && progress_; }
 
     CollectionLoad load(CollectionState& state);
     bool blocked() const { return blocked_; }
@@ -49,6 +53,11 @@ public:
     bool saveActive(CollectionState& state, const PetState& pet, const Settings& settings,
                     const char* learningRef = nullptr, uint32_t elapsedMs = 0);
     bool saveCare(CollectionState& state, const PetState& pet, const Settings& settings, uint32_t elapsedMs=0);
+    bool saveProgress(CollectionState& state, const PetState& pet, const Settings& settings,
+                      uint64_t learningBase, const std::string& events, uint32_t elapsedMs=0);
+    const CareRecord* progressRecord() const { return careApplied_ && care_ && care_->record().progress ? &care_->record() : nullptr; }
+    void setInterrupt(bool (*callback)(void*), void* context) { repository_.setInterrupt(callback,context); }
+    bool interrupted() const { return repository_.interrupted(); }
     bool compactCare() const { return care_!=nullptr; }
     bool settleCare() { return !care_ || care_->settle(); }
     bool activate(CollectionState& state, size_t target, PetState& pet, Settings& settings,
@@ -75,8 +84,11 @@ private:
                  const std::string* const replacements[CollectionState::kSlots]);
     bool readBody(const CollectionSlot& slot, std::string& body);
     bool current(const CollectionState& state);
+    bool saveJournal(CollectionState& state, const PetState& pet, const Settings& settings,
+                     uint32_t elapsedMs, const CareRecord* progress);
     CollectionRepository& repository_;
     CareJournal* care_;
+    bool progress_ = false;
     bool careApplied_ = false;
     uint32_t viewToken_ = 0, baseCrc_ = 0;
     uint64_t viewSequence_ = 0;

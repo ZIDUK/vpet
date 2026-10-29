@@ -36,7 +36,6 @@ TRAINING_STRINGS = {
     "training.timed.cancel_title": {"ES": "CANCELAR SESION?", "EN": "CANCEL SESSION?"},
     # ---- state A: select ------------------------------------------------
     "training.title":              {"ES": "ENTRENAR",       "EN": "TRAIN"},
-    "training.saving":             {"ES": "GUARDANDO",      "EN": "SAVING"},
     "training.slot":               {"ES": "ATRIBUTO",        "EN": "STAT"},
     "training.techniques":         {"ES": "TECNICAS",        "EN": "TECHNIQUES"},
     "training.techniques_sub":     {"ES": "APRENDIZAJE / DOMINIO",
@@ -95,6 +94,7 @@ TRAINING_STRINGS = {
     # ---- state D: result -----------------------------------------------
     "training.result.title":       {"ES": "ENTRENAMIENTO GUARDADO",
                                     "EN": "TRAINING SAVED"},
+    "training.result.heading":     {"ES": "RESULTADO",       "EN": "RESULT"},
     "training.result.ok":          {"ES": "OK",              "EN": "OK"},
     "training.result.page_summary":{"ES": "RESUMEN",         "EN": "SUMMARY"},
     "training.result.page_stats":  {"ES": "STATS",           "EN": "STATS"},

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <memory>
+#include <atomic>
 
 #include "vpet/Input.h"
 #include "vpet/BleService.h"
@@ -29,9 +30,73 @@ public:
     ~App();
     void begin(uint32_t nowMs);
     void tick(uint32_t nowMs, InputEvent event);
-    bool ready() const { return storageReady_ && !savePending_ && !careSave_ && !trainingSave_; }
+    bool ready() const {
+        return storageReady_ && !savePending_ && !careSave_ && !trainingSave_ &&
+            (!progressSave_ || progressSave_->kind == ProgressKind::None) && progressInputCount_ == 0;
+    }
 
 private:
+    enum class ProgressKind { None, Receipt, Checkpoint, CollectionInput, Reload, Recovery, Settlement };
+    enum class ProgressOrigin { State, Care, Training, Practice, Exploration };
+    struct ProgressView {
+        Navigation navigation;
+        DateTimeMenu date;
+        TrainingSession training;
+        PracticeSession practice;
+        ExplorationSession exploration;
+        bool trainingActive = false, practicing = false;
+        uint8_t clockStep = 0;
+    };
+    struct ProgressSave {
+        ProgressKind kind = ProgressKind::None;
+        ProgressOrigin origin = ProgressOrigin::State;
+        PetState before, snapshot;
+        Settings beforeSettings, settings;
+        ProgressView beforeView, view;
+        RuntimeExperience events[8]{};
+        size_t eventCount = 0;
+        InputEvent input = InputEvent::None;
+        CollectionSwitchGuard guard;
+        bool started = false, committed = false, recovered = true, cancelled = false;
+        bool close = false, changedActive = false, dirty = false, setClock = false, clockApplied = true;
+        uint64_t epoch = 0;
+        uint32_t durationMs = 0, stackFreeBytes = 0, heapMin = 0;
+    };
+    ProgressView progressView() const;
+    void restoreProgressView(const ProgressView& view);
+    void prepareProgress();
+    void startProgress(uint32_t nowMs);
+    void finishProgress(uint32_t nowMs);
+    static void writeProgress(void* context);
+    static bool interruptProgress(void* context);
+    void tickProgress(uint32_t nowMs, InputEvent event);
+    void tickGameplay(uint32_t nowMs, InputEvent event);
+    bool queueProgressInput(InputEvent event, uint32_t nowMs, bool home);
+    void closeProgressToHome();
+    void previewProgressInput(InputEvent event, uint32_t nowMs);
+    void drawProgress(uint32_t nowMs);
+    void warnProgress(uint32_t nowMs);
+    void progressPresented();
+    bool progressMode_ = false;
+    std::unique_ptr<ProgressSave> progressSave_;
+    std::atomic<bool> progressInterrupt_{false};
+    static constexpr uint8_t kProgressInputCapacity = 8;
+    struct ProgressInput {
+        InputEvent event = InputEvent::None;
+        bool home = false;
+        uint32_t queuedAtMs = 0;
+    };
+    ProgressInput progressInputs_[kProgressInputCapacity]{};
+    uint8_t progressInputHead_ = 0, progressInputCount_ = 0;
+    bool progressInputOverflow_ = false, sleepCheckpoint_ = false, progressSettlement_ = false;
+    uint32_t lastProgressCheckpointMs_ = 0;
+    bool progressWarning_ = false;
+    uint32_t progressWarningStartedMs_ = 0;
+    uint32_t progressMaxQueueDelayMs_ = 0, progressMaxDrawLatencyMs_ = 0;
+    uint32_t progressVisibleInputMs_ = 0;
+    bool progressVisibleInput_ = false;
+    bool progressSafeHome_ = false;
+
     void activate(uint32_t nowMs);
     void handlePanelInput(uint32_t nowMs, InputEvent event);
     void drawHome(uint32_t nowMs);

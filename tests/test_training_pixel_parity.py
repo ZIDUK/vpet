@@ -1,7 +1,90 @@
 """Render the production C++ UI, not an independently drawn firmware mock."""
+import io
+import subprocess
+
+import pytest
+from PIL import Image, ImageChops
+
 from scripts import build, build_tdisplay
 from scripts.verify_training_pixels import ROOT, verify, sim_frame
 from scripts.practice_renderer import GREEN, PANEL
+
+
+@pytest.fixture(scope="module")
+def training_renderers(tmp_path_factory):
+    from scripts.verify_training_pixels import compile_renderer
+
+    root = tmp_path_factory.mktemp("pending-training-result")
+    sim, data, include = root / "sim", root / "data", root / "include"
+    build.main(profile_name="tdisplay", output_dir=sim)
+    build_tdisplay.build(ROOT, sim, data, include / "generated")
+    binary = root / "training-pixels"
+    compile_renderer(binary, include)
+    return sim, data, binary
+
+
+@pytest.mark.parametrize("language", ["ES", "EN"])
+def test_training_result_does_not_claim_durable_storage(language):
+    from core.i18n import tr
+    from core.pet import Pet
+
+    pet = Pet()
+    pet.language = language
+    title = tr(pet, "training.result.heading")
+    assert not any(word in title for word in ("GUARDADO", "SAVED", "SAVING"))
+
+
+@pytest.mark.parametrize("language", ["ES", "EN"])
+@pytest.mark.parametrize("stat", range(6))
+def test_pending_training_result_equals_ordinary_result(training_renderers, monkeypatch,
+                                                       language, stat):
+    from core.i18n import tr
+    from core.pet import Pet
+    from scripts import training_renderer
+
+    sim, data, binary = training_renderers
+    labels = []
+    original_text = training_renderer.text
+
+    def capture_text(draw, position, value, *args, **kwargs):
+        labels.append(value)
+        return original_text(draw, position, value, *args, **kwargs)
+
+    monkeypatch.setattr(training_renderer, "text", capture_text)
+    pet = Pet()
+    pet.language = language
+    for page in (0, 1):
+        for ms in (10000, 10150):
+            for energy, ev in ((80, 30), (8, 30), (80, 250)):
+                args = (language, stat, page, 1, ms, energy, ev)
+                ordinary = sim_frame(sim, 4, *args)
+                labels.clear()
+                pending = sim_frame(sim, 9, *args)
+                assert tr(pet, "training.result.heading") in labels
+                assert not any(word in label for label in labels
+                               for word in ("GUARDANDO", "GUARDADO", "SAVING", "SAVED",
+                                            "SAVE PENDING"))
+                assert ImageChops.difference(pending, ordinary).getbbox() is None
+
+
+@pytest.mark.parametrize("language", ["ES", "EN"])
+@pytest.mark.parametrize("stat", range(6))
+def test_cpp_pending_training_result_equals_ordinary_result(training_renderers, language, stat):
+    sim, data, binary = training_renderers
+    from scripts.verify_training_pixels import quantized
+
+    for page in (0, 1):
+        for ms in (10000, 10150):
+            for energy, ev in ((80, 30), (8, 30), (80, 250)):
+                args = (language, stat, page, 1, ms, energy, ev)
+                frames = []
+                for state in (4, 9):
+                    raw = subprocess.check_output([str(binary), str(data), str(state),
+                                                   *map(str, args)])
+                    frames.append(Image.open(io.BytesIO(raw)).convert("RGB"))
+                assert ImageChops.difference(*frames).getbbox() is None
+                expected = quantized(sim_frame(sim, 9, *args))
+                assert ImageChops.difference(frames[1], expected).getbbox() is None
 
 
 def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
@@ -19,18 +102,6 @@ def test_training_cpp_matches_approved_simulator_pixels(tmp_path):
     from scripts.practice_renderer import render_practice
     from scripts.verify_training_pixels import quantized
     binary = tmp_path / "comparison" / "training-pixels"
-    for language in ("ES", "EN"):
-        for stat in range(6):
-            frames = []
-            for ms in (10000, 10150):
-                args = (9, language, stat, 0, 1, ms, 80, 30)
-                raw = subprocess.check_output([str(binary), str(data), *map(str, args)])
-                actual = Image.open(io.BytesIO(raw)).convert("RGB")
-                expected = quantized(sim_frame(sim, *args))
-                assert ImageChops.difference(actual, expected).getbbox() is None
-                frames.append(actual)
-                actual.save(tmp_path / "comparison" / f"{language}-saving-{stat}-{ms}.png")
-            assert ImageChops.difference(*frames).getbbox() is not None
     for lang in ("ES", "EN"):
         pet = Pet()
         pet.complete_hatch("rookie", entropy=42)

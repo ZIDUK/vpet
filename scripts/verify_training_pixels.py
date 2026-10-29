@@ -54,7 +54,7 @@ def sim_frame(build, state, lang, index, secondary, reps, ms, energy, ev):
     if state == 2 and ms < 10000 and reps:
         s._animation_started_ms = 0
         s._animation_index = min(index,5)
-    if state == 4:
+    if state in (4, 9):
         s._result_snapshot = batch_apply(p, stat, reps)
         s._result_page = "stats" if secondary else "summary"
         s._focus = "back" if batch_block_reason(p, stat) else "repeat"
@@ -75,17 +75,18 @@ def verify(build, output, data_dir=None, include_dir=None):
     binary = output / "training-pixels"
     compile_renderer(binary, include_dir)
     report = []
+    # State 9 is the ordinary RAM result while persistence remains in flight.
     # Includes every stat, button focus, locale, active animation and failure screen.
     for lang in ("ES", "EN"):
-        for state in range(7):
+        for state in (*range(7), 9):
             for index in range(8 if state == 0 else 6):
                 for secondary in range(1 if state == 0 else 2):
-                    reps = 1 if state in (2,3,4,6) else 0
+                    reps = 1 if state in (2,3,4,6,9) else 0
                     scenarios = [(1600,80,30)]
                     if state == 2:
                         scenarios += [(0,80,30),(300,80,30),(5000,80,30),
                                       (9999,80,30),(1600,8,30),(1600,80,246)]
-                    if state == 4:
+                    if state in (4, 9):
                         scenarios += [(1600,8,30),(1600,80,250)]
                     for ms,energy,ev in scenarios:
                         args=(state,lang,index,secondary,reps,ms,energy,ev)
@@ -93,18 +94,20 @@ def verify(build, output, data_dir=None, include_dir=None):
                         fw=Image.open(io.BytesIO(raw)).convert("RGB")
                         sim=quantized(sim_frame(build,*args))
                         different=sum(a!=b for a,b in zip(sim.getdata(),fw.getdata()))
-                        slug=f"{lang}-{STATES[state]}-{index}-{secondary}-{ms}-{energy}-{ev}"
+                        name = "result-pending" if state == 9 else STATES[state]
+                        slug=f"{lang}-{name}-{index}-{secondary}-{ms}-{energy}-{ev}"
                         sim.save(output / (slug+"-sim.png"))
                         fw.save(output / (slug+"-firmware.png"))
                         report.append({"slug":slug,"different_pixels":different,"match":1-different/(240*135)})
     (output / "report.json").write_text(json.dumps(report,indent=2)+"\n")
     rows=[]
-    for state,secondary in ((0,0),(1,0),(2,0),(2,1),(3,0),(6,0),(4,0),(4,1),(5,0)):
+    for state,secondary in ((0,0),(1,0),(2,0),(2,1),(3,0),(6,0),(4,0),(4,1),(9,0),(9,1),(5,0)):
         row=Image.new("RGB",(980,154),(245,245,245))
         draw=ImageDraw.Draw(row)
         for col,(lang,kind) in enumerate((("ES","sim"),("ES","firmware"),("EN","sim"),("EN","firmware"))):
-            slug=f"{lang}-{STATES[state]}-0-{secondary}-1600-80-30"
-            draw.text((col*245,0),f"{lang} {kind} / {STATES[state]}",fill="black")
+            name = "result-pending" if state == 9 else STATES[state]
+            slug=f"{lang}-{name}-0-{secondary}-1600-80-30"
+            draw.text((col*245,0),f"{lang} {kind} / {name}",fill="black")
             row.paste(Image.open(output/(slug+f"-{kind}.png")),(col*245,18))
         rows.append(row)
     sheet=Image.new("RGB",(980,len(rows)*154),(245,245,245))

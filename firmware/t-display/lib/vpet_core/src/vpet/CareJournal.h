@@ -1,5 +1,6 @@
 #pragma once
 #include "vpet/SettingsStore.h"
+#include "vpet/ProgressEvents.h"
 #include <limits>
 #include <sstream>
 namespace vpet {
@@ -9,6 +10,9 @@ struct CareRecord {
     uint32_t elapsedMs=0;
     uint8_t active=0;
     std::string identity, snapshot;
+    bool progress=false;
+    uint64_t learningBase=0;
+    std::string experiences;
 };
 class CareJournal {
 public:
@@ -31,15 +35,19 @@ public:
             record.identity==std::string(32,'0') ||
             record.identity.find_first_not_of("0123456789abcdef")!=std::string::npos ||
             record.snapshot.empty() || record.snapshot.size()>3800) return "";
-        const std::string payload="VPCJ1\n"+std::to_string(record.base)+"\n"+
+        if (!ProgressEvents::valid(record.experiences) || (!record.progress && (record.learningBase || !record.experiences.empty())) ||
+            record.learningBase>UINT64_MAX-record.experiences.size()/6) return "";
+        const std::string payload=std::string(record.progress?"VPCJ2\n":"VPCJ1\n")+std::to_string(record.base)+"\n"+
             std::to_string(record.revision)+"\n"+std::to_string(record.active)+"\n"+
-            std::to_string(record.elapsedMs)+"\n"+record.identity+"\n"+record.snapshot;
+            std::to_string(record.elapsedMs)+"\n"+record.identity+"\n"+
+            (record.progress?std::to_string(record.learningBase)+"\n"+record.experiences+"\n":"")+record.snapshot;
         const std::string result=payload+"CRC "+std::to_string(checksum(payload))+"\n";
         return result.size()<=kMaxBytes?result:"";
     }
     static CareLoad decode(const std::string& raw, CareRecord& out) {
         if (raw.size()>kMaxBytes || raw.find('\0')!=std::string::npos) return CareLoad::Corrupt;
-        if (raw.compare(0,6,"VPCJ1\n"))
+        const bool progress=raw.compare(0,6,"VPCJ2\n")==0;
+        if (!progress && raw.compare(0,6,"VPCJ1\n"))
             return raw.compare(0,4,"VPCJ")==0?CareLoad::Future:CareLoad::Corrupt;
         const auto end=raw.rfind("CRC ");
         if (end==std::string::npos || !end || raw[end-1]!='\n' || raw.back()!='\n') return CareLoad::Corrupt;
@@ -56,6 +64,9 @@ public:
         if (!std::getline(input,line) || !unsignedValue(line,value,UINT32_MAX)) return CareLoad::Corrupt;
         next.elapsedMs=value;
         if (!std::getline(input,next.identity)) return CareLoad::Corrupt;
+        next.progress=progress;
+        if (progress && (!std::getline(input,line) || !unsignedValue(line,next.learningBase,UINT64_MAX) ||
+            !std::getline(input,next.experiences))) return CareLoad::Corrupt;
         const auto at=input.tellg();
         if (at<0 || static_cast<size_t>(at)>=end) return CareLoad::Corrupt;
         next.snapshot=raw.substr(static_cast<size_t>(at),end-static_cast<size_t>(at));

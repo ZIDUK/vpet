@@ -10,9 +10,9 @@ namespace vpet {
 // no IO, mounting, formatting, recovery, migration or startup registration.
 // One writer, called serially by the owning save task. Do not instantiate concurrent
 // writers for the same directory. External learning blobs need their own adapter.
-// Max 24 KiB each for current/previous/pending (72 KiB total); begin requires a
-// 192 KiB operational budget including these files. A failed preparation may
-// leave previous incomplete; current remains authoritative and is never removed.
+// Max 24 KiB each for current/previous/pending and backup staging (96 KiB peak);
+// begin requires a 192 KiB operational budget including these files. Backups are
+// verified before atomic replacement; cancellation preserves valid generations.
 // Recovery of previous is an explicit user flow, never automatic. Atomic durable
 // rename relies on the mounted LittleFS implementation; physical power-cut / heap
 // validation and deployment backup protection remain integration requirements.
@@ -31,6 +31,10 @@ public:
     bool readPrepared(size_t offset, void* data, size_t bytes) override;
     bool commit(uint64_t nextSequence) override;
     void abort() override;
+    void setInterrupt(bool (*callback)(void*), void* context) override {
+        interrupt_ = callback; interruptContext_ = context;
+    }
+    bool interrupted() const override { return interrupt_ && interrupt_(interruptContext_); }
 
 private:
     bool closeCurrent();
@@ -46,6 +50,8 @@ private:
     size_t preparedBytes_ = 0;
     uint64_t expectedSequence_ = 0;
     bool dirty_ = false;
+    bool (*interrupt_)(void*) = nullptr;
+    void* interruptContext_ = nullptr;
 };
 
 }  // namespace vpet

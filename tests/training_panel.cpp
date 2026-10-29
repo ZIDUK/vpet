@@ -73,29 +73,47 @@ int main(int argc, char** argv) {
         uncached.drawTraining(session, pet, 2700, language);
         assert(canvas.pixels == reference.pixels);
     }
-    session.state = vpet::TrainingSession::State::Result;
-    session.saving = true;
-    panels.drawTraining(session, pet, 10000, language);
-    const auto firstSaving = canvas.pixels;
-    bool animated = false;
-    for (uint32_t ms = 10033; ms < 14000; ms += 33) {
-        const size_t opens = assetOpens;
-        panels.drawTraining(session, pet, ms, language);
-        assert(assetOpens == opens); // No LittleFS contention with the writer.
-        animated = animated || canvas.pixels != firstSaving;
-        uncached.invalidate();
-        uncached.drawTraining(session, pet, ms, language);
+    for (uint8_t stat = 0; stat < vpet::kTrainingStatCount; ++stat) {
+        auto resultPet = pet;
+        resultPet.setEnergy(80);
+        resultPet.setEvAt(vpet::trainingTypeAt(stat).stat, 30);
+        session = vpet::TrainingSession{};
+        session.state = vpet::TrainingSession::State::Result;
+        session.cursor = stat;
+        session.chosenStatValid = true;
+        session.chosenStat = vpet::trainingTypeAt(stat).stat;
+        session.repsCompleted = 1;
+        session.captureSnapshot(resultPet);
+        session.lastSummary = vpet::trainingApply(resultPet, session.chosenStat, 1);
+        session.saving = true;
+        std::vector<uint16_t> previous;
+        for (bool stats : {false, true, false}) {
+            session.resultStats = stats;
+            for (uint8_t choice : {0, 1, 2}) {
+                session.resultChoice = choice;
+                for (uint32_t ms : {10000u, 10150u}) {
+                    auto ordinary = session;
+                    ordinary.saving = false;
+                    panels.drawTraining(session, resultPet, ms, language);
+                    uncached.drawTraining(ordinary, resultPet, ms, language);
+                    assert(canvas.pixels == reference.pixels);
+                }
+                if (!previous.empty()) assert(canvas.pixels != previous);
+                previous = canvas.pixels;
+            }
+        }
+        panels.invalidate();
+        scene.fillSprite(TFT_RED);
+        canvas.fillSprite(TFT_RED);
+        panels.drawTraining(session, resultPet, 14000, language);
+        auto ordinary = session;
+        ordinary.saving = false;
+        uncached.drawTraining(ordinary, resultPet, 14000, language);
+        assert(canvas.pixels == reference.pixels);
+        session.saving = false;
+        panels.drawTraining(session, resultPet, 14033, language);
+        uncached.drawTraining(session, resultPet, 14033, language);
         assert(canvas.pixels == reference.pixels);
     }
-    assert(animated);
-    panels.invalidate();
-    panels.drawTraining(session, pet, 14000, language);
-    uncached.invalidate();
-    uncached.drawTraining(session, pet, 14000, language);
-    assert(canvas.pixels == reference.pixels);
-    session.saving = false;
-    panels.drawTraining(session, pet, 14033, language);
-    uncached.drawTraining(session, pet, 14033, language);
-    assert(canvas.pixels == reference.pixels);
     std::cout << "TRAINING_PANEL_OK\n";
 }

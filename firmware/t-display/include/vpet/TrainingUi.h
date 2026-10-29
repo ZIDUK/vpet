@@ -287,7 +287,7 @@ private:
         snprintf(value,sizeof(value),"%d",after); text(204,y,value,color,true);
     }
     void result() {
-        header(tr("training.result.title"),tr("training.result.ok"),green); portrait();
+        header(tr("training.result.heading"),tr("training.result.ok"),green); portrait();
         const auto& summary = s.lastSummary;
         if (s.resultStats) {
             indicator(24);
@@ -424,19 +424,8 @@ public:
     View(Canvas& canvas, const TrainingSession& session, const PetState& p, uint32_t ms, bool spanish,
          const content::PetDefinition& contentDefinition = content::builtinDefinition())
         : c(canvas), s(session), pet(p), now(ms), es(spanish), definition(contentDefinition) {}
-    void drawSavingIndicator() {
-        for (int i=0;i<3;++i) rect(70+i*12,80,6,6,(now/150)%3==uint32_t(i)?yellow:panel);
-    }
     void draw(bool drawSelectFooter = true) {
         rect(0,0,240,135,ink);
-        if (s.saving) {
-            header(tr("training.title"),"");
-            petAsset("idle",0,30,0);
-            info(index(),name(index()));
-            text(70,57,tr("training.saving"),white);
-            drawSavingIndicator();
-            return;
-        }
         switch(s.state) {
             case State::Select: select(drawSelectFooter); break;
             case State::Prepare: prepare(); break;

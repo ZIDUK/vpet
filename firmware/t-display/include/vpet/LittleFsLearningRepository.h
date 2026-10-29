@@ -13,9 +13,15 @@ public:
     bool prepare(const std::string& owner, const LearningState& policy, std::string& ref) override;
     bool inspect() { return collect(false); }
     const char* failureReason() const override { return failureReason_; }
+    void setInterrupt(bool (*callback)(void*), void* context) override {
+        interrupt_ = callback; interruptContext_ = context;
+    }
+    bool interrupted() const override { return interrupt_ && interrupt_(interruptContext_); }
 private:
     bool collect(bool cleanup=true);
     std::string directory_;
     const char* failureReason_ = "none";
+    bool (*interrupt_)(void*) = nullptr;
+    void* interruptContext_ = nullptr;
 };
 }  // namespace vpet

@@ -40,13 +40,9 @@ def test_policy_files_atomic_refs_and_runtime_recovery(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("compact", [False, True, "collection", "unreadable",
-                                     "training_policy", "training_collection", "training_unreadable",
-                                     "explore_policy", "explore_collection", "explore_unreadable",
-                                     "async_success", "async_policy", "async_collection", "async_unreadable", "async_executor",
-                                     "legacy_success", "legacy_reject", "legacy_pending", "legacy_destruct"])
-def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path, compact):
-    binary = tmp_path / "learning-app"
+@pytest.fixture(scope="module")
+def learning_app_binary(tmp_path_factory):
+    binary = tmp_path_factory.mktemp("learning-app-host") / "learning-app"
     result = subprocess.run([
         "c++", "-std=c++17", "-include", str(ROOT / "tests/asset_stubs/Arduino.h"),
         "-I", str(ROOT / "tests/app_stubs"), "-I", str(ROOT / "tests/asset_stubs"),
@@ -60,6 +56,16 @@ def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path, compact):
         "-o", str(binary),
     ], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
+    return binary
+
+
+@pytest.mark.parametrize("compact", [False, True, "collection", "unreadable",
+                                     "training_policy", "training_collection", "training_unreadable",
+                                     "explore_policy", "explore_collection", "explore_unreadable",
+                                     "async_success", "async_policy", "async_collection", "async_unreadable", "async_executor",
+                                     "legacy_success", "legacy_reject", "legacy_pending", "legacy_destruct", "journal"])
+def test_actual_esp32_app_learning_hooks_and_review_fixes(tmp_path, compact, learning_app_binary):
+    binary = learning_app_binary
     result = subprocess.run([str(binary), str(tmp_path), *([str(compact)] if compact else [])], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
 
