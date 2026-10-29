@@ -1,5 +1,21 @@
 # Arquitectura de software
 
+## Decision Aprobada: Persistencia Invisible
+
+El 2026-10-29 el usuario aprobo registro pequeno recuperable y respaldo completo
+al dormir/en reposo, sin interrumpir el juego ni presentar GUARDANDO. El alcance
+incluye entrenamiento, combate, CLAIM, cuidado y ajustes; no basta ocultar un
+texto ni cambiar una pausa por un spinner. La consolidacion tambien debe ceder
+ante entradas y evitar contencion con el renderer.
+
+Esto es una decision de alcance, NO el comportamiento implementado en 64addc8.
+El journal actual solo cubre cuidado; las experiencias siguen confirmando
+generaciones completas y entrenamiento aun presenta la vista de guardado.
+El documento tecnico y los limites de migracion/memoria necesitan revision;
+no se declara fluidez ni aceptacion fisica. Ver
+[SPEC-GAME-FLUID-001](superpowers/specs/2026-10-29-invisible-progress-journal-design.md)
+y su [plan](superpowers/plans/2026-10-29-invisible-progress-journal.md).
+
 ## Supervivencia Y Muerte Gradual: Piloto 2026-10-28
 
 El core conserva la muerte por 15 lesiones acumuladas o seis horas herido.
