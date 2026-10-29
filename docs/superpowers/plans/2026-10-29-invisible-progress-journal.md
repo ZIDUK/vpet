@@ -143,6 +143,9 @@ valida 166 tests trazados, sin sustituir ejecucion ni aceptacion fisica.
 
 Resumen y limites: ../reviews/2026-10-29-invisible-progress-verification.md.
 El usuario retiro el 2026-10-29 la precondicion de evidencia de las cuatro
-paginas Status; AGENTS.md actualizado. La carga esta preparada, sin afirmar
-aceptacion fisica. Todavia no estan medidos p95, intervalos de cuadros ni
-cortes de energia reales de esta version.
+paginas Status; AGENTS.md actualizado. La carga firmware-only fue exitosa,
+conservando LittleFS. La captura USB de 180 s tiene 112 entradas y 111 tiempos
+de presentacion: p95 610 ms y maximo 998 ms. No cumple p95 <=100 ms. Los
+checkpoints tardaron 3.9-7.5 s, con 2.3 s en consultas de espacio. No se declara
+resuelta la fluidez. Entrenamiento fisico pendiente: usuario reporta energia
+insuficiente; USB actual no ofrece una mutacion remota de energia.

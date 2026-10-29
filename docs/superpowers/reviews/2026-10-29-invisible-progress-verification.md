@@ -37,15 +37,30 @@ La lectura reinicio la placa. No se borraron NVS, LittleFS ni respaldos.
 
 El usuario retiro expresamente el 2026-10-29 el requisito de evidencia fisica
 de las cuatro paginas Status antes del flash; AGENTS.md actualizado. La carga
-esta preparada, aun no confirmada en este informe. Los cambios en Panels.cpp solo afectan
+firmware-only termino correctamente: heap_free=75980, heap_min=54444,
+LittleFS=11862016/12451840 y manifest=1. Los cambios en Panels.cpp solo afectan
 entrenamiento; scripts/sim_renderer.py y el layout Status quedan intactos.
 
-Siguiente paso: carga firmware-only, conservar volumen
-instalado, verificar READY y medir al menos 20 transiciones por flujo. Quedan
-abiertos p95 <=100 ms, resultado <=200 ms y cuadros <=200 ms. El mantenimiento
-retiene el framebuffer mientras usa LittleFS; una cancelacion o fsync lenta
-puede incumplir esos limites aunque los tests host pasen. No se afirma fluidez
-fisica, aprobacion visual ni resistencia a cortes de energia reales.
+Observacion de 180.145 s en
+`out/board-backups/20261029-invisible-progress-observation.json`: 112 eventos de
+entrada, 111 presentaciones medidas, sin fatal ni reinicio observado; heap
+minimo 23308. p95 entrada-a-presentacion=610 ms, maximo=998 ms: NO cumple el
+objetivo de 100 ms. loop_max_us=699077. No se confunden estos tiempos globales
+con una medicion de 20 transiciones por cada flujo.
+
+Los recibos compactos medidos tardaron 226-505 ms; checkpoints completos
+3869-7452 ms. La consulta de espacio consume aproximadamente 2260-2324 ms;
+hay una cancelacion real de checkpoint en 424 ms. No se detectaron recibos
+rechazados en esta captura, pero retener el framebuffer durante mantenimiento
+todavia produce una espera visible. La arquitectura esta implementada, NO se
+declara resuelta ni aceptada la fluidez fisica. Falta optimizar/medir estos
+recorridos y comprobar cortes de energia reales.
+
+El usuario no pudo entrenar por falta de energia. La interfaz USB instalada
+solo admite consultas STATUS/STORAGE, no cambios de energia. Recuperacion
+soportada: Proteina en Comida (+20, una vez por ciclo) o Tonico de Mochila (+25,
+si hay stock), ademas del sueno. No se edito NVS ni se concedieron recursos
+mediante comandos ocultos.
 
 ## Historial De Fallos De Verificacion
 

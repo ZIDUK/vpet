@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "vPet: juego y persistencia",
+    "output": ".archify/persistence-vpet-20261029/vpet-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/ZIDUK/vpet.git",
+      "revision": "f4bb5cbe032ddbcf2f2568eac914bd8feea7b893"
+    }
+  },
+  "components": [
+    {"id":"input","type":"external","label":"Dos botones","sublabel":"GPIO0 / GPIO35","pos":[40,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/BoardInput.cpp","line":1,"end_line":52}]},
+    {"id":"app","type":"backend","label":"App ESP32","sublabel":"Juego, cola de 8 y recuperacion","pos":[340,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/App.cpp","line":1118,"end_line":1202},{"path":"firmware/t-display/include/vpet/App.h","line":40,"end_line":97}]},
+    {"id":"render","type":"frontend","label":"TFT y Renderer","sublabel":"Resultado en RAM, sin GUARDANDO","pos":[640,80],"size":[200,74],"sources":[{"path":"firmware/t-display/src/Renderer.cpp","line":1,"end_line":40},{"path":"firmware/t-display/src/Panels.cpp","line":1072,"end_line":1094},{"path":"firmware/t-display/include/vpet/TrainingUi.h","line":20,"end_line":60}]},
+    {"id":"assets","type":"database","label":"Assets LittleFS","sublabel":"VPA1 y framebuffer reutilizado","pos":[640,260],"size":[200,74],"sources":[{"path":"firmware/t-display/src/AssetStore.cpp","line":1,"end_line":70},{"path":"firmware/t-display/src/App.cpp","line":1053,"end_line":1079}]},
+    {"id":"worker","type":"backend","label":"SaveTask ESP32","sublabel":"Un escritor; mantenimiento cede","pos":[340,260],"size":[200,74],"sources":[{"path":"firmware/t-display/include/vpet/FreeRtosSaveTask.h","line":8,"end_line":46},{"path":"firmware/t-display/src/App.cpp","line":893,"end_line":943},{"path":"firmware/t-display/src/App.cpp","line":1197,"end_line":1201}]},
+    {"id":"collection","type":"backend","label":"Coleccion y aprendizaje","sublabel":"Recibos y checkpoints versionados","pos":[340,440],"size":[200,74],"sources":[{"path":"firmware/t-display/src/LearningRuntime.cpp","line":26,"end_line":78},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":345,"end_line":369},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":465,"end_line":502}]},
+    {"id":"journal","type":"database","label":"Journal NVS","sublabel":"VPCJ2: efectos y hasta 64 eventos","pos":[640,440],"size":[200,74],"sources":[{"path":"firmware/t-display/lib/vpet_core/src/vpet/CareJournal.h","line":33,"end_line":45},{"path":"firmware/t-display/lib/vpet_core/src/vpet/ProgressEvents.h","line":5,"end_line":31},{"path":"firmware/t-display/src/NvsKeyValueStore.cpp","line":60,"end_line":88}]},
+    {"id":"snapshots","type":"database","label":"Respaldo LittleFS","sublabel":"VPCL v2 y politicas VPL1","pos":[340,620],"size":[200,74],"sources":[{"path":"firmware/t-display/src/LittleFsCollectionRepository.cpp","line":212,"end_line":254},{"path":"firmware/t-display/src/LittleFsLearningRepository.cpp","line":157,"end_line":213},{"path":"firmware/t-display/lib/vpet_core/src/vpet/CollectionStore.cpp","line":345,"end_line":396}]}
+  ],
+  "connections": [
+    {"from":"input","to":"app","label":"Eventos"},
+    {"from":"app","to":"render","label":"Presentacion"},
+    {"from":"render","to":"assets","label":"Recursos"},
+    {"from":"app","to":"worker","label":"Trabajo unico"},
+    {"from":"worker","to":"collection","label":"Callback"},
+    {"from":"collection","to":"journal","label":"VPCJ2"},
+    {"from":"collection","to":"snapshots","label":"Checkpoint"}
+  ],
+  "cards": [
+    {"dot":"emerald","title":"Implementado en fuente","items":["Entrenamiento, Arena, CLAIM, cuidado y ajustes usan recibos compactos","El respaldo se solicita al dormir, en reposo o al alcanzar capacidad","Efectos y aprendizaje se recuperan juntos; la revision impide duplicarlos"]},
+    {"dot":"amber","title":"Fluidez aun no aceptada","items":["2212 pruebas host y 185 native pasaron; firmware cargado sin borrar partidas","Captura inicial: p95 de 610 ms, fuera del objetivo de 100 ms","Falta optimizar esperas y medir cada flujo; errores reales siguen visibles"]},
+    {"dot":"cyan","title":"Compatibilidad","items":["Lee VPCJ1 y VPCL v1; conserva NVS schema 3 y politicas VPL1","LittleFS y partidas se conservan mediante carga firmware-only","El usuario retiro la exigencia de capturas Status antes del flash"]}
+  ]
+}

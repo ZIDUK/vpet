@@ -32,8 +32,12 @@ Durante E/S completa se conserva el framebuffer presentado para evitar lecturas
 de assets competidoras. La latencia de esa cancelacion y la continuidad visual
 requieren medicion fisica, no se deducen de mover el trabajo a FreeRTOS.
 
-Esta entrega sigue en verificacion local; no se declara fluidez ni aceptacion
-fisica. El baseline 64addc8 solo tenia cuidado compacto y una vista de guardado
+La entrega se cargo firmware-only, conservando LittleFS. La observacion fisica
+inicial mide p95 entrada-a-presentacion de 610 ms, fuera del objetivo de 100 ms;
+no se declara fluidez ni aceptacion fisica. Las consultas completas de espacio
+tardan unos 2.3 s y el mantenimiento aun retiene la imagen. Ver el informe
+[de verificacion](superpowers/reviews/2026-10-29-invisible-progress-verification.md).
+El baseline 64addc8 solo tenia cuidado compacto y una vista de guardado
 en entrenamiento. Ver
 [SPEC-GAME-FLUID-001](superpowers/specs/2026-10-29-invisible-progress-journal-design.md)
 y su [plan](superpowers/plans/2026-10-29-invisible-progress-journal.md).
