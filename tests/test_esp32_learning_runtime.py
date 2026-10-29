@@ -6,6 +6,22 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / "firmware/t-display/lib/vpet_core/src"
 
 
+def test_learning_scan_reuses_generation_streams_without_caching_validation(tmp_path):
+    binary = tmp_path / "learning-io"
+    result = subprocess.run([
+        "c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
+        "-I", str(CORE), "-I", str(ROOT / "firmware/t-display/include"),
+        str(ROOT / "tests/learning_repository_io.cpp"),
+        str(ROOT / "firmware/t-display/src/LittleFsCollectionRepository.cpp"),
+        *[str(CORE / "vpet" / (name + ".cpp")) for name in (
+            "CollectionStore", "SettingsStore", "PetState", "Nutrition", "PracticeBattle")],
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    result = subprocess.run([str(binary), str(tmp_path)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_policy_files_atomic_refs_and_runtime_recovery(tmp_path):
     binary = tmp_path / "learning-runtime"
     result = subprocess.run([

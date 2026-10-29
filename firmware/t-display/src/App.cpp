@@ -876,10 +876,14 @@ void App::tick(uint32_t nowMs, InputEvent event) {
         if (training_.dirty && training_.needsRollback) {
             const int score=int(training_.lastSummary.evAdded)*10-training_.lastSummary.energyCharged;
             const RuntimeExperience experience{0,0,trainingIndexFor(training_.chosenStat),std::max(-100,std::min(100,score))};
-            if (!persistExperience(&experience,1)) {
+            const uint32_t saveStarted=millis();
+            const bool committed=persistExperience(&experience,1);
+            if (!committed) {
                 training_.rollbackFromSnapshot(pet_);
                 recoverRejectedExperience("training");
             } else settleStorage();
+            Serial.printf("VPET_TRAINING_SAVE duration_ms=%u committed=%u pending=%u\n",
+                millis()-saveStarted,committed?1U:0U,savePending_?1U:0U);
             training_.dirty = false;
             training_.needsRollback = false;
         }

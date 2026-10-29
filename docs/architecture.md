@@ -137,6 +137,13 @@ y nunca sobrescribe bytes distintos ante colision. GC protege ambas generaciones
 No cambia el schema NVS ni se reformatea el volumen. HUB STORAGE valida en modo
 solo lectura sin GC cuando App esta lista; STATUS conserva su protocolo.
 
+La validacion del GC de aprendizaje usa un flujo de lectura por generacion,
+no uno por bloque: comprueba longitud, CRC completo y cuerpos antes de cerrar
+con resultado verificado. Cada operacion reabre y revalida; no conserva bytes
+ni certificados de validacion entre generaciones. App mide el guardado final
+de entrenamiento con VPET_TRAINING_SAVE. Sigue siendo sincrono y la tabla solo
+se presenta despues de confirmarlo; menor E/S host no acredita fluidez fisica.
+
 No cambian enums persistidos, VPCL v1, assets, Status, WiFi ni particiones. El
 modo sin Coleccion conserva el guardado legacy existente. Para volver a un
 firmware sin soporte del journal debe completarse primero un checkpoint total;

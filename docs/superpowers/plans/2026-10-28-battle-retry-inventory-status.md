@@ -16,6 +16,8 @@ Spec: [SPEC-GAME-PLAYABILITY-001](../specs/2026-10-28-battle-retry-inventory-sta
 
 ## Trazas
 
+- REQ-GAME-PLAY-008: `tests/test_esp32_learning_runtime.py::test_learning_scan_reuses_generation_streams_without_caching_validation` y las regresiones de App; ampliar medicion fisica antes de aceptar fluidez.
+
 - REQ-GAME-PLAY-007 (propuesto): medir fases en placa; `tests/test_exploration_app.py::test_actual_app_exploration_clock_and_transactions` y las regresiones de experiencia son guardas funcionales, no benchmarks de latencia.
 
 - REQ-GAME-PLAY-006: `tests/test_esp32_learning_runtime.py::test_policy_files_atomic_refs_and_runtime_recovery`, `tests/test_esp32_learning_runtime.py::test_actual_esp32_app_learning_hooks_and_review_fixes`, con `tests/posix_littlefs32.h`.
@@ -42,6 +44,36 @@ no aparece SAVE PENDING en esa captura. Se observa inicio de exploracion.
 No acredita recuperacion del fallo original ni autoriza cancelar el viaje.
 
 ## Evidencia Final
+
+### Final De Entrenamiento: 2026-10-29
+
+El usuario reporta congelamiento al terminar entrenamiento antes de la tabla.
+App confirma persistExperience de forma sincrona antes de dibujar Result.
+ReadOnlyGeneration del colector de politicas hacia stat/open/seek/read/close
+por cada bloque. La regresion real con dos mascotas y dos generaciones cuenta
+44 aperturas, 44 cierres y 44 seeks antes del cambio y falla el presupuesto.
+
+Se mantiene una lectura abierta por validacion de generacion, con posicion
+continua y limites del archivo observado. size invalida la vista; finish cierra
+y comprueba antes de aceptar referencias para GC. Destructor libera en errores.
+No hay cache de cuerpos/CRC ni otro worker, framebuffer o formato de guardado.
+Se agrega VPET_TRAINING_SAVE duration_ms/committed/pending para medir la pausa.
+Las pruebas de corrupcion posterior y fallo de cierre preservan el bloqueo.
+Verificacion: 2110 Python aprobadas (356.13 s, 13278 advertencias), 185 nativas,
+13 focalizadas de aprendizaje/recuperacion; escaneo reforzado de corrupcion al
+ultimo byte y cierre fallido repetido despues. Test aislado ejecutado: opens=2,
+closes=2, seeks=2, frente a 44/44/44. spec-check: 6 specs, 30 requisitos.
+Build final tdisplay correcto: app 1121317 y RAM estatica 53916 bytes.
+
+Carga firmware-only completada, sin reemplazar LittleFS. SHA256 firmware
+a36aad5a189aba86f37e47315b1a6d0098aacaccbca410f49c6ca7f64f6f1edc.
+Respaldo NVS fresco out/board-backups/20261029-training-stream-critical.bin,
+24576 bytes, SHA256 604b7714f85e0cca3bed958187fd3dda870320465af07242219538638388a80d.
+Registro 20261029-training-stream-deploy.log: READY, heap libre 78340/minimo
+58584, FS 11862016/12451840, manifest=1. El arranque posterior y HUB STORAGE
+valid=1 constan en 20261029-training-stream-live.log. Se pide un entrenamiento
+real al usuario; aun no se capturo VPET_TRAINING_SAVE ni aceptacion de fluidez.
+Menos aperturas no prueba menor pausa de commit: queda por medir en placa.
 
 ### Ampliacion Exploracion
 

@@ -88,6 +88,15 @@ sin quitar comprobaciones de durabilidad ni repetir premios. Separar tiempo de
 respuesta visual y commit, conservar recuperacion ante corte y comprobar margen
 de memoria. El usuario confirma la recogida pero reporta lentitud en ambos flujos.
 
+### REQ-GAME-PLAY-008
+
+Reporte 2026-10-29: reducir E/S redundante al confirmar aprendizaje al final del
+entrenamiento. Validar cada generacion con un flujo de lectura por operacion,
+sin reabrir ni buscar por cada bloque consecutivo. Mantener limites, CRC completo,
+validacion de cuerpos y cierre comprobado antes del GC. No reutilizar bytes o
+validaciones entre operaciones ni mostrar como confirmado un resultado rechazado.
+Medir duracion del guardado de entrenamiento por USB antes de afirmar fluidez.
+
 ## Criterios De Aceptacion
 
 ### AC-GAME-PLAY-001
@@ -139,6 +148,15 @@ Registrar tiempos por fase de CLAIM y Save del reloj en placa antes y despues
 del cambio, con regresiones de reloj, premios y reinicio conservadas. Definir el
 presupuesto de respuesta en su plan antes de declarar aceptacion de fluidez.
 Las pruebas funcionales actuales no prueban latencia; pendiente de implementacion.
+
+### AC-GAME-PLAY-008
+
+Con dos mascotas en ambas generaciones, el escaneo real usa dos aperturas,
+dos cierres y hasta seis seeks frente a las 44 aperturas/seeks previas.
+Corrupcion de bytes posterior a un escaneo y fallo de cierre bloquean el siguiente
+escaneo sin descriptores abiertos ni GC. Regresiones de premio unico, rechazo,
+reinicio y nombres de 32 bytes siguen pasando. Capturar VPET_TRAINING_SAVE en
+placa y separar menor E/S host de aceptacion fisica del congelamiento.
 
 ## Contratos Y Compatibilidad
 

@@ -2,6 +2,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <dirent.h>
 #include <memory>
 #include <new>
@@ -94,18 +95,32 @@ bool directorySync(const std::string& path) {
 class ReadOnlyGeneration final : public CollectionRepository {
 public:
     explicit ReadOnlyGeneration(const std::string& path) : path_(path) {}
+    ReadOnlyGeneration(const ReadOnlyGeneration&)=delete;
+    ReadOnlyGeneration& operator=(const ReadOnlyGeneration&)=delete;
+    ~ReadOnlyGeneration() override { finish(); }
+    bool finish() {
+        if (!file_) return true;
+        auto* closing=file_; file_=nullptr;
+        return std::fclose(closing)==0;
+    }
     CollectionRead size(size_t& bytes) override {
+        // A stream lasts one complete validation, never the next generation.
+        sized_=false; position_=0;
+        if (!finish()) return CollectionRead::Error;
         struct stat info;
         if (::stat(path_.c_str(),&info)) return errno==ENOENT?CollectionRead::Missing:CollectionRead::Error;
         if (!S_ISREG(info.st_mode) || info.st_size<0) return CollectionRead::Error;
-        bytes=static_cast<size_t>(info.st_size); return CollectionRead::Present;
+        bytes=length_=static_cast<size_t>(info.st_size); sized_=true;
+        return CollectionRead::Present;
     }
     bool read(size_t offset,void* data,size_t bytes) override {
-        size_t length=0;
-        if (size(length)!=CollectionRead::Present || offset>length || bytes>length-offset) return false;
-        auto* file=openFile(path_,"rb"); if (!file) return false;
-        const bool ok=std::fseek(file,static_cast<long>(offset),SEEK_SET)==0 && std::fread(data,1,bytes,file)==bytes;
-        const bool closed=std::fclose(file)==0; return ok && closed;
+        if (!sized_ || offset>length_ || bytes>length_-offset || offset>static_cast<size_t>(LONG_MAX)) return false;
+        if (!file_) { file_=openFile(path_,"rb"); position_=0; }
+        if (!file_) return false;
+        if (position_!=offset && std::fseek(file_,static_cast<long>(offset),SEEK_SET)) return false;
+        const size_t read=std::fread(data,1,bytes,file_);
+        position_=offset+read;
+        return read==bytes;
     }
     bool begin(uint64_t,size_t) override { return false; }
     bool write(size_t,const void*,size_t) override { return false; }
@@ -114,6 +129,9 @@ public:
     void abort() override {}
 private:
     std::string path_;
+    std::FILE* file_=nullptr;
+    size_t length_=0, position_=0;
+    bool sized_=false;
 };
 }
 LittleFsLearningRepository::LittleFsLearningRepository(const char* directory) : directory_(directory?directory:"") {
@@ -180,6 +198,7 @@ bool LittleFsLearningRepository::collect(bool cleanup) {
         failureReason_=!std::strcmp(name,"current.bin")?"policy_collect_current":"policy_collect_previous";
         ReadOnlyGeneration generation(parent+"/"+name); CollectionStore reader(generation);
         const auto loaded=reader.load(*state);
+        if (!generation.finish()) return false;
         if (loaded==CollectionLoad::Missing) {
             if (!std::strcmp(name,"current.bin")) return false;
             continue;
