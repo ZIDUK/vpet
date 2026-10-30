@@ -29,7 +29,29 @@ void test_nutrition_condition_and_unlimited_food_contract() {
     TEST_ASSERT_EQUAL(80, pet.energy());
     TEST_ASSERT_EQUAL(13, pet.weight());
     TEST_ASSERT_EQUAL(2, pet.itemCount(4));
-    TEST_ASSERT_EQUAL(vpet::FoodResult::Cycle, vpet::applyFood(pet, vpet::FoodId::Protein));
+    TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, vpet::FoodId::Protein));
+    TEST_ASSERT_EQUAL(100, pet.energy());
+    TEST_ASSERT_EQUAL(15, pet.weight());
+    pet.setEnergy(0);
+    pet.setWeight(10);
+    for (int i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, vpet::FoodId::Protein));
+    TEST_ASSERT_EQUAL(100, pet.energy());
+    TEST_ASSERT_EQUAL(22, pet.weight());
+    for (auto food : {vpet::FoodId::Meat, vpet::FoodId::Protein}) {
+        pet.setWeight(98); pet.setHunger(95); pet.setEnergy(95);
+        TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, food));
+        TEST_ASSERT_EQUAL(99, pet.weight());
+        const auto meals = pet.meals(); const auto overfeeds = pet.overfeeds();
+        TEST_ASSERT_EQUAL(vpet::FoodResult::Full, vpet::applyFood(pet, food));
+        TEST_ASSERT_EQUAL(meals, pet.meals()); TEST_ASSERT_EQUAL(overfeeds, pet.overfeeds());
+        pet.setHunger(60); pet.setEnergy(60);
+        for (int i = 0; i < 2; ++i)
+            TEST_ASSERT_EQUAL(vpet::FoodResult::Applied, vpet::applyFood(pet, food));
+        TEST_ASSERT_EQUAL(99, pet.weight());
+    }
+    for (uint8_t i = 0; i < 6; ++i)
+        TEST_ASSERT_EQUAL(0, pet.evAt(static_cast<vpet::CombatStat>(i)));
 }
 
 void test_legacy_meat_and_protein_inventory_items_are_not_consumed() {
@@ -210,14 +232,17 @@ void test_overfeed_once_when_full_is_not_a_care_mistake() {
     TEST_ASSERT_EQUAL(1, pet.meals());
 }
 
-void test_second_feed_while_full_is_rejected() {
+void test_repeated_feed_while_full_stops_at_weight_cap() {
     vpet::PetState pet;
     pet.restore(vpet::SpeciesId::Rookie, 100, 80, 80, 0, 100, 0);
     pet.beginAction(vpet::Action::Feed);
     pet.completeAction();
+    TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
+    TEST_ASSERT_TRUE(pet.completeAction());
+    TEST_ASSERT_EQUAL(2, pet.overfeeds());
+    TEST_ASSERT_EQUAL(2, pet.meals());
+    pet.setWeight(99);
     TEST_ASSERT_FALSE(pet.beginAction(vpet::Action::Feed));
-    TEST_ASSERT_EQUAL(1, pet.overfeeds());
-    TEST_ASSERT_EQUAL(1, pet.meals());
 }
 
 void test_hunger_drop_allows_another_overfeed() {
@@ -235,8 +260,9 @@ void test_hunger_drop_allows_another_overfeed() {
     TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
     pet.completeAction();
     TEST_ASSERT_EQUAL(2, pet.overfeeds());
-    TEST_ASSERT_FALSE(pet.beginAction(vpet::Action::Feed));
-    TEST_ASSERT_EQUAL(2, pet.overfeeds());
+    TEST_ASSERT_TRUE(pet.beginAction(vpet::Action::Feed));
+    TEST_ASSERT_TRUE(pet.completeAction());
+    TEST_ASSERT_EQUAL(3, pet.overfeeds());
 }
 
 void test_meat_item_blocked_after_overfeed() {

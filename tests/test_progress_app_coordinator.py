@@ -29,7 +29,8 @@ def coordinator(tmp_path_factory):
 
 
 @pytest.mark.parametrize("scenario", ["settings", "training_queue", "queue", "overflow", "care",
-                                     "care_reject", "settings_reject", "training_reject",
+                                     "care_reject", "food_repeat", "food_repeat_reject",
+                                     "settings_reject", "training_reject",
                                      "accepted_pending", "maintenance", "sleep", "collection",
                                      "capacity", "stress", "explore", "explore_reject", "battle",
                                      "battle_reject", "clock", "clock_reject", "warning", "legacy",

@@ -157,7 +157,7 @@ void test_arena_results_unlock_evolution_once_without_care_costs();
 void test_practice_session_runs_rounds_without_action_input();
 void test_practice_progress_follows_pet_save_and_backup();
 void test_practice_progress_legacy_and_invalid_values_are_safe();
-void test_second_feed_while_full_is_rejected();
+void test_repeated_feed_while_full_stops_at_weight_cap();
 void test_hunger_drop_allows_another_overfeed();
 void test_meat_item_blocked_after_overfeed();
 void test_wake_at_night_adds_care_mistake();
@@ -377,7 +377,7 @@ int main(int, char**) {
     RUN_TEST(test_force_from_ultimate_restarts_as_egg);
     RUN_TEST(test_missing_life_key_restarts_as_egg);
     RUN_TEST(test_overfeed_once_when_full_is_not_a_care_mistake);
-    RUN_TEST(test_second_feed_while_full_is_rejected);
+    RUN_TEST(test_repeated_feed_while_full_stops_at_weight_cap);
     RUN_TEST(test_hunger_drop_allows_another_overfeed);
     RUN_TEST(test_meat_item_blocked_after_overfeed);
     RUN_TEST(test_wake_at_night_adds_care_mistake);

@@ -495,11 +495,10 @@ void Panels::drawFeeding(uint8_t selected, bool spanish, const PetState& pet) {
         display_.setTextColor(kInk, fill);
         drawLabel(names[index], x + 31, 65, 73, 2);
         drawLabel(effects[index], x + 31, 87, 73, 1);
-        const bool proteinResting = index == 1 &&
-                                    (pet.proteinFedThisCycle() || pet.energy() > 100 - items::kProteinEnergy);
-        display_.setTextColor(proteinResting ? TFT_DARKGREY : TFT_GREEN, fill);
-        drawLabel(proteinResting
-                      ? (spanish ? "EN DESCANSO" : "RESTING")
+        const bool full = pet.weight() >= 99 && (index == 0 ? pet.hunger() : pet.energy()) >= 100;
+        display_.setTextColor(full ? TFT_DARKGREY : TFT_GREEN, fill);
+        drawLabel(full
+                      ? (spanish ? "LLENO" : "FULL")
                       : (spanish ? "ILIMITADO" : "UNLIMITED"),
                   x + 31, 101, 73, 1);
     }

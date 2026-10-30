@@ -119,8 +119,9 @@ def markdown():
             lines += ["", "Excepcion legacy: conserva su efecto mixto para no cambiar el balance guardado."]
     lines += ["", "## Contratos de uso", "",
               "- Alimentar contiene solo carne y proteina ilimitadas. No descuenta sus stocks legacy 3/2.",
-              "- Carne: +20 hambre y +1 peso; una sobrealimentacion por ciclo cuando ya esta lleno.",
-              "- Proteina: +20 energia y +2 peso; ENE <=80, una vez por ciclo metabolico. No da EV ni DP.",
+              "- Carne: +20 hambre y +1 peso; porciones repetidas incluso lleno, hasta hambre 100 y peso 99.",
+              "- Proteina: +20 energia y +2 peso; porciones repetidas incluso lleno, hasta energia 100 y peso 99. No da EV ni DP.",
+              "- Con peso 99 todavia se recupera hambre/energia; se rechaza sin cambios solo si ambos efectos estan al maximo.",
               "- Amuleto mejora animo, no fuerza. Conserva el ID `ring` y el recurso `ItemRing` por compatibilidad.",
               "- Los cuatro consumibles de mochila se gastan desde casa; la Guia abre entrenamiento y solo se consume al completar la sesion.",
               "- Guia: maximo una; conserva el objeto al cancelar, fallar el guardado o llenar el atributo con el entrenamiento base.",

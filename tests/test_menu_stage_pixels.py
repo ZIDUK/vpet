@@ -42,6 +42,24 @@ def locked_icons(species):
     return {1, 2, 3, 4, 5} if species == "egg" else {2, 3, 4} if species == "baby" else set()
 
 
+@pytest.mark.parametrize("language", ["ES", "EN"])
+@pytest.mark.parametrize("state", [0, 1, 2])
+def test_feeding_labels_follow_effect_caps_not_cycle_flags(menu_stage_pixels, language, state):
+    sim, data, binary = menu_stage_pixels
+    output = subprocess.check_output([str(binary), str(data), "0", "feeding", str(state), language])
+    assert Image.open(io.BytesIO(output)).size == (240, 135)
+    pet = Pet(species="rookie", state="live")
+    pet.weight = 10 if state == 0 else 99
+    pet.stats.update(h=60 if state == 2 else 100, e=60 if state == 2 else 100)
+    pet.protein_fed_this_cycle = pet.overfed_this_cycle = True
+    pet.language = language
+    image = render_frame(sim, pet, menu_index=1, panel_mode="feeding",
+                         profile=get_display_profile("tdisplay"))
+    note = image.crop((41, 96, 230, 107))
+    has_green = any(g > 100 and g > r * 1.3 and g > b * 1.3 for r, g, b in note.get_flattened_data())
+    assert has_green == (state != 1)
+
+
 def expected_bar(baseline, species, board):
     image = baseline.crop((0, 0, 240, 24))
     for index in locked_icons(species):

@@ -270,23 +270,20 @@ def test_battle_blocks_after_four_consecutive():
 
 
 # ---------------------------------------------------------------------------
-# 5. Feed: bounded by hunger cap (h=100) and overfed cycle.
+# 5. Feed: repeated portions stop when hunger and weight are both capped.
 # ---------------------------------------------------------------------------
 
 
-def test_feed_is_bounded_by_hunger_and_overfeed_cycle_without_ev():
+def test_feed_is_bounded_by_weight_cap_without_ev():
     pet = _fresh_firemon(energy=100)
     motion = _motion()
     feeds = 0
-    while _feed(pet, motion):
+    while feeds < 100 and _feed(pet, motion):
         feeds += 1
-    # One normal meal and one allowed overfeed; neither grants EV.
-    assert feeds == 2
+    assert feeds == 89
     assert pet.ev_at("hp") == 0
-    assert pet.weight == 12
-    # To repeat, the player must wait for h to drop below 100 (decay) so
-    # overfed_this_cycle resets. That is hours of real time, but
-    # deterministic in tests.
+    assert pet.weight == 99
+    assert not _feed(pet, motion)
 
 
 # ---------------------------------------------------------------------------

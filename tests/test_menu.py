@@ -60,7 +60,7 @@ def test_rest_menu_recovers_pet_and_starts_sleep_animation():
     assert motion.state != MOTION_SLEEP
 
 
-def test_overfeed_once_when_full_is_not_a_care_mistake():
+def test_repeated_overfeeding_increases_weight_without_care_mistake():
     from core.menu import activate_menu_item
 
     pet = Pet(species="rookie", state=STATE_LIVE)
@@ -72,8 +72,11 @@ def test_overfeed_once_when_full_is_not_a_care_mistake():
     assert pet.overfeeds == 1
     assert pet.care_mistakes == 0
     assert pet.weight == 11
-    assert not activate_menu_item(pet, motion, menu_index=1, now=1.0)
-    assert pet.overfeeds == 1
+    assert activate_menu_item(pet, motion, menu_index=1, now=1.0)
+    assert pet.overfeeds == 2
+    assert pet.meals == 2
+    assert pet.weight == 12
+    assert pet.care_mistakes == 0
     assert motion.state == MOTION_EAT
 
 

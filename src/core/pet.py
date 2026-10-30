@@ -220,7 +220,7 @@ class Pet:
     def can_feed(self):
         if self.is_egg:
             return False
-        return not (self.stats.get("h", 0) >= 100 and self.overfed_this_cycle)
+        return not (self.stats.get("h", 0) >= 100 and self.weight >= 99)
 
     def has_dna(self):
         return any(self.dna)

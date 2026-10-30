@@ -32,6 +32,20 @@ int main(int argc, char** argv) {
         motion.setSpecies(pet.species());
         if (view == "home") renderer.draw({pet,motion,selected,0,true});
         else if (view == "status") panels.draw(navigation,pet,vpet::BleStatus::Off,clock,"ES",false);
+        else if (view == "feeding") {
+            pet.setHunger(selected == 2 ? 60 : 100);
+            pet.setEnergy(selected == 2 ? 60 : 100);
+            pet.setWeight(selected == 0 ? 10 : 99);
+            pet.restoreOverfeed(true, 1); pet.setProteinFedThisCycle(true);
+            navigation.setPanel(vpet::PanelId::Feeding);
+            panels.draw(navigation,pet,vpet::BleStatus::Off,clock,spanish ? "ES" : "EN",false);
+            int labels = 0;
+            const std::string expected = selected == 1 ? (spanish ? "LLENO" : "FULL")
+                                                       : (spanish ? "ILIMITADO" : "UNLIMITED");
+            for (const auto& text : canvas.textDraws)
+                if (text.value == expected) ++labels;
+            assert(labels >= 2);
+        }
         else if (view == "evolution") {
             navigation.setCurrentSpecies(pet.species());
             navigation.setPanel(vpet::PanelId::EvolutionTree);

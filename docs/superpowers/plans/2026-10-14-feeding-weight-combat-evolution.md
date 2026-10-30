@@ -162,7 +162,7 @@ C++: BodyCondition, FoodPreview, FoodResult y funciones homonimas en camelCase;
      PetState::effectiveCombatStat(CombatStat) devuelve el valor efectivo.
 ```
 
-`food_preview` no muta; `apply_food` vuelve a validar y solo lo invoca el controlador transaccional al confirmar. Solo admite los IDs `meat` y `protein`. Reasons estables: `ok`, `egg`, `dead`, `asleep`, `busy`, `full`, `overfeed_used`, `protein_cycle`, `invalid_food`. Los adaptadores pasan disponibilidad/sueno; no introducir dependencia de Motion en la formula numerica.
+`food_preview` no muta; `apply_food` vuelve a validar y solo lo invoca el controlador transaccional al confirmar. Solo admite los IDs `meat` y `protein`. Reasons estables: `ok`, `egg`, `dead`, `asleep`, `busy`, `full`, `overfeed_used`, `protein_cycle`, `invalid_food`. Los adaptadores pasan disponibilidad/sueno; no introducir dependencia de Motion en la formula numerica. **Contrato histórico reemplazado:** `overfeed_used` y `protein_cycle` se conservan por compatibilidad de diagnóstico, pero las reglas aprobadas en [SPEC-GAME-FOOD-001](../specs/2026-10-29-repeat-feeding-design.md) permiten repetir porciones hasta los topes de necesidad y peso.
 
 ## 5. Secuencia de implementacion
 

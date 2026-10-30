@@ -729,7 +729,12 @@ y umbrales de animo; no crean Calls ni estado persistido nuevo.
 [Contrato y evidencia](mood-cues.md).
 
 Alimentar ofrece carne y proteina ilimitadas; no consulta ni descuenta el
-stock legado. La mochila conserva los objetos legacy y agrega el catalogo
+stock legado. Las porciones se repiten incluso con saciedad/energia 100 para
+aumentar peso hasta 99; sin EV ni DP. Con peso 99 aun recuperan necesidades.
+Se rechaza sin mutar solo si ambos efectos del alimento estan al maximo;
+los flags historicos de ciclo no bloquean alimentos. Ver
+[SPEC-GAME-FOOD-001](superpowers/specs/2026-10-29-repeat-feeding-design.md).
+La mochila conserva los objetos legacy y agrega el catalogo
 adoptado de 40 consumibles y Guia; no todos se usan fuera de combate.
 `ACTION` consume un item valido, guarda la partida y permanece en el menu; si
 el guardado falla, restaura la instantanea anterior. Stock 0 o una accion

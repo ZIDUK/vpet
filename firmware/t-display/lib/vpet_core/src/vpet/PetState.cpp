@@ -420,7 +420,7 @@ void PetState::restoreOverfeed(bool usedThisCycle, uint8_t count) {
 
 bool PetState::canFeed() const {
     if (species_ == SpeciesId::Egg) return false;
-    return !(hunger_ >= 100 && overfedThisCycle_);
+    return !(hunger_ >= 100 && weight_ >= 99);
 }
 
 CareSnapshot PetState::snapshot() const {

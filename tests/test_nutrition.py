@@ -64,7 +64,72 @@ def test_meat_and_protein_are_unlimited_foods_not_inventory_consumables():
     assert pet.get("e") == 80
     assert pet.weight == 13
     assert pet.inventory["protein"] == 0
-    assert apply_food(pet, "protein")["reason"] == "protein_cycle"
+    assert apply_food(pet, "protein")["applied"]
+    assert (pet.get("e"), pet.weight) == (100, 15)
+
+
+@pytest.mark.parametrize("food,stat,portions,initial,weight", [
+    ("protein", "e", 6, 0, 22), ("meat", "h", 3, 100, 13),
+])
+def test_repeated_food_ignores_legacy_flags_and_preserves_ev(food, stat, portions, initial, weight):
+    from core.nutrition import apply_food, food_preview
+    from core.pet import Pet, STATE_LIVE
+
+    pet = Pet(species="rookie", state=STATE_LIVE)
+    pet.stats[stat] = initial
+    pet.weight = 10
+    pet.overfed_this_cycle = pet.protein_fed_this_cycle = True
+    before_ev, before_dp, before_effort = dict(pet.ev), pet.dp, pet.effort
+    for _ in range(portions):
+        before = pet.to_dict()
+        preview = food_preview(pet, food)
+        assert pet.to_dict() == before
+        assert preview["allowed"]
+        assert apply_food(pet, food)["applied"]
+        assert pet.weight == preview["weight_after"]
+        assert pet.get(stat) == preview["energy_after" if stat == "e" else "hunger_after"]
+    assert (pet.get(stat), pet.weight) == (100, weight)
+    assert (pet.ev, pet.dp, pet.effort) == (before_ev, before_dp, before_effort)
+    loaded = Pet()
+    loaded.load_from_dict(pet.to_dict())
+    assert apply_food(loaded, food)["applied"]
+
+
+@pytest.mark.parametrize("food,stat", [("meat", "h"), ("protein", "e")])
+def test_food_caps_recovery_and_no_effect_rejection(food, stat):
+    from core.nutrition import apply_food, food_preview
+    from core.pet import Pet, STATE_LIVE
+
+    pet = Pet(species="rookie", state=STATE_LIVE)
+    pet.stats[stat], pet.weight = 95, 98
+    assert apply_food(pet, food)["applied"]
+    assert (pet.get(stat), pet.weight) == (100, 99)
+    before = pet.to_dict()
+    assert not food_preview(pet, food)["allowed"]
+    assert apply_food(pet, food)["reason"] == "full"
+    assert pet.to_dict() == before
+    pet.stats[stat] = 60
+    for _ in range(2):
+        assert apply_food(pet, food)["applied"]
+    assert (pet.get(stat), pet.weight) == (100, 99)
+
+
+@pytest.mark.parametrize("condition,reason", [
+    ("egg", "egg"), ("dead", "dead"), ("cold", "frozen"),
+    ("asleep", "asleep"), ("busy", "busy"),
+])
+@pytest.mark.parametrize("food", ["meat", "protein"])
+def test_repeated_food_preserves_eligibility_guards(condition, reason, food):
+    from core.nutrition import apply_food
+    from core.pet import Pet, STATE_LIVE
+
+    pet = Pet(species="egg" if condition == "egg" else "rookie", state=STATE_LIVE)
+    if condition in ("dead", "cold"):
+        setattr(pet, condition, True)
+    before = pet.to_dict()
+    result = apply_food(pet, food, asleep=condition == "asleep", busy=condition == "busy")
+    assert not result["applied"] and result["reason"] == reason
+    assert pet.to_dict() == before
 
 
 def test_food_clears_matching_care_call_and_timer():

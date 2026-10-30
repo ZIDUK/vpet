@@ -43,7 +43,7 @@ Roasted meat that restores hunger and increases weight.
 | Objetivo | `h`, `weight` |
 | Magnitud | h +20 (tope 100); weight +1 (tope 99) |
 | Duracion | Inmediata |
-| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `one_overfeed_per_hunger_cycle` |
+| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `hunger_or_weight_below_cap` |
 | Origen | Menu Alimentar, ilimitado |
 
 ### TONICO / TONIC
@@ -139,7 +139,7 @@ Food supplement that restores energy and increases weight, without EV.
 | Objetivo | `e`, `weight` |
 | Magnitud | e +20 (tope 100); weight +2 (tope 99) |
 | Duracion | Inmediata |
-| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `energy_at_most_80`, `once_per_hunger_cycle` |
+| Limites | `hatched`, `alive`, `feeding`, `home`, `awake`, `energy_or_weight_below_cap` |
 | Origen | Menu Alimentar, ilimitado |
 
 ### BOTIQUIN / MEDKIT
@@ -191,8 +191,9 @@ Manual that grants +1 EV in the next completed and saved attribute session.
 ## Contratos de uso
 
 - Alimentar contiene solo carne y proteina ilimitadas. No descuenta sus stocks legacy 3/2.
-- Carne: +20 hambre y +1 peso; una sobrealimentacion por ciclo cuando ya esta lleno.
-- Proteina: +20 energia y +2 peso; ENE <=80, una vez por ciclo metabolico. No da EV ni DP.
+- Carne: +20 hambre y +1 peso; porciones repetidas incluso lleno, hasta hambre 100 y peso 99.
+- Proteina: +20 energia y +2 peso; porciones repetidas incluso lleno, hasta energia 100 y peso 99. No da EV ni DP.
+- Con peso 99 todavia se recupera hambre/energia; se rechaza sin cambios solo si ambos efectos estan al maximo.
 - Amuleto mejora animo, no fuerza. Conserva el ID `ring` y el recurso `ItemRing` por compatibilidad.
 - Los cuatro consumibles de mochila se gastan desde casa; la Guia abre entrenamiento y solo se consume al completar la sesion.
 - Guia: maximo una; conserva el objeto al cancelar, fallar el guardado o llenar el atributo con el entrenamiento base.

@@ -61,19 +61,13 @@ def food_preview(pet, food_id, available=True, asleep=False, busy=False):
         result["reason"] = "egg"
     elif getattr(pet, "dead", False):
         result["reason"] = "dead"
+    elif getattr(pet, "cold", False):
+        result["reason"] = "frozen"
     elif asleep or getattr(getattr(pet, 'sleep', None), 'asleep', False):
         result["reason"] = "asleep"
     elif busy:
         result["reason"] = "busy"
-    elif food_id == "meat" and pet.get("h") >= 100:
-        if getattr(pet, "overfed_this_cycle", False):
-            result["reason"] = "overfeed_used"
-        else:
-            result.update(allowed=True, hunger_after=100,
-                          weight_after=min(99, int(pet.weight) + effect_amount("meat", "weight", "weight")))
-    elif food_id == "protein" and getattr(pet, "protein_fed_this_cycle", False):
-        result["reason"] = "protein_cycle"
-    elif food_id == "protein" and pet.get("e") > 100 - effect_amount("protein", "restore", "e"):
+    elif pet.weight >= 99 and pet.get("h" if food_id == "meat" else "e") >= 100:
         result["reason"] = "full"
     else:
         result["allowed"] = True

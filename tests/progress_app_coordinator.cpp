@@ -200,6 +200,33 @@ void careAsync(bool reject) {
     if(reject) assert(f.panels.errors>0);
 }
 
+void repeatedFood(bool reject) {
+    using namespace vpet;
+    Fixture f; f.menu(1); f.key(InputEvent::Next); // Protein, initially energy 90.
+    f.key(InputEvent::Action);
+    assert(f.task.starts==1 && !f.app.ready());
+    // Queue reopening Feeding, selecting protein and consuming another portion.
+    f.key(InputEvent::Action); f.key(InputEvent::Next); f.key(InputEvent::Action);
+    f.complete(); f.drain();
+    auto p=f.saved();
+    assert(f.task.starts==2 && p.energy()==100 && p.weight()==14);
+    f.key(InputEvent::Action); f.key(InputEvent::Next); f.key(InputEvent::Action);
+    assert(f.task.starts==3 && !f.app.ready());
+    f.kv.rejectCommit=reject;
+    f.complete();
+    p=f.saved();
+    assert(p.energy()==100 && p.weight()==(reject?14:16));
+    assert(p.evAt(CombatStat::Off)==0 && f.task.waits==0);
+    if(reject) assert(f.panels.errors>0);
+    assert(f.repository.commits==1); // Small durable receipts, no full checkpoint.
+    CareJournal rebootJournal(f.kv);
+    CollectionStore reboot(f.repository,&rebootJournal,true); CollectionState state;
+    assert(reboot.load(state)==CollectionLoad::Loaded);
+    Settings s; PetState recovered;
+    assert(reboot.readPet(state,state.active,recovered,s));
+    assert(recovered.weight()==p.weight() && recovered.energy()==p.energy());
+}
+
 void rejectedSettings() {
     using namespace vpet;
     Fixture f; f.menu(8); f.key(InputEvent::Next); f.key(InputEvent::Action);
@@ -419,6 +446,8 @@ int main(int argc,char** argv) {
     else if(scenario=="overflow") orderedQueue(true);
     else if(scenario=="care") careAsync(false);
     else if(scenario=="care_reject") careAsync(true);
+    else if(scenario=="food_repeat") repeatedFood(false);
+    else if(scenario=="food_repeat_reject") repeatedFood(true);
     else if(scenario=="settings_reject") rejectedSettings();
     else if(scenario=="training_reject") rejectedTraining();
     else if(scenario=="accepted_pending") pendingReceipt();

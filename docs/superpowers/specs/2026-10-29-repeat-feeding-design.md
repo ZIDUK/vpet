@@ -2,10 +2,10 @@
 
 ## Estado Y Aprobacion
 
-Estado: scope-approved, 2026-10-29. El usuario solicito repetir proteina y
+Estado: approved, 2026-10-29. El usuario solicito repetir proteina y
 carne para aumentar peso y aprobo expresamente: "Si, incluso estando lleno".
-Revision de este documento pendiente; no se modifica comportamiento antes de
-esa revision. La implementacion requiere plan separado y registro REQ/AC en
+El usuario aprobo este documento: "Si, implementar esta especificacion".
+La implementacion requiere plan separado y registro REQ/AC en
 docs/requirements.json. No se atribuye aprobacion retrospectiva al balance viejo.
 
 ## Problema
@@ -107,5 +107,4 @@ autorizada y observacion real. Este documento no afirma pruebas ni despliegue.
 
 ## Preguntas Pendientes
 
-Sin decisiones de producto abiertas. Falta la revision humana del documento
-antes de escribir el plan y ejecutar la implementacion.
+Sin decisiones de producto abiertas. Documento aprobado para implementar.

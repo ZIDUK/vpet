@@ -112,7 +112,7 @@ from core.inventory import (
     inventory_window,
     visible_inventory_indexes,
 )
-from core.item_catalog import ITEM_BY_ID, effect_amount
+from core.item_catalog import ITEM_BY_ID
 from core.status_card import (
     HELIX_HEIGHT,
     HELIX_RUNGS,
@@ -618,10 +618,9 @@ def _draw_wide_panel(frame, build_dir, pet, panel_mode, panel_index, options_ses
             _paste_ui_icon(frame, build_dir, icon, x + 5, 66, 26)
             draw.text((x + 34, 64), name, fill=ink, font=_status_font(10))
             draw.text((x + 34, 82), effect, fill=ink, font=_status_font(8))
-            note = "EN DESCANSO" if spanish else "RESTING"
+            note = "LLENO" if spanish else "FULL"
             unlimited = "ILIMITADO" if spanish else "UNLIMITED"
-            if index == 1 and (getattr(pet, "protein_fed_this_cycle", False)
-                               or pet.get("e") > 100 - effect_amount("protein", "restore", "e")):
+            if pet.weight >= 99 and pet.get("h" if index == 0 else "e") >= 100:
                 draw.text((x + 34, 96), note, fill=(113, 122, 126), font=_status_font(7))
             else:
                 draw.text((x + 34, 96), unlimited, fill=green, font=_status_font(7))

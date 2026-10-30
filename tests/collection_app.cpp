@@ -525,7 +525,7 @@ int main() {
             Store foodLegacy; SettingsStore foodSettings(foodLegacy); Settings settings;
             PetState hungry;
             hungry.restore(species,70,70,90,0,100,0); hungry.profile=profile(); hungry.rollDna(17);
-            if (scenario==2) { hungry.setHunger(100); hungry.restoreOverfeed(true,1); }
+            if (scenario==2) { hungry.setHunger(100); hungry.setWeight(99); hungry.restoreOverfeed(true,1); }
             if (scenario==3) hungry.setCold(true);
             if (scenario>=4) { hungry.setHunger(6); hungry.setEnergy(0); hungry.setHappiness(0); }
             const bool protein=scenario==1 || scenario==5;
@@ -551,7 +551,7 @@ int main() {
             Serial.output.clear();
             input(InputEvent::Action);
             assert(Serial.output.find("VPET_FEED input index=")!=std::string::npos);
-            const int result=accepted?0:(scenario==2?6:4);
+            const int result=accepted?0:(scenario==2?5:4); // FoodResult::Full / Frozen.
             const std::string outcome="VPET_FEED result="+std::to_string(result)+
                 " committed="+(accepted && scenario!=6?"1":"0");
             assert(Serial.output.find(outcome)!=std::string::npos);
@@ -883,10 +883,12 @@ int main() {
         } else assert(settingsStore.load(saved,ignored)==LoadResult::Loaded);
         assert(saved.hunger()==100 && saved.meals()==3);
         input(InputEvent::Action); input(InputEvent::Action);
-        assert(!app.ready() && task.starts==4); // Existing rules allow one overfeed per cycle.
+        assert(!app.ready() && task.starts==4);
         task.complete(); input(InputEvent::None);
         input(InputEvent::Action); input(InputEvent::Action);
-        assert(app.ready() && task.starts==4); // The next full-satiety meal is blocked.
+        assert(!app.ready() && task.starts==5);
+        task.complete(); input(InputEvent::None);
+        assert(app.ready());
     }
     // A long light-save interval is caught up under the new sleep state, not
     // discarded or credited twice. Turning lights on catches up awake care.
