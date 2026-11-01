@@ -16,6 +16,8 @@ Reducir bytes instalados sin cambiar calidad, secuencia ni tiempos.
 ## Alcance
 
 Generador VPA1 y empaquetador training.
+Ampliacion solicitada por el usuario tras autorizar push: aplicar el ahorro en
+placa. Incluye lector temporal USB en compilacion separada asset_maintenance.
 
 ## Exclusiones
 
@@ -42,6 +44,15 @@ especie utilizados por el catalogo. Regenerar, no editar datos generados a mano.
 El preparador offline rechaza la operacion si no recibe un inventario independiente
 del dispositivo o si este no coincide con los archivos extraidos. No escribe flash.
 
+### REQ-ASSET-SHARING-004
+
+El lector temporal usa la biblioteca LittleFS del mismo SDK que el juego, no
+inicia App ni WiFi/BLE, y solo acepta inventario y lectura de archivos. Capturar
+una copia coherente de TODOS los archivos por rutas, tamanos y SHA-256, incluidos
+los que el unpacker host no enumera. No modificar NVS, particiones o datos de juego.
+Restaurar el firmware original antes de terminar; conservar respaldos originales
+y una copia raw actualizada de LittleFS durante el mantenimiento.
+
 ## Criterios De Aceptacion
 
 ### AC-ASSET-SHARING-001
@@ -62,6 +73,14 @@ El reproductor C++ real sigue reproduciendo offsets repetidos correctamente.
 Sin inventario se obtiene LIVE_INVENTORY_REQUIRED y no se crea salida. Si falta
 un archivo del inventario en la extraccion, se rechaza sin preparar imagen.
 Los tests de inventario sintetico no acreditan exportacion real desde la placa.
+
+### AC-ASSET-SHARING-004
+
+Ante una extraccion host que omite collection/current.bin, la captura desde
+dispositivo recupera y verifica ese archivo. Rechazar truncamiento, hashes
+incorrectos, rutas inseguras, duplicados y contadores incoherentes. La imagen
+reconstruida conserva todos los hashes no gestionados, el arranque alcanza
+VPET_READY y el espacio libre medido aumenta sin reducir la reserva.
 
 ## Contratos Y Compatibilidad
 

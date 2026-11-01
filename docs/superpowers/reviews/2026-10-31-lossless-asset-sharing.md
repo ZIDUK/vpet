@@ -54,7 +54,7 @@ del desacuerdo entre el lector host y el dispositivo.
 Se restauro LittleFS original desde el respaldo sin modificar, se verificaron
 de nuevo sus digests y los de firmware/NVS. El siguiente arranque produjo
 VPET_READY y HUB STATUS: fs_used=11853824, fs_total=12451840 (598016 libres).
-La placa queda con los recursos originales, NO con el ahorro local desplegado.
+Tras ese primer intento la placa quedo con los recursos originales, sin ahorro.
 Aceptacion visual y de juego posterior al rollback pendiente del usuario.
 
 scripts/preserve_asset_update.py ahora exige inventario independiente de rutas
@@ -71,3 +71,40 @@ El resultado global es failed porque source_unchanged=false: no presentarlo como
 snapshot completo aprobado. Tras agregar el bloqueo por inventario se ejecutaron
 17 pruebas focales de preservacion, VPA y lector real, todas aprobadas.
 Los respaldos, imagenes y registros del dispositivo permanecen ignorados por Git.
+
+## Despliegue Corregido Aplicado
+
+El lector temporal de mantenimiento, sin App ni API de escritura, obtuvo un
+inventario independiente de 233 archivos desde la placa. La extraccion host
+anterior omitia cuatro archivos vivos de coleccion: current, previous y dos
+politicas. Se recuperaron sus bytes por USB y se verificaron sus SHA-256.
+No se atribuye aqui el desacuerdo a una causa interna del unpacker no demostrada.
+
+Con respaldo raw actual y NVS preservado, se preparo una imagen de 228 archivos:
+solo desaparecen cinco recursos legacy duplicados. Los cinco archivos no
+administrados se conservaron identicos; los 222 VPA retenidos tienen los mismos
+pixels decodificados. El inventario leido de la imagen instalada en la propia
+placa coincide exactamente con los 228 hashes esperados.
+
+Se restauro el firmware de juego que estaba instalado antes del mantenimiento.
+verify_flash confirmo los tres digests: NVS/particiones, firmware y LittleFS.
+El juego arranco con VPET_READY y HUB STATUS confirmo:
+
+- Antes: fs_used=11853824; libres=598016 bytes.
+- Despues: fs_used=10911744; libres=1540096 bytes, total=12451840.
+- Espacio fisico recuperado: 942080 bytes (920 KiB).
+- Ahorro de payload VPA: 899521 bytes; la diferencia fisica incluye bloques
+  y metadatos del filesystem reconstruido.
+
+Evidencia local en out/board-backups/asset-sharing-live-20261031/:
+live-inventory.json, merge-report.json, pixel-report.json,
+installed-inventory.json, verify-final.log y runtime-final.log.
+No se incluyen datos privados del guardado en Git. La aceptacion visual y de
+juego sigue pendiente; no se afirma que la instalacion del pet piloto en
+Collection este terminada, ni que se hayan resuelto las pausas de checkpoints.
+
+Verificacion local completa: out/local-verification/20261101T022738Z-0ecd4cb1/report.json,
+2294 pytest, native, firmware, generados y ambos navegadores aprobados,
+source_unchanged=true. Perfil Creator tambien aprobado en
+out/local-verification/20261101T022855Z-8e89fd66/report.json.
+Estos perfiles automatizados no sustituyen la evidencia fisica separada anterior.

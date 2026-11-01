@@ -35,11 +35,29 @@ No escribir particiones/NVS, no omitir archivos desconocidos. Verificar flash
 y HUB STATUS antes de informar despliegue. El helper general sigue protegido.
 Commit acotado a esta entrega, sin incorporar cambios ajenos del worktree.
 
-Resultado fisico: imagen candidata escrita y verificada, pero arranque bloqueado
+Primer intento fisico: imagen candidata escrita y verificada, pero arranque bloqueado
 en recuperacion. Se restauro LittleFS original, se verificaron digests de NVS,
-firmware y filesystem, y volvio VPET_READY. La optimizacion NO queda desplegada.
+firmware y filesystem, y volvio VPET_READY. Ese intento no desplego la optimizacion.
 El preparador ahora exige inventario independiente de la placa; no volver a usar
 solo la salida de mklittlefs como prueba de que se preservo la coleccion.
 Consultar docs/superpowers/reviews/2026-10-31-lossless-asset-sharing.md.
 REQ-ASSET-SHARING-003: bloqueo por inventario implementado y probado; protocolo
 para exportar inventario vivo consistente pendiente, no simulado por el host.
+
+## Aplicacion Solicitada Tras El Rollback
+
+REQ-ASSET-SHARING-004: compilar lector separado maintenance/main.cpp, sin App y
+sin API de escritura. Protocolo privado USB MAINT INVENTORY/READ, limitado a rutas
+ASCII seguras; scripts/asset_maintenance.py verifica hashes y reconstruye copia
+completa usando baseline solo cuando coincide con el inventario real. Tests en
+tests/test_asset_maintenance.py: archivo ausente, tamper, rutas, EOF y contadores.
+Conservar NVS actual y copia raw LittleFS mientras la placa esta detenida. Preparar
+imagen con preserve_asset_update y ese inventario; reextraer y comparar hashes.
+Escribir exclusivamente filesystem y restaurar app original; verificar digests
+de NVS, app y filesystem antes de arrancar. Comprobar VPET_READY y fs libre.
+
+Resultado aplicado: captura viva de 233 archivos; imagen instalada de 228 hashes
+verificada desde la placa, cinco archivos no administrados preservados y 222 VPA
+con pixels identicos. Firmware original restaurado; tres digests verificados.
+VPET_READY y HUB STATUS confirman 1540096 bytes libres (antes 598016): 920 KiB
+fisicos recuperados. Evidencia y limites en el review de esta entrega.
