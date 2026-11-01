@@ -44,16 +44,6 @@ def package_training(sim_build, data_dir, include_dir, definition=None):
                     records.append(write_asset(data_dir / explore["path"].lstrip("/"),
                                                explore_frames, (size, size)))
 
-    for action in ("idle", "punch", "block", "walk", "cast"):
-        with Image.open(sim_build / definition.clip("rookie", action, "training")["atlas"].lstrip("/")) as atlas:
-            frames = []
-            for x in range(0, atlas.width, atlas.height):
-                cell = atlas.crop((x, 0, x + atlas.height, atlas.height))
-                alpha = cell.point([0] + [255] * 255, mode="L")
-                cell = cell.convert("RGBA")
-                cell.putalpha(alpha)
-                frames.append(cell.resize((68, 68), Image.Resampling.NEAREST))
-            asset(action, frames)
     for name in ("Training", "Pedia", "Back"):
         with Image.open(sim_build / "UIIcons" / (name + ".bmp")) as icon:
             asset(name.lower(), [icon.convert("RGBA").resize((16, 16), Image.Resampling.NEAREST)])

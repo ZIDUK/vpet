@@ -37,6 +37,13 @@ int main(int argc, char** argv) {
     assert(assetReads-beforeFrame<=7);
     assert(store.drawFrame(canvas,"/training/icon0.vpa",0,0,0));
     assert(assetOpens==opens+2);
+    const auto firstFrame=canvas.pixels;
+    assert(store.drawFrame(canvas,"/training/pet.vpa",2,0,30));
+    assert(canvas.pixels==firstFrame);
+    assert(store.drawFrame(canvas,"/training/pet.vpa",1,0,30));
+    const auto secondFrame=canvas.pixels;
+    assert(store.drawFrame(canvas,"/training/pet.vpa",3,0,30));
+    assert(canvas.pixels==secondFrame);
     // Cached transparency preserves the current background, not the old one.
     vpet::AssetStore cold;
     TFT_eSprite reference;

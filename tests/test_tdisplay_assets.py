@@ -67,6 +67,9 @@ def test_native_manifest_covers_every_registered_animation(tmp_path):
     assert manifest["display"] == {"width": 240, "height": 135, "menu_height": 24}
     assert set(manifest["species"]) == {"egg", "baby", "rookie", "champion", "ultimate"}
     assert all(item["sha256"] and item["bytes"] > 0 for item in manifest["assets"])
+    for action in ('idle', 'walk', 'punch', 'block', 'cast'):
+        assert not (data_dir / 'training' / (action + '.vpa')).exists()
+        assert (data_dir / 'training' / ('firemon_' + action + '.vpa')).exists()
     assert len(manifest["animations"]) == 51
     for stage, name in (("baby", "sparkmon"), ("rookie", "firemon"),
                         ("champion", "flamemon"), ("ultimate", "dragfiremon")):

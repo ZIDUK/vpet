@@ -91,13 +91,29 @@ def encode_vpa(frames, width, height, trim_transparent=False):
             width, height = width-2*margin, height-top
     frame_bytes = width * height
     prefix_size = HEADER.size + len(palette) * 2 + len(frames) * 4
-    offsets = [prefix_size + index * frame_bytes for index in range(len(frames))]
+    offsets = []
+    unique_frames = {}
+    pixels = bytearray()
+    transparent_tail = 0
+    # VPA1 already stores an offset per frame: identical frames need only one
+    # pixel block, with no decompression or extra work on the device.
+    for start in range(0, len(indexed), frame_bytes):
+        block = indexed[start:start + frame_bytes]
+        if block not in unique_frames:
+            transparent_head = len(block) - len(block.lstrip(b'\0'))
+            overlap = min(transparent_tail, transparent_head)
+            unique_frames[block] = prefix_size + len(pixels) - overlap
+            pixels.extend(block[overlap:])
+            tail = len(block) - len(block.rstrip(b'\0'))
+            transparent_tail = (transparent_tail + frame_bytes - overlap
+                                if tail == frame_bytes else tail)
+        offsets.append(unique_frames[block])
     payload = bytearray(
         HEADER.pack(MAGIC, width, height, len(frames), len(palette), 0)
     )
     payload.extend(struct.pack(f"<{len(palette)}H", *palette))
     payload.extend(struct.pack(f"<{len(offsets)}I", *offsets))
-    payload.extend(indexed)
+    payload.extend(pixels)
     return bytes(payload)
 
 
